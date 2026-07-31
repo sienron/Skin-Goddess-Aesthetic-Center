@@ -1,0 +1,486 @@
+@font-face {
+    font-family: "Playfair Display";
+    src: url(fonts/Playfair_Display/PlayfairDisplay-VariableFont_wght.ttf) format("truetype");
+    font-style: normal;
+    font-weight: 400 900;
+}
+
+@font-face {
+    font-family: "Raleway";
+    src: url(fonts/Raleway/Raleway-VariableFont_wght.ttf) format("truetype");
+    font-style: normal;
+    font-weight: 100 900;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    font-size: 16px;
+}
+
+img {
+    max-width: 100%;
+}
+
+html,
+body {
+    height: 100%;
+}
+
+body {
+    margin: 0;
+    background-color: rgb(245, 243, 239);
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+}
+
+header {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    row-gap: 8px;
+    background-color: white;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+    position: relative;
+    z-index: 1;
+    flex-shrink: 0;
+}
+
+.actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding-right: 30px;
+}
+
+.notification {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border: 1px solid rgb(220, 220, 220);
+    background-color: white;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.logo-container {
+    width: 180px;
+    height: 64px;
+    flex-shrink: 0;
+    display: flex;
+    justify-content: left;
+    align-items: center;
+    margin-left: 10px ;
+}
+
+#logo {
+    width: 130px;
+    height: 40px;
+}
+
+.page-title {
+    flex: 1;
+    min-width: 150px;
+}
+
+.page-title h2 {
+    font-family: "Playfair Display", serif;
+    margin: 0;
+    padding: 0;
+}
+
+.page-title p {
+    font-family: "Raleway", sans-serif;
+    font-size: 0.75rem;
+    margin: 0;
+}
+
+
+.main-content {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+}
+
+.sidebar {
+    display: flex;
+    flex-direction: column;
+    background-color: white;
+    height: 100%;
+    width: 180px;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0 15px 15px 15px;
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.04);
+    overflow-y: auto;
+    transition: width 0.2s ease;
+}
+
+nav ul {
+    display: block;
+    font-family: "Raleway", sans-serif;
+    font-size: 0.75rem;
+    margin: 0;
+    padding: 0;
+}
+
+/*.badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background-color: #B93C3C;
+    color: white;
+    font-family: "Raleway", sans-serif;
+    font-size: 1vh;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}  This is for when new notifications are present*/
+
+.search {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid rgb(220, 220, 220);
+    background-color: white;
+    border-radius: 6px;
+    padding: 6px 12px;
+    min-width: 0;
+}
+
+.search input {
+    border: none;
+    outline: none;
+    flex: 1;
+    width: 100%;
+    min-width: 0;
+    font-family: "Raleway", sans-serif;
+    font-size: 0.75rem;
+}
+
+.search-svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    display: block;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    list-style: none;
+    margin-left: -15px;
+    margin-right: -15px;
+    padding: 8px 15px;
+    border-left: 3px solid transparent;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.nav-item a {
+    text-decoration: none;
+    color: inherit;
+    margin-left: 0.6vh;
+}
+
+.nav-item:hover {
+    background-color: rgba(201, 168, 76, 0.12);
+    border-left: 3px solid #C9A84C;
+}
+
+.nav-bullet {
+    display: block;
+    width: 6px;
+    height: 6px;
+}
+
+.nav-item.active {
+    background-color: rgba(201, 168, 76, 0.12);
+    border-left: 3px solid #C9A84C;
+}
+
+
+.status-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 15px;
+    margin-left: 10px;
+}
+
+.status-item span {
+    font-family: "Raleway", sans-serif;
+    font-size: 0.75rem;
+}
+
+h6 {
+    margin-left: 5px;
+    margin-bottom: 10px;
+    margin-top: 10px;
+    font-family: "Playfair Display", serif;
+    color: rgb(145, 118, 118);
+}
+
+hr {
+    border: none;
+    border-top: 1px solid rgb(205, 205, 205);
+    flex-shrink: 0;
+    width: 100%;
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+.Confirmed-icon,
+.Pending-icon,
+.Completed-icon,
+.Cancelled-icon,
+.No-Show-icon {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+}
+
+.Confirmed-icon {
+    background-color: #929292;
+}
+
+.Pending-icon {
+    background-color: #C9A84C;
+}
+
+.Completed-icon {
+    background-color: #228B46;
+}
+
+.Cancelled-icon {
+    background-color: #B93C3C;
+}
+
+.No-Show-icon {
+    background-color: #D1D1D1;
+}
+
+#ratingNumber {
+    color: rgb(202, 171, 83);
+    font-size: 48px;
+    margin: 0;
+    padding: 0;
+}
+
+.calendar-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 16px 30px;
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.date-display {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-family: "Raleway", sans-serif;
+}
+
+.current-month {
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.nav-arrow {
+    border: 1px solid rgb(220, 220, 220);
+    background-color: white;
+    border-radius: 6px;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.view-toggle {
+    display: flex;
+    gap: 6px;
+}
+
+.view-btn {
+    font-family: "Raleway", sans-serif;
+    font-size: 0.75rem;
+    padding: 8px 16px;
+    border: 1px solid rgb(220, 220, 220);
+    background-color: white;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.view-btn.active {
+    background-color: black;
+    color: white;
+    border-color: black;
+}
+
+.calendar-icon-svg {
+    width: 20px;
+    height: 20px;
+    display: block;
+}
+
+.nav-arrow-left,
+.nav-arrow-right,
+.search-svg,
+.notification-bell {
+    width: 14px;
+    height: 14px;
+    display: block;
+}
+
+.profile-card {
+    margin: auto -15px -15px -15px;
+    display: flex;
+    flex-direction: column;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background-color 0.15s ease;
+    padding: 15px 15px 8px 15px;
+}
+
+.profile-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+.profile-avatar {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    background-color: rgb(245, 243, 239);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Raleway", sans-serif;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: rgb(145, 118, 118);
+    flex-shrink: 0;
+}
+
+.profile-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.profile-name {
+    font-family: "Raleway", sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 3px;
+}
+
+.profile-role {
+    font-family: "Raleway", sans-serif;
+    font-size: 0.75rem;
+    color: rgb(150, 150, 150);
+}
+
+.profile-card hr{
+    margin: 0;
+    padding: 0;
+}
+
+.profile-divider {
+    margin: 0;
+    border: none;
+    border-top: 1px solid rgb(205, 205, 205);
+    flex-shrink: 0;
+    width: 100%;
+}
+
+.profile-card:hover {
+    background-color: rgba(201, 168, 76, 0.12);
+}
+.profile-wrap {
+    margin-top: auto;
+}
+
+/* ===== Responsive breakpoints ===== */
+
+@media (max-width: 768px) {
+    main {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        width: 100%;
+        height: auto;
+        flex-direction: row;
+        flex-wrap: wrap;
+        padding: 10px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+    }
+
+    .sidebar nav ul {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .sidebar h6 {
+        width: 100%;
+    }
+
+    .profile-wrap {
+        margin-top: 10px;
+        width: 100%;
+    }
+
+    .logo-container {
+        width: 120px;
+    }
+
+    .page-title {
+        margin-left: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .page-title h2 {
+        font-size: 1.1rem;
+    }
+
+    .actions {
+        padding-right: 15px;
+    }
+
+    .calendar-toolbar {
+        padding: 16px;
+    }
+
+    .view-toggle {
+        width: 100%;
+        justify-content: flex-start;
+    }
+}

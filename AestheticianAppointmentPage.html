@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>Appointments</title>
+</head>
+
+<body>
+    <header>
+        <div class="logo-container">
+            <img src="images/logo_horizontal.jpg" alt="logo" id="logo">
+        </div>
+
+        <div class="page-title">
+            <h2>Appointments</h2>
+            <p>Monthly overview - <span id="current-month">Month 0000</span></p>
+        </div>
+
+        <div class="actions">
+            <button class="notification">
+                <img src="icons/notification-bell.svg" alt="notification" class="notification-bell">
+                <span class="badge"></span>
+            </button>
+
+            <div class="search">
+                <img src="icons/magnifying-glass.svg" alt="search" class="search-svg">
+                <input type="text" placeholder="Search appointment...">
+            </div>
+        </div>
+    </header>
+    <main>
+        <section class="sidebar">
+
+            <hr>
+
+            <h6>MY PORTAL</h6>
+            <nav>
+                <ul>
+                    <li class="nav-item"><img src="icons/circle.svg" alt="bullet" class="nav-bullet"><a href="#">Dashboard</a></li>
+                    <li class="nav-item"><img src="icons/circle.svg" alt="bullet" class="nav-bullet"><a href="#">My Clients</a></li>
+                    <li class="nav-item active"><img src="icons/circle.svg" alt="bullet" class="nav-bullet"><a href="#">Appointments</a></li>
+                    <li class="nav-item"><img src="icons/circle.svg" alt="bullet" class="nav-bullet"><a href="#">Remarks & Notes</a><span class="nav-badge"> </span></li>
+                    <li class="nav-item"><img src="icons/circle.svg" alt="bullet" class="nav-bullet"><a href="#">Treatment History</a></li>
+                </ul>
+            </nav>
+
+            <hr>
+
+            <h6>STATUS LEGEND</h6>
+            <div class="status-item">
+                <span class="Confirmed-icon"></span>
+                <span>Confirmed</span>
+            </div>
+            <div class="status-item">
+                <span class="Pending-icon"></span>
+                <span>In Progress</span>
+            </div>
+            <div class="status-item">
+                <span class="Completed-icon"></span>
+                <span>Completed</span>
+            </div>
+            <div class="status-item">
+                <span class="Cancelled-icon"></span>
+                <span>Cancelled</span>
+            </div>
+            <div class="status-item">
+                <span class="No-Show-icon"></span>
+                <span>No Show</span>
+            </div>
+
+            <hr>
+            <h6>MY RATING</h6>
+            <h1 id="ratingNumber">0</h1>
+
+            <div class="profile-wrap">
+                <hr class="profile-divider">
+                <a href="#profile" class="profile-card">
+                    <div class="profile-row">
+                        <div class="profile-avatar">SR</div>
+                        <div class="profile-info">
+                            <span class="profile-name">Sofia Reyes</span>
+                            <span class="profile-role">Lead Aesthetician</span>
+                        </div>
+                        <span class="profile-status"></span>
+                    </div>
+                </a>
+            </div>
+        </section>
+        <section class="main-content">
+            <div class="calendar-toolbar">
+                <div class="date-display">
+                    <span class="calendar-icon"><img src="icons/calendar.svg" alt="calendar" class="calendar-icon-svg"></span>
+                    <span class="current-month">Month 0000</span>
+                    <button class="nav-arrow" aria-label="Previous"><img src="icons/arrow-left.svg" alt="arrow left" class="nav-arrow-left"></button>
+                    <button class="nav-arrow" aria-label="Next"><img src="icons/arrow-right.svg" alt="arrow right" class="nav-arrow-right"></button>
+                </div>
+
+                <div class="view-toggle">
+                    <button class="view-btn">Week</button>
+                    <button class="view-btn active">Month</button>
+                </div>
+            </div>
+        </section>
+    </main>
+</body>
+
+</html>
