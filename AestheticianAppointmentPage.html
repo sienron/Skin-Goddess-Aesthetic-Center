@@ -9,7 +9,7 @@
 </head>
 
 <body>
-    <header>
+    <header class="staff-header">
         <div class="logo-container">
             <img src="images/logo_horizontal.jpg" alt="logo" id="logo">
         </div>
@@ -20,15 +20,36 @@
         </div>
 
         <div class="actions">
-            <button class="notification">
-                <img src="icons/notification-bell.svg" alt="notification" class="notification-bell">
-                <span class="badge"></span>
-            </button>
+            <div class="notification-wrap" id="notificationWrap">
+                <button class="notification" id="notificationBtn">
+                    <img src="icons/notification-bell.svg" alt="notification" class="notification-bell">
+                    <span class="badge"></span>
+                </button>
 
-            <div class="search">
-                <img src="icons/magnifying-glass.svg" alt="search" class="search-svg">
-                <input type="text" placeholder="Search appointment...">
+                <div class="notification-dropdown" id="notificationDropdown">
+                    <div class="notification-dropdown-header">
+                        <span>Notifications</span>
+                    </div>
+                    <div class="notification-list" id="notificationList">
+                        <!-- Populated from the backend. Left empty for now. -->
+                    </div>
+                </div>
             </div>
+
+            <div class="search" id="searchWrap">
+                <img src="icons/magnifying-glass.svg" alt="search" class="search-svg">
+                <input type="text" id="searchInput" placeholder="Search appointment..." autocomplete="off">
+                <ul class="search-suggestions" id="searchSuggestions"></ul>
+            </div>
+
+            <button class="logout-btn" id="logoutBtn">
+                <svg class="logout-icon" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 2H3.5C2.67157 2 2 2.67157 2 3.5V12.5C2 13.3284 2.67157 14 3.5 14H6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M10.5 11L14 8L10.5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M14 8H6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>Logout</span>
+            </button>
         </div>
     </header>
     <main>
@@ -73,7 +94,14 @@
 
             <hr>
             <h6>MY RATING</h6>
-            <h1 id="ratingNumber">0</h1>
+
+            <div class="rating-widget" id="ratingWidget">
+                <h1 id="ratingAverage">—</h1>
+                <div class="rating-stars" id="ratingStars"></div>
+                <p class="rating-count" id="ratingReviewCount">Loading reviews…</p>
+
+                <div class="rating-breakdown" id="ratingBreakdown"></div>
+            </div>
 
             <div class="profile-wrap">
                 <hr class="profile-divider">
@@ -90,6 +118,7 @@
             </div>
         </section>
         <section class="main-content">
+            <div class="calendar-card">
             <div class="calendar-toolbar">
                 <div class="date-display">
                     <span class="calendar-icon"><img src="icons/calendar.svg" alt="calendar" class="calendar-icon-svg"></span>
@@ -97,14 +126,127 @@
                     <button class="nav-arrow" aria-label="Previous"><img src="icons/arrow-left.svg" alt="arrow left" class="nav-arrow-left"></button>
                     <button class="nav-arrow" aria-label="Next"><img src="icons/arrow-right.svg" alt="arrow right" class="nav-arrow-right"></button>
                 </div>
-
+        
                 <div class="view-toggle">
                     <button class="view-btn">Week</button>
                     <button class="view-btn active">Month</button>
                 </div>
             </div>
+        
+            <div class="calendar-view">
+                <div class="month-view">
+                    <div class="month-weekdays">
+                        <div>SUN</div>
+                        <div>MON</div>
+                        <div>TUE</div>
+                        <div>WED</div>
+                        <div>THU</div>
+                        <div>FRI</div>
+                        <div>SAT</div>
+                    </div>
+        
+                    <div class="month-grid" id="monthGrid">
+                        <!-- Day cells will be generated here by JS (Step 6) -->
+                    </div>
+                </div>
+        
+                <div class="week-view">
+                    <div class="week-header">
+                        <div class="week-time-label"></div>
+                        <div class="week-day-col">SUN <span class="week-date-num"></span></div>
+                        <div class="week-day-col">MON <span class="week-date-num"></span></div>
+                        <div class="week-day-col">TUE <span class="week-date-num"></span></div>
+                        <div class="week-day-col">WED <span class="week-date-num"></span></div>
+                        <div class="week-day-col">THU <span class="week-date-num"></span></div>
+                        <div class="week-day-col">FRI <span class="week-date-num"></span></div>
+                        <div class="week-day-col">SAT <span class="week-date-num"></span></div>
+                    </div>
+        
+                    <div class="week-body" id="weekBody">
+                        <div class="week-time-column" id="weekTimeColumn">
+                            <!-- Hour labels (9AM–5PM etc.) generated by JS -->
+                        </div>
+                        <div class="week-days-grid" id="weekDaysGrid">
+                            <!-- 7 day columns generated by JS, chips positioned absolutely inside -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
         </section>
     </main>
+
+    <!-- Appointment Detail Modal -->
+    <div class="modal-overlay" id="apptModalOverlay">
+        <div class="appt-modal" id="apptModal">
+            <div class="appt-modal-topbar" id="apptModalTopbar"></div>
+
+            <button class="modal-close" id="apptModalClose" aria-label="Close">&times;</button>
+
+            <div class="appt-modal-header">
+                <div class="appt-modal-avatar" id="apptModalAvatar"></div>
+                <div class="appt-modal-heading">
+                    <h3 id="apptModalName"></h3>
+                    <p id="apptModalSubtitle"></p>
+                    <span class="appt-status-badge" id="apptModalStatus"></span>
+                </div>
+            </div>
+
+            <hr>
+
+            <div class="appt-modal-grid">
+                <div class="appt-field">
+                    <span class="appt-field-label">DATE</span>
+                    <span class="appt-field-value" id="apptModalDate"></span>
+                </div>
+                <div class="appt-field">
+                    <span class="appt-field-label">TIME</span>
+                    <span class="appt-field-value" id="apptModalTime"></span>
+                </div>
+
+                <div class="appt-field">
+                    <span class="appt-field-label">AESTHETICIAN</span>
+                    <span class="appt-field-value" id="apptModalAesthetician"></span>
+                </div>
+                <div class="appt-field">
+                    <span class="appt-field-label">DURATION</span>
+                    <span class="appt-field-value" id="apptModalDuration"></span>
+                </div>
+
+                <div class="appt-field">
+                    <span class="appt-field-label">SERVICE</span>
+                    <span class="appt-field-value" id="apptModalService"></span>
+                </div>
+                <div class="appt-field">
+                    <span class="appt-field-label">SERVICE FEE</span>
+                    <span class="appt-field-value" id="apptModalFee"></span>
+                </div>
+
+                <div class="appt-field">
+                    <span class="appt-field-label">RESERVATION DEPOSIT</span>
+                    <span class="appt-field-value" id="apptModalDeposit"></span>
+                </div>
+                <div class="appt-field">
+                    <span class="appt-field-label">CONTACT</span>
+                    <span class="appt-field-value" id="apptModalContact"></span>
+                </div>
+            </div>
+
+            <div class="appt-modal-remarks">
+                <span class="appt-field-label">REMARKS &amp; NOTES</span>
+                <p id="apptModalRemarks"></p>
+            </div>
+
+            <div class="appt-modal-actions">
+                <button class="modal-btn modal-btn-cancel" id="apptModalCancelBtn">Cancel</button>
+                <button class="modal-btn modal-btn-reschedule" id="apptModalRescheduleBtn">Reschedule</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="header.js"></script>
+    <script src="appointment-modal.js"></script>
+    <script src="appointments-aesthetician.js"></script>
 </body>
 
 </html>

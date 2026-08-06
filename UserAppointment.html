@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skin Goddess Aesthetic Center</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header class="public-header">
+
+        <div class="logo-container">
+            <img id="logo" src="images/logo_horizontal.jpg" alt="Skin Goddess Aesthetic Center logo">
+        </div>
+
+        <nav class="public-nav">
+            <ul class="public-nav-links">
+                <li><a href="#" class="active">Services</a></li>
+                <li><a href="#">About</a></li>
+                <li><a href="#">Results</a></li>
+                <li><a href="#">Contact</a></li>
+            </ul>
+        </nav>
+
+        <div class="public-header-actions">
+
+            <div class="notification-wrap" id="notificationWrap">
+                <div class="notification" id="notificationBtn">
+                    <img src="icons/notification-bell.svg" alt="Notifications" class="notification-bell">
+                </div>
+
+                <div class="notification-dropdown" id="notificationDropdown">
+                    <div class="notification-dropdown-header">Notifications</div>
+                    <div class="notification-list">
+                        <!-- Notification items would be populated here -->
+                    </div>
+                </div>
+            </div>
+
+            <button class="book-now-btn" type="button">BOOK NOW</button>
+
+            <div class="public-divider"></div>
+
+            <div class="profile-row">
+                <div class="profile-avatar">AR</div>
+                <div class="profile-info">
+                    <span class="profile-name">Anna Reyes</span>
+                    <span class="profile-role">Client</span>
+                </div>
+            </div>
+
+        </div>
+
+    </header>
+
+    <main class="booking-main">
+
+        <div class="booking-intro">
+            <span class="booking-eyebrow">-- BOOK A VISIT</span>
+            <h1>Book Your <span>Appointment</span></h1>
+            <p>Choose your service, pick a date, and confirm all online.</p>
+        </div>
+
+        <div class="booking-layout">
+
+            <!-- ===== Column 1: Service selection =====
+                 Placeholder services below. Once the backend exists, replace this
+                 static list with services fetched from the API and re-render
+                 renderServices() in appointment-booking.js. -->
+            <div class="booking-col">
+                <div class="booking-panel">
+                    <p class="booking-panel-label">SELECT A SERVICE</p>
+
+                    <div class="service-list" id="serviceList">
+
+                        <div class="service-card selected" data-service="Hydrating Facial" data-price="1200">
+                            <span class="service-name">Hydrating Facial</span>
+                            <span class="service-desc">60 min &middot; Deep moisture boost</span>
+                            <span class="service-price">₱1,200</span>
+                            <span class="service-check">✓</span>
+                        </div>
+
+                        <div class="service-card" data-service="Skin Whitening" data-price="1800">
+                            <span class="service-name">Skin Whitening</span>
+                            <span class="service-desc">90 min &middot; Even skin tone</span>
+                            <span class="service-price">₱1,800</span>
+                            <span class="service-check">✓</span>
+                        </div>
+
+                        <div class="service-card" data-service="Anti-Aging Therapy" data-price="2500">
+                            <span class="service-name">Anti-Aging Therapy</span>
+                            <span class="service-desc">75 min &middot; Collagen boost</span>
+                            <span class="service-price">₱2,500</span>
+                            <span class="service-check">✓</span>
+                        </div>
+
+                        <div class="service-card" data-service="Laser Rejuvenation" data-price="3200">
+                            <span class="service-name">Laser Rejuvenation</span>
+                            <span class="service-desc">90 min &middot; Advanced laser</span>
+                            <span class="service-price">₱3,200</span>
+                            <span class="service-check">✓</span>
+                        </div>
+
+                        <div class="service-card" data-service="Acne Treatment" data-price="1500">
+                            <span class="service-name">Acne Treatment</span>
+                            <span class="service-desc">60 min &middot; Blemish control</span>
+                            <span class="service-price">₱1,500</span>
+                            <span class="service-check">✓</span>
+                        </div>
+
+                        <div class="service-card" data-service="Chemical Peel" data-price="2000">
+                            <span class="service-name">Chemical Peel</span>
+                            <span class="service-desc">45 min &middot; Skin renewal</span>
+                            <span class="service-price">₱2,000</span>
+                            <span class="service-check">✓</span>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== Column 2: Date/time + client details =====
+                 Calendar is rendered by JS from a placeholder availability map.
+                 Swap generatePlaceholderAvailability() for a real API call once
+                 the backend exists (see appointment-booking.js). -->
+            <div class="booking-col">
+                <div class="booking-panel">
+                    <p class="booking-panel-label">SELECT DATE + TIME</p>
+
+                    <div class="calendar-header">
+                        <h3 id="calendarMonthLabel">April 2025</h3>
+                        <div class="calendar-nav">
+                            <button type="button" id="calendarPrev" aria-label="Previous month">&lsaquo;</button>
+                            <button type="button" id="calendarNext" aria-label="Next month">&rsaquo;</button>
+                        </div>
+                    </div>
+
+                    <div class="calendar-grid" id="calendarWeekdays">
+                        <div class="calendar-weekday">SU</div>
+                        <div class="calendar-weekday">MO</div>
+                        <div class="calendar-weekday">TU</div>
+                        <div class="calendar-weekday">WE</div>
+                        <div class="calendar-weekday">TH</div>
+                        <div class="calendar-weekday">FR</div>
+                        <div class="calendar-weekday">SA</div>
+                    </div>
+
+                    <div class="calendar-grid" id="calendarDays">
+                        <!-- Populated by appointment-booking.js -->
+                    </div>
+
+                    <div class="calendar-legend">
+                        <span><span class="legend-dot available"></span>Available slots</span>
+                        <span><span class="legend-dot today"></span>Today</span>
+                    </div>
+
+                    <div class="slots-section">
+                        <p class="slots-heading" id="slotsHeading">SELECT A DATE TO SEE AVAILABLE SLOTS</p>
+                        <div id="slotsContainer">
+                            <!-- Populated by appointment-booking.js -->
+                        </div>
+                    </div>
+
+                    <form class="details-form" id="detailsForm">
+
+                        <p class="booking-panel-label" style="margin-bottom: 14px;">YOUR DETAILS</p>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="firstName">First Name</label>
+                                <input type="text" id="firstName" name="firstName" placeholder="Enter your first name" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="lastName">Last Name</label>
+                                <input type="text" id="lastName" name="lastName" placeholder="Enter your last name" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="email">Email Address</label>
+                            <input type="email" id="email" name="email" placeholder="name@email.com" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="phone">Phone Number</label>
+                            <input type="tel" id="phone" name="phone" placeholder="+63 9XX XXX XXXX" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="paymentMethod">Payment Method</label>
+                            <select id="paymentMethod" name="paymentMethod" required>
+                                <option value="" selected disabled>Select payment method</option>
+                                <option value="gcash">GCash</option>
+                                <option value="card">Credit / Debit Card</option>
+                                <option value="cash">Cash at Clinic</option>
+                            </select>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+
+            <!-- ===== Column 3: Booking summary =====
+                 Updated live by JS as the user picks a service / date / time / payment method. -->
+            <div class="booking-col">
+                <div class="booking-panel">
+                    <p class="booking-panel-label">BOOKING SUMMARY</p>
+
+                    <div class="summary-row">
+                        <span>Service</span>
+                        <span id="summaryService">Hydrating Facial</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Booking Fee</span>
+                        <span id="summaryFee">₱300</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Date</span>
+                        <span id="summaryDate" class="not-selected">Not selected</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Time</span>
+                        <span id="summaryTime" class="not-selected">Not selected</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Payment</span>
+                        <span id="summaryPayment" class="not-selected">Not selected</span>
+                    </div>
+
+                    <div class="summary-total">
+                        <span>Total</span>
+                        <span id="summaryTotal">₱1,200</span>
+                    </div>
+                    <p class="summary-note">Cancellations: 24 hrs in advance</p>
+
+                    <p class="summary-section-title">WHAT TO EXPECT</p>
+                    <ul class="summary-list">
+                        <li>Arrive 10 minutes early</li>
+                        <li>Bring a valid ID</li>
+                        <li>Confirmation sent via email</li>
+                        <li>Specialist will be ready for you</li>
+                    </ul>
+
+                    <p class="summary-section-title">CLINIC HOURS</p>
+                    <ul class="summary-list">
+                        <li>Mon to Fri 9:00 AM to 6:00 PM</li>
+                        <li>Saturday 9:00 AM to 4:00 PM</li>
+                        <li>Sunday Closed</li>
+                    </ul>
+
+                    <div class="summary-location">
+                        <p class="summary-section-title" style="margin-top: 0;">LOCATION</p>
+                        <strong>Skin Goddess Aesthetic Center</strong>
+                        Imus Cavite<br>
+                        Philippines
+                    </div>
+                </div>
+
+                <div class="confirm-bar">
+                    <button type="submit" form="detailsForm" class="confirm-btn" id="confirmBtn">CONFIRM APPOINTMENT</button>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <script src="header.js"></script>
+    <script src="appointment-booking.js"></script>
+
+</body>
+</html>
