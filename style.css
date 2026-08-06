@@ -437,8 +437,17 @@ hr {
     flex-direction: row;
     align-items: center;
     gap: 10px;
-    padding-top: 5px;
-    padding-bottom: 5px;
+    padding: 5px 0;
+    margin: 0;
+    border: none;
+    outline: none;
+    background: none;
+    appearance: none;
+    -webkit-appearance: none;
+    box-shadow: none;
+    cursor: pointer;
+    font: inherit;
+    text-align: left;
 }
 
 .profile-avatar {
@@ -1247,7 +1256,7 @@ hr {
     z-index: 1;
     flex-shrink: 0;
     padding: 0 30px;
-    justify-content: space-between;
+    justify-content: flex-start;
     min-height: 72px;
 }
 
@@ -1256,7 +1265,10 @@ hr {
     align-items: center;
     gap: 36px;
     flex-wrap: wrap;
+    margin-left: auto;
+    margin-right: 36px;
 }
+
 
 .public-nav-links {
     display: flex;
@@ -1408,7 +1420,7 @@ hr {
     display: grid;
     grid-template-columns: 1fr 1.35fr 1fr;
     gap: 20px;
-    align-items: start;
+    align-items: stretch;
 }
 
 .booking-col {
@@ -1417,12 +1429,19 @@ hr {
     gap: 16px;
 }
 
+.booking-col .booking-panel {
+    flex: 1;
+}
+
 .booking-panel {
     background-color: white;
     border-radius: 10px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     padding: 20px;
     box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
 }
 
 .booking-panel-label {
@@ -1440,6 +1459,10 @@ hr {
     display: flex;
     flex-direction: column;
     gap: 10px;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 4px;
 }
 
 .service-card {
@@ -1603,16 +1626,17 @@ hr {
 .calendar-legend {
     display: flex;
     gap: 16px;
-    margin-top: 12px;
+    margin-top: 20px;
     font-family: "Raleway", sans-serif;
     font-size: 0.68rem;
     color: rgb(140, 140, 140);
+    margin-bottom: -15px;
 }
 
 .calendar-legend span {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
 }
 
 .legend-dot {
@@ -1624,11 +1648,6 @@ hr {
 
 .legend-dot.available {
     background-color: #C9A84C;
-}
-
-.legend-dot.today {
-    background-color: transparent;
-    box-shadow: 0 0 0 2px #8a6f2c;
 }
 
 /* --- Time slots --- */
@@ -1643,7 +1662,7 @@ hr {
     font-weight: 700;
     letter-spacing: 0.05em;
     color: rgb(150, 150, 150);
-    margin-bottom: 10px;
+    margin-bottom: -10px;
 }
 
 .slots-period {
@@ -1832,7 +1851,7 @@ hr {
 }
 
 .summary-location {
-    margin-top: 14px;
+    margin-top: auto;
     background-color: rgb(248, 247, 244);
     border-radius: 8px;
     padding: 12px 14px;

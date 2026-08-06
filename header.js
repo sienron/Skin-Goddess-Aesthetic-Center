@@ -37,6 +37,20 @@
     });
 })();
 
+/* ===== Profile Button =====
+   Placeholder handler — replace with real navigation to the client's
+   profile/account page once that page exists, e.g.:
+     window.location.href = "/profile";
+*/
+(function () {
+    const profileBtn = document.getElementById("profileBtn");
+    if (!profileBtn) return;
+
+    profileBtn.addEventListener("click", () => {
+        console.log("Profile clicked");
+    });
+})();
+
 /* ===== Logout Button =====
    Placeholder handler — replace the body with real session/auth teardown
    once the backend exists, e.g. clearing the session token and redirecting:
