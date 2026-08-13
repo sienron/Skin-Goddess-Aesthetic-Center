@@ -49,6 +49,7 @@
   html,
   body {
     height: 100%;
+    overflow-x: hidden;
   }
   
   body {
@@ -2158,7 +2159,7 @@
   
   
   
-  .homepage *{
+  .homepage *:where(:not(.public-header, .public-header *, .mobile-nav-drawer, .mobile-nav-drawer *, .mobile-nav-overlay)){
     margin:0;
     padding:0;
   }
