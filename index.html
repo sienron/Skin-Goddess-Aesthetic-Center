@@ -14,7 +14,7 @@
     <header class="public-header">
 
         <div class="logo-container">
-            <img id="logo" src="images/logo_horizontal.jpg" alt="Skin Goddess Aesthetic Center logo">
+          <a href="index.html"><img id="logo" src="images/logo_horizontal.jpg" alt="Skin Goddess Aesthetic Center logo"></a>
         </div>
 
         <nav class="public-nav">
@@ -22,7 +22,6 @@
                 <li><a href="index.html" class="active">Home</a></li>
                 <li><a href="#services">Services</a></li>
                 <li><a href="#">About</a></li>
-                <li><a href="#feedback">Results</a></li>
                 <li><a href="#">Contact</a></li>
             </ul>
         </nav>
@@ -161,37 +160,350 @@
     <p class="treatments-lede">Each treatment is personalized around your unique skin concerns and goals, delivered by our certified aesthetic specialists.</p>
   </div>
 
-  <div class="treatments-grid">
+  <div class="treatments-carousel-wrap">
 
-    <article class="treatment-card">
-      <div class="card-media"><img src="images/HydratingFacialImg.png" alt="Hydrating Facial treatment"></div>
-      <div class="card-body">
-        <h3>Hydrating Facial</h3>
-        <div class="card-meta">60 MIN &middot; FROM &#8369;1,200</div>
-        <p>A deep-cleansing, moisture-rich facial that restores radiance and softness. Suitable for all skin types.</p>
-        <a href="#" class="learn-more">LEARN MORE</a>
-      </div>
-    </article>
+    <button type="button" class="carousel-nav carousel-nav--prev" id="carouselPrev" aria-label="Rewind treatments">
+      <img src="icons/arrow-left.svg" alt="" class="carousel-nav-icon">
+    </button>
 
-    <article class="treatment-card">
-      <div class="card-media"><img src="images/SkinWhiteningImg.png" alt="Skin Whitening treatment"></div>
-      <div class="card-body">
-        <h3>Skin Whitening</h3>
-        <div class="card-meta">90 MIN &middot; FROM &#8369;1,800</div>
-        <p>Science-backed brightening that targets dark spots and uneven tone for a luminous, radiant finish.</p>
-        <a href="#" class="learn-more">LEARN MORE</a>
-      </div>
-    </article>
+    <div class="treatments-carousel" id="treatmentsCarousel">
+      <div class="treatments-track" id="treatmentsTrack">
 
-    <article class="treatment-card">
-      <div class="card-media"><img src="images/AntiAgingTherapyImg.png" alt="Anti-Aging Therapy treatment"></div>
-      <div class="card-body">
-        <h3>Anti-Aging Therapy</h3>
-        <div class="card-meta">75 MIN &middot; FROM &#8369;2,500</div>
-        <p>Advanced collagen-stimulating treatments that reduce fine lines and restore your skin's natural youthfulness.</p>
-        <a href="#" class="learn-more">LEARN MORE</a>
+        <!-- Card set (16) — repeated once below so the scroll loops seamlessly -->
+
+      <article class="treatment-card">
+        <div class="card-media"><img src="images/HydratingFacialImg.png" alt="Hydrating Facial treatment"></div>
+        <div class="card-body">
+          <h3>Hydrating Facial</h3>
+          <div class="card-meta">60 MIN &middot; FROM &#8369;1,200</div>
+          <p>A deep-cleansing, moisture-rich facial that restores radiance and softness. Suitable for all skin types.</p>
+          <a href="#" class="learn-more">LEARN MORE</a>
+        </div>
+      </article>
+
+      <article class="treatment-card">
+        <div class="card-media"><img src="images/SkinWhiteningImg.png" alt="Skin Whitening treatment"></div>
+        <div class="card-body">
+          <h3>Skin Whitening</h3>
+          <div class="card-meta">90 MIN &middot; FROM &#8369;1,800</div>
+          <p>Science-backed brightening that targets dark spots and uneven tone for a luminous, radiant finish.</p>
+          <a href="#" class="learn-more">LEARN MORE</a>
+        </div>
+      </article>
+
+      <article class="treatment-card">
+        <div class="card-media"><img src="images/AntiAgingTherapyImg.png" alt="Anti-Aging Therapy treatment"></div>
+        <div class="card-body">
+          <h3>Anti-Aging Therapy</h3>
+          <div class="card-meta">75 MIN &middot; FROM &#8369;2,500</div>
+          <p>Advanced collagen-stimulating treatments that reduce fine lines and restore your skin's natural youthfulness.</p>
+          <a href="#" class="learn-more">LEARN MORE</a>
+        </div>
+      </article>
+
+      <article class="treatment-card">
+        <div class="card-media card-media--placeholder"><span>E</span></div>
+        <div class="card-body">
+          <h3>Eyelash Extension</h3>
+          <div class="card-meta">90 MIN &middot; FROM &#8369;350</div>
+          <p>Full lash sets from classic to mega volume for a fuller, more dramatic lash look. Infill and removal services are also available for maintenance.</p>
+          <a href="#" class="learn-more">LEARN MORE</a>
+        </div>
+      </article>
+
+      <article class="treatment-card">
+        <div class="card-media card-media--placeholder"><span>P</span></div>
+        <div class="card-body">
+          <h3>Paraffin Therapy</h3>
+          <div class="card-meta">30 MIN &middot; FROM &#8369;299</div>
+          <p>A warm paraffin wax treatment for hands and feet that softens skin and soothes joints. Great as a quick add-on or standalone relaxation service.</p>
+          <a href="#" class="learn-more">LEARN MORE</a>
+        </div>
+      </article>
+
+      <article class="treatment-card">
+        <div class="card-media card-media--placeholder"><span>H</span></div>
+        <div class="card-body">
+          <h3>Hand Treatment</h3>
+          <div class="card-meta">45 MIN &middot; FROM &#8369;199</div>
+          <p>Classic and soft gel manicure services to keep nails clean and well-groomed. Ideal for regular upkeep or special occasions.</p>
+          <a href="#" class="learn-more">LEARN MORE</a>
+        </div>
+      </article>
+
+      <article class="treatment-card">
+        <div class="card-media card-media--placeholder"><span>C</span></div>
+        <div class="card-body">
+          <h3>Chemical Peeling (TCA)</h3>
+          <div class="card-meta">60 MIN &middot; FROM &#8369;2,000</div>
+          <p>TCA peels that target uneven skin tone and texture across the face and body. Areas range from small zones like elbows to full-body treatments.</p>
+          <a href="#" class="learn-more">LEARN MORE</a>
+        </div>
+      </article>
+
+      <article class="treatment-card">
+        <div class="card-media card-media--placeholder"><span>T</span></div>
+        <div class="card-body">
+          <h3>Threading Services</h3>
+          <div class="card-meta">15 MIN &middot; FROM &#8369;200</div>
+          <p>Precise hair removal for eyebrows, upper lip, and lower lip using traditional threading. A quick, low-irritation option for facial hair grooming.</p>
+          <a href="#" class="learn-more">LEARN MORE</a>
+        </div>
+      </article>
+
+      <article class="treatment-card">
+        <div class="card-media card-media--placeholder"><span>F</span></div>
+        <div class="card-body">
+          <h3>Foot Treatment</h3>
+          <div class="card-meta">45 MIN &middot; FROM &#8369;299</div>
+          <p>Foot spa and pedicure services designed to relax and refresh tired feet. Add-on foot spa options are available for a more indulgent experience.</p>
+          <a href="#" class="learn-more">LEARN MORE</a>
+        </div>
+      </article>
+
+      <article class="treatment-card">
+        <div class="card-media card-media--placeholder"><span>S</span></div>
+        <div class="card-body">
+          <h3>Soft Gel Nail Extensions</h3>
+          <div class="card-meta">75 MIN &middot; FROM &#8369;1,300</div>
+          <p>Durable soft gel extensions available in short, medium, and long lengths. Nail art, rhinestones, and other add-ons can enhance the final look.</p>
+          <a href="#" class="learn-more">LEARN MORE</a>
+        </div>
+      </article>
+
+      <article class="treatment-card">
+        <div class="card-media card-media--placeholder"><span>H</span></div>
+        <div class="card-body">
+          <h3>Hair Removal (IPL-HR)</h3>
+          <div class="card-meta">30 MIN &middot; FROM &#8369;2,000</div>
+          <p>IPL-based hair removal for targeted areas like underarms and bikini line up to full-body sessions. A long-term solution for smoother, hair-free skin.</p>
+          <a href="#" class="learn-more">LEARN MORE</a>
+        </div>
+      </article>
+
+      <article class="treatment-card">
+        <div class="card-media card-media--placeholder"><span>D</span></div>
+        <div class="card-body">
+          <h3>Drip / Shot (ED/GS)</h3>
+          <div class="card-meta">45 MIN &middot; FROM &#8369;1,000</div>
+          <p>IV drips and shots formulated for anti-aging, immune support, slimming, and whitening. Delivers nutrients directly for faster, noticeable results.</p>
+          <a href="#" class="learn-more">LEARN MORE</a>
+        </div>
+      </article>
+
+      <article class="treatment-card">
+        <div class="card-media card-media--placeholder"><span>F</span></div>
+        <div class="card-body">
+          <h3>Facials</h3>
+          <div class="card-meta">60 MIN &middot; FROM &#8369;1,000</div>
+          <p>A range of facials from basic cleansing to advanced treatments like diamond peel and acne programs. Customizable based on skin concerns and goals.</p>
+          <a href="#" class="learn-more">LEARN MORE</a>
+        </div>
+      </article>
+
+      <article class="treatment-card">
+        <div class="card-media card-media--placeholder"><span>T</span></div>
+        <div class="card-body">
+          <h3>Tightening (BT) / Body Fat Reduction</h3>
+          <div class="card-meta">60 MIN &middot; FROM &#8369;1,300</div>
+          <p>Body tightening and fat reduction treatments for the tummy, arms, and thighs. Can be combined with BFR for enhanced contouring results.</p>
+          <a href="#" class="learn-more">LEARN MORE</a>
+        </div>
+      </article>
+
+      <article class="treatment-card">
+        <div class="card-media card-media--placeholder"><span>E</span></div>
+        <div class="card-body">
+          <h3>Electrocautery (ECT)</h3>
+          <div class="card-meta">30 MIN &middot; FROM &#8369;3,000</div>
+          <p>A precise method for removing warts and milia using controlled heat. A quick, in-clinic procedure with minimal downtime.</p>
+          <a href="#" class="learn-more">LEARN MORE</a>
+        </div>
+      </article>
+
+      <article class="treatment-card">
+        <div class="card-media card-media--placeholder"><span>M</span></div>
+        <div class="card-body">
+          <h3>Mesotherapy (MT)</h3>
+          <div class="card-meta">60 MIN &middot; FROM &#8369;3,000</div>
+          <p>Injectable treatments targeting the face, arms, tummy, thighs, or full body for tightening and rejuvenation. Includes BFR-enhanced whole-body options for deeper results.</p>
+          <a href="#" class="learn-more">LEARN MORE</a>
+        </div>
+      </article>
+
+      <!-- Duplicate of the 16 cards above, hidden from assistive tech, so the
+           translateX(-50%) loop in style.css has no visible seam. Keep this
+           block identical to the one above if you add/remove treatments. -->
+      <div class="treatments-track-dupe" aria-hidden="true">
+
+        <article class="treatment-card">
+          <div class="card-media"><img src="images/HydratingFacialImg.png" alt=""></div>
+          <div class="card-body">
+            <h3>Hydrating Facial</h3>
+            <div class="card-meta">60 MIN &middot; FROM &#8369;1,200</div>
+            <p>A deep-cleansing, moisture-rich facial that restores radiance and softness. Suitable for all skin types.</p>
+            <a href="#" class="learn-more">LEARN MORE</a>
+          </div>
+        </article>
+
+        <article class="treatment-card">
+          <div class="card-media"><img src="images/SkinWhiteningImg.png" alt=""></div>
+          <div class="card-body">
+            <h3>Skin Whitening</h3>
+            <div class="card-meta">90 MIN &middot; FROM &#8369;1,800</div>
+            <p>Science-backed brightening that targets dark spots and uneven tone for a luminous, radiant finish.</p>
+            <a href="#" class="learn-more">LEARN MORE</a>
+          </div>
+        </article>
+
+        <article class="treatment-card">
+          <div class="card-media"><img src="images/AntiAgingTherapyImg.png" alt=""></div>
+          <div class="card-body">
+            <h3>Anti-Aging Therapy</h3>
+            <div class="card-meta">75 MIN &middot; FROM &#8369;2,500</div>
+            <p>Advanced collagen-stimulating treatments that reduce fine lines and restore your skin's natural youthfulness.</p>
+            <a href="#" class="learn-more">LEARN MORE</a>
+          </div>
+        </article>
+
+        <article class="treatment-card">
+          <div class="card-media card-media--placeholder"><span>E</span></div>
+          <div class="card-body">
+            <h3>Eyelash Extension</h3>
+            <div class="card-meta">90 MIN &middot; FROM &#8369;350</div>
+            <p>Full lash sets from classic to mega volume for a fuller, more dramatic lash look. Infill and removal services are also available for maintenance.</p>
+            <a href="#" class="learn-more">LEARN MORE</a>
+          </div>
+        </article>
+
+        <article class="treatment-card">
+          <div class="card-media card-media--placeholder"><span>P</span></div>
+          <div class="card-body">
+            <h3>Paraffin Therapy</h3>
+            <div class="card-meta">30 MIN &middot; FROM &#8369;299</div>
+            <p>A warm paraffin wax treatment for hands and feet that softens skin and soothes joints. Great as a quick add-on or standalone relaxation service.</p>
+            <a href="#" class="learn-more">LEARN MORE</a>
+          </div>
+        </article>
+
+        <article class="treatment-card">
+          <div class="card-media card-media--placeholder"><span>H</span></div>
+          <div class="card-body">
+            <h3>Hand Treatment</h3>
+            <div class="card-meta">45 MIN &middot; FROM &#8369;199</div>
+            <p>Classic and soft gel manicure services to keep nails clean and well-groomed. Ideal for regular upkeep or special occasions.</p>
+            <a href="#" class="learn-more">LEARN MORE</a>
+          </div>
+        </article>
+
+        <article class="treatment-card">
+          <div class="card-media card-media--placeholder"><span>C</span></div>
+          <div class="card-body">
+            <h3>Chemical Peeling (TCA)</h3>
+            <div class="card-meta">60 MIN &middot; FROM &#8369;2,000</div>
+            <p>TCA peels that target uneven skin tone and texture across the face and body. Areas range from small zones like elbows to full-body treatments.</p>
+            <a href="#" class="learn-more">LEARN MORE</a>
+          </div>
+        </article>
+
+        <article class="treatment-card">
+          <div class="card-media card-media--placeholder"><span>T</span></div>
+          <div class="card-body">
+            <h3>Threading Services</h3>
+            <div class="card-meta">15 MIN &middot; FROM &#8369;200</div>
+            <p>Precise hair removal for eyebrows, upper lip, and lower lip using traditional threading. A quick, low-irritation option for facial hair grooming.</p>
+            <a href="#" class="learn-more">LEARN MORE</a>
+          </div>
+        </article>
+
+        <article class="treatment-card">
+          <div class="card-media card-media--placeholder"><span>F</span></div>
+          <div class="card-body">
+            <h3>Foot Treatment</h3>
+            <div class="card-meta">45 MIN &middot; FROM &#8369;299</div>
+            <p>Foot spa and pedicure services designed to relax and refresh tired feet. Add-on foot spa options are available for a more indulgent experience.</p>
+            <a href="#" class="learn-more">LEARN MORE</a>
+          </div>
+        </article>
+
+        <article class="treatment-card">
+          <div class="card-media card-media--placeholder"><span>S</span></div>
+          <div class="card-body">
+            <h3>Soft Gel Nail Extensions</h3>
+            <div class="card-meta">75 MIN &middot; FROM &#8369;1,300</div>
+            <p>Durable soft gel extensions available in short, medium, and long lengths. Nail art, rhinestones, and other add-ons can enhance the final look.</p>
+            <a href="#" class="learn-more">LEARN MORE</a>
+          </div>
+        </article>
+
+        <article class="treatment-card">
+          <div class="card-media card-media--placeholder"><span>H</span></div>
+          <div class="card-body">
+            <h3>Hair Removal (IPL-HR)</h3>
+            <div class="card-meta">30 MIN &middot; FROM &#8369;2,000</div>
+            <p>IPL-based hair removal for targeted areas like underarms and bikini line up to full-body sessions. A long-term solution for smoother, hair-free skin.</p>
+            <a href="#" class="learn-more">LEARN MORE</a>
+          </div>
+        </article>
+
+        <article class="treatment-card">
+          <div class="card-media card-media--placeholder"><span>D</span></div>
+          <div class="card-body">
+            <h3>Drip / Shot (ED/GS)</h3>
+            <div class="card-meta">45 MIN &middot; FROM &#8369;1,000</div>
+            <p>IV drips and shots formulated for anti-aging, immune support, slimming, and whitening. Delivers nutrients directly for faster, noticeable results.</p>
+            <a href="#" class="learn-more">LEARN MORE</a>
+          </div>
+        </article>
+
+        <article class="treatment-card">
+          <div class="card-media card-media--placeholder"><span>F</span></div>
+          <div class="card-body">
+            <h3>Facials</h3>
+            <div class="card-meta">60 MIN &middot; FROM &#8369;1,000</div>
+            <p>A range of facials from basic cleansing to advanced treatments like diamond peel and acne programs. Customizable based on skin concerns and goals.</p>
+            <a href="#" class="learn-more">LEARN MORE</a>
+          </div>
+        </article>
+
+        <article class="treatment-card">
+          <div class="card-media card-media--placeholder"><span>T</span></div>
+          <div class="card-body">
+            <h3>Tightening (BT) / Body Fat Reduction</h3>
+            <div class="card-meta">60 MIN &middot; FROM &#8369;1,300</div>
+            <p>Body tightening and fat reduction treatments for the tummy, arms, and thighs. Can be combined with BFR for enhanced contouring results.</p>
+            <a href="#" class="learn-more">LEARN MORE</a>
+          </div>
+        </article>
+
+        <article class="treatment-card">
+          <div class="card-media card-media--placeholder"><span>E</span></div>
+          <div class="card-body">
+            <h3>Electrocautery (ECT)</h3>
+            <div class="card-meta">30 MIN &middot; FROM &#8369;3,000</div>
+            <p>A precise method for removing warts and milia using controlled heat. A quick, in-clinic procedure with minimal downtime.</p>
+            <a href="#" class="learn-more">LEARN MORE</a>
+          </div>
+        </article>
+
+        <article class="treatment-card">
+          <div class="card-media card-media--placeholder"><span>M</span></div>
+          <div class="card-body">
+            <h3>Mesotherapy (MT)</h3>
+            <div class="card-meta">60 MIN &middot; FROM &#8369;3,000</div>
+            <p>Injectable treatments targeting the face, arms, tummy, thighs, or full body for tightening and rejuvenation. Includes BFR-enhanced whole-body options for deeper results.</p>
+            <a href="#" class="learn-more">LEARN MORE</a>
+          </div>
+        </article>
+
       </div>
-    </article>
+
+    </div>
+    </div>
+
+    <button type="button" class="carousel-nav carousel-nav--next" id="carouselNext" aria-label="Fast forward treatments">
+      <img src="icons/arrow-right.svg" alt="" class="carousel-nav-icon">
+    </button>
 
   </div>
 </section>
@@ -483,5 +795,6 @@
 </section>
 
 <script src="header.js"></script>
+<script src="homepage-treatments-carousel.js"></script>
 </body>
 </html>

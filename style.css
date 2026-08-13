@@ -2473,12 +2473,87 @@
     max-width: 520px;
   }
   
-  .treatments-grid{
-    display:grid;
-    grid-template-columns: repeat(3, 1fr);
+  /* Outer wrap positions the nav buttons over the faded edges of
+     the viewport below. */
+  .treatments-carousel-wrap{
+    position: relative;
+  }
+
+  /* Carousel viewport: clips the track, fades the edges so cards
+     don't look like they're cut off mid-scroll. Fade zone is wide
+     so a good chunk of the flanking cards dissolve into the page. */
+  .treatments-carousel{
+    overflow: hidden;
+    width: 100%;
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 clamp(90px, 11vw, 220px), #000 calc(100% - clamp(90px, 11vw, 220px)), transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0, #000 clamp(90px, 11vw, 220px), #000 calc(100% - clamp(90px, 11vw, 220px)), transparent 100%);
+  }
+
+  /* Track holds two back-to-back copies of every card; the scroll
+     itself is driven by JS (treatments-carousel.js) via the Web
+     Animations API so the nav buttons can speed it up/reverse it. */
+  .treatments-track{
+    display:flex;
     gap: 32px;
-  } 
-  
+    width: max-content;
+  }
+
+  /* Wrapper only exists to group the duplicate cards for aria-hidden;
+     it must not become a flex item itself. */
+  .treatments-track-dupe{
+    display: contents;
+  }
+
+  /* Nav buttons: sit on top of the fade zone, half over the carousel. */
+  .carousel-nav{
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 5;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: var(--white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 10px 24px rgba(90,58,30,.14);
+    transition: background .2s ease, box-shadow .2s ease, transform .15s ease;
+  }
+  .carousel-nav:hover{
+    background: var(--gold);
+    box-shadow: 0 12px 28px rgba(90,58,30,.2);
+  }
+  .carousel-nav:hover .carousel-nav-icon{
+    filter: brightness(0) invert(1);
+  }
+  .carousel-nav:active{
+    transform: translateY(-50%) scale(.92);
+  }
+  .carousel-nav:focus-visible{
+    outline: 2px solid var(--gold-dark);
+    outline-offset: 3px;
+  }
+  .carousel-nav--prev{ left: 6px; }
+  .carousel-nav--next{ right: 6px; }
+
+  .carousel-nav-icon{
+    width: 20px;
+    height: 20px;
+    display: block;
+    pointer-events: none;
+    transition: filter .2s ease;
+  }
+
+  @media (max-width: 640px){
+    .carousel-nav{ width: 42px; height: 42px; }
+    .carousel-nav-icon{ width: 16px; height: 16px; }
+    .carousel-nav--prev{ left: 2px; }
+    .carousel-nav--next{ right: 2px; }
+  }
+
   .treatment-card{
     background: var(--white);
     border: 1px solid var(--line);
@@ -2486,6 +2561,8 @@
     overflow:hidden;
     display:flex;
     flex-direction:column;
+    flex: 0 0 320px;
+    width: 320px;
     transition: transform .2s ease, box-shadow .2s ease;
   }
   .treatment-card:hover{
@@ -2509,6 +2586,22 @@
   }
   .treatment-card:hover .card-media img{
     transform: scale(1.05);
+  }
+
+  /* Placeholder photo block for treatments without a photo yet —
+     swap in an <img> (like the cards above) once one is available. */
+  .card-media--placeholder{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background: linear-gradient(135deg, var(--cream-deep), var(--gold) 165%);
+  }
+  .card-media--placeholder span{
+    font-family: var(--font-display);
+    font-weight:600;
+    font-size:46px;
+    color: var(--white);
+    opacity:.9;
   }
   
   .card-body{
@@ -2555,11 +2648,12 @@
   
   /* ---- Responsive ---- */
   @media (max-width: 980px){
-    .treatments-grid{ grid-template-columns: 1fr 1fr; }
+    .treatment-card{ flex-basis: 280px; width: 280px; }
   }
   @media (max-width: 640px){
     .treatments{ padding: 64px 24px 72px; }
-    .treatments-grid{ grid-template-columns: 1fr; }
+    .treatment-card{ flex-basis: 250px; width: 250px; }
+    .card-media{ height: 190px; }
   }
   
   /* ============================================================
