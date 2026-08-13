@@ -23,6 +23,10 @@
             </ul>
         </nav>
 
+        <button type="button" class="hamburger-btn" id="hamburgerBtn" aria-label="Open menu" aria-expanded="false" aria-controls="mobileNavDrawer">
+            <img src="icons/hamburger.svg" alt="" class="hamburger-icon">
+        </button>
+
         <div class="public-header-actions">
 
             <div class="notification-wrap" id="notificationWrap">
@@ -52,6 +56,33 @@
         </div>
 
     </header>
+
+    <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
+
+    <aside class="mobile-nav-drawer" id="mobileNavDrawer" aria-hidden="true" inert>
+
+        <div class="mobile-nav-top">
+            <img src="images/logo_horizontal.jpg" alt="Skin Goddess Aesthetic Center logo" class="mobile-nav-logo">
+            <button type="button" class="mobile-nav-close" id="mobileNavClose" aria-label="Close menu">&times;</button>
+        </div>
+
+        <ul class="mobile-nav-links">
+            <li><a href="#" class="active">Services</a></li>
+            <li><a href="#">About</a></li>
+            <li><a href="#">Results</a></li>
+            <li><a href="#">Contact</a></li>
+        </ul>
+
+        <button class="book-now-btn mobile-nav-book-btn" type="button">BOOK NOW</button>
+
+        <div class="mobile-nav-profile">
+            <div class="profile-avatar">AR</div>
+            <div class="profile-info">
+                <span class="profile-name">Anna Reyes</span>
+            </div>
+        </div>
+
+    </aside>
 
     <main class="booking-main">
 
@@ -256,6 +287,52 @@
         </div>
 
     </main>
+
+    <footer class="public-footer">
+
+        <div class="footer-top">
+
+            <div class="footer-col footer-brand">
+                <div class="footer-logo">
+                    <img src="images/logo_horizontal.jpg" alt="Skin Goddess Aesthetic Center logo">
+                </div>
+                <p class="footer-tagline">Skin Care Clinic that performs non-surgical treatments based on the needs of an individual.</p>
+            </div>
+
+            <div class="footer-col">
+                <p class="footer-heading">SERVICES</p>
+                <ul class="footer-links">
+                    <li><a href="#">Facial Treatments</a></li>
+                    <li><a href="#">Skin Whitening</a></li>
+                    <li><a href="#">Anti Aging</a></li>
+                    <li><a href="#">Laser Therapy</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-col">
+                <p class="footer-heading">PORTAL</p>
+                <ul class="footer-links">
+                    <li><a href="#">Book Online</a></li>
+                    <li><a href="#">View Services</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-col">
+                <p class="footer-heading">CONTACT</p>
+                <p class="footer-contact-line">2nd Floor KW Plaza Building, Pasong Buaya 2 Imus Cavite., Imus, Philippines, 4103</p>
+                <p class="footer-contact-line">+63 945 611 9436</p>
+                <p class="footer-contact-line">info@skingoddess.ph</p>
+                <p class="footer-contact-line">Mon - Sat &middot; 9am &ndash; 6pm</p>
+            </div>
+
+        </div>
+
+        <div class="footer-bottom">
+            <span>&copy; 2025 Skin Goddess Aesthetic Center. All rights reserved.</span>
+            <span>Imus - Philippines</span>
+        </div>
+
+    </footer>
 
     <script src="header.js"></script>
     <script src="appointment-booking.js"></script>

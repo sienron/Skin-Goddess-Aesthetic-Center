@@ -64,3 +64,52 @@
         console.log("Logout requested");
     });
 })();
+
+/* ===== Mobile Nav Drawer (public header) =====
+   Hamburger button toggles an off-canvas drawer + darkened overlay.
+   Only present on the public-facing pages (public-header has no sidebar
+   nav to fall back on at small widths), so this self-guards like the
+   rest of the file and is a no-op on staff pages missing this markup.
+*/
+(function () {
+    const hamburgerBtn = document.getElementById("hamburgerBtn");
+    const mobileNavDrawer = document.getElementById("mobileNavDrawer");
+    const mobileNavOverlay = document.getElementById("mobileNavOverlay");
+    const mobileNavClose = document.getElementById("mobileNavClose");
+
+    if (!hamburgerBtn || !mobileNavDrawer || !mobileNavOverlay) return;
+
+    function openDrawer() {
+        mobileNavDrawer.classList.add("show");
+        mobileNavOverlay.classList.add("show");
+        mobileNavDrawer.setAttribute("aria-hidden", "false");
+        mobileNavDrawer.removeAttribute("inert");
+        hamburgerBtn.setAttribute("aria-expanded", "true");
+        document.body.style.overflow = "hidden";
+    }
+
+    function closeDrawer() {
+        mobileNavDrawer.classList.remove("show");
+        mobileNavOverlay.classList.remove("show");
+        mobileNavDrawer.setAttribute("aria-hidden", "true");
+        mobileNavDrawer.setAttribute("inert", "");
+        hamburgerBtn.setAttribute("aria-expanded", "false");
+        document.body.style.overflow = "";
+    }
+
+    hamburgerBtn.addEventListener("click", openDrawer);
+    mobileNavOverlay.addEventListener("click", closeDrawer);
+
+    if (mobileNavClose) {
+        mobileNavClose.addEventListener("click", closeDrawer);
+    }
+
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") closeDrawer();
+    });
+
+    // Close the drawer if a nav link inside it is clicked.
+    mobileNavDrawer.querySelectorAll("a").forEach((link) => {
+        link.addEventListener("click", closeDrawer);
+    });
+})();
