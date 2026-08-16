@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Skin Goddess Aesthetic Center — Create Account</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Cormorant+Garamond:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">  
+</head>
+<body>
+
+  <!--  
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a href="#" class="brand-mini">
+        <img src="images/fh_logo.jpg" alt="Skin Goddess Aesthetic Center" class="brand-logo">
+      </a>
+
+      <div class="nav-actions">
+        <nav class="main-nav">
+          <a href="#">SERVICES</a>
+          <a href="/AboutUsPage.html">ABOUT</a>
+          <a href="#">RESULTS</a>
+          <a href="/ContactUsPage.html">CONTACT</a>
+        </nav>
+
+        <div class="topbar-actions">
+          <button class="icon-btn" aria-label="Notifications">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+              <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.7 21a2 2 0 01-3.4 0"/>
+            </svg>
+            <span class="dot"></span>
+          </button>
+          <button class="btn btn-gold btn-sm">BOOK NOW</button>
+          <div class="user-chip">
+            <span class="avatar">AR</span>
+            <span class="user-meta">
+              <strong>Anna Reyes</strong>
+              <small>Client</small>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header> -->
+
+  <!--header ni boss sienron-->
+  <header class="public-header">
+
+    <div class="logo-container">
+      <a href="index.html"><img id="logo" src="images/logo_horizontal.jpg" alt="Skin Goddess Aesthetic Center logo"></a>
+    </div>
+
+    <nav class="public-nav">
+        <ul class="public-nav-links">
+            <li><a href="index.html">Home</a></li>
+            <li><a href="#services">Services</a></li>
+            <li><a href="AboutUsPage.html">About</a></li>
+            <li><a href="ContactUsPage.html">Contact</a></li>
+        </ul>
+    </nav>
+
+    <button type="button" class="hamburger-btn" id="hamburgerBtn" aria-label="Open menu" aria-expanded="false" aria-controls="mobileNavDrawer">
+        <img src="icons/hamburger.svg" alt="" class="hamburger-icon">
+    </button>
+
+    <div class="public-header-actions">
+
+        <div class="notification-wrap" id="notificationWrap">
+            <div class="notification" id="notificationBtn">
+                <img src="icons/notification-bell.svg" alt="Notifications" class="notification-bell">
+            </div>
+
+            <div class="notification-dropdown" id="notificationDropdown">
+                <div class="notification-dropdown-header">Notifications</div>
+                <div class="notification-list">
+                    <!-- Notification items would be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <button class="book-now-btn" type="button" onclick="window.location.href='UserAppointment.html'">BOOK NOW</button>
+
+        <div class="public-divider"></div>
+
+        <button type="button" class="profile-row" id="profileBtn">
+            <div class="profile-avatar">AR</div>
+            <div class="profile-info">
+                <span class="profile-name">Anna Reyes</span>
+            </div>
+        </button>
+
+    </div>
+
+  </header>
+
+  <!-- MAIN CONTENT -->
+  <main class="page">
+
+    <!-- LEFT: FORM -->
+    <section class="form-side">
+
+      <div class="side-brand">
+        <img src="images/fh_logo.jpg" alt="Skin Goddess Aesthetic Center" class="brand-logo large">
+      </div>
+
+      <div class="form-wrap">
+
+        <h1>Create your account</h1>
+        <p class="subtitle">Fill in the details below to register as a client</p>
+
+        <!-- STEPPER -->
+        <ol class="stepper">
+          <li class="step active">
+            <span class="step-circle">1</span>
+            <span class="step-label">PERSONAL</span>
+          </li>
+          <li class="step-line"></li>
+          <li class="step">
+            <span class="step-circle">2</span>
+            <span class="step-label">SKIN PROFILE</span>
+          </li>
+          <li class="step-line"></li>
+          <li class="step">
+            <span class="step-circle">3</span>
+            <span class="step-label">CONFIRMATION</span>
+          </li>
+        </ol>
+
+        <form id="registerForm" novalidate>
+
+          <h2 class="section-title">Personal Information</h2>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="firstName">First Name</label>
+              <input type="text" id="firstName" name="firstName" placeholder="e.g. Anna" required>
+            </div>
+            <div class="field">
+              <label for="lastName">Last Name</label>
+              <input type="text" id="lastName" name="lastName" placeholder="e.g. Reyes" required>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="dob">Date of Birth</label>
+              <input type="text" id="dob" name="dob" placeholder="MM / DD / YYYY" onfocus="(this.type='date')" onblur="if(!this.value)this.type='text'">
+            </div>
+            <div class="field">
+              <label for="gender">Gender</label>
+              <select id="gender" name="gender" required>
+                <option value="" selected disabled>Select</option>
+                <option value="female">Female</option>
+                <option value="male">Male</option>
+                <option value="other">Other</option>
+                <option value="prefer-not">Prefer not to say</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="civilStatus">Civil Status</label>
+              <select id="civilStatus" name="civilStatus">
+                <option value="" selected disabled>Select</option>
+                <option value="single">Single</option>
+                <option value="married">Married</option>
+                <option value="widowed">Widowed</option>
+                <option value="separated">Separated</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="contactNumber">Contact Number</label>
+              <input type="tel" id="contactNumber" name="contactNumber" placeholder="+63 9XX XXX XXXX" required>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="address">Home Address</label>
+            <input type="text" id="address" name="address" placeholder="Street, Barangay, City, Province">
+          </div>
+
+          <h2 class="section-title">Skin &amp; Health Profile</h2>
+
+          <div class="field">
+            <label for="allergies">Known Allergies <span class="hint">— leave blank if none</span></label>
+            <input type="text" id="allergies" name="allergies" placeholder="e.g. Fragrance, Lanolin, Salicylic Acid...">
+          </div>
+
+          <div class="field">
+            <label for="conditions">Medical Conditions <span class="hint">— if any</span></label>
+            <input type="text" id="conditions" name="conditions" placeholder="None declared">
+          </div>
+
+          <h2 class="section-title">Account Credentials</h2>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="email">Email Address</label>
+              <input type="email" id="email" name="email" placeholder="your@email.com" required>
+            </div>
+            <div class="field">
+              <label for="password">Password</label>
+              <div class="password-wrap">
+                <input type="password" id="password" name="password" placeholder="Min. 8 characters" minlength="8" required>
+                <button type="button" class="toggle-pw" data-target="password" aria-label="Show password">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                    <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="confirmPassword">Confirm Password</label>
+              <div class="password-wrap">
+                <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Re-enter password" required>
+                <button type="button" class="toggle-pw" data-target="confirmPassword" aria-label="Show password">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                    <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div class="field terms-field">
+              <label class="checkbox-row">
+                <input type="checkbox" id="agree" name="agree" required>
+                <span>I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a></span>
+              </label>
+            </div>
+          </div>
+
+        </form>
+      </div>
+
+      <div class="form-footer">
+        <p class="signin-hint">Already have an account? <a href="/LoginPage.html">Sign in</a></p>
+        <button type="submit" form="registerForm" class="btn-gold create-btn">CREATE ACCOUNT</button>
+      </div>
+
+    </section>
+
+    <!-- RIGHT: IMAGE PANEL -->
+    <!--<section class="image-side"> -->
+    <section class="showcase-panel">
+      <img src="images/showcase.jpg" alt="Skin Goddess Aesthetic Center reception area" class="showcase-image" id="showcaseImage">
+    </section>
+
+  </main>
+
+  <!-- FOOTER 
+  <footer class="site-footer">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="side-brand">
+          <img src="images/fh_logo.jpg" alt="Skin Goddess Aesthetic Center" class="brand-logo">
+        </div>
+        <p>Skin Care Clinic that performs non-surgical treatments based on the needs of an individual.</p>
+      </div>
+
+      <div class="footer-col">
+        <h3>SERVICES</h3>
+        <a href="#">Facial Treatments</a>
+        <a href="#">Skin Whitening</a>
+        <a href="#">Anti Aging</a>
+        <a href="#">Laser Therapy</a>
+      </div>
+
+      <div class="footer-col">
+        <h3>PORTAL</h3>
+        <a href="#">Book Online</a>
+        <a href="#">View Services</a>
+      </div>
+
+      <div class="footer-col">
+        <h3>CONTACT</h3>
+        <p>2nd Floor KW Plaza Building,<br>Pasong Buaya 2 Imus Cavite.,<br>Imus, Philippines, 4103</p>
+        <p>+63 945 611 9436</p>
+        <p>info@skingoddess.ph</p>
+        <p>Mon - Sat · 9am – 6pm</p>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <span>© 2025 Skin Goddess Aesthetic Center. All rights reserved.</span>
+      <span>Imus · Philippines</span>
+    </div>
+  </footer> -->
+
+  <!-- OTP / EMAIL VERIFICATION MODAL                -->
+  <div class="auth-modal-overlay" id="otpModal" hidden>
+    <div class="modal-box otp-modal">
+      <div class="modal-top-bar"></div>
+      <button type="button" class="auth-modal-close" aria-label="Close">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6L6 18M6 6l12 12"/>
+        </svg>
+      </button>
+
+      <div class="modal-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.6">
+          <rect x="2" y="4" width="20" height="16" rx="2"/>
+          <path d="M2 6l10 7 10-7"/>
+        </svg>
+      </div>
+
+      <h2 class="modal-title">Check your email</h2>
+      <p class="modal-subtitle">
+        We sent a 6-digit verification code to<br>
+        <span class="otp-email" id="otpEmailDisplay">j****.torres@email.com</span>
+      </p>
+
+      <div class="otp-inputs">
+        <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" aria-label="Digit 1">
+        <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" aria-label="Digit 2">
+        <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" aria-label="Digit 3">
+        <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" aria-label="Digit 4">
+        <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" aria-label="Digit 5">
+        <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" aria-label="Digit 6">
+      </div>
+
+      <p class="otp-timer">Code expires in <span class="otp-timer-value">04:32</span></p>
+
+      <button type="button" class="auth-btn btn-gold btn-block">VERIFY CODE</button>
+
+      <p class="otp-resend">Didn't receive it? <a href="#" class="link-gold">Resend code</a></p>
+
+      <div class="otp-divider-line"></div>
+
+      <a href="#" class="back-to-signin">&larr; Back to Registration</a>
+
+      <div class="otp-security-note">
+        <p>This code is valid for 5 minutes.</p>
+        <p>Never share this code with anyone.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- footer ni boss sienron-->
+  <footer class="public-footer">
+
+    <div class="footer-top">
+
+        <div class="footer-col footer-brand">
+            <div class="footer-logo">
+                <img src="images/logo_horizontal.jpg" alt="Skin Goddess Aesthetic Center logo">
+            </div>
+            <p class="footer-tagline">Skin Care Clinic that performs non-surgical treatments based on the needs of an individual.</p>
+        </div>
+
+        <div class="footer-col">
+            <p class="footer-heading">SERVICES</p>
+            <ul class="footer-links">
+                <li><a href="#">Facial Treatments</a></li>
+                <li><a href="#">Skin Whitening</a></li>
+                <li><a href="#">Anti Aging</a></li>
+                <li><a href="#">Laser Therapy</a></li>
+            </ul>
+        </div>
+
+        <div class="footer-col">
+            <p class="footer-heading">PORTAL</p>
+            <ul class="footer-links">
+                <li><a href="#">Book Online</a></li>
+                <li><a href="#">View Services</a></li>
+            </ul>
+        </div>
+
+        <div class="footer-col">
+            <p class="footer-heading">CONTACT</p>
+            <p class="footer-contact-line">2nd Floor KW Plaza Building, Pasong Buaya 2 Imus Cavite., Imus, Philippines, 4103</p>
+            <p class="footer-contact-line">+63 945 611 9436</p>
+            <p class="footer-contact-line">info@skingoddess.ph</p>
+            <p class="footer-contact-line">Mon - Sat &middot; 9am &ndash; 6pm</p>
+        </div>
+
+    </div>
+
+    <div class="footer-bottom">
+        <span>&copy; 2025 Skin Goddess Aesthetic Center. All rights reserved.</span>
+        <span>Imus - Philippines</span>
+    </div>
+
+  </footer>
+
+  <script src="registration.js"></script>
+  <script src="header.js"></script>
+
+</body>
+</html>

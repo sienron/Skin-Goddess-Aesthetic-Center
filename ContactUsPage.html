@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contact Us | Skin Goddess Aesthetic Center</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="contact-page">
+
+  <!--by boss sienron-->
+  <header class="public-header">
+
+    <div class="logo-container">
+        <img id="logo" src="images/logo_horizontal.jpg" alt="Skin Goddess Aesthetic Center logo">
+    </div>
+
+    <nav class="public-nav">
+        <ul class="public-nav-links">
+            <li><a href="#" class="active">Services</a></li>
+            <li><a href="AboutUsPage.html">About</a></li>
+            <li><a href="#">Results</a></li>
+            <li><a href="ContactUsPage.html">Contact</a></li>
+        </ul>
+    </nav>
+
+    <div class="public-header-actions">
+
+        <div class="notification-wrap" id="notificationWrap">
+            <div class="notification" id="notificationBtn">
+                <img src="icons/notification-bell.svg" alt="Notifications" class="notification-bell">
+            </div>
+
+            <div class="notification-dropdown" id="notificationDropdown">
+                <div class="notification-dropdown-header">Notifications</div>
+                <div class="notification-list">
+                    <!-- Notification items would be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <button class="book-now-btn" type="button">BOOK NOW</button>
+
+        <div class="public-divider"></div>
+
+        <button type="button" class="profile-row" id="profileBtn">
+            <div class="profile-avatar">AR</div>
+            <div class="profile-info">
+                <span class="profile-name">Anna Reyes</span>
+            </div>
+        </button>
+
+    </div>
+
+  </header>
+
+  <main class="contact-main">
+
+    <div class="contact-hero">
+      <p class="contact-breadcrumb">HOME &middot; CONTACT US</p>
+      <h1 class="contact-title">Get in <span class="text-gold">Touch</span></h1>
+    </div>
+
+    <div class="contact-grid">
+
+      <!-- Left column: map + contact info -->
+      <section class="contact-info-col">
+        <div class="contact-map">
+          <iframe
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3864.6185871284347!2d120.9652764749822!3d14.391465986070484!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2110358e5909487f%3A0x6f33d234862041eb!2sSkin-Goddess%20Aesthetic%20Center!5e0!3m2!1sen!2sph!4v1785746223191!5m2!1sen!2sph"
+            width="100%"
+            height="384"
+            style="border:0;"
+            allowfullscreen=""
+            loading="lazy"
+            referrerpolicy="strict-origin-when-cross-origin"
+            title="Skin Goddess Aesthetic Center location">
+          </iframe>
+        </div>
+
+        <div class="contact-info-card">
+          <p class="section-label">FIND US</p>
+
+          <div class="info-row">
+            <span class="info-icon" aria-hidden="true">📍</span>
+            <div> 
+
+                
+              <p class="info-title">Skin Goddess Aesthetic Center</p>
+              <p class="info-sub">2nd Floor KW Plaza Building, Pasong Buaya 2 </p>
+              <p class="info-sub">Imus Cavite., Imus, Philippines, 4103</p>
+            </div>
+          </div>
+
+          <div class="info-row">
+            <span class="info-icon" aria-hidden="true">📞</span>
+            <div>
+              <p class="info-title">+63 945 611 9436</p>
+              <p class="info-sub">Mon &ndash; Sat &middot; 9:00 AM &ndash; 6:00 PM</p>
+            </div>
+          </div>
+
+          <div class="info-row">
+            <span class="info-icon" aria-hidden="true">✉️</span>
+            <div>
+              <p class="info-title">info@skingoddess.ph</p>
+            </div>
+          </div>
+
+          <p class="section-label">FOLLOW US</p>
+          <div class="social-row">
+            <a href="https://www.facebook.com/profile.php?id=100063979185153" class="social-icon" aria-label="Facebook" target="_blank">f</a>
+            <a href="#" class="social-icon" aria-label="Instagram">◎</a>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right column: contact form -->
+      <section class="contact-form-col">
+        <p class="section-label">SEND A MESSAGE</p>
+        <h2 class="form-title">We'd love to <span class="text-gold-italic">hear from you.</span></h2>
+        <p class="form-subtitle">Fill out the form below and our team will get back to you within 24 hours.</p>
+
+        <form id="contactForm" class="contact-form" novalidate>
+          <div class="contact-form-row two-col">
+            <div class="form-field">
+              <label for="firstName">FIRST NAME</label>
+              <input type="text" id="firstName" name="firstName" placeholder="Maria" required />
+            </div>
+            <div class="form-field">
+              <label for="lastName">LAST NAME</label>
+              <input type="text" id="lastName" name="lastName" placeholder="Santos" required />
+            </div>
+          </div>
+
+          <div class="contact-form-row">
+            <div class="form-field">
+              <label for="email">EMAIL ADDRESS</label>
+              <input type="email" id="email" name="email" placeholder="maria@email.com" required />
+            </div>
+          </div>
+
+          <div class="contact-form-row">
+            <div class="form-field">
+              <label for="phone">PHONE NUMBER</label>
+              <input type="tel" id="phone" name="phone" placeholder="+63 9XX XXX XXXX" />
+            </div>
+          </div>
+
+          <div class="contact-form-row">
+            <div class="form-field">
+              <label for="subject">SUBJECT</label>
+              <select id="subject" name="subject" required>
+                <option value="" disabled selected>Select inquiry type</option>
+                <option value="booking">Booking Inquiry</option>
+                <option value="services">Services Inquiry</option>
+                <option value="feedback">Feedback</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="contact-form-row">
+            <div class="form-field">
+              <label for="message">MESSAGE</label>
+              <textarea id="message" name="message" rows="4" placeholder="Write your message here..." required></textarea>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-send">SEND MESSAGE</button>
+          <p id="formStatus" class="form-status" role="status" aria-live="polite"></p>
+        </form>
+      </section>
+
+    </div>
+  </main>
+
+  <footer class="public-footer">
+
+    <div class="footer-top">
+
+        <div class="footer-col footer-brand">
+            <div class="footer-logo">
+                <img src="images/logo_horizontal.jpg" alt="Skin Goddess Aesthetic Center logo">
+            </div>
+            <p class="footer-tagline">Skin Care Clinic that performs non-surgical treatments based on the needs of an individual.</p>
+        </div>
+
+        <div class="footer-col">
+            <p class="footer-heading">SERVICES</p>
+            <ul class="footer-links">
+                <li><a href="#">Facial Treatments</a></li>
+                <li><a href="#">Skin Whitening</a></li>
+                <li><a href="#">Anti Aging</a></li>
+                <li><a href="#">Laser Therapy</a></li>
+            </ul>
+        </div>
+
+        <div class="footer-col">
+            <p class="footer-heading">PORTAL</p>
+            <ul class="footer-links">
+                <li><a href="#">Book Online</a></li>
+                <li><a href="#">View Services</a></li>
+            </ul>
+        </div>
+
+        <div class="footer-col">
+            <p class="footer-heading">CONTACT</p>
+            <p class="footer-contact-line">2nd Floor KW Plaza Building, Pasong Buaya 2 Imus Cavite., Imus, Philippines, 4103</p>
+            <p class="footer-contact-line">+63 945 611 9436</p>
+            <p class="footer-contact-line">info@skingoddess.ph</p>
+            <p class="footer-contact-line">Mon - Sat &middot; 9am &ndash; 6pm</p>
+        </div>
+
+    </div>
+
+    <div class="footer-bottom">
+        <span>&copy; 2025 Skin Goddess Aesthetic Center. All rights reserved.</span>
+        <span>Imus - Philippines</span>
+    </div>
+
+  </footer>
+
+  <script src="contact-us.js"></script>
+  <script src="header.js"></script>
+
+</body>
+</html>

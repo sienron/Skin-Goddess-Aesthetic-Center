@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login | Skin Goddess Aesthetic Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div class="top-accent-bar"></div>
+  <!--<header class="site-header">
+    <a href="/" class="brand">
+      <img src="images/fh_logo.jpg" alt="Skin Goddess Aesthetic Center" class="brand-logo-img" />
+    </a>
+
+    <div class="header-right">
+      <nav class="main-nav">
+        <a href="/services">SERVICES</a>
+        <a href="/AboutUsPage.html">ABOUT</a>
+        <a href="/results">RESULTS</a>
+        <a href="/ContactUsPage.html">CONTACT</a>
+      </nav>
+
+      <div class="header-actions">
+        <div class="notif-wrap">
+          <button class="icon-btn" id="notifBtn" aria-haspopup="true" aria-expanded="false" aria-label="Notifications" type="button">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4a1.5 1.5 0 00-3 0v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" fill="#8A837A"/>
+            </svg>
+            <span class="notif-badge" id="notifBadge">2</span>
+          </button>
+          <div class="notif-dropdown" id="notifDropdown" hidden>
+            <p class="notif-item">Your appointment tomorrow at 2:00 PM is confirmed.</p>
+            <p class="notif-item">New promo: 20% off Laser Therapy this month.</p>
+          </div>
+        </div>
+
+        <a href="/booking" class="btn btn-gold btn-sm">BOOK NOW</a>
+
+        <div class="user-chip-wrap">
+          <button class="user-chip" id="profileBtn" aria-haspopup="true" aria-expanded="false" type="button">
+            <span class="avatar">AR</span>
+            <div class="user-meta">
+              <span class="user-name">Anna Reyes</span>
+              <span class="user-role"><i class="dot"></i>Client</span>
+            </div>
+          </button>
+
+        </div>
+      </div>
+    </div>
+  </header> -->
+
+  <!--header ni boss sienron-->
+  <header class="public-header">
+
+    <div class="logo-container">
+      <a href="index.html"><img id="logo" src="images/logo_horizontal.jpg" alt="Skin Goddess Aesthetic Center logo"></a>
+    </div>
+
+    <nav class="public-nav">
+        <ul class="public-nav-links">
+            <li><a href="index.html">Home</a></li>
+            <li><a href="#services">Services</a></li>
+            <li><a href="AboutUsPage.html">About</a></li>
+            <li><a href="ContactUsPage.html">Contact</a></li>
+        </ul>
+    </nav>
+
+    <button type="button" class="hamburger-btn" id="hamburgerBtn" aria-label="Open menu" aria-expanded="false" aria-controls="mobileNavDrawer">
+        <img src="icons/hamburger.svg" alt="" class="hamburger-icon">
+    </button>
+
+    <div class="public-header-actions">
+
+        <div class="notification-wrap" id="notificationWrap">
+            <div class="notification" id="notificationBtn">
+                <img src="icons/notification-bell.svg" alt="Notifications" class="notification-bell">
+            </div>
+
+            <div class="notification-dropdown" id="notificationDropdown">
+                <div class="notification-dropdown-header">Notifications</div>
+                <div class="notification-list">
+                    <!-- Notification items would be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <button class="book-now-btn" type="button" onclick="window.location.href='UserAppointment.html'">BOOK NOW</button>
+
+        <div class="public-divider"></div>
+
+        <button type="button" class="profile-row" id="profileBtn">
+            <div class="profile-avatar">AR</div>
+            <div class="profile-info">
+                <span class="profile-name">Anna Reyes</span>
+            </div>
+        </button>
+
+    </div>
+
+  </header>
+
+  <main class="login-layout">
+
+    <section class="login-panel">
+      <div class="login-panel-inner">
+
+        <h1 class="welcome-title">Welcome</h1>
+        <p class="welcome-sub">Sign in to your account to continue</p>
+
+        <div class="step-indicator">
+          <span class="step-line active"></span>
+          <span class="step-dot active"></span>
+          <span class="step-line"></span>
+        </div>
+
+        <form id="login-form" class="login-form" novalidate>
+
+          <div class="auth-form-group">
+            <label for="email">EMAIL ADDRESS</label>
+            <input type="email" id="email" name="email" placeholder="your@email.com" autocomplete="email" required />
+            <span class="field-error" data-error-for="email"></span>
+          </div>
+
+          <div class="auth-form-group">
+            <label for="password">PASSWORD</label>
+            <div class="password-field">
+              <input type="password" id="password" name="password" placeholder="••••••••••" autocomplete="current-password" required />
+              <button type="button" class="toggle-password" id="togglePassword" aria-label="Show password">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7z" stroke="#B0AAA3" stroke-width="1.5"/>
+                  <circle cx="12" cy="12" r="3" stroke="#B0AAA3" stroke-width="1.5"/>
+                </svg>
+              </button>
+            </div>
+            <span class="field-error" data-error-for="password"></span>
+          </div>
+
+          <div class="auth-form-row">
+            <label class="checkbox-label">
+              <input type="checkbox" id="staysignedin" name="staysignedin" />
+              <span>Stay Signed In</span>
+            </label>
+            <a href="/forgot-password" class="link-gold" id="forgotPasswordLink">Forgot password?</a>
+          </div>
+
+          <span class="field-error" data-error-for="form"></span>
+
+          <button type="submit" class="auth-btn btn-gold btn-block" id="submitBtn">
+            <span class="btn-label">SIGN IN</span>
+          </button>
+
+          <div class="divider"><span>or</span></div>
+
+          <p class="signup-prompt">Don't have an account?</p>
+
+          <a href="/Registration.html" class="auth-btn auth-btn-outline btn-block">CREATE AN ACCOUNT</a>
+
+        </form>
+
+        <p class="legal-text">
+          By signing up you agree to our <a href="/terms">Terms of Service</a> and <a href="/privacy">Privacy Policy</a>
+        </p>
+        <p class="legal-copy">© 2026 Skin Goddess Aesthetic Center · Las Piñas, Metro Manila</p>
+      </div>
+    </section>
+
+    <section class="showcase-panel">
+      <img src="images/showcase.jpg" alt="Skin Goddess Aesthetic Center treatment" class="showcase-image" id="showcaseImage" />
+    </section>
+
+  </main>
+
+  <!--  
+  <footer class="site-footer footer-flat">
+    <div class="footer-col brand-col">
+      <a href="/" class="brand">
+        
+        <img src="images/fh_logo.jpg" alt="Skin Goddess Aesthetic Center" class="brand-logo-img" />
+      </a>
+      <p class="footer-desc">Skin Care Clinic that performs non-surgical treatments based on the needs of an individual.</p>
+    </div>
+
+    <div class="footer-col">
+      <h4>SERVICES</h4>
+      <a href="/services/facial">Facial Treatments</a>
+      <a href="/services/whitening">Skin Whitening</a>
+      <a href="/services/anti-aging">Anti Aging</a>
+      <a href="/services/laser">Laser Therapy</a>
+    </div>
+
+    <div class="footer-col">
+      <h4>PORTAL</h4>
+      <a href="/booking">Book Online</a>
+      <a href="/services">View Services</a>
+    </div>
+
+    <div class="footer-col">
+      <h4>CONTACT</h4>
+      <p>2nd Floor KW Plaza Building, Pasong Buaya 2 Imus Cavite., Imus, Philippines, 4103</p>
+      <p>+63 945 611 9436</p>
+      <p>info@skingoddess.ph</p>
+      <p>Mon - Sat · 9am – 6pm</p>
+    </div>
+
+    <div class="footer-bottom">
+      <span>© 2025 Skin Goddess Aesthetic Center. All rights reserved.</span>
+      <span>Imus · Philippines</span>
+    </div>
+  </footer> -->
+
+  <!-- footer ni boss sienron  -->
+  <footer class="public-footer">
+
+    <div class="footer-top">
+
+        <div class="footer-col footer-brand">
+            <div class="footer-logo">
+                <img src="images/logo_horizontal.jpg" alt="Skin Goddess Aesthetic Center logo">
+            </div>
+            <p class="footer-tagline">Skin Care Clinic that performs non-surgical treatments based on the needs of an individual.</p>
+        </div>
+
+        <div class="footer-col">
+            <p class="footer-heading">SERVICES</p>
+            <ul class="footer-links">
+                <li><a href="#">Facial Treatments</a></li>
+                <li><a href="#">Skin Whitening</a></li>
+                <li><a href="#">Anti Aging</a></li>
+                <li><a href="#">Laser Therapy</a></li>
+            </ul>
+        </div>
+
+        <div class="footer-col">
+            <p class="footer-heading">PORTAL</p>
+            <ul class="footer-links">
+                <li><a href="#">Book Online</a></li>
+                <li><a href="#">View Services</a></li>
+            </ul>
+        </div>
+
+        <div class="footer-col">
+            <p class="footer-heading">CONTACT</p>
+            <p class="footer-contact-line">2nd Floor KW Plaza Building, Pasong Buaya 2 Imus Cavite., Imus, Philippines, 4103</p>
+            <p class="footer-contact-line">+63 945 611 9436</p>
+            <p class="footer-contact-line">info@skingoddess.ph</p>
+            <p class="footer-contact-line">Mon - Sat &middot; 9am &ndash; 6pm</p>
+        </div>
+
+    </div>
+
+    <div class="footer-bottom">
+        <span>&copy; 2025 Skin Goddess Aesthetic Center. All rights reserved.</span>
+        <span>Imus - Philippines</span>
+    </div>
+
+  </footer>
+
+  <div class="auth-modal-overlay" id="forgotPasswordOverlay" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="forgotPasswordTitle">
+      <div class="modal-top-bar"></div>
+      <button type="button" class="auth-modal-close" id="closeForgotPassword" aria-label="Close">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M1 1L13 13M13 1L1 13" stroke="#8A837A" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </button>
+
+      <div class="modal-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="5" y="10" width="14" height="10" rx="2" stroke="#1A1714" stroke-width="1.5"/>
+          <path d="M8 10V7a4 4 0 018 0v3" stroke="#1A1714" stroke-width="1.5"/>
+          <circle cx="12" cy="15" r="1.5" fill="#1A1714"/>
+        </svg>
+      </div>
+
+      <h2 class="modal-title" id="forgotPasswordTitle">Forgot your password?</h2>
+      <p class="modal-subtitle">No worries. Enter your registered email<br />and we'll send you a reset link.</p>
+
+      <form id="forgot-password-form" class="modal-form" novalidate>
+        <div class="auth-form-group">
+          <label for="reset-email">EMAIL ADDRESS</label>
+          <input type="email" id="reset-email" name="reset-email" placeholder="your@email.com" autocomplete="email" required />
+          <span class="field-error" data-error-for="reset-email"></span>
+        </div>
+
+        <span class="field-error" data-error-for="reset-form"></span>
+
+        <button type="submit" class="auth-btn btn-gold btn-block" id="resetSubmitBtn">
+          <span class="btn-label">SEND RESET LINK</span>
+        </button>
+      </form>
+
+      <div class="divider"><span>or</span></div>
+
+      <button type="button" class="back-to-signin" id="backToSignIn">
+        <svg width="12" height="10" viewBox="0 0 12 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M11 5H1M1 5L5 1M1 5L5 9" stroke="#C9A84C" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Back to Sign In
+      </button>
+
+      <p class="modal-footnote">Reset link expires in 30 minutes. Check your spam folder if you don't see it.</p>
+    </div>
+  </div>
+
+  <script src="login.js"></script>
+  <script src="header.js"></script>
+  
+</body>
+</html>
