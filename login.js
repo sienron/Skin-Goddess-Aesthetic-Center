@@ -136,8 +136,8 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // Success — redirect based on role, or to a default dashboard
-      window.location.href = data.redirectUrl || '/dashboard';
+      // Success — land on the homepage
+      window.location.href = 'index.html';
     } catch (err) {
       setFieldError('form', 'Something went wrong. Please try again.');
       console.error('Login request failed:', err);
