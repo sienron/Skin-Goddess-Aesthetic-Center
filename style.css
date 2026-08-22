@@ -4667,13 +4667,15 @@ body.services{
   font-weight:50;
   font-size: clamp(2.2rem, 3.6vw, 3.1rem);
   line-height:1.15;
+  padding-top: 15px;
+  padding-bottom: 10px;
   color: var(--white);
   
 }
 
 .services-headline-subheading{
   font-family: var(--font-body);
-  font-weight:50;
+  font-weight:10;
   font-size: 1rem;
   line-height:1.15;
   color: var(--gold);
@@ -4710,7 +4712,7 @@ body.services{
 .services-headline-lede{
   font-family: var(--font-body);
   font-weight:50;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   line-height:1.15;
   color: var(--ink-soft);
   margin-top: 50px;
@@ -5201,7 +5203,7 @@ body.services{
   font-family: var(--font-body);
   font-weight:50;
   font-size: 1rem;
-  margin-bottom: -20px;
+  margin-bottom: 5px;
   color: var(--gold-dark);
   padding-top: 15px;
 }
