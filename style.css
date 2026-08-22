@@ -707,7 +707,7 @@ hr {
 
 @media (max-width: 768px) {
   main {
-      flex-direction: column;
+  flex-direction: column;
   }
 
   .sidebar {
@@ -2658,7 +2658,11 @@ a{ text-decoration:none; color:inherit; }
 
 /* ============================================================
    ALL TREATMENTS
+
    Full-bleed dark photo section with a two-column price list.
+
+.
+
 ============================================================ */
 .all-treatments{
   position:relative;
@@ -4626,4 +4630,635 @@ font-family: var(--font-body);
   flex: none;
   min-height: max-content;
   height: auto;
+}
+
+
+
+
+/*SERVICES PAGE*/
+
+
+
+
+body.services{
+  display: block;
+  height: auto;
+  min-height: 100%;
+  font-family: var(--font-body);
+  color: var(--ink);
+  background: var(--cream);
+  -webkit-font-smoothing: antialiased;
+}
+
+.services-headline{
+  width: auto;
+  height: auto;
+  background-color: black;
+  padding:20px 5vw;
+  text-align: center;
+  background-image: url("images/ServicesBackground.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.services-headline h1{
+  font-family: var(--font-body);
+  font-weight:50;
+  font-size: clamp(2.2rem, 3.6vw, 3.1rem);
+  line-height:1.15;
+  color: var(--white);
+  
+}
+
+.services-headline-subheading{
+  font-family: var(--font-body);
+  font-weight:50;
+  font-size: 1rem;
+  line-height:1.15;
+  color: var(--gold);
+  
+}
+
+.services-headline-horizontal{
+  height: 1px;
+  width:120px;
+  background-color: var(--gold-dark);
+  display: inline-block;
+
+}
+
+.services-headline-dot{
+
+  width: 10px;
+  height: 10px;
+  transform: translateY(4px);
+  border-radius: 50%;
+  background: var(--gold-dark);
+  display: inline-block;
+  margin-left: 50px;
+  margin-right: 50px;
+}
+
+.services-headline-horizontal2{
+  height: 1px;
+  width:120px;
+  background-color: var(--gold-dark);
+  display: inline-block;
+}
+
+.services-headline-lede{
+  font-family: var(--font-body);
+  font-weight:50;
+  font-size: 0.9rem;
+  line-height:1.15;
+  color: var(--ink-soft);
+  margin-top: 50px;
+}
+
+      @media(max-width:900px){
+        .services-headline-horizontal{
+          height: 1px;
+          width:60px;
+          background-color: var(--gold-dark);
+          display: inline-block;
+        }
+
+        .services-headline-dot{
+          width: 10px;
+          height: 10px;
+          transform: translateY(4px);
+          border-radius: 50%;
+          background: var(--gold-dark);
+          display: inline-block;
+          margin-left: 25px;
+          margin-right: 25px;
+        }
+
+        .services-headline-horizontal2{
+          height: 1px;
+          width:60px;
+          background-color: var(--gold-dark);
+          display: inline-block;
+        }
+
+       
+
+      }
+
+
+
+.all-services{
+  width: auto;
+  height: auto;
+  background-color:var(--cream);
+  padding:20px 5vw;
+}
+
+.all-services-title{
+  font-family: var(--font-body);
+  font-size: 0.6rem;
+  line-height:1.15;
+  color: var(--gold);
+  border-bottom: 1px solid var(--gold);
+  padding-bottom: 5px;
+}
+
+
+.category-grid{
+  display:grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 40px;
+}
+ 
+.category-card{
+  background: var(--white);
+  border-radius: 10px;
+  overflow:hidden;
+  box-shadow: 0 10px 28px rgba(90,58,30,.08);
+  display:flex;
+  flex-direction:column;
+}
+ 
+/* ---- Dark media panel ----
+     1. Add  <img src="images/photo.jpg" class="category-photo">
+        as the FIRST child inside .category-media (before the badge)
+   The scrim (.category-media::after) stays either way — that's
+   what keeps the badge/title/price legible over a photo. */
+.category-media{
+  position:relative;
+  min-height: 300px;
+  padding: 20px 24px 22px;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  border-bottom: 3px solid var(--gold);
+  overflow:hidden;
+}
+ 
+
+
+.category-photo{
+  position:absolute;
+  inset:0;
+  width:100%; 
+  height:100%;
+  object-fit:cover;
+  z-index:0;
+}
+ 
+/* the gradient scrim — transparent at the top so the photo shows,
+   darkening from the middle down so the title/price stay readable
+   regardless of what's behind them */
+.category-media::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:1;
+  background: linear-gradient(
+    180deg,
+    rgba(0,0,0,0) 0%,
+    rgba(0,0,0,0) 40%,
+    rgba(0,0,0,.55) 70%,
+    rgba(0,0,0,.82) 100%
+  );
+}
+ 
+.category-badge{
+  position:relative;
+  z-index:2;
+  align-self:flex-start;
+  background: var(--gold);
+  border: 1px solid rgba(255,255,255,.28);
+  color: var(--white);
+  font-size:10.5px;
+  font-weight:700;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  padding: 6px 14px;
+  border-radius: 20px;
+  backdrop-filter: blur(2px);
+}
+ 
+.category-media-text{
+  position:relative;
+  z-index:2;
+}
+ 
+.category-media-text h3{
+  font-family: var(--font-display);
+  font-weight:600;
+  font-size:24px;
+  color: var(--white);
+  margin-bottom:8px;
+}
+ 
+.category-underline{
+  width:70px;
+  height:2px;
+  background: var(--gold);
+  margin-bottom:12px;
+}
+ 
+.category-meta{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+ 
+.category-price-range{
+  font-size:13.5px;
+  color: var(--gold);
+}
+ 
+.category-count{
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:.03em;
+  color: var(--gold);
+}
+ 
+/* ---- White price list body ---- */
+.category-body{
+  padding: 18px 26px 22px;
+}
+.category-body-description{
+  font-weight:100;
+  font-size: 13.5px;
+  color: var(--ink-soft);
+}
+.category-service-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+  font-size:14.5px;
+  color: var(--ink);
+}
+.category-service-row--last{
+  border-bottom:none;
+}
+ 
+.category-service-price{
+  font-weight:100;
+  color: var(--gold);
+  white-space:nowrap;
+}
+ 
+.category-body-note{
+  font-weight:200;
+  font-size: 14px;
+  color: var(--gold-dark);
+  text-align: center;
+  padding-top: 10px;
+}
+
+.category-body-note-add-ons{
+  margin-left: 15px;
+  font-weight:100;
+  font-size: 13px;
+  color: var(--ink-soft);
+  padding: 3px;
+ 
+}
+ 
+/* ---- Responsive ---- */
+@media (max-width: 980px){
+  .category-grid{ grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 640px){
+  .service-categories{ padding: 64px 24px 72px; }
+  .category-grid{ grid-template-columns: 1fr; }
+}
+
+/*3rd CARD ROW
+============================================================ */
+.all-services-title-2{
+  font-family: var(--font-body);
+  font-size: 0.6rem;
+  margin-top: 45px;
+  color: var(--gold);
+  border-bottom: 1px solid var(--gold);
+  padding-bottom: 5px;
+}
+
+.featured-treatment{
+  position:relative;
+  display:flex;
+  align-items:stretch;
+  margin: 0px 5vw 20px;
+  border-radius: 14px;
+  overflow:hidden;
+  background-color: var(--cream);
+  box-shadow: 0 20px 40px rgba(20,15,10,.25);
+}
+ 
+/* ---- Left: photo placeholder panel ----
+   To swap in a real photo later:
+     1. Add <img src="images/your-photo.jpg" class="featured-photo">
+        as the first child of .featured-treatment (before .featured-treatment-bg)
+    
+   Both this panel's width (380px) and the scrim's width must stay
+   equal to .featured-intro's flex-basis below, so they line up. */
+.featured-treatment-bg{
+  position:absolute;
+  top:0; left:0;
+  width:430px;
+  height:100%;
+  z-index:0;
+}
+
+ 
+.featured-photo{
+  position:absolute;
+  top:0; left:0;
+  width:430px;
+  height:100%;
+  object-fit:cover;
+  z-index:0;
+}
+ 
+/* the same "transparent top, dark bottom" scrim used on the
+   category cards — keeps the badge/title readable up top even
+   without darkening, then deepens through the lower half where
+   the subtitle/price/button sit */
+.featured-treatment-scrim{
+  position:absolute;
+  top:0; left:0;
+  width:430px;
+  height:100%;
+  z-index:1;
+  background: linear-gradient(
+    180deg,
+    rgba(0,0,0,0) 0%,
+    rgba(0,0,0,.20) 40%,
+    rgba(0,0,0,.55) 70%,
+    rgba(0,0,0,.85) 100%
+  );
+}
+ 
+.featured-intro{
+  position:relative;
+  z-index:2; /* sits above .featured-treatment-bg/scrim */
+  flex: 0 0 430px;
+  padding: 40px 36px;
+  display:flex;
+  flex-direction:column;
+}
+ 
+.featured-badge{
+  align-self:flex-start;
+  background: rgba(255,255,255,.14);
+  border: 1px solid rgba(255,255,255,.28);
+  color: var(--light-gold);
+  font-size:10.5px;
+  font-weight:700;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  padding: 6px 14px;
+  border-radius: 20px;
+  margin-bottom:26px;
+}
+ 
+.featured-title{
+  font-family: var(--font-display);
+  font-weight:500;
+  font-size: 56px;
+  line-height:1;
+  color: var(--white);
+  margin-bottom:16px;
+}
+ 
+.featured-underline{
+  width:90px;
+  height:2px;
+  background: var(--gold);
+  margin-bottom:16px;
+}
+ 
+.featured-subtitle{
+  font-size:13.5px;
+  color: rgba(255,255,255,.72);
+  margin-bottom:4px;
+}
+ 
+.featured-price-range{
+  font-size:14px;
+  color: rgba(255,255,255,.78);
+  margin-bottom:28px;
+}
+ 
+.featured-cta{
+  align-self:flex-start;
+  margin-top:auto; /* pushes the button to the bottom of the panel */
+  background: var(--gold);
+  color: var(--espresso-dark);
+  font-weight:700;
+  font-size:12.5px;
+  letter-spacing:.05em;
+  text-transform:uppercase;
+  padding: 15px 30px;
+  border-radius: 8px;
+  transition: background .15s ease, transform .15s ease;
+}
+.featured-cta:hover{
+  background:#EFD98F;
+  transform: translateY(-1px);
+}
+ 
+/* ---- Right: permanent dark price-list panel ---- */
+.featured-list{
+  position:relative;
+  z-index:2;
+  flex:1;
+  padding: 32px 40px;
+  background: linear-gradient(160deg, #241811 0%, #170f0a 55%, #100b07 100%);
+}
+ 
+.featured-list-label{
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  color: var(--light-gold);
+  margin-bottom:16px;
+}
+ 
+.featured-rows{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 56px;
+}
+ 
+.featured-rows-col{
+  display:flex;
+  flex-direction:column;
+}
+ 
+.service-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  padding: 13px 0;
+  border-bottom: 1px solid rgba(255,255,255,.1);
+  font-size:14.5px;
+  color: rgba(255,255,255,.92);
+}
+.featured-rows-col .service-row:last-child{
+  border-bottom:none;
+}
+ 
+.service-row .price{
+  color: var(--gold);
+  font-weight:200;
+  white-space:nowrap;
+}
+ 
+.service-highlight{
+  margin-top:14px;
+  padding: 14px 16px;
+  background: rgba(212,169,55,.1);
+  border: 1px solid rgba(212,169,55,.32);
+  border-radius: 8px;
+}
+ 
+.service-highlight-label{
+  font-size:10.5px;
+  font-weight:700;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color: var(--gold);
+  margin-bottom:6px;
+}
+ 
+.service-highlight-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  font-size:15px;
+  font-weight:200;
+  color: var(--white);
+}
+.service-highlight-row .price{
+  font-size:16px;
+  
+}
+ 
+/* ---- Responsive ---- */
+@media (max-width: 900px){
+  .featured-treatment{
+    flex-direction:column;
+  }
+  .featured-treatment-bg,
+  .featured-treatment-scrim, .featured-photo{
+    width:100%;
+    height:380px;
+  }
+  .featured-intro{
+    flex: none;
+    width:100%;
+    height:380px;
+  }
+  .featured-title{ font-size:44px; 
+  }
+  .featured-rows{
+    grid-template-columns: 1fr;
+    column-gap:0;
+  }
+  
+  }
+
+@media (max-width: 480px){
+  .featured-intro,
+  .featured-list{
+    padding: 28px 24px;
+  }
+  .featured-title{ font-size:36px; }
+}
+
+
+
+
+.ready-to-glow-strip{
+  width: auto;
+  height: auto;
+  padding:20px 5vw;
+  text-align: center;
+  border-top: 4px solid var(--gold);
+  background-color: black;
+  background-image: url("images/ServicesBackground.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.ready-to-glow-strip-subheading-2{
+  font-family: var(--font-body);
+  font-weight:50;
+  font-size: 1rem;
+  margin-bottom: -20px;
+  color: var(--gold-dark);
+  padding-top: 15px;
+}
+
+.ready-to-glow-strip-subheading-3{
+  font-family: var(--font-body);
+  font-weight:50;
+  font-size: clamp(2.0rem, 2.5vw, 2.7rem);
+  line-height:1.15;
+  color: var(--white);
+  margin-bottom: -30px;
+  
+}
+
+.rtg-buttons{
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap:5px;
+}
+
+.book-online-btn{
+  margin-top:auto; /* pushes the button to the bottom of the panel */
+  background: var(--gold);
+  color: var(--espresso-dark);
+  font-weight:100;
+  font-size:12.5px;
+  letter-spacing:.05em;
+  text-transform:uppercase;
+  padding: 15px 30px;
+  border-radius: 8px;
+  transition: background .15s ease, transform .15s ease;
+}
+
+.book-online-btn:hover{
+  background:#EFD98F;
+  transform: translateY(-2px);
+}
+
+
+
+.contact-us-btn{
+  margin-top:10px; /* pushes the button to the bottom of the panel */
+  background: black;
+  color: var(--gold);
+  font-weight:100;
+  font-size:12.5px;
+  letter-spacing:.05em;
+  text-transform:uppercase;
+  padding: 15px 30px;
+  border-radius: 8px;
+  border: 1px solid var(--gold);
+  transition: background .15s ease, transform .15s ease;
+}
+
+.contact-us-btn:hover{
+  background:#EFD98F;
+  transform: translateY(-2px);
 }
