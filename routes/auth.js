@@ -1,21 +1,21 @@
 // routes/auth.js
 // Dito nakapaloob ang lahat ng logic para sa Register, Verify OTP, Resend OTP,
-// at Login. Bawat "router.post(...)" sa ibaba ay parang isang hiwalay na
-// "pinto" na may sariling gawain.
+// Login, Forgot Password, Reset Password, at Logout. Bawat "router.post(...)"
+// sa ibaba ay parang isang hiwalay na "pinto" na may sariling gawain.
 
 const express = require('express');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 // Ginagamit natin ang bcryptjs para i-"hash" ang password bago i-save.
-// Ang hashing ay parang isang paraan ng pag-scramble sa password nang
-// hindi na ito ma-reverse pabalik — kaya kahit makita ng iba ang laman
-// ng database, hindi nila makikita ang totoong password.
+// Ang crypto (built-in sa Node) ay ginagamit natin para gumawa ng random
+// na reset tokens para sa forgot password feature.
 
 const router = express.Router();
 // Ang "Router" ay parang isang mini-server na nakatuon lang sa
 // isang specific na grupo ng routes (dito, lahat ng related sa "auth").
 
 const db = require('../db'); // gagamitin natin ito para mag-query sa database
-const { sendOtpEmail } = require('../utils/mailer'); // para makapagpadala ng totoong email
+const { sendOtpEmail, sendPasswordResetEmail } = require('../utils/mailer'); // para makapagpadala ng totoong email
 
 function gumawaNgOtpCode() {
   // Gumagawa ito ng random na 6 digit na numero, hal. "042917"
@@ -27,7 +27,6 @@ function gumawaNgOtpCode() {
 // ROUTE 1: REGISTER (Gumawa ng bagong account)
 // ============================================
 router.post('/register', async (req, res) => {
-  // "req.body" ang laman ng data na ipinadala mula sa Registration form
   const {
     firstName,
     lastName,
@@ -42,29 +41,44 @@ router.post('/register', async (req, res) => {
     password,
   } = req.body;
 
-  // Step 1: siguraduhing may laman ang mga importanteng fields
   if (!firstName || !lastName || !email || !password) {
     return res.status(400).json({ message: 'Fill out all the fields' });
   }
 
+  let bagongUser = null;
+
   try {
-    // Step 2: tignan muna kung existing na ang email na 'to sa database
     const existingUser = await db.query(
-      'SELECT user_id FROM users WHERE email = $1',
+      'SELECT user_id, email_verified FROM users WHERE email = $1',
       [email]
     );
 
     if (existingUser.rows.length > 0) {
-      // May nahanap na — ibig sabihin gamit na ang email na 'to
-      return res.status(409).json({ message: 'This email has already been used.' });
+      const foundUser = existingUser.rows[0];
+
+      if (foundUser.email_verified) {
+        // Real, completed account already exists — block as before
+        return res.status(409).json({ message: 'This email has already been used.' });
+      }
+
+      // Account exists but was never verified — send a fresh code
+      // instead of dead-ending the user here
+      const freshOtpCode = gumawaNgOtpCode();
+      await db.query(
+        `INSERT INTO otp_codes (user_id, code, purpose, expires_at)
+         VALUES ($1, $2, 'email_verification', NOW() + INTERVAL '5 minutes')`,
+        [foundUser.user_id, freshOtpCode]
+      );
+      await sendOtpEmail(email, freshOtpCode);
+
+      return res.status(200).json({
+        message: 'Account already exists but is not verified. A new code has been sent.',
+        userId: foundUser.user_id,
+      });
     }
 
-    // Step 3: i-hash ang password bago i-save (huwag kailanman i-save nang plain text)
     const hashedPassword = await bcrypt.hash(password, 10);
-    // Ang "10" ay tinatawag na "salt rounds" — mas mataas na numero, mas
-    // matagal pero mas secure ang hashing. 10 ay standard/sapat na.
 
-    // Step 4: i-save ang bagong user sa users table
     const insertResult = await db.query(
       `INSERT INTO users
         (email, password_hash, first_name, last_name, date_of_birth, gender,
@@ -85,35 +99,39 @@ router.post('/register', async (req, res) => {
         conditions || null,
       ]
     );
-    // Ang "$1, $2, $3..." ay mga placeholder — pinapalitan sila ng values
-    // sa array sa ibaba nila, sa tamang pagkakasunod-sunod. Ginagawa natin
-    // 'to (sa halip na diretsong ilagay ang values sa SQL string) para
-    // maiwasan ang isang klase ng attack na tinatawag na "SQL injection".
 
-    const bagongUser = insertResult.rows[0]; // ito yung row na kaka-insert lang natin
+    bagongUser = insertResult.rows[0];
 
-    // Step 5: gumawa ng OTP code, i-save sa otp_codes table
     const otpCode = gumawaNgOtpCode();
     await db.query(
       `INSERT INTO otp_codes (user_id, code, purpose, expires_at)
        VALUES ($1, $2, 'email_verification', NOW() + INTERVAL '5 minutes')`,
       [bagongUser.user_id, otpCode]
     );
-    // Ang "NOW() + INTERVAL '5 minutes'" ay isang PostgreSQL function —
-    // kinukuha ang kasalukuyang oras, dinadagdagan ng 5 minuto. Ito na
-    // ang magiging expiration time ng code na 'to.
 
-    // Step 6: ipadala ang OTP code sa totoong email ng user
+    // If this next line fails (e.g. email service is misconfigured),
+    // the catch block below will undo the user we just created —
+    // so retrying registration with the same email works cleanly.
     await sendOtpEmail(bagongUser.email, otpCode);
 
-    // Step 7: sabihin sa frontend na successful — ibalik din ang userId
-    // (kakailanganin 'to sa Verify OTP step mamaya)
     res.status(201).json({
       message: 'Account created. Check email for verification code.',
       userId: bagongUser.user_id,
     });
   } catch (error) {
     console.log('Registration Error:', error);
+
+    // Rollback: if we already created the user row but something
+    // after that failed (like the email), delete the half-finished
+    // account so the email becomes available again for retry.
+    if (bagongUser) {
+      try {
+        await db.query('DELETE FROM users WHERE user_id = $1', [bagongUser.user_id]);
+      } catch (rollbackError) {
+        console.log('Rollback error:', rollbackError);
+      }
+    }
+
     res.status(500).json({ message: 'Error. Try Again.' });
   }
 });
@@ -129,42 +147,33 @@ router.post('/verify-otp', async (req, res) => {
   }
 
   try {
-    // Hanapin ang pinaka-bagong code na ginawa para sa user na 'to,
-    // na hindi pa nagagamit
+    // Note: expiration is now checked directly in SQL (expires_at > NOW())
+    // instead of comparing dates in JavaScript, to avoid timezone mismatch
+    // issues between the server and the database.
     const otpResult = await db.query(
-      `SELECT otp_id, code, expires_at
+      `SELECT otp_id, code
        FROM otp_codes
        WHERE user_id = $1
          AND purpose = 'email_verification'
          AND is_used = FALSE
+         AND expires_at > NOW()
        ORDER BY created_at DESC
        LIMIT 1`,
       [userId]
     );
 
     if (otpResult.rows.length === 0) {
-      return res.status(400).json({ message: 'Resend code.' });
+      return res.status(400).json({ message: 'Code expired or not found. Resend code.' });
     }
 
     const otpRow = otpResult.rows[0];
 
-    // Tignan kung expired na ang code
-    const ngayon = new Date();
-    const expirationTime = new Date(otpRow.expires_at);
-    if (expirationTime < ngayon) {
-      return res.status(400).json({ message: 'Code Expired. Resend code.' });
-    }
-
-    // Tignan kung tugma ang binigay na code sa nakalagay sa database
     if (otpRow.code !== code) {
       return res.status(400).json({ message: 'Wrong code. Try again.' });
     }
 
-    // Tama ang code! I-mark natin na "gamit" na ito, para hindi na
-    // magamit muli (kahit malaman pa ito ng ibang tao)
     await db.query('UPDATE otp_codes SET is_used = TRUE WHERE otp_id = $1', [otpRow.otp_id]);
 
-    // I-mark din natin ang account bilang "verified" na
     await db.query('UPDATE users SET email_verified = TRUE WHERE user_id = $1', [userId]);
 
     res.status(200).json({ message: 'Successful Email verification.' });
@@ -193,8 +202,6 @@ router.post('/resend-otp', async (req, res) => {
 
     const userEmail = userResult.rows[0].email;
 
-    // Parehong logic lang gaya ng sa Register — gumawa ng bagong code,
-    // i-save, ipadala via email
     const bagongOtpCode = gumawaNgOtpCode();
     await db.query(
       `INSERT INTO otp_codes (user_id, code, purpose, expires_at)
@@ -222,31 +229,23 @@ router.post('/login', async (req, res) => {
   }
 
   try {
-    // Hanapin ang user gamit ang email
     const result = await db.query('SELECT * FROM users WHERE email = $1', [email]);
 
     if (result.rows.length === 0) {
-      // Hindi natin sinasabing "walang ganitong email" nang specific —
-      // "Invalid email or password" na lang, para hindi malaman ng
-      // umaatake kung aling emails ang existing sa system natin
       return res.status(401).json({ message: 'Incorrect Email or Password' });
     }
 
     const user = result.rows[0];
 
-    // Ikumpara ang binigay na password sa naka-save na hashed password
     const tamaAngPassword = await bcrypt.compare(password, user.password_hash);
     if (!tamaAngPassword) {
       return res.status(401).json({ message: 'Invalid Email o Password.' });
     }
 
-    // Siguraduhing na-verify na ang email bago payagang makapag-login
     if (!user.email_verified) {
       return res.status(403).json({ message: 'Verify Email to login.' });
     }
 
-    // Tama ang lahat! Sabihin sa frontend kung saan siya dapat i-redirect,
-    // base sa role niya. (Placeholder pa lang ang mga dashboard pages na 'to.)
     const dashboardPerRole = {
       client: '/UserDashboard.html',
       admin: '/AdminDashboard.html',
@@ -255,6 +254,11 @@ router.post('/login', async (req, res) => {
       finance_officer: '/FinanceDashboard.html',
       staff: '/StaffDashboard.html',
     };
+
+    // Save the user's ID into the session — this is what keeps them
+    // "logged in" across future requests
+    req.session.userId = user.user_id;
+    req.session.role = user.role;
 
     res.status(200).json({
       message: 'Successful login.',
@@ -266,6 +270,108 @@ router.post('/login', async (req, res) => {
     console.log('Error login:', error);
     res.status(500).json({ message: 'Error. Try again.' });
   }
+});
+
+// ============================================
+// ROUTE 5: FORGOT PASSWORD (Magpadala ng reset link)
+// ============================================
+router.post('/forgot-password', async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ message: 'Email address is required.' });
+  }
+
+  try {
+    const userResult = await db.query('SELECT user_id, email FROM users WHERE email = $1', [email]);
+
+    if (userResult.rows.length === 0) {
+      return res.status(200).json({ message: 'If that email exists, a reset link has been sent.' });
+    }
+
+    const user = userResult.rows[0];
+
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+    await db.query(
+      `INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)
+       VALUES ($1, $2, NOW() + INTERVAL '30 minutes')`,
+      [user.user_id, tokenHash]
+    );
+
+    const baseUrl = process.env.NODE_ENV === 'production'
+      ? 'https://loginandregisterpage.onrender.com'
+      : 'http://localhost:3000';
+    const resetLink = `${baseUrl}/ResetPassword.html?token=${rawToken}`;
+    await sendPasswordResetEmail(user.email, resetLink);
+
+    res.status(200).json({ message: 'If that email exists, a reset link has been sent.' });
+  } catch (error) {
+    console.log('Forgot password error:', error);
+    res.status(500).json({ message: 'Error. Try again.' });
+  }
+});
+
+// ============================================
+// ROUTE 6: RESET PASSWORD (Gumawa ng bagong password)
+// ============================================
+router.post('/reset-password', async (req, res) => {
+  const { token, newPassword } = req.body;
+
+  if (!token || !newPassword) {
+    return res.status(400).json({ message: 'Token and new password are required.' });
+  }
+
+  try {
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+    // Same fix here — check expiration directly in SQL
+    const tokenResult = await db.query(
+      `SELECT reset_id, user_id
+       FROM password_reset_tokens
+       WHERE token_hash = $1
+         AND is_used = FALSE
+         AND expires_at > NOW()
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [tokenHash]
+    );
+
+    if (tokenResult.rows.length === 0) {
+      return res.status(400).json({ message: 'Invalid or expired reset link.' });
+    }
+
+    const tokenRow = tokenResult.rows[0];
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await db.query('UPDATE users SET password_hash = $1 WHERE user_id = $2', [
+      hashedPassword,
+      tokenRow.user_id,
+    ]);
+
+    await db.query('UPDATE password_reset_tokens SET is_used = TRUE WHERE reset_id = $1', [
+      tokenRow.reset_id,
+    ]);
+
+    res.status(200).json({ message: 'Password has been reset successfully.' });
+  } catch (error) {
+    console.log('Reset password error:', error);
+    res.status(500).json({ message: 'Error. Try again.' });
+  }
+});
+
+// ============================================
+// ROUTE 7: LOGOUT
+// ============================================
+router.post('/logout', (req, res) => {
+  req.session.destroy((error) => {
+    if (error) {
+      console.log('Logout error:', error);
+      return res.status(500).json({ message: 'Error logging out.' });
+    }
+    res.status(200).json({ message: 'Logged out successfully.' });
+  });
 });
 
 module.exports = router;

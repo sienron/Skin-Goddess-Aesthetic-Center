@@ -5264,3 +5264,14 @@ body.services{
   background:#EFD98F;
   transform: translateY(-2px);
 }
+
+/* Reset Password — success state */
+.reset-success {
+  margin-top: 16px;
+}
+
+.reset-success-link {
+  display: inline-block;
+  text-align: center;
+  text-decoration: none;
+}

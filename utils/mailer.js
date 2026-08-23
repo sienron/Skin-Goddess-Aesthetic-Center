@@ -17,7 +17,7 @@ async function sendOtpEmail(toEmail, otpCode) {
     body: JSON.stringify({
       sender: {
         name: 'Skin Goddess Aesthetic Center',
-        email: process.env.EMAIL_USER, // yung sender email na na-verify mo sa Brevo
+        email: process.env.EMAIL_USER,
       },
       to: [{ email: toEmail }],
       subject: 'Ang verification code mo',
@@ -37,8 +37,40 @@ async function sendOtpEmail(toEmail, otpCode) {
     throw new Error(`Hindi naipadala ang email: ${errorText}`);
   }
 }
-// Ang function na 'to ang gagamitin natin sa auth.js — binibigay lang
-// natin ang email address at yung 6-digit code, at siya na ang bahalang
-// mag-format at magpadala ng actual email, sa pamamagitan ng Brevo API.
 
-module.exports = { sendOtpEmail };
+async function sendPasswordResetEmail(toEmail, resetLink) {
+  const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'api-key': process.env.BREVO_API_KEY,
+    },
+    body: JSON.stringify({
+      sender: {
+        name: 'Skin Goddess Aesthetic Center',
+        email: process.env.EMAIL_USER,
+      },
+      to: [{ email: toEmail }],
+      subject: 'Reset your password',
+      htmlContent: `
+        <div style="font-family: sans-serif; max-width: 400px; margin: 0 auto;">
+          <h2 style="color: #C9A84C;">Skin Goddess Aesthetic Center</h2>
+          <p>A password reset was requested for this account. Click the button below to set a new password:</p>
+          <p style="margin: 24px 0;">
+            <a href="${resetLink}" style="background: #C9A84C; color: #1A1714; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">
+              Reset Password
+            </a>
+          </p>
+          <p style="color: #6B6459; font-size: 13px;">This link expires in 30 minutes. If you didn't request this, you can safely ignore this email.</p>
+        </div>
+      `,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Hindi naipadala ang email: ${errorText}`);
+  }
+}
+
+module.exports = { sendOtpEmail, sendPasswordResetEmail };
