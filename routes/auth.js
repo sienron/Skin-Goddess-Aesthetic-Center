@@ -357,8 +357,8 @@ router.post('/reset-password', async (req, res) => {
     res.status(200).json({ message: 'Password has been reset successfully.' });
   } catch (error) {
     console.log('Reset password error:', error);
-    res.status(500).json({ message: 'Error. Try again.' });
-  }
+    res.status(500).json({ message: 'Error. Try again.', debug: error.message });
+}
 });
 
 // ============================================
