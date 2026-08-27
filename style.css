@@ -708,7 +708,6 @@ hr {
 @media (max-width: 768px) {
   main {
   flex-direction: column;
-  flex-direction: column;
   }
 
   .sidebar {
@@ -2433,7 +2432,7 @@ a{ text-decoration:none; color:inherit; }
 }
 
 .treatments-intro{
-  max-width: 640px;
+  max-width: 900px;
   margin-bottom: 52px;
 }
 
@@ -2456,12 +2455,13 @@ a{ text-decoration:none; color:inherit; }
 }
 
 .treatments-heading{
-  font-family: var(--font-body);
-  font-weight:100;
-  font-size: clamp(2.2rem, 3.6vw, 3.1rem);
+  font-family: var(--font-display);
+  font-weight:700;
+  font-size: clamp(1.9rem, 3vw, 2.7rem);
   line-height:1.15;
   color: var(--ink);
-  margin-bottom:20px;
+  margin-bottom:0;
+  white-space: nowrap;
 }
 .treatments-heading .accent{
   color: var(--gold);
@@ -2659,16 +2659,17 @@ a{ text-decoration:none; color:inherit; }
 
 /* ============================================================
    ALL TREATMENTS
-
-   Full-bleed dark photo section with a two-column price list.
-
-.
-
+   Full-bleed photo banner: a stacked display headline on the
+   left, the "How we work" step list on the right (folded in here
+   since it used to be its own separate section below).
 ============================================================ */
 .all-treatments{
   position:relative;
   overflow:hidden;
-  padding: 110px 5vw 90px;
+  min-height: 600px;
+  display:flex;
+  align-items:center;
+  padding: 130px;
 }
 
 .all-treatments-bg{
@@ -2682,115 +2683,70 @@ a{ text-decoration:none; color:inherit; }
   object-fit:cover;
   display:block;
 }
-/* darkens the photo evenly so white/gold text stays readable */
+
 .all-treatments-scrim{
   position:absolute;
   inset:0;
-  background: linear-gradient(180deg, rgba(20,17,13,.42) 0%, rgba(20,17,13,.3) 40%, rgba(20,17,13,.5) 100%);
+  background: linear-gradient(180deg, rgba(20,17,13,.5) 0%, rgba(20,17,13,.38) 45%, rgba(20,17,13,.55) 100%);
 }
 
 .all-treatments-content{
   position:relative;
   z-index:1;
-  /* no max-width/margin here on purpose — this keeps the left and
-     right edges aligned with .treatments above, which is also just
-     bounded by the section's 5vw padding, not centered independently */
+  width:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap: 20%;
 }
 
-.accent-dash{
-  display:block;
-  width:32px;
-  height:2px;
-  background: var(--gold);
-  margin-bottom:22px;
+.all-treatments-copy{
+  flex-shrink:0;
 }
 
 .all-treatments-heading{
   font-family: var(--font-display);
-  font-weight:300;
-  font-size: clamp(2.4rem, 4.4vw, 3.6rem);
+  font-weight:600;
+  font-size: clamp(4.8rem, 5vw, 4rem);
+  line-height:1.25;
   color: var(--white);
-  margin-bottom:18px;
+  margin-bottom:22px;
 }
-
-.all-treatments-lede{
-  font-size:15.5px;
-  color: rgba(255,255,255,.78);
-  margin-bottom:56px;
-}
-
-.price-list{
-  display:grid;
-  grid-template-columns: 1fr 1fr;
-  column-gap: 70px;
-  margin-bottom:56px;
-}
-
-.price-row{
-  display:flex;
-  align-items:flex-start;
-  justify-content:space-between;
-  gap:24px;
-  padding: 22px 0;
-  border-bottom: 1px solid rgba(255,255,255,.14);
-}
-.price-row--last{
-  border-bottom:none;
-}
-
-.price-info h4{
-  font-family: var(--font-display);
+.all-treatments-heading .script{
+  font-family: 'Playfair Display', var(--font-display), serif;
+  font-style:italic;
   font-weight:500;
-  font-size:21px;
   color: var(--gold);
-  margin-bottom:6px;
-}
-.price-info p{
-  font-size:13.5px;
-  color: rgba(255,255,255,.72);
 }
 
-.price-amount{
-  font-family: var(--font-display);
-  font-weight:500;
-  font-size:19px;
-  color: var(--gold);
-  white-space:nowrap;
+.all-treatments-hours{
+  font-size:14px;
+  color: rgba(255,255,255,.85);
+  margin-top: -20px;
+}
+
+.all-treatments-content .hww-steps{
+  width: min(430px, 40%);
   flex-shrink:0;
 }
 
-.view-all-link{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  gap:18px;
-  font-size:12px;
-  font-weight:700;
-  letter-spacing:.12em;
-  color: var(--gold);
-  transition: color .15s ease;
-}
-.view-all-link:hover{ color:#EFD98F; }
-.view-all-line{
-  width:56px;
-  height:1px;
-  background: var(--gold);
-}
-
 /* ---- Responsive ---- */
+@media (max-width: 900px){
+  .all-treatments-content{
+    flex-direction:column;
+  }
+  .all-treatments-content .hww-steps{
+    width:100%;
+  }
+}
 @media (max-width: 760px){
-  .all-treatments{ padding: 80px 24px 64px; }
-  .price-list{
-    grid-template-columns: 1fr;
-    column-gap:0;
-  }
-  .price-col:first-child .price-row--last{
-    border-bottom: 1px solid rgba(255,255,255,.14); /* restore divider between stacked columns */
-  }
+  .all-treatments{ padding: 64px 24px; min-height: auto; }
 }
 @media (max-width: 460px){
-  .price-row{ flex-direction:column; gap:4px; }
-  .price-amount{ font-size:17px; }
+  .all-treatments-hours{ font-size:13px; }
+}
+@media (max-width: 680px){
+  .treatments-heading{ white-space: normal; }
 }
 
 .why-skin-goddess{
@@ -2887,141 +2843,38 @@ a{ text-decoration:none; color:inherit; }
   }
 }
 
-.how-we-work{
-  background-color: var(--cream);
-  height: auto;
-  width: auto;
-  padding: 30px 5vw 70px;
-  border-top: 1px solid var(--light-grey);
-}
+/* "How we work" now lives inside .all-treatments as the right-hand
+   column — always in the compact vertical-with-connector layout,
+   styled for the dark photo background instead of the cream one. */
 .hww-headline{
-  text-align: center;
-  font-family: var(--font-body);
-  font-weight:100;
-  font-size: clamp(2.0rem, 2.9vw, 2.9rem);
-  line-height:1.15;
-  color: var(--ink);
-  margin-bottom:20px;
-}
-
-.hww-headline .hww-headline-dash{ 
-  background-color: var(gold);
-  width:40px;
-  height: 16px;
-  display:inline-block;
-  border-top: var(--gold);
-} 
-.gold-lines {
-  display: flex;
-  justify-content: center;
-  gap: 70px;
-  margin-top: 10px;
-}
-.gold-lines span {
-    width: 40px;
-    height: 2px;
-    background: var(--gold);
-    margin-bottom:50px;
-}
-
-.hww-steps{
-  display:grid;
-  position:relative;
-  grid-template-columns: repeat(4,1fr);
-}
-
-.hww-steps-column{
-  align-items: center;
-  text-align: center;
-}
-
-/* On desktop these wrappers are invisible structurally — their
-   children (.step-number, .step-connector, title, body) behave
-   exactly as if they were direct children of .hww-steps-column,
-   same as before this markup change. The mobile media query
-   below turns them into an actual flex layout. */
-.step-marker,
-.step-content{
-  display:contents;
-}
-.step-connector{
-  display:none; /* desktop uses the single .hww-steps::before line instead */
-}
-
-.hww-column-title{
-  font-size:18px;
-  line-height:1.5;
-  color: var(--ink);
-  max-width: 520px;
-}
-
-.hww-column-body{
-  font-size:14px;
-  line-height:1.6;
-  color: var(--ink-soft);
-  max-width: 520px;
-}
-
-.step-number{
-  width:72px;
-  height:72px;
-  position:relative;
-  z-index: 1;
-  border-radius:50%;
-
-  border:2px solid var(--gold-dark);
-
-  color:var(--gold-dark);
-
   display:flex;
-  justify-content:center;
   align-items:center;
-  background:white;
-  font-size:22px;
-  font-weight:600;
-  margin:0 auto 20px;
+  gap:12px;
+  font-family: var(--font-body);
+  font-weight:700;
+  font-size:12px;
+  letter-spacing:.12em;
+  color: var(--gold);
+  margin-bottom:22px;
+}
+.hww-headline .dash{
+  width:28px;
+  height:1.5px;
+  background: var(--gold);
+  display:inline-block;
 }
 
-.step-number.active{
-background:var(--gold-dark);
-color:white;
-}
-
-/* the line connecting the circle with a number in it*/
-.hww-steps::before{
-content:"";
-position:absolute;
-
-left:12.5%;
-right:12.5%;
-
-top:36px;
-
-border-top:1.5px dashed var(--gold-dark);
-
-z-index:0;
-}@media(max-width:900px) {
 .hww-steps{
-  grid-template-columns: 1fr;
-}
-
-/* turn off the old single line that spanned the whole grid —
-   each step now carries its own short connector instead */
-.hww-steps::before{
-  display:none;
+  position:relative;
 }
 
 .hww-steps-column{
   display:flex;
-  align-items:stretch; /* marker stretches to match the row's full height */
+  align-items:stretch; /* marker stretches to match the row's fixed height,
+                           so the connector length stays identical for
+                           every step no matter how the text wraps */
   text-align:left;
-  gap:20px;
-  padding-bottom:48px; /* space before the next step — the connector
-                           fills through this space too, since marker
-                           stretches to the row's full height */
-}
-.hww-steps-column:last-child{
-  padding-bottom:0;
+  gap:16px;
 }
 
 .step-marker{
@@ -3031,39 +2884,69 @@ z-index:0;
   flex-shrink:0;
 }
 
+.step-content{
+  display:flex;
+  align-items:flex-start; 
+  height:96px;
+  padding-top:9px; 
+}
+.hww-steps-column:last-child .step-content{
+  height:40px; 
+}
+
+.hww-column-title{
+  font-family: var(--font-body);
+  font-weight:700;
+  font-size:15.5px;
+  line-height:1.4;
+  color: var(--white);
+}
+
+.hww-column-body{
+  font-family: var(--font-body);
+  font-weight:400;
+  font-size:13px;
+  color: rgba(255,255,255,.72);
+  margin-left:6px;
+}
+
 .step-number{
-  margin:0; /* was margin:0 auto for desktop centering — not needed in a row layout */
+  width:40px;
+  height:40px;
+  flex-shrink:0;
+  position:relative;
+  z-index:1;
+  border-radius:50%;
+  border:none;
+  color: var(--gold-dark);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  background: var(--cream);
+  font-size:13px;
+  font-weight:600;
+  margin:0;
+  transition: transform .3s ease, background-color .3s ease, color .3s ease, box-shadow .3s ease;
+}
+
+
+.step-number:hover{
+  transform: scale(1.14);
+  background: var(--gold);
+  color: var(--espresso-dark);
+  box-shadow: 0 0 0 6px rgba(255,255,255,.12);
 }
 
 .step-connector{
   display:block;
-  flex:1;              /* stretches to fill the marker's remaining height */
+  flex:1;
   width:0;
   margin-top:4px;
-  border-left:1.5px dashed var(--gold-dark);
+  margin-bottom:4px;
+  border-left:1.5px dotted rgba(255,255,255,.55);
 }
-/* no connector after the last step — this is what cuts the line
-   off right after circle 04 instead of it running past it */
 .hww-steps-column:last-child .step-connector{
   display:none;
-}
-
-.step-content{
-  display:block;
-  text-align:left;
-}
-.step-content .hww-column-title,
-.step-content .hww-column-body{
-  max-width:none; /* let text use the full width beside the circle */
-}
-
-/* the manual <br> tags were placed for the centered desktop layout
-   (forcing short, balanced lines under each circle) — beside the
-   circle on mobile they'd just cut text awkwardly short, so we
-   drop them here and let the browser wrap naturally instead */
-.hww-break{
-  display:none;
-}
 }
 
 .feedback{
