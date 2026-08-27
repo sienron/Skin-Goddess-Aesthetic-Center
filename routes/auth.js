@@ -301,7 +301,7 @@ router.post('/forgot-password', async (req, res) => {
     );
 
     const baseUrl = process.env.NODE_ENV === 'production'
-      ? 'https://loginandregisterpage.onrender.com'
+      ? 'https://skin-goddess-aesthetic-center-sf0r.onrender.com'
       : 'http://localhost:3000';
     const resetLink = `${baseUrl}/ResetPassword.html?token=${rawToken}`;
     await sendPasswordResetEmail(user.email, resetLink);
@@ -309,7 +309,7 @@ router.post('/forgot-password', async (req, res) => {
     res.status(200).json({ message: 'If that email exists, a reset link has been sent.' });
   } catch (error) {
     console.log('Forgot password error:', error);
-    res.status(500).json({ message: 'Error. Try again.', debug: error.message });
+    res.status(500).json({ message: 'Error. Try again.' });
   }
 });
 
@@ -357,7 +357,7 @@ router.post('/reset-password', async (req, res) => {
     res.status(200).json({ message: 'Password has been reset successfully.' });
   } catch (error) {
     console.log('Reset password error:', error);
-    res.status(500).json({ message: 'Error. Try again.', debug: error.message });
+    res.status(500).json({ message: 'Error. Try again.' });
 }
 });
 
