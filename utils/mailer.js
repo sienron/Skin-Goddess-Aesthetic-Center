@@ -20,13 +20,13 @@ async function sendOtpEmail(toEmail, otpCode) {
         email: process.env.EMAIL_USER,
       },
       to: [{ email: toEmail }],
-      subject: 'Ang verification code mo',
+      subject: 'Verification Code',
       htmlContent: `
         <div style="font-family: sans-serif; max-width: 400px; margin: 0 auto;">
           <h2 style="color: #C9A84C;">Skin Goddess Aesthetic Center</h2>
-          <p>Ang verification code mo ay:</p>
+          <p>Your Verification Code is:</p>
           <p style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #1A1714;">${otpCode}</p>
-          <p style="color: #6B6459; font-size: 13px;">Mag-expire ito sa loob ng 5 minuto. Huwag ibahagi sa kahit kanino.</p>
+          <p style="color: #6B6459; font-size: 13px;">This code expires in 5 mins. Do not share with anyone.</p>
         </div>
       `,
     }),
@@ -34,7 +34,7 @@ async function sendOtpEmail(toEmail, otpCode) {
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`Hindi naipadala ang email: ${errorText}`);
+    throw new Error(`The email was not sent: ${errorText}`);
   }
 }
 
@@ -69,7 +69,7 @@ async function sendPasswordResetEmail(toEmail, resetLink) {
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`Hindi naipadala ang email: ${errorText}`);
+    throw new Error(`The email was not sent: ${errorText}`);
   }
 }
 
