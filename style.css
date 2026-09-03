@@ -5160,3 +5160,169 @@ body.services{
   text-align: center;
   text-decoration: none;
 }
+
+/* ============================================
+   Admin — User Management page (UserManagement.html)
+   Append this block to the end of the shared style.css.
+   Reuses existing tokens where the value already matches
+   (--gold-2, --text-dark, --text-muted). New tokens are
+   namespaced --um-* so they can never collide with anything
+   already declared above (same reasoning as --gold-2 /
+   --cream-2 further up this file).
+   ============================================ */
+
+   :root {
+    --um-bg-cream: #F7F5F0;      /* NOT the same as --bg-cream (#F1ECE3) — this page's
+                                      Figma spec uses a slightly different cream */
+    --um-border: #ece7dd;
+    --um-text-body: #4a4540;
+    --um-text-faint: #b0aaa3;
+    --um-text-faint-2: #c8c0b4;
+    --um-status-active: #006400;
+    --um-status-active-bg: #e6f2e6;
+    --um-status-suspended: #9b2626;
+    --um-status-suspended-bg: #fbeaea;
+    --um-role-client: #3b82f6;
+    --um-role-client-bg: #eaf1fe;
+    --um-role-staff-bg: #f8f2e0;
+    --um-role-doctor: #8a6e2f;
+    --um-role-doctor-bg: #f3ead2;
+  }
+  
+  .um-shell { display: flex; min-height: 100vh; font-family: 'Poppins', sans-serif; background: var(--um-bg-cream); color: var(--text-dark); }
+  
+  /* ---------- Sidebar (220px per Figma) ---------- */
+  .um-sidebar { width: 220px; flex-shrink: 0; background: #fff; border-right: 1px solid var(--um-border); display: flex; flex-direction: column; padding: 0 0 20px; }
+  .um-sidebar__logo { display: flex; align-items: center; height: 72px; box-sizing: border-box; padding: 0 20px; text-decoration: none; border-bottom: 1px solid var(--um-border); margin-bottom: 16px; }
+  .um-sidebar__logo .logo-container { margin-left: 0; }
+  .um-sidebar__logo-img { width: 32px; height: 32px; object-fit: contain; }
+  .um-sidebar__brand { margin: 0; font-size: 11px; letter-spacing: .03em; color: var(--gold-2); font-weight: 600; }
+  .um-sidebar__brand-sub { margin: 2px 0 0; font-size: 7.5px; letter-spacing: .05em; color: var(--text-muted); }
+  .um-sidebar__label { margin: 0 0 8px 20px; font-size: 8px; letter-spacing: .08em; color: var(--text-muted); }
+  .um-sidebar__nav { display: flex; flex-direction: column; }
+  .um-nav-link { padding: 10px 20px; font-size: 12px; color: var(--text-dark); text-decoration: none; border-left: 3px solid transparent; }
+  .um-nav-link:hover { background: var(--um-bg-cream); }
+  .um-nav-link--active { color: var(--gold-2); border-left-color: var(--gold-2); background: #fbf8ef; font-weight: 500; }
+  .um-sidebar__account { margin-top: auto; display: flex; align-items: center; gap: 10px; padding: 12px 20px; border-top: 1px solid var(--um-border); }
+  .um-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--um-role-staff-bg); color: var(--gold-2); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; flex-shrink: 0; }
+  .um-sidebar__account-name { margin: 0; font-size: 12px; color: var(--um-text-body); }
+  .um-sidebar__account-role { margin: 0; font-size: 10px; color: var(--text-muted); }
+  
+  /* ---------- Main ---------- */
+  .um-main { flex: 1; padding: 20px 24px; min-width: 0; }
+  .um-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; background: #fff; height: 72px; box-sizing: border-box; padding: 0 24px; margin: -20px -24px 18px; border-bottom: 1px solid var(--um-border); box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
+  .um-header__title { margin: 0; font-size: 20px; font-weight: 600; color: var(--text-dark); }
+  .um-header__subtitle { margin: 6px 0 0; font-size: 11px; color: var(--text-muted); }
+  .um-header__actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .um-search { display: flex; align-items: center; gap: 8px; border: 1px solid var(--um-border); border-radius: 6px; padding: 8px 12px; width: 210px; color: var(--um-text-faint); }
+  .um-search input { border: none; outline: none; font-family: inherit; font-size: 12px; width: 100%; background: transparent; color: var(--text-dark); }
+  .um-btn { font-family: inherit; font-size: 11px; border-radius: 6px; padding: 9px 16px; cursor: pointer; border: 1px solid var(--um-border); }
+  .um-btn--ghost { background: #fff; color: var(--um-text-body); }
+  .um-btn--ghost:hover { background: var(--um-bg-cream); }
+  .um-btn--primary { background: var(--gold-2); color: #fff; border-color: var(--gold-2); font-weight: 500; }
+  .um-btn--primary:hover { background: var(--gold-dark-2); }
+  
+  /* ---------- Stat cards ---------- */
+  .um-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 16px; }
+  .um-stat-card { background: #fff; border: 1px solid var(--um-border); border-top: 3px solid var(--gold-2); border-radius: 6px; padding: 13px 18px; }
+  .um-stat-card__label { margin: 0; font-size: 9px; letter-spacing: .04em; color: var(--text-muted); }
+  .um-stat-card__value { margin: 6px 0; font-size: 30px; color: var(--gold-2); line-height: 1; }
+  .um-stat-card__hint { margin: 0; font-size: 10px; color: var(--text-muted); }
+  .um-stat-card__hint--positive { color: var(--um-status-active); }
+  .um-stat-card__hint--negative { color: var(--um-status-suspended); }
+  
+  /* ---------- Tabs ---------- */
+  .um-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--um-border); overflow-x: auto; }
+  .um-tab { font-family: inherit; font-size: 11px; letter-spacing: .02em; border: none; background: transparent; color: var(--text-muted); padding: 10px 18px; cursor: pointer; white-space: nowrap; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .um-tab:hover { color: var(--text-dark); }
+  .um-tab--active { color: var(--gold-2); font-weight: 500; border-bottom-color: var(--gold-2); }
+  
+  /* ---------- Table ---------- */
+  .um-table-wrap { background: #fff; border: 1px solid var(--um-border); border-top: none; border-radius: 0 0 6px 6px; overflow-x: auto; }
+  .um-table { width: 100%; border-collapse: collapse; min-width: 900px; }
+  .um-table thead tr { background: var(--um-bg-cream); }
+  .um-table th { text-align: left; font-size: 8.5px; letter-spacing: .04em; color: var(--text-muted); padding: 10px 12px; border-bottom: 1px solid var(--um-border); font-weight: 400; }
+  .um-table td { padding: 10px 12px; border-bottom: 1px solid var(--um-border); font-size: 11.5px; vertical-align: middle; color: var(--um-text-body); }
+  .um-table__checkbox-col { width: 30px; }
+  .um-table tbody tr:last-child td { border-bottom: none; }
+  .um-table tbody tr:hover { background: #fbfaf7; }
+  .um-table tbody tr.um-row--suspended td { color: var(--um-text-faint); }
+  .um-table tbody tr.um-row--suspended .um-user-cell__name { color: var(--um-text-faint); }
+  .um-table tbody tr.um-row--suspended .um-user-cell__meta { color: var(--um-text-faint-2); }
+  .um-table tbody tr.um-row--suspended .um-visits { color: var(--um-text-faint); }
+  .um-table tbody tr.um-row--suspended .um-visits-label { color: var(--um-text-faint-2); }
+  .um-table tbody tr.um-row--suspended .um-avatar { color: var(--um-text-faint); }
+  .um-table tbody tr.um-row--suspended .um-badge { opacity: .7; }
+  .um-user-cell { display: flex; align-items: center; gap: 10px; }
+  .um-user-cell__name { margin: 0; font-size: 12.5px; color: var(--text-dark); }
+  .um-user-cell__meta { margin: 2px 0 0; font-size: 10px; color: var(--text-muted); }
+  .um-badge { display: inline-block; font-size: 9px; font-weight: 600; padding: 3px 10px; border-radius: 10px; white-space: nowrap; }
+  .um-badge--client { background: var(--um-role-client-bg); color: var(--um-role-client); }
+  .um-badge--staff   { background: var(--um-role-staff-bg);  color: var(--gold-2); }
+  .um-badge--doctor  { background: var(--um-role-doctor-bg); color: var(--um-role-doctor); }
+  .um-status { display: inline-flex; align-items: center; gap: 5px; font-size: 9px; font-weight: 600; padding: 3px 10px; border-radius: 10px; }
+  .um-status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .um-status--active    { background: var(--um-status-active-bg); color: var(--um-status-active); }
+  .um-status--suspended { background: var(--um-status-suspended-bg); color: var(--um-status-suspended); }
+  .um-visits { font-size: 22px; color: var(--gold-2); display: block; line-height: 1; }
+  .um-visits-label { font-size: 9.5px; color: var(--text-muted); display: block; margin-top: 2px; }
+  .um-row-actions button { font-family: inherit; border: none; background: none; cursor: pointer; font-size: 11px; margin-right: 10px; padding: 0; }
+  .um-action-view    { color: var(--gold-2); }
+  .um-action-edit    { color: var(--um-text-body); }
+  .um-action-delete  { color: var(--um-status-suspended); }
+  .um-action-restore { color: var(--um-text-body); }
+  
+  /* ---------- Footer / pagination ---------- */
+  .um-table-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; font-size: 11px; color: var(--text-muted); flex-wrap: wrap; gap: 10px; }
+  .um-pagination { display: flex; gap: 6px; }
+  .um-pagination button { width: 28px; height: 28px; border: 1px solid var(--um-border); background: #fff; border-radius: 5px; cursor: pointer; font-family: inherit; font-size: 11px; color: var(--text-muted); }
+  .um-pagination button.active { background: var(--gold-2); color: #fff; border-color: var(--gold-2); }
+  
+  /* ---------- User Information Pop Up (matches Figma node 94:1455) ---------- */
+  .um-modal-overlay { position: fixed; inset: 0; background: rgba(26,23,20,.4); display: none; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
+  .um-modal-overlay.um-modal-overlay--open { display: flex; }
+  .um-modal { background: #fff; width: 760px; max-width: 100%; max-height: 90vh; overflow-y: auto; border-radius: 8px; border-top: 4px solid var(--gold-2); position: relative; display: flex; box-shadow: 0 20px 50px rgba(0,0,0,.15); font-family: 'Poppins', sans-serif; color: var(--text-dark); }
+  .um-modal__close { position: absolute; top: 10px; right: 12px; width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--um-border); background: #fff; font-size: 18px; line-height: 1; cursor: pointer; color: var(--text-muted); }
+  .um-modal__side { width: 200px; flex-shrink: 0; padding: 20px; border-right: 1px solid var(--um-border); text-align: center; }
+  .um-modal__photo { width: 76px; height: 76px; margin: 0 auto 10px; border: 2px dashed var(--um-border); border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--um-text-faint); gap: 4px; }
+  .um-modal__photo p { margin: 0; font-size: 8px; letter-spacing: .05em; }
+  .um-modal__name { margin: 0; font-size: 15px; color: var(--text-dark); }
+  .um-modal__id { margin: 4px 0 10px; font-size: 9px; color: var(--gold-2); }
+  .um-modal__side hr { border: none; border-top: 1px solid var(--um-border); margin: 12px 0; }
+  .um-modal__label { margin: 0; font-size: 8.5px; letter-spacing: .05em; color: var(--um-text-faint); text-align: center; }
+  .um-modal__bignum { margin: 6px 0 0; font-size: 32px; color: var(--gold-2); text-align: center; line-height: 1; }
+  .um-modal__bignum-label { margin: 2px 0 0; font-size: 9.5px; color: var(--text-muted); text-align: center; }
+  .um-modal__row { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; text-align: left; }
+  .um-modal__row span { font-size: 10.5px; color: var(--text-muted); }
+  .um-modal__row strong { font-size: 10.5px; color: var(--text-dark); font-weight: 500; text-align: right; }
+  .um-modal__btn-primary { width: 100%; background: var(--gold-2); color: #fff; border: none; border-radius: 5px; padding: 9px; font-size: 9.5px; letter-spacing: .04em; font-family: inherit; cursor: pointer; margin-top: 4px; }
+  .um-modal__btn-primary:hover { background: var(--gold-dark-2); }
+  .um-modal__btn-row { display: flex; gap: 6px; margin-top: 6px; }
+  .um-modal__btn-outline-gold, .um-modal__btn-outline-red { flex: 1; background: #fff; border-radius: 5px; padding: 8px 4px; font-size: 9.5px; letter-spacing: .03em; font-family: inherit; cursor: pointer; }
+  .um-modal__btn-outline-gold { border: 1px solid var(--gold-2); color: var(--gold-2); }
+  .um-modal__btn-outline-red { border: 1px solid var(--um-status-suspended); color: var(--um-status-suspended); }
+  .um-modal__main { flex: 1; padding: 20px 24px; min-width: 0; }
+  .um-modal__section-title { margin: 0; font-size: 9px; letter-spacing: .05em; color: var(--gold-2); }
+  .um-modal__main > hr, .um-modal__note-card hr { border: none; border-top: 1px solid var(--um-border); margin: 8px 0 12px; }
+  .um-modal__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .um-modal__grid > div { display: flex; flex-direction: column; gap: 4px; }
+  .um-modal__grid span, .um-modal__grid-label { font-size: 10px; color: var(--text-muted); }
+  .um-modal__grid strong { font-size: 12.5px; color: var(--text-dark); font-weight: 400; }
+  .um-allergy-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; margin-bottom: 12px; }
+  .um-allergy-tag { background: var(--um-status-suspended-bg); color: var(--um-status-suspended); font-size: 10px; padding: 4px 10px; border-radius: 11px; }
+  .um-modal__note-card { background: var(--um-bg-cream); border-radius: 6px; padding: 12px 14px; margin-top: 4px; }
+  .um-modal__note-meta { margin: 0; font-size: 9.5px; color: var(--gold-2); }
+  .um-modal__note-text { margin: 0; font-size: 12px; color: var(--um-text-body); line-height: 1.5; }
+  .um-modal__footer { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--um-border); margin-top: 16px; padding-top: 12px; gap: 10px; flex-wrap: wrap; }
+  .um-modal__footer p { margin: 0; font-size: 10px; color: var(--um-text-faint); }
+  .um-modal__footer a { font-size: 10px; color: var(--gold-2); text-decoration: none; }
+  
+  @media (max-width: 900px) {
+    .um-sidebar { display: none; }
+    .um-stats { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 760px) {
+    .um-modal { flex-direction: column; width: 100%; }
+    .um-modal__side { width: 100%; border-right: none; border-bottom: 1px solid var(--um-border); }
+    .um-modal__grid { grid-template-columns: 1fr; }
+  }

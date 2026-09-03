@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>User Management — Skin Goddess Aesthetic Center</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="um-shell">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="um-sidebar">
+    <a href="Dashboard.html" class="um-sidebar__logo">
+        <div class="logo-container">
+            <img id="logo" src="images/logo_horizontal.jpg" alt="Skin Goddess Aesthetic Center logo">
+        </div>
+    </a>
+
+    <p class="um-sidebar__label">MAIN MENU</p>
+    <nav class="um-sidebar__nav">
+      <a href="Dashboard.html" class="um-nav-link">Dashboard</a>
+      <a href="Appointments.html" class="um-nav-link">Appointments</a>
+      <a href="Inventory.html" class="um-nav-link">Inventory</a>
+      <a href="Reports.html" class="um-nav-link">Reports</a>
+      <a href="UserManagement.html" class="um-nav-link um-nav-link--active">User Management</a>
+      <a href="ContentManagement.html" class="um-nav-link">Content Management</a>
+    </nav>
+
+    <div class="um-sidebar__account">
+      <div class="um-avatar">A</div>
+      <div>
+        <p class="um-sidebar__account-name">Admin User</p>
+        <p class="um-sidebar__account-role">Owner</p>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <div class="um-main">
+
+    <header class="um-header">
+      <div>
+        <h1 class="um-header__title">User Management</h1>
+        <p class="um-header__subtitle">Create, view, update, and delete system users and client accounts</p>
+      </div>
+      <div class="um-header__actions">
+        <div class="um-search">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="umSearchInput" placeholder="Search users...">
+        </div>
+        <button class="um-btn um-btn--ghost" id="umFilterBtn" type="button">Filter</button>
+        <button class="um-btn um-btn--ghost" id="umExportBtn" type="button">Export</button>
+        <button class="um-btn um-btn--primary" id="umCreateBtn" type="button">+ Create New User</button>
+      </div>
+    </header>
+
+    <section class="um-stats">
+      <div class="um-stat-card">
+        <p class="um-stat-card__label">TOTAL USERS</p>
+        <p class="um-stat-card__value" id="statTotalUsers">—</p>
+        <p class="um-stat-card__hint um-stat-card__hint--positive" id="statTotalUsersHint"></p>
+      </div>
+      <div class="um-stat-card">
+        <p class="um-stat-card__label">CLIENTS</p>
+        <p class="um-stat-card__value" id="statClients">—</p>
+        <p class="um-stat-card__hint um-stat-card__hint--positive">Active accounts</p>
+      </div>
+      <div class="um-stat-card">
+        <p class="um-stat-card__label">STAFF ACCOUNTS</p>
+        <p class="um-stat-card__value" id="statStaff">—</p>
+        <p class="um-stat-card__hint">Doctors, admin, cashiers</p>
+      </div>
+      <div class="um-stat-card um-stat-card--wide">
+        <p class="um-stat-card__label">INACTIVE / SUSPENDED</p>
+        <p class="um-stat-card__value" id="statSuspended">—</p>
+        <p class="um-stat-card__hint um-stat-card__hint--negative" id="statSuspendedHint"></p>
+      </div>
+    </section>
+
+    <nav class="um-tabs" id="umTabs">
+      <button class="um-tab um-tab--active" data-role="ALL" type="button">ALL</button>
+      <button class="um-tab" data-role="CLIENT" type="button">CLIENTS</button>
+      <button class="um-tab" data-role="DOCTOR" type="button">DOCTORS</button>
+      <button class="um-tab" data-role="ADMIN" type="button">ADMIN</button>
+      <button class="um-tab" data-role="CASHIER" type="button">CASHIER</button>
+      <button class="um-tab" data-role="SUSPENDED" type="button">SUSPENDED</button>
+    </nav>
+
+    <section class="um-table-wrap">
+      <table class="um-table">
+        <thead>
+          <tr>
+            <th class="um-table__checkbox-col"><input type="checkbox" id="umSelectAll"></th>
+            <th>USER</th>
+            <th>ROLE</th>
+            <th>EMAIL</th>
+            <th>JOINED</th>
+            <th>VISITS</th>
+            <th>LAST VISIT</th>
+            <th>STATUS</th>
+            <th>ACTIONS</th>
+          </tr>
+        </thead>
+        <tbody id="umTableBody">
+          <!-- Rows rendered by user-management.js from USERS_DATA / your API -->
+        </tbody>
+      </table>
+    </section>
+
+    <footer class="um-table-footer">
+      <p id="umShowingText">Showing 0 of 0 users</p>
+      <div class="um-pagination" id="umPagination">
+        <button type="button" data-page="prev">‹</button>
+        <button type="button" data-page="1" class="active">1</button>
+        <button type="button" data-page="2">2</button>
+        <button type="button" data-page="3">3</button>
+        <button type="button" data-page="next">›</button>
+      </div>
+    </footer>
+
+  </div>
+</div>
+
+<!-- ============ USER INFORMATION POP UP (View) ============ -->
+<div class="um-modal-overlay" id="umModalOverlay">
+  <div class="um-modal" id="umModal" role="dialog" aria-modal="true" aria-labelledby="umModalName">
+    <button class="um-modal__close" id="umModalClose" type="button" aria-label="Close">&times;</button>
+
+    <aside class="um-modal__side">
+      <div class="um-modal__photo">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.5-6 8-6s8 2 8 6"/></svg>
+        <p>PHOTO</p>
+      </div>
+      <p class="um-modal__name" id="umModalName">—</p>
+      <p class="um-modal__id" id="umModalId">—</p>
+      <p class="um-status um-status--active" id="umModalStatusBadge">ACTIVE CLIENT</p>
+
+      <hr>
+      <p class="um-modal__label">VISIT OVERVIEW</p>
+      <p class="um-modal__bignum" id="umModalVisits">—</p>
+      <p class="um-modal__bignum-label" id="umModalVisitsLabel">total visits</p>
+
+      <hr>
+      <div class="um-modal__row"><span>First Visit</span><strong id="umModalFirstVisit">—</strong></div>
+      <hr>
+      <div class="um-modal__row"><span>Last Visit</span><strong id="umModalLastVisit">—</strong></div>
+      <hr>
+      <div class="um-modal__row" id="umModalFavServiceRow"><span>Fav. Service</span><strong id="umModalFavService">—</strong></div>
+      <hr>
+      <div class="um-modal__row" id="umModalAssignedRow"><span>Assigned To</span><strong id="umModalAssigned">—</strong></div>
+      <hr>
+
+      <p class="um-modal__label">QUICK ACTIONS</p>
+      <button class="um-modal__btn-primary" id="umModalEditBtn" type="button">EDIT PROFILE</button>
+      <div class="um-modal__btn-row">
+        <button class="um-modal__btn-outline-gold" id="umModalSuspendBtn" type="button">SUSPEND</button>
+        <button class="um-modal__btn-outline-red" id="umModalDeleteBtn" type="button">DELETE</button>
+      </div>
+    </aside>
+
+    <section class="um-modal__main">
+      <p class="um-modal__section-title">PERSONAL INFORMATION</p>
+      <hr>
+      <div class="um-modal__grid">
+        <div><span>Full Name</span><strong id="umPiFullName">—</strong></div>
+        <div><span>Date of Birth</span><strong id="umPiDob">—</strong></div>
+      </div>
+      <hr>
+      <div class="um-modal__grid">
+        <div><span>Sex</span><strong id="umPiSex">—</strong></div>
+        <div><span>Civil Status</span><strong id="umPiCivilStatus">—</strong></div>
+      </div>
+      <hr>
+      <div class="um-modal__grid">
+        <div><span>Contact Number</span><strong id="umPiContact">—</strong></div>
+        <div><span>Email Address</span><strong id="umPiEmail">—</strong></div>
+      </div>
+      <hr>
+      <div class="um-modal__grid">
+        <div><span>Home Address</span><strong id="umPiAddress">—</strong></div>
+        <div><span>Emergency Contact</span><strong id="umPiEmergency">—</strong></div>
+      </div>
+      <hr>
+
+      <div id="umSkinHealthSection">
+        <p class="um-modal__section-title">SKIN AND HEALTH PROFILE</p>
+        <hr>
+        <div class="um-modal__grid">
+          <div><span>Skin Type</span><strong id="umShSkinType">—</strong></div>
+          <div><span>Primary Concern</span><strong id="umShConcern">—</strong></div>
+        </div>
+        <hr>
+        <div>
+          <span class="um-modal__grid-label">Known Allergies</span>
+          <div class="um-allergy-tags" id="umShAllergies"></div>
+        </div>
+        <hr>
+        <div class="um-modal__grid">
+          <div><span>Medical Conditions</span><strong id="umShConditions">—</strong></div>
+          <div><span>Current Medications</span><strong id="umShMeds">—</strong></div>
+        </div>
+        <hr>
+      </div>
+
+      <p class="um-modal__section-title">LATEST TREATMENT NOTES</p>
+      <hr>
+      <div class="um-modal__note-card" id="umNoteCard">
+        <p class="um-modal__note-meta" id="umNoteMeta">—</p>
+        <hr>
+        <p class="um-modal__note-text" id="umNoteText">—</p>
+      </div>
+
+      <div class="um-modal__footer">
+        <p id="umFooterMeta">—</p>
+        <a href="#" id="umViewFullHistory">View Full History</a>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script src="user-management.js"></script>
+</body>
+</html>
