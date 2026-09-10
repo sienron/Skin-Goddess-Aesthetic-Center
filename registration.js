@@ -233,3 +233,22 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
 });
+
+
+const contactNumberInput = document.getElementById('contactNumber');
+if (contactNumberInput) {
+  contactNumberInput.addEventListener('input', (e) => {
+    // strip anything that's not a digit, then cap at 10 digits
+    e.target.value = e.target.value.replace(/\D/g, '').slice(0, 10);
+  });
+ 
+  // also block non-numeric keys on the way in (paste is still caught
+  // by the 'input' handler above, this just stops stray letters from
+  // flashing on screen before getting stripped)
+  contactNumberInput.addEventListener('keydown', (e) => {
+    const allowedKeys = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'];
+    if (allowedKeys.includes(e.key)) return;
+    if (!/^\d$/.test(e.key)) e.preventDefault();
+  });
+}
+ 

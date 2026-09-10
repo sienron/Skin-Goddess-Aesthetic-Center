@@ -605,6 +605,39 @@ hr {
   border: 1px solid #C9A84C;
 }
 
+   .phone-input-wrap {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--border-input);
+    border-radius: 3px;
+    background: var(--bg-input);
+    overflow: hidden;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .phone-input-wrap:focus-within {
+    border-color: var(--gold-2);
+    box-shadow: 0 0 0 3px rgba(201, 168, 76, 0.12);
+  }
+  .phone-prefix {
+    padding: 12px 10px 12px 14px;
+    font-size: 13px;
+    color: var(--text-body);
+    border-right: 1px solid var(--border-input);
+    flex-shrink: 0;
+    user-select: none;
+  }
+  .phone-input-wrap input {
+    border: none;
+    background: transparent;
+    padding: 12px 14px 12px 10px;
+    flex: 1;
+    min-width: 0;
+  }
+  .phone-input-wrap input:focus {
+    outline: none;
+    box-shadow: none; /* the wrapper already shows the focus ring */
+  }
+
 .appt-chip {
   display: flex;
   justify-content: space-between;

@@ -138,7 +138,14 @@
             </div>
             <div class="field">
               <label for="contactNumber">Contact Number</label>
-              <input type="tel" id="contactNumber" name="contactNumber" placeholder="+63 9XX XXX XXXX" required>
+              <!-- +63 is a fixed, non-editable badge. The input itself
+                   accepts numbers only, max 10 digits (09XX XXX XXXX
+                   local format). registration.js strips non-digits +
+                   caps at 11 chars — see contact-number-restrict.js. -->
+              <div class="phone-input-wrap">
+                <span class="phone-prefix">+63</span>
+                <input type="tel" id="contactNumber" name="contactNumber" placeholder="9XX XXX XXXX" inputmode="numeric" maxlength="11" required>
+              </div>
             </div>
           </div>
 
