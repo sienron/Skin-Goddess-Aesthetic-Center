@@ -3982,6 +3982,48 @@ font-family: var(--font-body);
      filter: brightness(85%);
    }
    
+   
+   .sg-modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .sg-modal-overlay.sg-modal-open {
+    display: flex;
+  }
+  
+  .sg-modal-box {
+    background: var(--bg-cream, #fff);
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    border-radius: 12px;
+    padding: 32px;
+    position: relative;
+  }
+  
+  .sg-modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--text-dark, #333);
+  }
+  
+  .sg-modal-content h3 {
+    color: var(--gold, #C9A84C);
+    margin-top: 16px;
+  }
+
    /* ============================================
       RESPONSIVE
       ============================================ */
@@ -4014,7 +4056,7 @@ font-family: var(--font-body);
     min-height: max-content;
     height: auto;
    }
-
+   
 
    /* ============================================
    OTP / Email Verification modal

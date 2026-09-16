@@ -203,7 +203,7 @@
             <div class="field terms-field">
               <label class="checkbox-row">
                 <input type="checkbox" id="agree" name="agree" required>
-                <span>I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a></span>
+                <span>I agree to the <a href="#" id="tosLink">Terms of Service</a> and <a href="#" id="privacyLink">Privacy Policy</a></span>
               </label>
             </div>
           </div>
@@ -322,6 +322,53 @@
 
   </footer>
 
+  <!-- Terms of Service Modal -->
+  <div id="tosModal" class="sg-modal-overlay">
+    <div class="sg-modal-box">
+      <button class="sg-modal-close" data-modal-close>&times;</button>
+      <h2>Terms of Service</h2>
+      <div class="sg-modal-content">
+        <p>By creating an account and booking appointments with Skin Goddess Aesthetic Center ("we", "us", "our"), you agree to the following terms:</p>
+        <h3>1. Account Registration</h3>
+        <p>You must provide accurate, current information when creating an account. You are responsible for keeping your login credentials and OTP codes confidential.</p>
+        <h3>2. Appointments</h3>
+        <p>Appointments are subject to availability and confirmation. Please arrive on time; late arrivals may result in shortened service time or rescheduling. Cancellations should be made at least 24 hours in advance.</p>
+        <h3>3. Payments</h3>
+        <p>Payments are processed securely through PayMongo. All fees for services and products are as listed at the time of booking or purchase.</p>
+        <h3>4. Medical & Health Information</h3>
+        <p>You agree to disclose accurate information about allergies and medical conditions relevant to your treatments. We are not liable for adverse reactions resulting from undisclosed health information.</p>
+        <h3>5. Conduct</h3>
+        <p>We reserve the right to refuse service or terminate accounts found to be abusive, fraudulent, or in violation of these terms.</p>
+        <h3>6. Changes to Terms</h3>
+        <p>We may update these Terms from time to time. Continued use of our services means you accept the revised Terms.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Privacy Policy Modal -->
+  <div id="privacyModal" class="sg-modal-overlay">
+    <div class="sg-modal-box">
+      <button class="sg-modal-close" data-modal-close>&times;</button>
+      <h2>Privacy Policy</h2>
+      <div class="sg-modal-content">
+        <p>Skin Goddess Aesthetic Center values your privacy and is committed to protecting your personal data in accordance with the Data Privacy Act of 2012 (Republic Act No. 10173).</p>
+        <h3>1. Information We Collect</h3>
+        <p>We collect information such as your name, email, date of birth, gender, civil status, contact number, home address, and health-related information (allergies, medical conditions) when you register or book a service.</p>
+        <h3>2. How We Use Your Information</h3>
+        <p>Your information is used to manage your account, process appointments and payments, send OTP verification and notifications, and ensure your safety during treatments.</p>
+        <h3>3. Data Sharing</h3>
+        <p>We do not sell your personal data. Information may be shared with trusted third-party service providers (e.g. Brevo for email, PayMongo for payments) strictly to deliver our services.</p>
+        <h3>4. Data Security</h3>
+        <p>We implement reasonable technical and organizational measures, including password hashing and role-based access control, to protect your data from unauthorized access.</p>
+        <h3>5. Your Rights</h3>
+        <p>Under the Data Privacy Act, you have the right to access, correct, or request deletion of your personal data. Contact us to exercise these rights.</p>
+        <h3>6. Data Retention</h3>
+        <p>We retain your personal data only for as long as necessary to fulfill the purposes outlined in this policy or as required by law.</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="tos-privacy-modal.js"></script>
   <script src="registration.js"></script>
   <script src="header.js"></script>
 
