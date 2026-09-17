@@ -79,6 +79,8 @@ require('dotenv').config(); // read the .env file before doing anything else
   app.use('/api/auth', require('./routes/auth'));
 
   app.use('/api/services', require('./routes/services'));
+
+  app.use('/api/appointments', require('./routes/appointments'));
   
   app.listen(PORT, () => {
     console.log(`Server is running http://localhost:${PORT}`);

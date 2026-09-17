@@ -314,7 +314,7 @@
        No backend yet, so this just validates required fields exist and
        logs the payload. Replace the body with a real POST /api/appointments
        call once the backend is wired up. */
-    detailsForm.addEventListener("submit", (e) => {
+    detailsForm.addEventListener("submit", async (e) => {
         e.preventDefault();
 
         if (!selectedDate || !selectedTime) {
@@ -336,8 +336,23 @@
             paymentMethod: paymentMethod ? paymentMethod.value : null
         };
 
-        console.log("Booking submitted (placeholder — no backend yet):", payload);
-        alert("Appointment request captured. (Backend integration pending — nothing was actually saved yet.)");
+        try {
+            const response = await fetch("/api/appointments", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || "Could not create appointment.");
+            }
+
+            alert(data.message);
+        } catch (error) {
+            console.error("Appointment submission failed:", error);
+            alert(error.message);
+        }
     });
 
     fetchServices();
