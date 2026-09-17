@@ -15,9 +15,9 @@ const pool = new Pool({
   host: process.env.DB_HOST,
   port: process.env.DB_PORT,
   database: process.env.DB_NAME,
-  ssl: {
-    rejectUnauthorized: false
-  }
+  ssl: process.env.DB_SSL === 'true' || process.env.NODE_ENV === 'production'
+    ? { rejectUnauthorized: false }
+    : false
 });
 // Ito yung "settings" ng koneksyon natin — kinukuha lahat mula sa .env file,
 // para hindi natin kailangang i-type nang diretso yung password sa code
