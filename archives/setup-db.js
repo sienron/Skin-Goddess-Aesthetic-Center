@@ -41,6 +41,18 @@ async function setupTables() {
     console.log('OTP Codes table created successfully.');
 
     await db.query(`
+      CREATE TABLE IF NOT EXISTS password_reset_tokens (
+        reset_id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+        token_hash VARCHAR(64) NOT NULL,
+        is_used BOOLEAN DEFAULT FALSE,
+        expires_at TIMESTAMP NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    console.log('Password reset tokens table created successfully.');
+
+    await db.query(`
       CREATE TABLE IF NOT EXISTS services (
         service_id SERIAL PRIMARY KEY,
         service_name VARCHAR(255) NOT NULL UNIQUE,

@@ -2,12 +2,9 @@
 // Ito yung file na gumagawa ng koneksyon papunta sa PostgreSQL database natin.
 // Ginagamit natin ito sa ibang files tuwing kailangan nating mag-SELECT, INSERT, UPDATE, atbp.
 
-require('dotenv').config(); // binabasa nito yung laman ng .env file (DB_USER, DB_PASSWORD, atbp.)
+require('dotenv').config(); 
 
 const { Pool } = require('pg');
-// Ang "Pool" ay parang isang grupo ng mga bukas na koneksyon papunta sa database.
-// Sa halip na gumawa ng bagong koneksyon kada query (mabagal 'yun), ang Pool ay
-// nag-re-reuse ng mga koneksyon, kaya mas mabilis.
 
 const pool = new Pool({
   user: process.env.DB_USER,

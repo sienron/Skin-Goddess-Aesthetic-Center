@@ -136,8 +136,8 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // Success — land on the homepage
-      window.location.href = 'index.html';
+      // Success — open the dashboard assigned to the user's role.
+      window.location.href = data.redirectUrl || '/index.html';
     } catch (err) {
       setFieldError('form', 'Something went wrong. Please try again.');
       console.error('Login request failed:', err);

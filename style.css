@@ -1708,6 +1708,7 @@ hr {
   flex-direction: column;
   gap: 10px;
   flex: 1;
+  max-height: 590px;
   min-height: 0;
   overflow-y: auto;
   padding-right: 4px;
@@ -1721,6 +1722,7 @@ hr {
   border: 1px solid rgb(228, 228, 228);
   border-radius: 8px;
   padding: 12px 40px 12px 14px;
+  flex: 0 0 auto;
   cursor: pointer;
   background-color: white;
   transition: border-color 0.15s ease, background-color 0.15s ease;
@@ -1756,6 +1758,12 @@ hr {
   font-size: 0.8rem;
   font-weight: 700;
   color: #C9A84C;
+}
+
+.service-reservation-fee {
+  font-family: "Raleway", sans-serif;
+  font-size: 0.68rem;
+  color: rgb(140, 140, 140);
 }
 
 .service-check {

@@ -14,7 +14,6 @@
      with { serviceName, servicePrice, date, time, firstName, lastName,
      email, phone, paymentMethod }.
 */
-
 (function () {
     const serviceList = document.getElementById("serviceList");
     const calendarMonthLabel = document.getElementById("calendarMonthLabel");
@@ -30,12 +29,12 @@
     const summaryDate = document.getElementById("summaryDate");
     const summaryTime = document.getElementById("summaryTime");
     const summaryPayment = document.getElementById("summaryPayment");
+    const summaryFee = document.getElementById("summaryFee");
     const summaryTotal = document.getElementById("summaryTotal");
 
     // Self-guard: if this page's booking markup isn't present, do nothing.
     if (!serviceList || !calendarDays || !detailsForm) return;
 
-    const BOOKING_FEE = 300;
     const MONTH_NAMES = [
         "January", "February", "March", "April", "May", "June",
         "July", "August", "September", "October", "November", "December"
@@ -46,8 +45,10 @@
 
     const initiallySelectedCard = serviceList.querySelector(".service-card.selected");
     let selectedService = {
+        id: initiallySelectedCard ? initiallySelectedCard.dataset.serviceId : null,
         name: initiallySelectedCard ? initiallySelectedCard.dataset.service : null,
-        price: initiallySelectedCard ? Number(initiallySelectedCard.dataset.price) : 0
+        price: initiallySelectedCard ? Number(initiallySelectedCard.dataset.price) : 0,
+        reservationFee: initiallySelectedCard ? Number(initiallySelectedCard.dataset.reservationFee || 100) : 100
     };
 
     const today = new Date();
@@ -85,21 +86,78 @@
     }
 
     /* ===== Service selection ===== */
-    function renderServices() {
-        // Placeholder markup already in the DOM; this just wires up clicks.
-        // When backend-driven, build the .service-card elements here from
-        // the fetched services array before attaching listeners.
+    function renderServices(services) {
+        serviceList.replaceChildren();
+
+        services.forEach(service => {
+            const card = document.createElement("div");
+            card.className = "service-card";
+            card.dataset.serviceId = service.service_id;
+            card.dataset.service = service.service_name;
+            card.dataset.price = service.service_price;
+            card.dataset.reservationFee = service.reservation_fee;
+
+            const name = document.createElement("span");
+            name.className = "service-name";
+            name.textContent = service.service_name;
+
+            const description = document.createElement("span");
+            description.className = "service-desc";
+            description.textContent = `${service.duration_minutes} min - ${service.description || ""}`;
+
+            const price = document.createElement("span");
+            price.className = "service-price";
+            price.textContent = `PHP ${Number(service.service_price).toLocaleString("en-US")}`;
+
+            const reservationFee = document.createElement("span");
+            reservationFee.className = "service-reservation-fee";
+            reservationFee.textContent = `Reservation fee: PHP ${Number(service.reservation_fee).toLocaleString("en-US")}`;
+
+            const check = document.createElement("span");
+            check.className = "service-check";
+            check.textContent = "✓";
+
+            card.append(name, description, price, reservationFee, check);
+            serviceList.appendChild(card);
+        });
+
+        const firstCard = serviceList.querySelector(".service-card");
+        if (firstCard) {
+            firstCard.classList.add("selected");
+            selectedService = {
+                id: firstCard.dataset.serviceId,
+                name: firstCard.dataset.service,
+                price: Number(firstCard.dataset.price),
+                reservationFee: Number(firstCard.dataset.reservationFee)
+            };
+            updateSummary();
+        }
+
+        //Event listeners for service selection
         serviceList.querySelectorAll(".service-card").forEach((card) => {
             card.addEventListener("click", () => {
                 serviceList.querySelectorAll(".service-card").forEach((c) => c.classList.remove("selected"));
                 card.classList.add("selected");
                 selectedService = {
+                    id: card.dataset.serviceId,
                     name: card.dataset.service,
-                    price: Number(card.dataset.price)
+                    price: Number(card.dataset.price),
+                    reservationFee: Number(card.dataset.reservationFee)
                 };
                 updateSummary();
             });
         });
+    }
+
+    async function fetchServices() {
+        try {
+            const response = await fetch("/api/services");
+            if (!response.ok) throw new Error("Failed to fetch services");
+
+            renderServices(await response.json());
+        } catch (error) {
+            console.error("Error fetching services:", error);
+        }
     }
 
     /* ===== Calendar ===== */
@@ -241,7 +299,10 @@
             summaryPayment.classList.add("not-selected");
         }
 
-        const total = (selectedService.price || 0) + BOOKING_FEE;
+        const reservationFee = selectedService.reservationFee || 0;
+        if (summaryFee) summaryFee.textContent = `₱${reservationFee.toLocaleString("en-US")}`;
+
+        const total = (selectedService.price || 0) + reservationFee;
         summaryTotal.textContent = `₱${total.toLocaleString("en-US")}`;
     }
 
@@ -262,8 +323,10 @@
         }
 
         const payload = {
+            serviceId: selectedService.id,
             service: selectedService.name,
             price: selectedService.price,
+            reservationFee: selectedService.reservationFee,
             date: selectedDate,
             time: selectedTime,
             firstName: document.getElementById("firstName").value,
@@ -277,7 +340,7 @@
         alert("Appointment request captured. (Backend integration pending — nothing was actually saved yet.)");
     });
 
-    renderServices();
+    fetchServices();
     renderCalendar();
     renderSlots();
     updateSummary();

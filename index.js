@@ -74,10 +74,11 @@ require('dotenv').config(); // read the .env file before doing anything else
     }
   });
   
-  // Serve all other static files (CSS, JS, images, and public HTML pages)
   app.use(express.static(path.join(__dirname, '')));
   
   app.use('/api/auth', require('./routes/auth'));
+
+  app.use('/api/services', require('./routes/services'));
   
   app.listen(PORT, () => {
     console.log(`Server is running http://localhost:${PORT}`);

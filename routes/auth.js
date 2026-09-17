@@ -41,7 +41,9 @@ router.post('/register', async (req, res) => {
     password,
   } = req.body;
 
-  if (!firstName || !lastName || !email || !password) {
+  const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+
+  if (!firstName || !lastName || !normalizedEmail || !password) {
     return res.status(400).json({ message: 'Fill out all the fields' });
   }
 
@@ -49,8 +51,8 @@ router.post('/register', async (req, res) => {
 
   try {
     const existingUser = await db.query(
-      'SELECT user_id, email_verified FROM users WHERE email = $1',
-      [email]
+      'SELECT user_id, email_verified FROM users WHERE LOWER(email) = $1',
+      [normalizedEmail]
     );
 
     if (existingUser.rows.length > 0) {
@@ -69,7 +71,7 @@ router.post('/register', async (req, res) => {
          VALUES ($1, $2, 'email_verification', NOW() + INTERVAL '5 minutes')`,
         [foundUser.user_id, freshOtpCode]
       );
-      await sendOtpEmail(email, freshOtpCode);
+      await sendOtpEmail(normalizedEmail, freshOtpCode);
 
       return res.status(200).json({
         message: 'Account already exists but is not verified. A new code has been sent.',
@@ -86,7 +88,7 @@ router.post('/register', async (req, res) => {
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING user_id, email`,
       [
-        email,
+        normalizedEmail,
         hashedPassword,
         firstName,
         lastName,
@@ -223,13 +225,14 @@ router.post('/resend-otp', async (req, res) => {
 // ============================================
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
+  const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
 
-  if (!email || !password) {
+  if (!normalizedEmail || !password) {
     return res.status(400).json({ message: 'Email and password required.' });
   }
 
   try {
-    const result = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+    const result = await db.query('SELECT * FROM users WHERE LOWER(email) = $1', [normalizedEmail]);
 
     if (result.rows.length === 0) {
       return res.status(401).json({ message: 'Incorrect Email or Password' });
@@ -247,7 +250,7 @@ router.post('/login', async (req, res) => {
     }
 
     const dashboardPerRole = {
-      client: '/UserDashboard.html',
+      client: '/index.html',
       admin: '/AdminDashboard.html',
       aesthetician: '/AestheticianDashboard.html',
       inventory_officer: '/InventoryDashboard.html',
@@ -277,13 +280,14 @@ router.post('/login', async (req, res) => {
 // ============================================
 router.post('/forgot-password', async (req, res) => {
   const { email } = req.body;
+  const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
 
-  if (!email) {
+  if (!normalizedEmail) {
     return res.status(400).json({ message: 'Email address is required.' });
   }
 
   try {
-    const userResult = await db.query('SELECT user_id, email FROM users WHERE email = $1', [email]);
+    const userResult = await db.query('SELECT user_id, email FROM users WHERE LOWER(email) = $1', [normalizedEmail]);
 
     if (userResult.rows.length === 0) {
       return res.status(200).json({ message: 'If that email exists, a reset link has been sent.' });
