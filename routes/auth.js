@@ -1,30 +1,30 @@
 // routes/auth.js
-// Dito nakapaloob ang lahat ng logic para sa Register, Verify OTP, Resend OTP,
-// Login, Forgot Password, Reset Password, at Logout. Bawat "router.post(...)"
-// sa ibaba ay parang isang hiwalay na "pinto" na may sariling gawain.
+// Contains all the logic for Register, Verify OTP, Resend OTP,
+// Login, Forgot Password, Reset Password, and Logout. Each
+// "router.post(...)" below is like a separate "door" with its own job.
 
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
-// Ginagamit natin ang bcryptjs para i-"hash" ang password bago i-save.
-// Ang crypto (built-in sa Node) ay ginagamit natin para gumawa ng random
-// na reset tokens para sa forgot password feature.
+// bcryptjs is used to hash passwords before saving them.
+// crypto (built into Node) is used to generate random reset tokens
+// for the forgot password feature.
 
 const router = express.Router();
-// Ang "Router" ay parang isang mini-server na nakatuon lang sa
-// isang specific na grupo ng routes (dito, lahat ng related sa "auth").
+// The Router is like a mini-server focused on one specific
+// group of routes (here, everything related to "auth").
 
-const db = require('../db'); // gagamitin natin ito para mag-query sa database
-const { sendOtpEmail, sendPasswordResetEmail } = require('../utils/mailer'); // para makapagpadala ng totoong email
+const db = require('../db'); // used to query the database
+const { sendOtpEmail, sendPasswordResetEmail } = require('../utils/mailer'); // for sending actual emails
 
-function gumawaNgOtpCode() {
-  // Gumagawa ito ng random na 6 digit na numero, hal. "042917"
+function generateOtpCode() {
+  // Generates a random 6-digit number, e.g. "042917"
   const randomNumber = Math.floor(100000 + Math.random() * 900000);
   return String(randomNumber);
 }
 
 // ============================================
-// ROUTE 1: REGISTER (Gumawa ng bagong account)
+// ROUTE 1: REGISTER (Create a new account)
 // ============================================
 router.post('/register', async (req, res) => {
   const {
@@ -47,7 +47,7 @@ router.post('/register', async (req, res) => {
     return res.status(400).json({ message: 'Fill out all the fields' });
   }
 
-  let bagongUser = null;
+  let newUser = null;
 
   try {
     const existingUser = await db.query(
@@ -65,13 +65,21 @@ router.post('/register', async (req, res) => {
 
       // Account exists but was never verified — send a fresh code
       // instead of dead-ending the user here
-      const freshOtpCode = gumawaNgOtpCode();
+      const freshOtpCode = generateOtpCode();
       await db.query(
         `INSERT INTO otp_codes (user_id, code, purpose, expires_at)
          VALUES ($1, $2, 'email_verification', NOW() + INTERVAL '5 minutes')`,
         [foundUser.user_id, freshOtpCode]
       );
-      await sendOtpEmail(normalizedEmail, freshOtpCode);
+
+      try {
+        await sendOtpEmail(normalizedEmail, freshOtpCode);
+      } catch (emailError) {
+        console.log('Resend OTP email failed:', emailError);
+        return res.status(502).json({
+          message: 'Account exists but we could not send the verification email. Please try again in a bit.',
+        });
+      }
 
       return res.status(200).json({
         message: 'Account already exists but is not verified. A new code has been sent.',
@@ -102,56 +110,51 @@ router.post('/register', async (req, res) => {
       ]
     );
 
-    bagongUser = insertResult.rows[0];
+    newUser = insertResult.rows[0];
 
-    const otpCode = gumawaNgOtpCode();
+    const otpCode = generateOtpCode();
     await db.query(
       `INSERT INTO otp_codes (user_id, code, purpose, expires_at)
        VALUES ($1, $2, 'email_verification', NOW() + INTERVAL '5 minutes')`,
-      [bagongUser.user_id, otpCode]
+      [newUser.user_id, otpCode]
     );
 
-    // If this next line fails (e.g. email service is misconfigured),
-    // the catch block below will undo the user we just created —
-    // so retrying registration with the same email works cleanly.
-    await sendOtpEmail(bagongUser.email, otpCode);
+    try {
+      await sendOtpEmail(newUser.email, otpCode);
+    } catch (emailError) {
+      console.log('Registration OTP email failed:', emailError);
+      // Rollback the half-finished account so the email becomes
+      // available again for retry
+      await db.query('DELETE FROM users WHERE user_id = $1', [newUser.user_id]);
+      return res.status(502).json({
+        message: 'Account could not be created because the verification email failed to send. Please try again.',
+      });
+    }
 
     res.status(201).json({
       message: 'Account created. Check email for verification code.',
-      userId: bagongUser.user_id,
+      userId: newUser.user_id,
     });
   } catch (error) {
-    console.log('Registration Error:', error);
-
-    // Rollback: if we already created the user row but something
-    // after that failed (like the email), delete the half-finished
-    // account so the email becomes available again for retry.
-    if (bagongUser) {
-      try {
-        await db.query('DELETE FROM users WHERE user_id = $1', [bagongUser.user_id]);
-      } catch (rollbackError) {
-        console.log('Rollback error:', rollbackError);
-      }
-    }
-
+    console.log('Registration error:', error);
     res.status(500).json({ message: 'Error. Try Again.' });
   }
 });
 
 // ============================================
-// ROUTE 2: VERIFY OTP (I-verify ang 6-digit code)
+// ROUTE 2: VERIFY OTP (Verify the 6-digit code)
 // ============================================
 router.post('/verify-otp', async (req, res) => {
   const { userId, code } = req.body;
 
   if (!userId || !code) {
-    return res.status(400).json({ message: ' Enter six digit code.' });
+    return res.status(400).json({ message: 'Enter six digit code.' });
   }
 
   try {
-    // Note: expiration is now checked directly in SQL (expires_at > NOW())
-    // instead of comparing dates in JavaScript, to avoid timezone mismatch
-    // issues between the server and the database.
+    // Note: expiration is checked directly in SQL (expires_at > NOW())
+    // instead of comparing dates in JavaScript, to avoid timezone
+    // mismatch issues between the server and the database.
     const otpResult = await db.query(
       `SELECT otp_id, code
        FROM otp_codes
@@ -178,7 +181,7 @@ router.post('/verify-otp', async (req, res) => {
 
     await db.query('UPDATE users SET email_verified = TRUE WHERE user_id = $1', [userId]);
 
-    res.status(200).json({ message: 'Successful Email verification.' });
+    res.status(200).json({ message: 'Successful email verification.' });
   } catch (error) {
     console.log('OTP verification error:', error);
     res.status(500).json({ message: 'Error. Try again.' });
@@ -186,7 +189,7 @@ router.post('/verify-otp', async (req, res) => {
 });
 
 // ============================================
-// ROUTE 3: RESEND OTP (Magpadala ng bagong code)
+// ROUTE 3: RESEND OTP (Send a new code)
 // ============================================
 router.post('/resend-otp', async (req, res) => {
   const { userId } = req.body;
@@ -204,18 +207,18 @@ router.post('/resend-otp', async (req, res) => {
 
     const userEmail = userResult.rows[0].email;
 
-    const bagongOtpCode = gumawaNgOtpCode();
+    const newOtpCode = generateOtpCode();
     await db.query(
       `INSERT INTO otp_codes (user_id, code, purpose, expires_at)
        VALUES ($1, $2, 'email_verification', NOW() + INTERVAL '5 minutes')`,
-      [userId, bagongOtpCode]
+      [userId, newOtpCode]
     );
 
-    await sendOtpEmail(userEmail, bagongOtpCode);
+    await sendOtpEmail(userEmail, newOtpCode);
 
     res.status(200).json({ message: 'Code has been sent.' });
   } catch (error) {
-    console.log('There has been an error while resending Otp code:', error);
+    console.log('Error while resending OTP code:', error);
     res.status(500).json({ message: 'Error. Try again.' });
   }
 });
@@ -235,18 +238,18 @@ router.post('/login', async (req, res) => {
     const result = await db.query('SELECT * FROM users WHERE LOWER(email) = $1', [normalizedEmail]);
 
     if (result.rows.length === 0) {
-      return res.status(401).json({ message: 'Incorrect Email or Password' });
+      return res.status(401).json({ message: 'Incorrect email or password.' });
     }
 
     const user = result.rows[0];
 
-    const tamaAngPassword = await bcrypt.compare(password, user.password_hash);
-    if (!tamaAngPassword) {
-      return res.status(401).json({ message: 'Invalid Email o Password.' });
+    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: 'Incorrect email or password.' });
     }
 
     if (!user.email_verified) {
-      return res.status(403).json({ message: 'Verify Email to login.' });
+      return res.status(403).json({ message: 'Verify email to login.' });
     }
 
     const dashboardPerRole = {
@@ -270,13 +273,13 @@ router.post('/login', async (req, res) => {
       redirectUrl: dashboardPerRole[user.role] || '/dashboard',
     });
   } catch (error) {
-    console.log('Error login:', error);
+    console.log('Login error:', error);
     res.status(500).json({ message: 'Error. Try again.' });
   }
 });
 
 // ============================================
-// ROUTE 5: FORGOT PASSWORD (Magpadala ng reset link)
+// ROUTE 5: FORGOT PASSWORD (Send reset link)
 // ============================================
 router.post('/forgot-password', async (req, res) => {
   const { email } = req.body;
@@ -318,7 +321,7 @@ router.post('/forgot-password', async (req, res) => {
 });
 
 // ============================================
-// ROUTE 6: RESET PASSWORD (Gumawa ng bagong password)
+// ROUTE 6: RESET PASSWORD (Set a new password)
 // ============================================
 router.post('/reset-password', async (req, res) => {
   const { token, newPassword } = req.body;
@@ -362,7 +365,7 @@ router.post('/reset-password', async (req, res) => {
   } catch (error) {
     console.log('Reset password error:', error);
     res.status(500).json({ message: 'Error. Try again.' });
-}
+  }
 });
 
 // ============================================
@@ -379,5 +382,5 @@ router.post('/logout', (req, res) => {
 });
 
 module.exports = router;
-// Ie-export natin ang router na 'to papunta sa index.js, dun ginagamit
-// gamit ang "app.use('/api/auth', require('./routes/auth'))"
+// Exported to index.js, used with:
+// app.use('/api/auth', require('./routes/auth'))
