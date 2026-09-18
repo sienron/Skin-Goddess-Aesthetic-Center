@@ -23,6 +23,13 @@ function generateOtpCode() {
   return String(randomNumber);
 }
 
+function isValidPassword(password) {
+  // At least 8 characters, must contain both a letter and a number,
+  // and must not contain special characters.
+  const passwordPattern = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
+  return typeof password === 'string' && passwordPattern.test(password);
+}
+
 // ============================================
 // ROUTE 1: REGISTER (Create a new account)
 // ============================================
@@ -45,6 +52,12 @@ router.post('/register', async (req, res) => {
 
   if (!firstName || !lastName || !normalizedEmail || !password) {
     return res.status(400).json({ message: 'Fill out all the fields' });
+  }
+
+  if (!isValidPassword(password)) {
+    return res.status(400).json({
+      message: 'Password must be at least 8 characters, contain both letters and numbers, and must not include special characters.',
+    });
   }
 
   let newUser = null;
@@ -227,7 +240,7 @@ router.post('/resend-otp', async (req, res) => {
 // ROUTE 4: LOGIN
 // ============================================
 router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, staysignedin } = req.body;
   const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
 
   if (!normalizedEmail || !password) {
@@ -261,10 +274,14 @@ router.post('/login', async (req, res) => {
       staff: '/StaffDashboard.html',
     };
 
-    // Save the user's ID into the session — this is what keeps them
-    // "logged in" across future requests
     req.session.userId = user.user_id;
     req.session.role = user.role;
+
+    // "Stay Signed In" checked -> keep the cookie for 30 days.
+    // Unchecked -> fall back to the default 24-hour cookie set in index.js.
+    if (staysignedin) {
+      req.session.cookie.maxAge = 1000 * 60 * 60 * 24 * 30; // 30 days
+    }
 
     res.status(200).json({
       message: 'Successful login.',
@@ -274,6 +291,35 @@ router.post('/login', async (req, res) => {
     });
   } catch (error) {
     console.log('Login error:', error);
+    res.status(500).json({ message: 'Error. Try again.' });
+  }
+});
+
+// ============================================
+// ROUTE: GET CURRENT USER (for displaying name/initials in the header)
+// ============================================
+router.get('/me', async (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ message: 'Not logged in.' });
+  }
+
+  try {
+    const result = await db.query(
+      'SELECT first_name, last_name FROM users WHERE user_id = $1',
+      [req.session.userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Account not found.' });
+    }
+
+    const user = result.rows[0];
+    res.status(200).json({
+      firstName: user.first_name,
+      lastName: user.last_name,
+    });
+  } catch (error) {
+    console.log('Get current user error:', error);
     res.status(500).json({ message: 'Error. Try again.' });
   }
 });
@@ -293,7 +339,7 @@ router.post('/forgot-password', async (req, res) => {
     const userResult = await db.query('SELECT user_id, email FROM users WHERE LOWER(email) = $1', [normalizedEmail]);
 
     if (userResult.rows.length === 0) {
-      return res.status(200).json({ message: 'If that email exists, a reset link has been sent.' });
+      return res.status(404).json({ message: 'Account does not exist.' });
     }
 
     const user = userResult.rows[0];
@@ -313,7 +359,7 @@ router.post('/forgot-password', async (req, res) => {
     const resetLink = `${baseUrl}/ResetPassword.html?token=${rawToken}`;
     await sendPasswordResetEmail(user.email, resetLink);
 
-    res.status(200).json({ message: 'If that email exists, a reset link has been sent.' });
+    res.status(200).json({ message: 'Reset link has been sent.' });
   } catch (error) {
     console.log('Forgot password error:', error);
     res.status(500).json({ message: 'Error. Try again.' });
@@ -328,6 +374,12 @@ router.post('/reset-password', async (req, res) => {
 
   if (!token || !newPassword) {
     return res.status(400).json({ message: 'Token and new password are required.' });
+  }
+
+  if (!isValidPassword(newPassword)) {
+    return res.status(400).json({
+      message: 'Password must be at least 8 characters, contain both letters and numbers, and must not include special characters.',
+    });
   }
 
   try {
@@ -350,6 +402,25 @@ router.post('/reset-password', async (req, res) => {
     }
 
     const tokenRow = tokenResult.rows[0];
+
+    // Fetch the user's current password hash so we can check
+    // whether the new password is the same as the old one
+    const userResult = await db.query('SELECT password_hash FROM users WHERE user_id = $1', [
+      tokenRow.user_id,
+    ]);
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ message: 'Account not found.' });
+    }
+
+    const currentPasswordHash = userResult.rows[0].password_hash;
+
+    const isSameAsOldPassword = await bcrypt.compare(newPassword, currentPasswordHash);
+    if (isSameAsOldPassword) {
+      return res.status(400).json({
+        message: 'New password cannot be the same as your old password. Please choose a different one.',
+      });
+    }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     await db.query('UPDATE users SET password_hash = $1 WHERE user_id = $2', [

@@ -74,6 +74,13 @@ require('dotenv').config(); // read the .env file before doing anything else
     }
   });
   
+  app.get('/LoginPage.html', (req, res) => {
+    if (req.session.userId) {
+      return res.redirect('/');
+    }
+    res.sendFile(path.join(__dirname, 'LoginPage.html'));
+  });
+  
   app.use(express.static(path.join(__dirname, '')));
   
   app.use('/api/auth', require('./routes/auth'));

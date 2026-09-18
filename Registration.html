@@ -101,10 +101,12 @@
             <div class="field">
               <label for="firstName">First Name</label>
               <input type="text" id="firstName" name="firstName" placeholder="e.g. Anna" required>
+              <span class="field-error" data-error-for="firstName"></span>
             </div>
             <div class="field">
               <label for="lastName">Last Name</label>
               <input type="text" id="lastName" name="lastName" placeholder="e.g. Reyes" required>
+              <span class="field-error" data-error-for="lastName"></span>
             </div>
           </div>
 
@@ -112,6 +114,7 @@
             <div class="field">
               <label for="dob">Date of Birth</label>
               <input type="text" id="dob" name="dob" placeholder="MM / DD / YYYY" onfocus="(this.type='date')" onblur="if(!this.value)this.type='text'">
+              <span class="field-error" data-error-for="dob"></span>
             </div>
             <div class="field">
               <label for="gender">Gender</label>
@@ -122,36 +125,27 @@
                 <option value="other">Other</option>
                 <option value="prefer-not">Prefer not to say</option>
               </select>
+              <span class="field-error" data-error-for="gender"></span>
             </div>
           </div>
 
-          <div class="field-row">
-            <div class="field">
-              <label for="civilStatus">Civil Status</label>
-              <select id="civilStatus" name="civilStatus">
-                <option value="" selected disabled>Select</option>
-                <option value="single">Single</option>
-                <option value="married">Married</option>
-                <option value="widowed">Widowed</option>
-                <option value="separated">Separated</option>
-              </select>
+          <div class="field">
+            <label for="contactNumber">Contact Number</label>
+            <!-- +63 is a fixed, non-editable badge. The input itself
+                 accepts numbers only, max 10 digits (09XX XXX XXXX
+                 local format). registration.js strips non-digits +
+                 caps at 11 chars — see contact-number-restrict.js. -->
+            <div class="phone-input-wrap">
+              <span class="phone-prefix">+63</span>
+              <input type="tel" id="contactNumber" name="contactNumber" placeholder="9XX XXX XXXX" inputmode="numeric" maxlength="11" required>
             </div>
-            <div class="field">
-              <label for="contactNumber">Contact Number</label>
-              <!-- +63 is a fixed, non-editable badge. The input itself
-                   accepts numbers only, max 10 digits (09XX XXX XXXX
-                   local format). registration.js strips non-digits +
-                   caps at 11 chars — see contact-number-restrict.js. -->
-              <div class="phone-input-wrap">
-                <span class="phone-prefix">+63</span>
-                <input type="tel" id="contactNumber" name="contactNumber" placeholder="9XX XXX XXXX" inputmode="numeric" maxlength="11" required>
-              </div>
-            </div>
+            <span class="field-error" data-error-for="contactNumber"></span>
           </div>
 
           <div class="field">
             <label for="address">Home Address</label>
             <input type="text" id="address" name="address" placeholder="Street, Barangay, City, Province">
+            <span class="field-error" data-error-for="address"></span>
           </div>
 
           <h2 class="section-title">Skin &amp; Health Profile</h2>
@@ -159,11 +153,13 @@
           <div class="field">
             <label for="allergies">Known Allergies <span class="hint">— leave blank if none</span></label>
             <input type="text" id="allergies" name="allergies" placeholder="e.g. Fragrance, Lanolin, Salicylic Acid...">
+            <span class="field-error" data-error-for="allergies"></span>
           </div>
 
           <div class="field">
             <label for="conditions">Medical Conditions <span class="hint">— if any</span></label>
             <input type="text" id="conditions" name="conditions" placeholder="None declared">
+            <span class="field-error" data-error-for="conditions"></span>
           </div>
 
           <h2 class="section-title">Account Credentials</h2>
@@ -172,6 +168,7 @@
             <div class="field">
               <label for="email">Email Address</label>
               <input type="email" id="email" name="email" placeholder="your@email.com" required>
+              <span class="field-error" data-error-for="email"></span>
             </div>
             <div class="field">
               <label for="password">Password</label>
@@ -184,6 +181,7 @@
                   </svg>
                 </button>
               </div>
+              <span class="field-error" data-error-for="password"></span>
             </div>
           </div>
 
@@ -199,14 +197,18 @@
                   </svg>
                 </button>
               </div>
+              <span class="field-error" data-error-for="confirmPassword"></span>
             </div>
             <div class="field terms-field">
               <label class="checkbox-row">
                 <input type="checkbox" id="agree" name="agree" required>
                 <span>I agree to the <a href="#" id="tosLink">Terms of Service</a> and <a href="#" id="privacyLink">Privacy Policy</a></span>
               </label>
+              <span class="field-error" data-error-for="agree"></span>
             </div>
           </div>
+
+          <span class="field-error" data-error-for="form"></span>
 
         </form>
       </div>
@@ -259,6 +261,7 @@
       </div>
 
       <p class="otp-timer">Code expires in <span class="otp-timer-value">04:32</span></p>
+      <span class="field-error" data-error-for="otp"></span>
 
       <button type="button" class="auth-btn btn-gold btn-block">VERIFY CODE</button>
 
@@ -353,7 +356,7 @@
       <div class="sg-modal-content">
         <p>Skin Goddess Aesthetic Center values your privacy and is committed to protecting your personal data in accordance with the Data Privacy Act of 2012 (Republic Act No. 10173).</p>
         <h3>1. Information We Collect</h3>
-        <p>We collect information such as your name, email, date of birth, gender, civil status, contact number, home address, and health-related information (allergies, medical conditions) when you register or book a service.</p>
+        <p>We collect information such as your name, email, date of birth, gender, contact number, home address, and health-related information (allergies, medical conditions) when you register or book a service.</p>
         <h3>2. How We Use Your Information</h3>
         <p>Your information is used to manage your account, process appointments and payments, send OTP verification and notifications, and ensure your safety during treatments.</p>
         <h3>3. Data Sharing</h3>

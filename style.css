@@ -5409,3 +5409,69 @@ body.services{
     .um-modal__side { width: 100%; border-right: none; border-bottom: 1px solid var(--um-border); }
     .um-modal__grid { grid-template-columns: 1fr; }
   }
+
+  /* ===== PROFILE DROPDOWN (public header) ===== */
+.header-profile-wrap{
+  position: relative;
+}
+
+.profile-dropdown{
+  display: none;
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 200px;
+  background-color: var(--white);
+  border: 1px solid rgb(230, 230, 230);
+  border-radius: 10px;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.1);
+  z-index: 20;
+  overflow: hidden;
+  padding: 6px;
+}
+
+.profile-dropdown.show{
+  display: block;
+}
+
+.profile-dropdown-item{
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-family: "Raleway", sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgb(60, 60, 60);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.profile-dropdown-item:hover{
+  background-color: rgba(201, 168, 76, 0.12);
+  color: #C9A84C;
+}
+
+.profile-dropdown-divider{
+  height: 1px;
+  background-color: rgb(235, 235, 235);
+  margin: 6px 4px;
+}
+
+.profile-dropdown-item--signout{
+  color: #B93C3C;
+}
+
+.profile-dropdown-item--signout:hover{
+  background-color: rgba(185, 60, 60, 0.08);
+  color: #B93C3C;
+}
+
+@media (max-width: 480px){
+  .profile-dropdown{
+      right: -10px;
+  }
+}

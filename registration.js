@@ -7,15 +7,10 @@ document.addEventListener('DOMContentLoaded', () => {
     button.addEventListener('click', () => {
       const targetId = button.getAttribute('data-target');
       const input = document.getElementById(targetId);
-
-      if (input.type === 'password') {
-        input.type = 'text';
-      } else {
-        input.type = 'password';
-      }
+      input.type = input.type === 'password' ? 'text' : 'password';
     });
   });
-  
+
   // ===== OTP / Email Verification modal (shown after CREATE ACCOUNT) ===
   const otpModal = document.getElementById('otpModal');
   const registerForm = document.getElementById('registerForm');
@@ -34,6 +29,21 @@ document.addEventListener('DOMContentLoaded', () => {
   let countdownInterval = null;
   let currentUserId = null; // set after a successful register response
 
+  // ===== Inline error helpers (same pattern as reset-password.js) =====
+  function setFieldError(fieldName, message) {
+    const errorEl = document.querySelector(`[data-error-for="${fieldName}"]`);
+    const field = document.getElementById(fieldName);
+    const group = field ? field.closest('.field') : null;
+    if (errorEl) errorEl.textContent = message || '';
+    if (group) group.classList.toggle('has-error', Boolean(message));
+  }
+
+  function clearErrors(scope) {
+    const root = scope || document;
+    root.querySelectorAll('.field-error').forEach((el) => (el.textContent = ''));
+    root.querySelectorAll('.field').forEach((el) => el.classList.remove('has-error'));
+  }
+
   function startCountdown() {
     secondsLeft = 300; // 5 minutes = 300 seconds
 
@@ -44,7 +54,6 @@ document.addEventListener('DOMContentLoaded', () => {
       let minutes = Math.floor(secondsLeft / 60);
       let seconds = secondsLeft % 60;
 
-      // add a leading zero if the number is less than 10 (e.g. "4" -> "04")
       if (seconds < 10) {
         seconds = '0' + seconds;
       }
@@ -58,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
         clearInterval(countdownInterval);
         timerValue.textContent = '00:00';
       }
-    }, 1000); // runs every 1000ms = 1 second
+    }, 1000);
   }
 
   function stopCountdown() {
@@ -77,8 +86,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function openOtpModal() {
     otpModal.hidden = false;
-    document.body.classList.add('modal-open'); // dims/locks the page behind it
-    otpDigits.forEach((digit) => (digit.value = '')); // clear any leftover digits
+    document.body.classList.add('modal-open');
+    otpDigits.forEach((digit) => (digit.value = ''));
     otpDigits[0].focus();
     startCountdown();
   }
@@ -91,26 +100,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
   registerForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+    clearErrors(registerForm);
+    setFieldError('form', '');
 
     const password = document.getElementById('password').value;
     const confirmPassword = document.getElementById('confirmPassword').value;
     const agree = document.getElementById('agree').checked;
 
+    let hasError = false;
+
+    const passwordPattern = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z0-9]{8,}$/;
+    if (!passwordPattern.test(password)) {
+      setFieldError('password', 'Password must be at least 8 characters, contain both letters and numbers, and must not include special characters.');
+      hasError = true;
+    }
+
     if (password !== confirmPassword) {
-      alert('Passwords do not match.');
-      return;
+      setFieldError('confirmPassword', 'Passwords do not match.');
+      hasError = true;
     }
+
     if (!agree) {
-      alert('Please agree to the Terms of Service and Privacy Policy.');
-      return;
+      setFieldError('agree', 'Please agree to the Terms of Service and Privacy Policy.');
+      hasError = true;
     }
+
+    if (hasError) return;
 
     const formData = {
       firstName: document.getElementById('firstName').value.trim(),
       lastName: document.getElementById('lastName').value.trim(),
       dob: document.getElementById('dob').value || null,
       gender: document.getElementById('gender').value || null,
-      civilStatus: document.getElementById('civilStatus').value || null,
       contactNumber: document.getElementById('contactNumber').value.trim(),
       address: document.getElementById('address').value.trim(),
       allergies: document.getElementById('allergies').value.trim(),
@@ -126,10 +147,10 @@ document.addEventListener('DOMContentLoaded', () => {
         body: JSON.stringify(formData),
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        alert(data.message || 'Something went wrong. Please try again.');
+        setFieldError('form', data.message || 'Something went wrong. Please try again.');
         return;
       }
 
@@ -138,7 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
       openOtpModal();
     } catch (err) {
       console.error('Registration request failed:', err);
-      alert('Something went wrong. Please try again.');
+      setFieldError('form', 'Something went wrong. Please try again.');
     }
   });
 
@@ -162,10 +183,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ---- Verify Code button ----
   verifyBtn.addEventListener('click', async () => {
+    const errorEl = otpModal.querySelector('[data-error-for="otp"]');
+    if (errorEl) errorEl.textContent = '';
+
     const code = Array.from(otpDigits).map((digit) => digit.value).join('');
 
     if (code.length !== 6) {
-      alert('Please enter all 6 digits.');
+      if (errorEl) errorEl.textContent = 'Please enter all 6 digits.';
       return;
     }
 
@@ -176,24 +200,39 @@ document.addEventListener('DOMContentLoaded', () => {
         body: JSON.stringify({ userId: currentUserId, code }),
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        alert(data.message || 'Verification failed. Please try again.');
+        if (errorEl) errorEl.textContent = data.message || 'Verification failed. Please try again.';
         return;
       }
 
-      alert('Email verified! You can now sign in.');
-      window.location.href = '/LoginPage.html';
+      // Inline success instead of alert — swap modal content, then redirect
+      const modalBox = otpModal.querySelector('.otp-modal');
+      modalBox.innerHTML = `
+        <div class="modal-icon" style="background:#2e7d32;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2">
+            <path d="M20 6L9 17l-5-5"/>
+          </svg>
+        </div>
+        <h2 class="modal-title">Email verified!</h2>
+        <p class="modal-subtitle">You can now sign in to your account.</p>
+      `;
+
+      setTimeout(() => {
+        window.location.href = '/LoginPage.html';
+      }, 1500);
     } catch (err) {
       console.error('OTP verification request failed:', err);
-      alert('Something went wrong. Please try again.');
+      if (errorEl) errorEl.textContent = 'Something went wrong. Please try again.';
     }
   });
 
   // ---- Resend code ----
   resendLink.addEventListener('click', async (e) => {
     e.preventDefault();
+    const errorEl = otpModal.querySelector('[data-error-for="otp"]');
+    if (errorEl) errorEl.textContent = '';
 
     try {
       const response = await fetch('/api/auth/resend-otp', {
@@ -202,17 +241,17 @@ document.addEventListener('DOMContentLoaded', () => {
         body: JSON.stringify({ userId: currentUserId }),
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        alert(data.message || 'Could not resend code. Please try again.');
+        if (errorEl) errorEl.textContent = data.message || 'Could not resend code. Please try again.';
         return;
       }
 
-      startCountdown(); // bagong code = bagong 5-minute window
+      startCountdown();
     } catch (err) {
       console.error('Resend OTP request failed:', err);
-      alert('Something went wrong. Please try again.');
+      if (errorEl) errorEl.textContent = 'Something went wrong. Please try again.';
     }
   });
 
@@ -238,17 +277,12 @@ document.addEventListener('DOMContentLoaded', () => {
 const contactNumberInput = document.getElementById('contactNumber');
 if (contactNumberInput) {
   contactNumberInput.addEventListener('input', (e) => {
-    // strip anything that's not a digit, then cap at 10 digits
     e.target.value = e.target.value.replace(/\D/g, '').slice(0, 10);
   });
- 
-  // also block non-numeric keys on the way in (paste is still caught
-  // by the 'input' handler above, this just stops stray letters from
-  // flashing on screen before getting stripped)
+
   contactNumberInput.addEventListener('keydown', (e) => {
     const allowedKeys = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'];
     if (allowedKeys.includes(e.key)) return;
     if (!/^\d$/.test(e.key)) e.preventDefault();
   });
 }
- 

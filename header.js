@@ -1,3 +1,81 @@
+/* ===== Profile Area: show real user info if logged in, Sign In button if not ===== */
+(function () {
+    const profileWrap = document.getElementById('profileWrap');
+    const profileBtn = document.getElementById('profileBtn');
+    const profileDropdown = document.getElementById('profileDropdown');
+    const mobileProfile = document.querySelector('.mobile-nav-profile');
+
+    if (!profileBtn && !mobileProfile) return;
+
+    function fillProfile(container, fullName, initials) {
+        if (!container) return;
+        const avatarEl = container.querySelector('.profile-avatar');
+        const nameEl = container.querySelector('.profile-name');
+        if (avatarEl) avatarEl.textContent = initials;
+        if (nameEl) nameEl.textContent = fullName;
+    }
+
+    function showSignInButton(isMobile) {
+        if (isMobile) {
+            if (!mobileProfile) return;
+            mobileProfile.innerHTML = `<a href="/LoginPage.html" class="book-now-btn mobile-nav-book-btn" style="text-decoration:none;text-align:center;display:block;">SIGN IN</a>`;
+        } else {
+            if (!profileWrap) return;
+            profileWrap.innerHTML = `<a href="/LoginPage.html" class="book-now-btn" id="profileBtn" style="text-decoration:none;">SIGN IN</a>`;
+        }
+    }
+
+    fetch('/api/auth/me')
+        .then((res) => {
+            if (res.ok) return res.json();
+            throw new Error('not logged in');
+        })
+        .then((data) => {
+            const fullName = `${data.firstName} ${data.lastName}`.trim();
+            const initials = `${data.firstName?.[0] || ''}${data.lastName?.[0] || ''}`.toUpperCase();
+            fillProfile(profileBtn, fullName, initials);
+            fillProfile(mobileProfile, fullName, initials);
+        })
+        .catch(() => {
+            showSignInButton(false);
+            showSignInButton(true);
+        });
+
+    // Dropdown open/close (desktop only — wrap/dropdown don't exist once signed out)
+    if (profileWrap && profileBtn && profileDropdown) {
+        profileBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isOpen = profileDropdown.classList.toggle('show');
+            profileBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!profileWrap.contains(e.target)) {
+                profileDropdown.classList.remove('show');
+                profileBtn.setAttribute('aria-expanded', 'false');
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                profileDropdown.classList.remove('show');
+                profileBtn.setAttribute('aria-expanded', 'false');
+            }
+        });
+    }
+
+    const signOutBtn = document.getElementById('signOutBtn');
+    if (signOutBtn) {
+        signOutBtn.addEventListener('click', () => {
+            fetch('/api/auth/logout', { method: 'POST' })
+                .catch(() => {})
+                .finally(() => {
+                    window.location.href = '/LoginPage.html';
+                });
+        });
+    }
+})();
+
 /* ===== Shared Header Behavior =====
    Include this file on ANY page that uses the shared header markup
    (notification bell + dropdown, logout button). It only wires up
@@ -6,12 +84,6 @@
    no logout button).
 */
 
-/* ===== Notification Dropdown =====
-   notificationList is intentionally left empty in the HTML.
-   Once the backend is ready, populate it like:
-     notificationList.innerHTML = "";
-     notifications.forEach(n => notificationList.appendChild(buildNotificationItem(n)));
-*/
 (function () {
     const notificationWrap = document.getElementById("notificationWrap");
     const notificationBtn = document.getElementById("notificationBtn");
@@ -37,25 +109,6 @@
     });
 })();
 
-/* ===== Profile Button =====
-   Placeholder handler — replace with real navigation to the client's
-   profile/account page once that page exists, e.g.:
-     window.location.href = "/profile";
-*/
-(function () {
-    const profileBtn = document.getElementById("profileBtn");
-    if (!profileBtn) return;
-
-    profileBtn.addEventListener("click", () => {
-        console.log("Profile clicked");
-    });
-})();
-
-/* ===== Logout Button =====
-   Placeholder handler — replace the body with real session/auth teardown
-   once the backend exists, e.g. clearing the session token and redirecting:
-     fetch("/api/logout", { method: "POST" }).then(() => window.location.href = "/login");
-*/
 (function () {
     const logoutBtn = document.getElementById("logoutBtn");
     if (!logoutBtn) return;
@@ -65,12 +118,6 @@
     });
 })();
 
-/* ===== Mobile Nav Drawer (public header) =====
-   Hamburger button toggles an off-canvas drawer + darkened overlay.
-   Only present on the public-facing pages (public-header has no sidebar
-   nav to fall back on at small widths), so this self-guards like the
-   rest of the file and is a no-op on staff pages missing this markup.
-*/
 (function () {
     const hamburgerBtn = document.getElementById("hamburgerBtn");
     const mobileNavDrawer = document.getElementById("mobileNavDrawer");
@@ -108,7 +155,6 @@
         if (e.key === "Escape") closeDrawer();
     });
 
-    // Close the drawer if a nav link inside it is clicked.
     mobileNavDrawer.querySelectorAll("a").forEach((link) => {
         link.addEventListener("click", closeDrawer);
     });

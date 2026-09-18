@@ -56,11 +56,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let hasError = false;
 
+    const passwordPattern = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z0-9]{8,}$/;
+
     if (!newPassword) {
       setFieldError('new-password', 'Password is required.');
       hasError = true;
-    } else if (newPassword.length < 8) {
-      setFieldError('new-password', 'Password must be at least 8 characters.');
+    } else if (!passwordPattern.test(newPassword)) {
+      setFieldError('new-password', 'Password must be at least 8 characters, contain both letters and numbers, and must not include special characters.');
       hasError = true;
     }
 
