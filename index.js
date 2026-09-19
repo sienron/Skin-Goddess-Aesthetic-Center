@@ -13,6 +13,9 @@ require('dotenv').config(); // read the .env file before doing anything else
   
   const PORT = process.env.PORT || 3000;
   
+  // Needed when deployed behind a proxy such as Render
+  app.set('trust proxy', 1);
+
   app.use(express.json());
   
   // Session setup — this lets the server remember who is logged in

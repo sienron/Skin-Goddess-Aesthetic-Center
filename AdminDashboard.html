@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard — Skin Goddess Aesthetic Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="um-shell">
+
+    <!-- ===== SIDEBAR ===== -->
+    <aside class="um-sidebar">
+        <a href="AdminDashboard.html" class="um-sidebar__logo">
+          <img src="images/Logo.png" alt="Skin Goddess Aesthetic Center" class="um-sidebar__logo-img">
+        </a>
+      
+        <p class="um-sidebar__label">MAIN MENU</p>
+        <nav class="um-sidebar__nav">
+          <a href="AdminDashboard.html" class="um-nav-link um-nav-link--active">Dashboard</a>
+          <a href="AdminAppointments.html" class="um-nav-link">Appointments</a>
+          <a href="AdminInventory.html" class="um-nav-link">Inventory</a>
+          <a href="AdminReports.html" class="um-nav-link">Reports</a>
+          <a href="UserManagement.html" class="um-nav-link">User Management</a>
+          <a href="ContentManagement.html" class="um-nav-link">Content Management</a>
+        </nav>
+      
+        <div class="um-sidebar__account">
+          <div class="um-avatar">A</div>
+          <div>
+            <p class="um-sidebar__account-name">Admin User</p>
+            <p class="um-sidebar__account-role">Owner</p>
+          </div>
+        </div>
+      </aside>
+
+    <!-- ===== MAIN CONTENT ===== -->
+    <main class="um-main">
+
+      <div class="um-header">
+        <div>
+          <h1 class="um-header__title">Admin Dashboard</h1>
+          <p class="um-header__subtitle">Overview of accounts, appointments, and activity</p>
+        </div>
+
+        <div class="um-header__actions">
+          <div class="um-search">
+            <input type="text" id="dashboardSearch" placeholder="Search users...">
+          </div>
+          <button class="um-btn um-btn--ghost" id="filterBtn">Filter</button>
+          <button class="um-btn um-btn--ghost" id="exportBtn">Export</button>
+          <button class="um-btn um-btn--primary" id="createUserBtn">+ Create New User</button>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+</body>
+</html>
