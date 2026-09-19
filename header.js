@@ -7,6 +7,34 @@
 
     if (!profileBtn && !mobileProfile) return;
 
+    // Auth pages (login/register) shouldn't show a logged-in profile.
+    // If the user already has a valid session and lands here anyway
+    // (e.g. manually typing the URL, or clicking back), just send
+    // them to the homepage instead of showing their name on a page
+    // whose whole purpose is signing in / creating a NEW account.
+    const authPages = ['login', 'registration'];
+    const currentPage = document.body.dataset.page;
+
+    if (authPages.includes(currentPage)) {
+        fetch('/api/auth/me')
+            .then((res) => {
+                if (res.ok) {
+                    // Already logged in — don't let them see the login/register form
+                    window.location.href = '/index.html';
+                } else {
+                    // Not logged in (expected case) — replace the hardcoded
+                    // placeholder profile markup with the Sign In button
+                    showSignInButton(false);
+                    showSignInButton(true);
+                }
+            })
+            .catch(() => {
+                showSignInButton(false);
+                showSignInButton(true);
+            });
+        return;
+    }
+
     function fillProfile(container, fullName, initials) {
         if (!container) return;
         const avatarEl = container.querySelector('.profile-avatar');
@@ -20,8 +48,13 @@
             if (!mobileProfile) return;
             mobileProfile.innerHTML = `<a href="/LoginPage.html" class="book-now-btn mobile-nav-book-btn" style="text-decoration:none;text-align:center;display:block;">SIGN IN</a>`;
         } else {
-            if (!profileWrap) return;
-            profileWrap.innerHTML = `<a href="/LoginPage.html" class="book-now-btn" id="profileBtn" style="text-decoration:none;">SIGN IN</a>`;
+            // Pages like LoginPage.html/Registration.html have a bare
+            // #profileBtn with no #profileWrap wrapper around it (no
+            // dropdown needed there). Fall back to replacing the button
+            // itself directly in that case.
+            const target = profileWrap || profileBtn;
+            if (!target) return;
+            target.outerHTML = `<a href="/LoginPage.html" class="book-now-btn" id="profileBtn" style="text-decoration:none;">SIGN IN</a>`;
         }
     }
 

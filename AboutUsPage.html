@@ -18,43 +18,52 @@
     </div>
 
     <nav class="public-nav">
-        <ul class="public-nav-links">
-            <li><a href="index.html">Home</a></li>
-            <li><a href="ServicesPage.html">Services</a></li>
-            <li><a href="#">Results</a></li>
-            <li><a href="ContactUsPage.html">Contact</a></li>
-        </ul>
-    </nav>
+      <ul class="public-nav-links">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="ServicesPage.html">Services</a></li>
+          <li><a href="#">Results</a></li>
+          <li><a href="ContactUsPage.html">Contact</a></li>
+      </ul>
+  </nav>
 
-    <div class="public-header-actions">
+  <div class="public-header-actions">
 
-        <div class="notification-wrap" id="notificationWrap">
-            <div class="notification" id="notificationBtn">
-                <img src="icons/notification-bell.svg" alt="Notifications" class="notification-bell">
-            </div>
+      <div class="notification-wrap" id="notificationWrap">
+          <div class="notification" id="notificationBtn">
+              <img src="icons/notification-bell.svg" alt="Notifications" class="notification-bell">
+          </div>
 
-            <div class="notification-dropdown" id="notificationDropdown">
-                <div class="notification-dropdown-header">Notifications</div>
-                <div class="notification-list">
-                    <!-- Notification items would be populated here -->
-                </div>
-            </div>
-        </div>
+          <div class="notification-dropdown" id="notificationDropdown">
+              <div class="notification-dropdown-header">Notifications</div>
+              <div class="notification-list">
+                  <!-- Notification items would be populated here -->
+              </div>
+          </div>
+      </div>
 
-        <button class="book-now-btn" type="button">BOOK NOW</button>
+      <button class="book-now-btn" type="button">BOOK NOW</button>
 
-        <div class="public-divider"></div>
+      <div class="public-divider"></div>
 
-        <button type="button" class="profile-row" id="profileBtn">
+      <div class="header-profile-wrap" id="profileWrap">
+        <button type="button" class="profile-row" id="profileBtn" aria-haspopup="true" aria-expanded="false">
             <div class="profile-avatar">AR</div>
             <div class="profile-info">
                 <span class="profile-name">Anna Reyes</span>
             </div>
         </button>
 
+        <div class="profile-dropdown" id="profileDropdown">
+            <a href="UserAccount.html" class="profile-dropdown-item">My Account</a>
+            <a href="UserAppointment.html" class="profile-dropdown-item">My Appointments</a>
+            <div class="profile-dropdown-divider"></div>
+            <button type="button" class="profile-dropdown-item profile-dropdown-item--signout" id="signOutBtn">Sign out</button>
+        </div>
     </div>
 
-  </header>
+  </div>
+
+</header>
 
   <main class="about-main">
 

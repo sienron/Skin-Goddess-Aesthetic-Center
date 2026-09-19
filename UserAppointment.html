@@ -46,12 +46,21 @@
 
             <div class="public-divider"></div>
 
-            <button type="button" class="profile-row" id="profileBtn">
-                <div class="profile-avatar">AR</div>
-                <div class="profile-info">
-                    <span class="profile-name">Anna Reyes</span>
+            <div class="header-profile-wrap" id="profileWrap">
+                <button type="button" class="profile-row" id="profileBtn" aria-haspopup="true" aria-expanded="false">
+                    <div class="profile-avatar">AR</div>
+                    <div class="profile-info">
+                        <span class="profile-name">Anna Reyes</span>
+                    </div>
+                </button>
+  
+                <div class="profile-dropdown" id="profileDropdown">
+                    <a href="UserAccount.html" class="profile-dropdown-item">My Account</a>
+                    <a href="UserAppointment.html" class="profile-dropdown-item">My Appointments</a>
+                    <div class="profile-dropdown-divider"></div>
+                    <button type="button" class="profile-dropdown-item profile-dropdown-item--signout" id="signOutBtn">Sign out</button>
                 </div>
-            </button>
+            </div>
 
         </div>
 
