@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Confirm & Pay - Skin Goddess Aesthetic Center</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header class="public-header">
+
+        <div class="logo-container">
+          <a href="index.html"><img id="logo" src="images/logo_horizontal.jpg" alt="Skin Goddess Aesthetic Center logo"></a>
+        </div>
+
+        <nav class="public-nav">
+            <ul class="public-nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="#services">Services</a></li>
+                <li><a href="#">About</a></li>
+                <li><a href="#">Contact</a></li>
+            </ul>
+        </nav>
+
+        <button type="button" class="hamburger-btn" id="hamburgerBtn" aria-label="Open menu" aria-expanded="false" aria-controls="mobileNavDrawer">
+            <img src="icons/hamburger.svg" alt="" class="hamburger-icon">
+        </button>
+
+        <div class="public-header-actions">
+
+            <div class="notification-wrap" id="notificationWrap">
+                <button type="button" class="notification" id="notificationBtn" aria-label="View notifications" aria-haspopup="true" aria-expanded="false" aria-controls="notificationDropdown">
+                    <img src="icons/notification-bell.svg" alt="" class="notification-bell">
+                </button>
+
+                <div class="notification-dropdown" id="notificationDropdown">
+                    <div class="notification-dropdown-header">Notifications</div>
+                    <div class="notification-list">
+                        <!-- Notification items would be populated here -->
+                    </div>
+                </div>
+            </div>
+
+            <button class="book-now-btn" type="button" onclick="window.location.href='UserAppointment.html'">BOOK NOW</button>
+
+            <div class="public-divider"></div>
+
+            <div class="header-profile-wrap" id="profileWrap">
+                <button type="button" class="profile-row" id="profileBtn" aria-haspopup="true" aria-expanded="false">
+                    <div class="profile-avatar">AR</div>
+                    <div class="profile-info">
+                        <span class="profile-name">Anna Reyes</span>
+                    </div>
+                </button>
+  
+                <div class="profile-dropdown" id="profileDropdown">
+                    <a href="UserAccount.html" class="profile-dropdown-item">My Account</a>
+                    <a href="UserAppointment.html" class="profile-dropdown-item">My Appointments</a>
+                    <div class="profile-dropdown-divider"></div>
+                    <button type="button" class="profile-dropdown-item profile-dropdown-item--signout" id="signOutBtn">Sign out</button>
+                </div>
+            </div>
+
+        </div>
+
+    </header>
+
+    <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
+
+    <aside class="mobile-nav-drawer" id="mobileNavDrawer" aria-hidden="true" inert>
+
+        <div class="mobile-nav-top">
+            <img src="images/logo_horizontal.jpg" alt="Skin Goddess Aesthetic Center logo" class="mobile-nav-logo">
+            <button type="button" class="mobile-nav-close" id="mobileNavClose" aria-label="Close menu">&times;</button>
+        </div>
+
+        <ul class="mobile-nav-links">
+            <li><a href="index.html">Home</a></li>
+            <li><a href="ServicesPage.html">Services</a></li>
+            <li><a href="AboutUsPage.html">About</a></li>
+            <li><a href="ContactUsPage.html">Contact</a></li>
+        </ul>
+
+        <button class="book-now-btn mobile-nav-book-btn" type="button">BOOK NOW</button>
+
+        <div class="mobile-nav-profile">
+            <div class="profile-avatar">AR</div>
+            <div class="profile-info">
+                <span class="profile-name">Anna Reyes</span>
+            </div>
+        </div>
+
+    </aside>
+
+    <main class="booking-main">
+
+        <a href="UserAppointment.html" class="checkout-back-link">&larr; Back to booking</a>
+
+        <div class="summary-page-main">
+
+            <div class="booking-intro">
+                <span class="booking-eyebrow">-- REVIEW & PAY</span>
+                <h1>Confirm Your <span>Appointment</span></h1>
+                <p>Review your booking details, then complete payment to reserve your slot.</p>
+            </div>
+
+            <div class="summary-page-layout">
+
+                <!-- ===== Booking summary =====
+                     Populated by appointment-summary.js from the details saved
+                     on the booking page. -->
+                <div class="booking-panel" id="checkoutSummary">
+                    <p class="booking-panel-label">BOOKING SUMMARY</p>
+
+                    <div class="summary-row">
+                        <span>Service</span>
+                        <span id="summaryService">—</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Reservation Fee</span>
+                        <span id="summaryFee">₱100</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Date</span>
+                        <span id="summaryDate" class="not-selected">Not selected</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Time</span>
+                        <span id="summaryTime" class="not-selected">Not selected</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Name</span>
+                        <span id="summaryName">—</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Email</span>
+                        <span id="summaryEmail">—</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Phone</span>
+                        <span id="summaryPhone">—</span>
+                    </div>
+
+                    <div class="summary-total">
+                        <span>Total</span>
+                        <span id="summaryTotal">₱0</span>
+                    </div>
+                    <p class="summary-note">Cancellations: 24 hrs in advance</p>
+
+                    <p class="summary-section-title">WHAT TO EXPECT</p>
+                    <ul class="summary-list">
+                        <li>Arrive 10 minutes early</li>
+                        <li>Bring a valid ID</li>
+                        <li>Confirmation sent via email</li>
+                        <li>Specialist will be ready for you</li>
+                    </ul>
+
+                    <div class="summary-location">
+                        <p class="summary-section-title" style="margin-top: 0;">LOCATION</p>
+                        <strong>Skin Goddess Aesthetic Center</strong>
+                        Imus Cavite<br>
+                        Philippines
+                    </div>
+                </div>
+
+                <!-- ===== Payment (PayMongo) =====
+                     Replace #paymongoCheckout with the actual PayMongo
+                     Payment Intent / Checkout Session UI. -->
+                <p class="checkout-section-title">PAYMENT</p>
+                <div id="paymongoCheckout" class="paymongo-placeholder">
+                    PayMongo checkout goes here
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+    <footer class="public-footer">
+
+        <div class="footer-top">
+
+            <div class="footer-col footer-brand">
+                <div class="footer-logo">
+                    <img src="images/logo_horizontal.jpg" alt="Skin Goddess Aesthetic Center logo">
+                </div>
+                <p class="footer-tagline">Skin Care Clinic that performs non-surgical treatments based on the needs of an individual.</p>
+            </div>
+
+            <div class="footer-col">
+                <p class="footer-heading">SERVICES</p>
+                <ul class="footer-links">
+                    <li><a href="#">Facial Treatments</a></li>
+                    <li><a href="#">Skin Whitening</a></li>
+                    <li><a href="#">Anti Aging</a></li>
+                    <li><a href="#">Laser Therapy</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-col">
+                <p class="footer-heading">PORTAL</p>
+                <ul class="footer-links">
+                    <li><a href="#">Book Online</a></li>
+                    <li><a href="#">View Services</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-col">
+                <p class="footer-heading">CONTACT</p>
+                <p class="footer-contact-line">2nd Floor KW Plaza Building, Pasong Buaya 2 Imus Cavite., Imus, Philippines, 4103</p>
+                <p class="footer-contact-line">+63 945 611 9436</p>
+                <p class="footer-contact-line">info@skingoddess.ph</p>
+                <p class="footer-contact-line">Mon - Sat &middot; 9am &ndash; 6pm</p>
+            </div>
+
+        </div>
+
+        <div class="footer-bottom">
+            <span>&copy; 2025 Skin Goddess Aesthetic Center. All rights reserved.</span>
+            <span>Imus - Philippines</span>
+        </div>
+
+    </footer>
+
+    <script src="header.js"></script>
+    <script src="appointment-summary.js"></script>
+
+</body>
+</html>

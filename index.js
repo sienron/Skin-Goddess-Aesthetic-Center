@@ -50,6 +50,7 @@ require('dotenv').config(); // read the .env file before doing anything else
   // Protected pages — these HTML files require an active session.
   const protectedPages = [
     '/UserAppointment.html',
+    '/MyAppointments.html',
     '/AestheticianAppointmentPage.html',
     '/UserDashboard.html',
     '/AdminDashboard.html',
@@ -91,6 +92,8 @@ require('dotenv').config(); // read the .env file before doing anything else
   app.use('/api/services', require('./routes/services'));
 
   app.use('/api/appointments', require('./routes/appointments'));
+
+  app.use('/api/availability', require('./routes/availability'));
   
   app.listen(PORT, () => {
     console.log(`Server is running http://localhost:${PORT}`);

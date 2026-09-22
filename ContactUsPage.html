@@ -8,30 +8,31 @@
 </head>
 <body class="contact-page">
 
-  <!--by boss sienron-->
   <header class="public-header">
 
-    <div class="logo-container">
-        <img id="logo" src="images/logo_horizontal.jpg" alt="Skin Goddess Aesthetic Center logo">
-    </div>
+    <button type="button" class="hamburger-btn" id="hamburgerBtn" aria-label="Open menu" aria-expanded="false" aria-controls="mobileNavDrawer">
+        <img src="icons/hamburger.svg" alt="" class="hamburger-icon">
+    </button>
 
-    <!-- class="active" (pang active highlight)-->
+    <div class="logo-container">
+        <a href="index.html"><img id="logo" src="images/logo_horizontal.jpg" alt="Skin Goddess Aesthetic Center logo"></a>
+    </div>
 
     <nav class="public-nav">
         <ul class="public-nav-links">
             <li><a href="index.html">Home</a></li>
             <li><a href="ServicesPage.html">Services</a></li>
             <li><a href="AboutUsPage.html">About</a></li>
-            <li><a href="#">Results</a></li>
+            <li><a href="ContactUsPage.html" class="active">Contact</a></li>
         </ul>
     </nav>
 
     <div class="public-header-actions">
 
         <div class="notification-wrap" id="notificationWrap">
-            <div class="notification" id="notificationBtn">
-                <img src="icons/notification-bell.svg" alt="Notifications" class="notification-bell">
-            </div>
+            <button type="button" class="notification" id="notificationBtn" aria-label="View notifications" aria-haspopup="true" aria-expanded="false" aria-controls="notificationDropdown">
+                <img src="icons/notification-bell.svg" alt="" class="notification-bell">
+            </button>
 
             <div class="notification-dropdown" id="notificationDropdown">
                 <div class="notification-dropdown-header">Notifications</div>
@@ -41,7 +42,7 @@
             </div>
         </div>
 
-        <button class="book-now-btn" type="button">BOOK NOW</button>
+        <button class="book-now-btn" type="button" onclick="window.location.href='UserAppointment.html'">BOOK NOW</button>
 
         <div class="public-divider"></div>
 
@@ -54,7 +55,7 @@
           </button>
 
           <div class="profile-dropdown" id="profileDropdown">
-              <a href="UserAccount.html" class="profile-dropdown-item">My Account</a>
+              <a href="index.html" class="profile-dropdown-item">My Account</a>
               <a href="UserAppointment.html" class="profile-dropdown-item">My Appointments</a>
               <div class="profile-dropdown-divider"></div>
               <button type="button" class="profile-dropdown-item profile-dropdown-item--signout" id="signOutBtn">Sign out</button>
@@ -64,6 +65,31 @@
     </div>
 
   </header>
+
+  <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
+
+  <aside class="mobile-nav-drawer" id="mobileNavDrawer" aria-hidden="true" inert>
+    <div class="mobile-nav-top">
+      <img src="images/logo_horizontal.jpg" alt="Skin Goddess Aesthetic Center logo" class="mobile-nav-logo">
+      <button type="button" class="mobile-nav-close" id="mobileNavClose" aria-label="Close menu">&times;</button>
+    </div>
+
+    <ul class="mobile-nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="ServicesPage.html">Services</a></li>
+      <li><a href="AboutUsPage.html">About</a></li>
+      <li><a href="ContactUsPage.html" class="active">Contact</a></li>
+    </ul>
+
+    <button class="book-now-btn mobile-nav-book-btn" type="button" onclick="window.location.href='UserAppointment.html'">BOOK NOW</button>
+
+    <div class="mobile-nav-profile">
+      <div class="profile-avatar">AR</div>
+      <div class="profile-info">
+        <span class="profile-name">Anna Reyes</span>
+      </div>
+    </div>
+  </aside>
 
   <main class="contact-main">
 

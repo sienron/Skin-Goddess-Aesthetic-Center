@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Appointments - Skin Goddess Aesthetic Center</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="public-header">
+    <div class="logo-container"><a href="index.html"><img id="logo" src="images/logo_horizontal.jpg" alt="Skin Goddess Aesthetic Center logo"></a></div>
+    <nav class="public-nav"><ul class="public-nav-links"><li><a href="index.html">Home</a></li><li><a href="ServicesPage.html">Services</a></li><li><a href="AboutUsPage.html">About</a></li><li><a href="ContactUsPage.html">Contact</a></li></ul></nav>
+    <button type="button" class="hamburger-btn" id="hamburgerBtn" aria-label="Open menu" aria-expanded="false" aria-controls="mobileNavDrawer"><img src="icons/hamburger.svg" alt="" class="hamburger-icon"></button>
+    <div class="public-header-actions">
+      <button class="book-now-btn" type="button" onclick="window.location.href='UserAppointment.html'">BOOK NOW</button>
+      <div class="public-divider"></div>
+      <div class="header-profile-wrap" id="profileWrap">
+        <button type="button" class="profile-row" id="profileBtn" aria-haspopup="true" aria-expanded="false"><div class="profile-avatar">AR</div><div class="profile-info"><span class="profile-name">Anna Reyes</span></div></button>
+        <div class="profile-dropdown" id="profileDropdown"><a href="MyAppointments.html" class="profile-dropdown-item">My Appointments</a><div class="profile-dropdown-divider"></div><button type="button" class="profile-dropdown-item profile-dropdown-item--signout" id="signOutBtn">Sign out</button></div>
+      </div>
+    </div>
+  </header>
+
+  <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
+  <aside class="mobile-nav-drawer" id="mobileNavDrawer" aria-hidden="true" inert><div class="mobile-nav-top"><img src="images/logo_horizontal.jpg" alt="Skin Goddess Aesthetic Center logo" class="mobile-nav-logo"><button type="button" class="mobile-nav-close" id="mobileNavClose" aria-label="Close menu">&times;</button></div><ul class="mobile-nav-links"><li><a href="index.html">Home</a></li><li><a href="ServicesPage.html">Services</a></li><li><a href="AboutUsPage.html">About</a></li><li><a href="ContactUsPage.html">Contact</a></li></ul></aside>
+
+  <main class="my-appointments-main" id="myAppointmentsPage">
+    <div class="booking-intro"><span class="booking-eyebrow">-- YOUR VISITS</span><h1>My <span>Appointments</span></h1><p>Review your upcoming visits and appointment history.</p></div>
+    <p class="appointments-message" id="appointmentsMessage" role="status" aria-live="polite"></p>
+    <section class="appointments-section"><h2>Upcoming</h2><div class="appointments-list" id="upcomingAppointments"></div></section>
+    <section class="appointments-section"><h2>Past</h2><div class="appointments-list" id="pastAppointments"></div></section>
+  </main>
+
+  <script src="header.js"></script>
+  <script src="my-appointments.js"></script>
+</body>
+</html>

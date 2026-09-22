@@ -23,14 +23,6 @@
     const slotsHeading = document.getElementById("slotsHeading");
     const slotsContainer = document.getElementById("slotsContainer");
     const detailsForm = document.getElementById("detailsForm");
-    const paymentMethod = document.getElementById("paymentMethod");
-
-    const summaryService = document.getElementById("summaryService");
-    const summaryDate = document.getElementById("summaryDate");
-    const summaryTime = document.getElementById("summaryTime");
-    const summaryPayment = document.getElementById("summaryPayment");
-    const summaryFee = document.getElementById("summaryFee");
-    const summaryTotal = document.getElementById("summaryTotal");
 
     // Self-guard: if this page's booking markup isn't present, do nothing.
     if (!serviceList || !calendarDays || !detailsForm) return;
@@ -130,7 +122,6 @@
                 price: Number(firstCard.dataset.price),
                 reservationFee: Number(firstCard.dataset.reservationFee)
             };
-            updateSummary();
         }
 
         //Event listeners for service selection
@@ -144,7 +135,6 @@
                     price: Number(card.dataset.price),
                     reservationFee: Number(card.dataset.reservationFee)
                 };
-                updateSummary();
             });
         });
     }
@@ -202,7 +192,6 @@
         selectedTime = null;
         renderCalendar();
         renderSlots();
-        updateSummary();
     }
 
     calendarPrev.addEventListener("click", () => {
@@ -256,7 +245,6 @@
                     btn.addEventListener("click", () => {
                         selectedTime = slot;
                         renderSlots();
-                        updateSummary();
                     });
                 }
 
@@ -270,51 +258,13 @@
         buildGroup("AFTERNOON", AFTERNOON_SLOTS);
     }
 
-    /* ===== Live summary ===== */
-    function updateSummary() {
-        summaryService.textContent = selectedService.name || "\u2014";
-
-        if (selectedDate) {
-            const dateObj = new Date(selectedDate.year, selectedDate.month, selectedDate.day);
-            summaryDate.textContent = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-            summaryDate.classList.remove("not-selected");
-        } else {
-            summaryDate.textContent = "Not selected";
-            summaryDate.classList.add("not-selected");
-        }
-
-        if (selectedTime) {
-            summaryTime.textContent = selectedTime;
-            summaryTime.classList.remove("not-selected");
-        } else {
-            summaryTime.textContent = "Not selected";
-            summaryTime.classList.add("not-selected");
-        }
-
-        if (paymentMethod && paymentMethod.value) {
-            summaryPayment.textContent = paymentMethod.options[paymentMethod.selectedIndex].textContent;
-            summaryPayment.classList.remove("not-selected");
-        } else if (summaryPayment) {
-            summaryPayment.textContent = "Not selected";
-            summaryPayment.classList.add("not-selected");
-        }
-
-        const reservationFee = selectedService.reservationFee || 0;
-        if (summaryFee) summaryFee.textContent = `₱${reservationFee.toLocaleString("en-US")}`;
-
-        const total = (selectedService.price || 0) + reservationFee;
-        summaryTotal.textContent = `₱${total.toLocaleString("en-US")}`;
-    }
-
-    if (paymentMethod) {
-        paymentMethod.addEventListener("change", updateSummary);
-    }
-
     /* ===== Submission =====
-       No backend yet, so this just validates required fields exist and
-       logs the payload. Replace the body with a real POST /api/appointments
-       call once the backend is wired up. */
-    detailsForm.addEventListener("submit", async (e) => {
+       The reservation fee + payment now happen on the next page
+       (AppointmentSummary.html, via PayMongo), so this handler just
+       validates the booking, stashes it, and hands off. The actual
+       POST /api/appointments call should happen once PayMongo confirms
+       payment on the summary page — see appointment-summary.js. */
+    detailsForm.addEventListener("submit", (e) => {
         e.preventDefault();
 
         if (!selectedDate || !selectedTime) {
@@ -322,41 +272,29 @@
             return;
         }
 
-        const payload = {
+        if (!detailsForm.reportValidity()) return;
+
+        const dateObj = new Date(selectedDate.year, selectedDate.month, selectedDate.day);
+
+        const booking = {
             serviceId: selectedService.id,
             service: selectedService.name,
             price: selectedService.price,
             reservationFee: selectedService.reservationFee,
-            date: selectedDate,
+            total: (selectedService.price || 0) + (selectedService.reservationFee || 0),
+            date: dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
             time: selectedTime,
-            firstName: document.getElementById("firstName").value,
-            lastName: document.getElementById("lastName").value,
-            email: document.getElementById("email").value,
-            phone: document.getElementById("phone").value,
-            paymentMethod: paymentMethod ? paymentMethod.value : null
+            firstName: document.getElementById("firstName").value.trim(),
+            lastName: document.getElementById("lastName").value.trim(),
+            email: document.getElementById("email").value.trim(),
+            phone: document.getElementById("phone").value.trim()
         };
 
-        try {
-            const response = await fetch("/api/appointments", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload)
-            });
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.message || "Could not create appointment.");
-            }
-
-            alert(data.message);
-        } catch (error) {
-            console.error("Appointment submission failed:", error);
-            alert(error.message);
-        }
+        localStorage.setItem("sg_pending_booking", JSON.stringify(booking));
+        window.location.href = "AppointmentSummary.html";
     });
 
     fetchServices();
     renderCalendar();
     renderSlots();
-    updateSummary();
 })();
