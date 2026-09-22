@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>User Management</title>
+</head>
+
+<body>
+    <header class="staff-header">
+        <div class="logo-container">
+            <img src="images/logo_horizontal.jpg" alt="logo" id="logo">
+        </div>
+
+        <div class="page-title">
+            <h2>User Management</h2>
+            <p>Monthly overview - <span id="current-month">Month 0000</span></p>
+        </div>
+
+        <div class="actions">
+            <div class="notification-wrap" id="notificationWrap">
+                <button class="notification" id="notificationBtn" aria-label="View notifications" aria-haspopup="true" aria-expanded="false" aria-controls="notificationDropdown">
+                    <img src="icons/notification-bell.svg" alt="" class="notification-bell">
+                    <span class="badge"></span>
+                </button>
+
+                <div class="notification-dropdown" id="notificationDropdown">
+                    <div class="notification-dropdown-header">
+                        <span>Notifications</span>
+                    </div>
+                    <div class="notification-list" id="notificationList">
+                        <!-- Populated from the backend. Left empty for now. -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="search" id="searchWrap">
+                <img src="icons/magnifying-glass.svg" alt="search" class="search-svg">
+                <input type="text" id="searchInput" placeholder="Search appointment..." autocomplete="off">
+                <ul class="search-suggestions" id="searchSuggestions"></ul>
+            </div>
+
+            <button class="logout-btn" id="logoutBtn">
+                <svg class="logout-icon" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 2H3.5C2.67157 2 2 2.67157 2 3.5V12.5C2 13.3284 2.67157 14 3.5 14H6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M10.5 11L14 8L10.5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M14 8H6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>Logout</span>
+            </button>
+        </div>
+    </header>
+    <main>
+        <section class="sidebar">
+
+            <hr>
+
+            <h4 class="sidebar-heading">MY PORTAL</h4>
+            <nav>
+                <ul>
+                    <li class="nav-item"><img src="icons/circle.svg" alt="bullet" class="nav-bullet"><a href="#">Dashboard</a></li>
+                    <li class="nav-item active"><img src="icons/circle.svg" alt="bullet" class="nav-bullet"><a href="AestheticianUserManagement.html">My Clients</a></li>
+                    <li class="nav-item"><img src="icons/circle.svg" alt="bullet" class="nav-bullet"><a href="AestheticianAppointmentPage.html">Appointments</a></li>
+                    <li class="nav-item"><img src="icons/circle.svg" alt="bullet" class="nav-bullet"><a href="#">Treatment History</a></li>
+                </ul>
+            </nav>
+
+            <hr>
+
+            <h4 class="sidebar-heading">STATUS LEGEND</h4>
+            <div class="status-item">
+                <span class="Confirmed-icon"></span>
+                <span>Confirmed</span>
+            </div>
+            <div class="status-item">
+                <span class="Pending-icon"></span>
+                <span>In Progress</span>
+            </div>
+            <div class="status-item">
+                <span class="Completed-icon"></span>
+                <span>Completed</span>
+            </div>
+            <div class="status-item">
+                <span class="Cancelled-icon"></span>
+                <span>Cancelled</span>
+            </div>
+            <div class="status-item">
+                <span class="No-Show-icon"></span>
+                <span>No Show</span>
+            </div>
+
+            <hr class="status-divider">
+            <h4 class="sidebar-heading">MY RATING</h4>
+
+            <div class="rating-widget" id="ratingWidget">
+                <h1 id="ratingAverage">—</h1>
+                <div class="rating-stars" id="ratingStars"></div>
+                <p class="rating-count" id="ratingReviewCount">Loading reviews…</p>
+
+                <div class="rating-breakdown" id="ratingBreakdown"></div>
+            </div>
+
+            <div class="profile-wrap">
+                <hr class="profile-divider">
+                <a href="#profile" class="profile-card">
+                    <div class="profile-row">
+                        <div class="profile-avatar">--</div>
+                        <div class="profile-info">
+                            <span class="profile-name">Loading...</span>
+                            <span class="profile-role">Aesthetician</span>
+                        </div>
+                        <span class="profile-status"></span>
+                    </div>
+                </a>
+            </div>
+        </section>
+        <section class="main-content">
+            <section class="clients-dashboard" aria-labelledby="clientsDashboardTitle">
+                <div class="clients-dashboard-heading">
+                    <div>
+                        <p class="clients-eyebrow">MY CLIENTS</p>
+                        <h1 id="clientsDashboardTitle">Client appointments</h1>
+                    </div>
+                    <p class="clients-dashboard-date" id="clientsDashboardDate"></p>
+                </div>
+
+                <div class="client-summary-grid" aria-label="Appointment summary">
+                    <article class="client-summary-card">
+                        <p class="client-summary-label">TODAY'S APPOINTMENT</p>
+                        <p class="client-summary-value" id="todayAppointmentCount">—</p>
+                        <p class="client-summary-hint">Scheduled for today</p>
+                    </article>
+                    <article class="client-summary-card">
+                        <p class="client-summary-label">RESCHEDULED</p>
+                        <p class="client-summary-value" id="rescheduledCount">—</p>
+                        <p class="client-summary-hint">Needs a new time</p>
+                    </article>
+                    <article class="client-summary-card">
+                        <p class="client-summary-label">CANCELLED</p>
+                        <p class="client-summary-value client-summary-value--cancelled" id="cancelledCount">—</p>
+                        <p class="client-summary-hint">Cancelled appointments</p>
+                    </article>
+                </div>
+
+                <section class="clients-table-section" aria-labelledby="clientsTableTitle">
+                    <div class="clients-table-heading">
+                        <div>
+                            <p class="clients-eyebrow">CLIENT LIST</p>
+                            <h2 id="clientsTableTitle">Assigned clients</h2>
+                        </div>
+                        <p class="clients-table-count" id="clientsTableCount">Loading clients...</p>
+                    </div>
+                    <div class="clients-table-wrap">
+                        <table class="clients-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">CLIENT</th>
+                                    <th scope="col">SERVICE</th>
+                                    <th scope="col">APPOINTMENT</th>
+                                    <th scope="col">STATUS</th>
+                                    <th scope="col">ACTIONS</th>
+                                </tr>
+                            </thead>
+                            <tbody id="clientsTableBody">
+                                <tr>
+                                    <td class="clients-table-message" colspan="5">Loading client appointments...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <footer class="clients-table-footer">
+                        <p id="clientsTableSummary">Showing 0 of 0 clients</p>
+                        <nav class="clients-pagination" id="clientsPagination" aria-label="Client list pages"></nav>
+                    </footer>
+                    <p class="clients-error" id="clientsError" role="alert" hidden></p>
+                </section>
+            </section>
+        </section>
+    </main>
+
+    <div class="client-modal-overlay" id="clientModalOverlay" aria-hidden="true">
+        <section class="client-detail-modal" role="dialog" aria-modal="true" aria-labelledby="clientModalTitle">
+            <div class="client-detail-topbar"></div>
+            <button class="client-detail-close" id="clientModalClose" type="button" aria-label="Close appointment details">&times;</button>
+            <div class="client-detail-header">
+                <div class="client-detail-avatar" id="clientModalAvatar">--</div>
+                <div>
+                    <p class="clients-eyebrow">APPOINTMENT DETAILS</p>
+                    <h2 id="clientModalTitle">Client</h2>
+                    <p id="clientModalNumber">Appointment #—</p>
+                </div>
+            </div>
+            <div class="client-detail-status-wrap">
+                <span class="client-status" id="clientModalStatus"><span></span>STATUS</span>
+            </div>
+            <div class="client-detail-grid">
+                <div><span>DATE</span><strong id="clientModalDate">—</strong></div>
+                <div><span>TIME</span><strong id="clientModalTime">—</strong></div>
+                <div><span>SERVICE</span><strong id="clientModalService">—</strong></div>
+                <div><span>DURATION</span><strong id="clientModalDuration">—</strong></div>
+                <div><span>SERVICE FEE</span><strong id="clientModalFee">—</strong></div>
+                <div><span>RESERVATION DEPOSIT</span><strong id="clientModalDeposit">—</strong></div>
+                <div><span>CONTACT</span><strong id="clientModalContact">—</strong></div>
+                <div><span>AESTHETICIAN</span><strong id="clientModalAesthetician">—</strong></div>
+            </div>
+            <div class="client-detail-footer">
+                <button class="client-detail-action" id="clientModalNotes" type="button" disabled>Add Notes</button>
+                <button class="client-detail-action client-detail-action--primary" id="clientModalDone" type="button">Done</button>
+            </div>
+        </section>
+    </div>
+
+    <script src="header.js"></script>
+    <script src="aesthetician-clients.js"></script>
+</body>
+
+</html>
