@@ -305,7 +305,7 @@ router.get('/me', async (req, res) => {
 
   try {
     const result = await db.query(
-      'SELECT first_name, last_name FROM users WHERE user_id = $1',
+      'SELECT first_name, last_name, email, contact_number FROM users WHERE user_id = $1',
       [req.session.userId]
     );
 
@@ -317,6 +317,8 @@ router.get('/me', async (req, res) => {
     res.status(200).json({
       firstName: user.first_name,
       lastName: user.last_name,
+      email: user.email,
+      contactNumber: user.contact_number,
     });
   } catch (error) {
     console.log('Get current user error:', error);

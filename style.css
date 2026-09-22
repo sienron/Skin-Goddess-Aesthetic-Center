@@ -2153,6 +2153,52 @@ hr {
   border-top: 1px solid rgb(235, 235, 235);
 }
 
+.details-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.same-as-user-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: "Raleway", sans-serif;
+  font-size: 0.68rem;
+  color: rgb(80, 80, 80);
+  cursor: pointer;
+}
+
+.same-as-user-toggle input {
+  accent-color: #C9A84C;
+}
+
+.booking-status-message {
+  min-height: 18px;
+  margin-top: 12px;
+  font-family: "Raleway", sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  display: none;
+}
+
+.booking-status-message.info {
+  color: #8b6b1f;
+  display: block;
+}
+
+.booking-status-message.success {
+  color: #1f7a4f;
+  display: block;
+}
+
+.booking-status-message.error {
+  color: #b33f3f;
+  display: block;
+}
+
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;

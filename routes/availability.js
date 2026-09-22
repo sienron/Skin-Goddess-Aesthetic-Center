@@ -77,7 +77,10 @@ router.get('/', async (req, res) => {
         )));
       });
 
-      if (slots.length > 0) availability[`${year}-${month - 1}-${day}`] = slots;
+      if (slots.length > 0) {
+        const dateKey = `${year}-${month - 1}-${day}`;
+        availability[dateKey] = slots;
+      }
     }
 
     return res.json(availability);

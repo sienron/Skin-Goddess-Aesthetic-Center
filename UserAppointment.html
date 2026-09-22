@@ -56,7 +56,7 @@
   
                 <div class="profile-dropdown" id="profileDropdown">
                     <a href="UserAccount.html" class="profile-dropdown-item">My Account</a>
-                    <a href="UserAppointment.html" class="profile-dropdown-item">My Appointments</a>
+                    <a href="MyAppointments.html" class="profile-dropdown-item">My Appointments</a>
                     <div class="profile-dropdown-divider"></div>
                     <button type="button" class="profile-dropdown-item profile-dropdown-item--signout" id="signOutBtn">Sign out</button>
                 </div>
@@ -201,7 +201,13 @@
 
                     <form class="details-form" id="detailsForm">
 
-                        <p class="booking-panel-label" style="margin-bottom: 14px;">YOUR DETAILS</p>
+                        <div class="details-header-row">
+                            <p class="booking-panel-label" style="margin-bottom: 0;">YOUR DETAILS</p>
+                            <label class="same-as-user-toggle" for="sameAsUserCheckbox">
+                                <input type="checkbox" id="sameAsUserCheckbox" />
+                                <span>Same as my account</span>
+                            </label>
+                        </div>
 
                         <div class="form-row">
                             <div class="form-group">
@@ -225,6 +231,8 @@
                         </div>
 
                     </form>
+
+                    <div id="bookingStatusMessage" class="booking-status-message" aria-live="polite"></div>
 
                     <div class="confirm-bar">
                         <button type="submit" form="detailsForm" class="confirm-btn" id="confirmBtn">CONFIRM APPOINTMENT</button>

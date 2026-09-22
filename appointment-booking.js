@@ -35,6 +35,57 @@
     const AFTERNOON_SLOTS = ["1:00 PM", "2:00 PM", "3:00 PM", "4:00 PM"];
     const ALL_SLOTS = MORNING_SLOTS.concat(AFTERNOON_SLOTS);
 
+    function getManilaNow() {
+        const parts = new Intl.DateTimeFormat("en-CA", {
+            timeZone: "Asia/Manila",
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            hourCycle: "h23"
+        }).formatToParts(new Date());
+
+        const values = Object.fromEntries(
+            parts.filter((part) => part.type !== "literal").map((part) => [part.type, part.value])
+        );
+
+        return {
+            year: Number(values.year),
+            month: Number(values.month) - 1,
+            day: Number(values.day),
+            hour: Number(values.hour),
+            minute: Number(values.minute)
+        };
+    }
+
+    function slotToMinutes(slot) {
+        const match = slot.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+        if (!match) return null;
+
+        let hour = Number(match[1]);
+        const minute = Number(match[2]);
+        const period = match[3].toUpperCase();
+
+        if (period === "AM" && hour === 12) hour = 0;
+        if (period === "PM" && hour !== 12) hour += 12;
+
+        return hour * 60 + minute;
+    }
+
+    function isSlotInPast(dateObj, slot) {
+        const now = getManilaNow();
+        const slotDate = new Date(dateObj.year, dateObj.month, dateObj.day);
+        const today = new Date(now.year, now.month, now.day);
+
+        if (slotDate < today) return true;
+        if (slotDate > today) return false;
+
+        const slotMinutes = slotToMinutes(slot);
+        const nowMinutes = now.hour * 60 + now.minute;
+        return slotMinutes !== null && slotMinutes <= nowMinutes;
+    }
+
     const initiallySelectedCard = serviceList.querySelector(".service-card.selected");
     let selectedService = {
         id: initiallySelectedCard ? initiallySelectedCard.dataset.serviceId : null,
@@ -49,32 +100,66 @@
     let selectedDate = null; // { year, month, day }
     let selectedTime = null;
     let currentAvailability = {};
+    let availabilityRequestId = 0;
 
-    /* ===== Placeholder availability =====
-       Deterministic pseudo-random availability so the calendar looks
-       populated without a backend. Swap for a real API response later —
-       keep the same shape: { "YYYY-M-D": ["9:00 AM", "1:00 PM", ...] }. */
-    function generatePlaceholderAvailability(year, month) {
-        const availability = {};
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
+    function setBookingStatus(message, kind = "info") {
+        const statusEl = document.getElementById("bookingStatusMessage");
+        if (!statusEl) return;
+        statusEl.textContent = message;
+        statusEl.className = `booking-status-message ${kind}`;
+    }
 
-        for (let day = 1; day <= daysInMonth; day++) {
-            const date = new Date(year, month, day);
-            const isPast = date < new Date(today.getFullYear(), today.getMonth(), today.getDate());
-            const isSunday = date.getDay() === 0;
+    function formatAvailabilityKey(year, monthIndex, day) {
+        return `${year}-${monthIndex}-${day}`;
+    }
 
-            if (isPast || isSunday) continue;
-
-            // FOR NOW: every remaining day is treated as available, so the
-            // calendar renders every day as a clickable gold circle.
-            // Once real availability data (or a proper "some days are full")
-            // scenario is needed, swap the line below for the sparse pattern:
-            //   if (day % 6 !== 1) continue;
-
-            availability[`${year}-${month}-${day}`] = ALL_SLOTS.slice(0, 4 + (day % 4));
+    async function fetchAvailability() {
+        if (!selectedService || !selectedService.id) {
+            currentAvailability = {};
+            renderCalendar();
+            renderSlots();
+            return;
         }
 
-        return availability;
+        const requestId = ++availabilityRequestId;
+        const monthParam = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}`;
+
+        try {
+            slotsHeading.textContent = "LOADING AVAILABILITY...";
+            const response = await fetch(`/api/availability?month=${monthParam}&serviceId=${selectedService.id}`);
+
+            if (response.status === 401) {
+                window.location.href = "/LoginPage.html";
+                return;
+            }
+
+            if (!response.ok) {
+                throw new Error("Could not load availability.");
+            }
+
+            const availability = await response.json();
+            if (requestId !== availabilityRequestId) return;
+
+            currentAvailability = availability || {};
+
+            if (selectedDate) {
+                const selectedKey = formatAvailabilityKey(selectedDate.year, selectedDate.month, selectedDate.day);
+                const daySlots = currentAvailability[selectedKey] || [];
+                if (daySlots.length === 0 || (selectedTime && !daySlots.includes(selectedTime))) {
+                    selectedDate = null;
+                    selectedTime = null;
+                }
+            }
+
+            renderCalendar();
+            renderSlots();
+        } catch (error) {
+            if (requestId !== availabilityRequestId) return;
+            currentAvailability = {};
+            renderCalendar();
+            renderSlots();
+            slotsHeading.textContent = "AVAILABILITY UNAVAILABLE";
+        }
     }
 
     /* ===== Service selection ===== */
@@ -124,7 +209,6 @@
             };
         }
 
-        //Event listeners for service selection
         serviceList.querySelectorAll(".service-card").forEach((card) => {
             card.addEventListener("click", () => {
                 serviceList.querySelectorAll(".service-card").forEach((c) => c.classList.remove("selected"));
@@ -135,6 +219,10 @@
                     price: Number(card.dataset.price),
                     reservationFee: Number(card.dataset.reservationFee)
                 };
+                selectedDate = null;
+                selectedTime = null;
+                setBookingStatus("");
+                fetchAvailability();
             });
         });
     }
@@ -145,6 +233,9 @@
             if (!response.ok) throw new Error("Failed to fetch services");
 
             renderServices(await response.json());
+            if (selectedService && selectedService.id) {
+                fetchAvailability();
+            }
         } catch (error) {
             console.error("Error fetching services:", error);
         }
@@ -154,7 +245,6 @@
     function renderCalendar() {
         calendarMonthLabel.textContent = `${MONTH_NAMES[viewMonth]} ${viewYear}`;
         calendarDays.innerHTML = "";
-        currentAvailability = generatePlaceholderAvailability(viewYear, viewMonth);
 
         const firstWeekday = new Date(viewYear, viewMonth, 1).getDay();
         const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
@@ -170,17 +260,31 @@
             cell.className = "calendar-day";
             cell.textContent = day;
 
+            const date = new Date(viewYear, viewMonth, day);
             const isToday = viewYear === today.getFullYear() && viewMonth === today.getMonth() && day === today.getDate();
-            const key = `${viewYear}-${viewMonth}-${day}`;
-            const isAvailable = Boolean(currentAvailability[key]);
+            const isPast = date < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+            const isSunday = date.getDay() === 0;
+            const key = formatAvailabilityKey(viewYear, viewMonth, day);
+            const daySlots = currentAvailability[key] || [];
+            const isSelectable = !isPast && !isSunday;
 
-            if (isAvailable) {
+            if (isSelectable) {
                 cell.classList.add("available");
-                cell.addEventListener("click", () => selectDate(day));
+                if (daySlots.length > 0) {
+                    cell.addEventListener("click", () => selectDate(day));
+                } else {
+                    cell.classList.add("disabled");
+                    cell.title = "No available slots for this date";
+                }
             }
+
             if (isToday) cell.classList.add("today");
             if (selectedDate && selectedDate.year === viewYear && selectedDate.month === viewMonth && selectedDate.day === day) {
                 cell.classList.add("selected");
+            }
+
+            if (!isSelectable && !isToday) {
+                cell.classList.add("disabled");
             }
 
             calendarDays.appendChild(cell);
@@ -197,13 +301,19 @@
     calendarPrev.addEventListener("click", () => {
         viewMonth -= 1;
         if (viewMonth < 0) { viewMonth = 11; viewYear -= 1; }
-        renderCalendar();
+        selectedDate = null;
+        selectedTime = null;
+        setBookingStatus("");
+        fetchAvailability();
     });
 
     calendarNext.addEventListener("click", () => {
         viewMonth += 1;
         if (viewMonth > 11) { viewMonth = 0; viewYear += 1; }
-        renderCalendar();
+        selectedDate = null;
+        selectedTime = null;
+        setBookingStatus("");
+        fetchAvailability();
     });
 
     /* ===== Time slots ===== */
@@ -215,28 +325,28 @@
             return;
         }
 
-        const key = `${selectedDate.year}-${selectedDate.month}-${selectedDate.day}`;
-        const available = currentAvailability[key] || [];
-        const dateLabel = `${MONTH_NAMES[selectedDate.month].slice(0, 3).toUpperCase()} ${selectedDate.day}`;
+const key = formatAvailabilityKey(selectedDate.year, selectedDate.month, selectedDate.day);
+            const available = currentAvailability[key] || [];
+            const dateLabel = `${MONTH_NAMES[selectedDate.month].slice(0, 3).toUpperCase()} ${selectedDate.day}`;
 
-        slotsHeading.textContent = `AVAILABLE SLOTS ${dateLabel}`;
+            slotsHeading.textContent = `AVAILABLE SLOTS ${dateLabel}`;
 
-        function buildGroup(label, slots) {
-            const heading = document.createElement("p");
-            heading.className = "slots-period";
-            heading.textContent = label;
-            slotsContainer.appendChild(heading);
+            function buildGroup(label, slots) {
+                const heading = document.createElement("p");
+                heading.className = "slots-period";
+                heading.textContent = label;
+                slotsContainer.appendChild(heading);
 
-            const grid = document.createElement("div");
-            grid.className = "slot-grid";
+                const grid = document.createElement("div");
+                grid.className = "slot-grid";
 
-            slots.forEach((slot) => {
-                const btn = document.createElement("button");
-                btn.type = "button";
-                btn.className = "slot-btn";
-                btn.textContent = slot;
+                slots.forEach((slot) => {
+                    const btn = document.createElement("button");
+                    btn.type = "button";
+                    btn.className = "slot-btn";
+                    btn.textContent = slot;
 
-                const isAvailable = available.includes(slot);
+                    const isAvailable = available.includes(slot) && !isSlotInPast(selectedDate, slot);
                 if (!isAvailable) {
                     btn.classList.add("disabled");
                     btn.disabled = true;
@@ -264,35 +374,112 @@
        validates the booking, stashes it, and hands off. The actual
        POST /api/appointments call should happen once PayMongo confirms
        payment on the summary page — see appointment-summary.js. */
-    detailsForm.addEventListener("submit", (e) => {
+    detailsForm.addEventListener("submit", async (e) => {
         e.preventDefault();
 
         if (!selectedDate || !selectedTime) {
-            alert("Please select a date and time for your appointment.");
+            setBookingStatus("Please select a date and time for your appointment.", "error");
             return;
         }
 
-        if (!detailsForm.reportValidity()) return;
+        if (!detailsForm.reportValidity()) {
+            setBookingStatus("Please complete your details before confirming.", "error");
+            return;
+        }
 
-        const dateObj = new Date(selectedDate.year, selectedDate.month, selectedDate.day);
+        const confirmBtn = document.getElementById("confirmBtn");
+        if (confirmBtn) confirmBtn.disabled = true;
+        setBookingStatus("Booking your appointment...", "info");
 
-        const booking = {
+        const payload = {
             serviceId: selectedService.id,
-            service: selectedService.name,
-            price: selectedService.price,
-            reservationFee: selectedService.reservationFee,
-            total: (selectedService.price || 0) + (selectedService.reservationFee || 0),
-            date: dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-            time: selectedTime,
-            firstName: document.getElementById("firstName").value.trim(),
-            lastName: document.getElementById("lastName").value.trim(),
-            email: document.getElementById("email").value.trim(),
-            phone: document.getElementById("phone").value.trim()
+            date: `${selectedDate.year}-${String(selectedDate.month + 1).padStart(2, "0")}-${String(selectedDate.day).padStart(2, "0")}`,
+            time: selectedTime
         };
 
-        localStorage.setItem("sg_pending_booking", JSON.stringify(booking));
-        window.location.href = "AppointmentSummary.html";
+        try {
+            const response = await fetch("/api/appointments", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json().catch(() => ({}));
+
+            if (response.status === 401) {
+                window.location.href = "/LoginPage.html";
+                return;
+            }
+
+            if (response.status === 409 || (data && data.message === "That time slot was just taken. Please choose another.")) {
+                setBookingStatus("That slot was just taken", "error");
+                selectedTime = null;
+                renderSlots();
+                await fetchAvailability();
+                if (confirmBtn) confirmBtn.disabled = false;
+                return;
+            }
+
+            if (!response.ok) {
+                throw new Error(data.message || "Could not create appointment.");
+            }
+
+            setBookingStatus("Appointment booked successfully.", "success");
+            selectedDate = null;
+            selectedTime = null;
+            renderCalendar();
+            renderSlots();
+        } catch (error) {
+            setBookingStatus(error.message || "Could not create appointment.", "error");
+        } finally {
+            if (document.getElementById("confirmBtn")) {
+                document.getElementById("confirmBtn").disabled = false;
+            }
+        }
     });
+
+    const sameAsUserCheckbox = document.getElementById("sameAsUserCheckbox");
+    if (sameAsUserCheckbox) {
+        const firstNameInput = document.getElementById("firstName");
+        const lastNameInput = document.getElementById("lastName");
+        const emailInput = document.getElementById("email");
+        const phoneInput = document.getElementById("phone");
+
+        function clearDetailFields() {
+            if (firstNameInput) firstNameInput.value = "";
+            if (lastNameInput) lastNameInput.value = "";
+            if (emailInput) emailInput.value = "";
+            if (phoneInput) phoneInput.value = "";
+        }
+
+        function autofillUserDetails() {
+            fetch("/api/auth/me")
+                .then((response) => {
+                    if (!response.ok) throw new Error("Not logged in");
+                    return response.json();
+                })
+                .then((data) => {
+                    if (!data) return;
+                    if (firstNameInput && data.firstName) firstNameInput.value = data.firstName;
+                    if (lastNameInput && data.lastName) lastNameInput.value = data.lastName;
+                    if (emailInput && data.email) emailInput.value = data.email;
+                    if (phoneInput && data.contactNumber) phoneInput.value = data.contactNumber;
+                })
+                .catch(() => {
+                    clearDetailFields();
+                });
+        }
+
+        sameAsUserCheckbox.addEventListener("change", () => {
+            if (sameAsUserCheckbox.checked) {
+                autofillUserDetails();
+            } else {
+                clearDetailFields();
+            }
+        });
+    }
 
     fetchServices();
     renderCalendar();
