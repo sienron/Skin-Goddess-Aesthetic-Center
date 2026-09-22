@@ -63,6 +63,146 @@ function validAppointmentId(value) {
   return typeof value === 'string' && /^\d+$/.test(value) && Number(value) > 0 && Number.isSafeInteger(Number(value)) ? Number(value) : null;
 }
 
+function validNoteId(value) {
+  return typeof value === 'string' && /^\d+$/.test(value) && Number(value) > 0 && Number.isSafeInteger(Number(value)) ? Number(value) : null;
+}
+
+function validNoteColor(value) {
+  return typeof value === 'string' && /^#[0-9A-Fa-f]{6}$/.test(value) ? value.toUpperCase() : null;
+}
+
+function validNoteText(value) {
+  return typeof value === 'string' && value.length <= 5000 ? value : null;
+}
+
+async function getAssignedAppointment(appointmentId, userId) {
+  const result = await db.query(`
+    SELECT appointment_id
+    FROM appointments
+    WHERE appointment_id = $1 AND aesthetician_id = $2
+  `, [appointmentId, userId]);
+  return result.rows.length > 0;
+}
+
+function noteResponse(row) {
+  return {
+    id: row.note_id,
+    text: row.note_text,
+    color: row.color,
+    updatedAt: row.updated_at,
+  };
+}
+
+router.get('/:id/notes', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ message: 'You must be logged in.' });
+  const appointmentId = validAppointmentId(req.params.id);
+  if (!appointmentId) return res.status(400).json({ message: 'Choose a valid appointment.' });
+
+  try {
+    if (!(await getAssignedAppointment(appointmentId, req.session.userId))) {
+      return res.status(403).json({ message: 'You cannot access notes for this appointment.' });
+    }
+
+    const result = await db.query(`
+      SELECT note_id, note_text, color, updated_at
+      FROM treatment_notes
+      WHERE appointment_id = $1
+      ORDER BY created_at ASC, note_id ASC
+    `, [appointmentId]);
+    return res.json(result.rows.map(noteResponse));
+  } catch (error) {
+    console.error('Error fetching treatment notes:', error);
+    return res.status(500).json({ message: 'Could not load treatment notes.' });
+  }
+});
+
+router.post('/:id/notes', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ message: 'You must be logged in.' });
+  const appointmentId = validAppointmentId(req.params.id);
+  if (!appointmentId) return res.status(400).json({ message: 'Choose a valid appointment.' });
+
+  const body = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
+  const text = validNoteText(body.text);
+  const color = validNoteColor(body.color);
+  if (text === null) return res.status(400).json({ message: 'Note text must be 5,000 characters or fewer.' });
+  if (!color) return res.status(400).json({ message: 'Choose a valid note color.' });
+
+  try {
+    if (!(await getAssignedAppointment(appointmentId, req.session.userId))) {
+      return res.status(403).json({ message: 'You cannot add notes to this appointment.' });
+    }
+
+    const result = await db.query(`
+      INSERT INTO treatment_notes (appointment_id, author_id, note_text, color)
+      VALUES ($1, $2, $3, $4)
+      RETURNING note_id, note_text, color, updated_at
+    `, [appointmentId, req.session.userId, text, color]);
+    return res.status(201).json(noteResponse(result.rows[0]));
+  } catch (error) {
+    console.error('Error creating treatment note:', error);
+    return res.status(500).json({ message: 'Could not create treatment note.' });
+  }
+});
+
+router.patch('/:id/notes/:noteId', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ message: 'You must be logged in.' });
+  const appointmentId = validAppointmentId(req.params.id);
+  const noteId = validNoteId(req.params.noteId);
+  if (!appointmentId || !noteId) return res.status(400).json({ message: 'Choose a valid note.' });
+
+  const body = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
+  const hasText = Object.prototype.hasOwnProperty.call(body, 'text');
+  const hasColor = Object.prototype.hasOwnProperty.call(body, 'color');
+  if (!hasText && !hasColor) return res.status(400).json({ message: 'Provide note text or color.' });
+  const text = hasText ? validNoteText(body.text) : null;
+  const color = hasColor ? validNoteColor(body.color) : null;
+  if (hasText && text === null) return res.status(400).json({ message: 'Note text must be 5,000 characters or fewer.' });
+  if (hasColor && !color) return res.status(400).json({ message: 'Choose a valid note color.' });
+
+  try {
+    if (!(await getAssignedAppointment(appointmentId, req.session.userId))) {
+      return res.status(403).json({ message: 'You cannot edit notes for this appointment.' });
+    }
+
+    const result = await db.query(`
+      UPDATE treatment_notes
+      SET note_text = COALESCE($1, note_text),
+          color = COALESCE($2, color),
+          updated_at = NOW()
+      WHERE note_id = $3 AND appointment_id = $4
+      RETURNING note_id, note_text, color, updated_at
+    `, [hasText ? text : null, hasColor ? color : null, noteId, appointmentId]);
+    if (result.rows.length === 0) return res.status(404).json({ message: 'Treatment note not found.' });
+    return res.json(noteResponse(result.rows[0]));
+  } catch (error) {
+    console.error('Error updating treatment note:', error);
+    return res.status(500).json({ message: 'Could not update treatment note.' });
+  }
+});
+
+router.delete('/:id/notes/:noteId', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ message: 'You must be logged in.' });
+  const appointmentId = validAppointmentId(req.params.id);
+  const noteId = validNoteId(req.params.noteId);
+  if (!appointmentId || !noteId) return res.status(400).json({ message: 'Choose a valid note.' });
+
+  try {
+    if (!(await getAssignedAppointment(appointmentId, req.session.userId))) {
+      return res.status(403).json({ message: 'You cannot delete notes for this appointment.' });
+    }
+
+    const result = await db.query(
+      'DELETE FROM treatment_notes WHERE note_id = $1 AND appointment_id = $2 RETURNING note_id',
+      [noteId, appointmentId]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ message: 'Treatment note not found.' });
+    return res.status(204).end();
+  } catch (error) {
+    console.error('Error deleting treatment note:', error);
+    return res.status(500).json({ message: 'Could not delete treatment note.' });
+  }
+});
+
 function calendarDayNumber(dateStr) {
   let [year, month, day] = dateStr.split('-').map(Number);
   year -= month <= 2 ? 1 : 0;

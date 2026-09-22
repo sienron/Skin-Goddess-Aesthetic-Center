@@ -57,20 +57,19 @@
 
             <hr>
 
-            <h3 class="sidebar-heading">MY PORTAL</h3>
+            <h4 class="sidebar-heading">MY PORTAL</h4>
             <nav>
                 <ul>
                     <li class="nav-item"><img src="icons/circle.svg" alt="bullet" class="nav-bullet"><a href="#">Dashboard</a></li>
                     <li class="nav-item"><img src="icons/circle.svg" alt="bullet" class="nav-bullet"><a href="#">My Clients</a></li>
                     <li class="nav-item active"><img src="icons/circle.svg" alt="bullet" class="nav-bullet"><a href="#">Appointments</a></li>
-                    <li class="nav-item"><img src="icons/circle.svg" alt="bullet" class="nav-bullet"><a href="#">Remarks & Notes</a><span class="nav-badge"> </span></li>
                     <li class="nav-item"><img src="icons/circle.svg" alt="bullet" class="nav-bullet"><a href="#">Treatment History</a></li>
                 </ul>
             </nav>
 
             <hr>
 
-            <h3 class="sidebar-heading">STATUS LEGEND</h3>
+            <h4 class="sidebar-heading">STATUS LEGEND</h4>
             <div class="status-item">
                 <span class="Confirmed-icon"></span>
                 <span>Confirmed</span>
@@ -92,8 +91,8 @@
                 <span>No Show</span>
             </div>
 
-            <hr>
-            <h3 class="sidebar-heading">MY RATING</h3>
+            <hr class="status-divider">
+            <h4 class="sidebar-heading">MY RATING</h4>
 
             <div class="rating-widget" id="ratingWidget">
                 <h1 id="ratingAverage">—</h1>
@@ -178,6 +177,16 @@
 
     <!-- Appointment Detail Modal -->
     <div class="modal-overlay" id="apptModalOverlay">
+      <div class="appt-modal-wrap" id="apptModalWrap">
+
+        <!-- Treatment Notes trigger — sits just outside the modal, top right -->
+        <button type="button" class="notes-trigger-btn" id="notesTriggerBtn" aria-label="Add treatment note" title="Add treatment note">
+            <img src="icons/add-treatment-notes.svg" alt="" class="notes-trigger-icon">
+        </button>
+
+        <!-- Sticky note panel — appears beside the modal once a note is added -->
+        <aside class="notes-panel" id="notesPanel" aria-hidden="true"></aside>
+
         <div class="appt-modal" id="apptModal">
             <div class="appt-modal-topbar" id="apptModalTopbar"></div>
 
@@ -242,11 +251,13 @@
                 <button class="modal-btn modal-btn-reschedule" id="apptModalRescheduleBtn">Reschedule</button>
             </div>
         </div>
+      </div>
     </div>
 
     <script src="header.js"></script>
     <script src="appointment-modal.js"></script>
     <script src="appointments-aesthetician.js"></script>
+    <script src="treatment-notes.js"></script>
 </body>
 
 </html>

@@ -227,12 +227,16 @@ nav ul {
   align-items: center;
   gap: 8px;
   margin-bottom: 15px;
-  margin-left: 10px;
+  margin-left: 0;
 }
 
 .status-item span {
   font-family: "Raleway", sans-serif;
   font-size: 0.75rem;
+}
+
+.status-divider {
+  margin-top: 5px;
 }
 
 h6 {
@@ -251,9 +255,6 @@ hr {
   margin-top: 20px;
   margin-bottom: 20px;
 }
-
-
-/* ===== SEARCH BAR ===== */
 
 .search {
   display: flex;
@@ -430,6 +431,8 @@ hr {
 .profile-info {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-width: 0;
 }
 
 .profile-name {
@@ -437,6 +440,9 @@ hr {
   font-size: 0.85rem;
   font-weight: 600;
   margin-bottom: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .profile-role {
@@ -5825,4 +5831,274 @@ body.services{
 
 @media (max-width: 600px) {
   .my-appointments-main { width: min(100% - 24px, 920px); padding-top: 36px; }
+}
+
+/* ===== Treatment Notes (sticky notes beside the appointment modal) ===== */
+
+.appt-modal-wrap {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+/* Trigger icon: sits just outside the modal's top-right corner */
+.notes-trigger-btn {
+  position: absolute;
+  top: -14px;
+  right: -14px;
+  z-index: 5;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid rgb(230, 225, 210);
+  background-color: #C9A84C;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(90, 58, 30, 0.28);
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.notes-trigger-btn:hover {
+  background-color: #b7963f;
+  transform: scale(1.06);
+}
+
+.notes-trigger-icon {
+  width: 17px;
+  height: 17px;
+  filter: brightness(0) invert(1);
+  display: block;
+  pointer-events: none;
+}
+
+/* Panel that holds the sticky notes, positioned to the right of the modal */
+.notes-panel {
+  position: relative;
+  margin-left: 0;
+  width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: var(--notes-max-height, 90vh);
+  overflow-y: hidden;
+  overflow-x: hidden;
+  padding-top: 6px;
+}
+
+.notes-panel:empty {
+  display: none;
+}
+
+/* Individual sticky note */
+.sticky-note {
+  position: relative;
+  background-color: #FFF3B0; /* default: yellow */
+  border-radius: 4px;
+  padding: 14px 14px 40px 14px;
+  max-height: var(--notes-max-height, 90vh);
+  overflow: hidden;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.16);
+  font-family: "Raleway", sans-serif;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  animation: stickyPop 0.18s ease-out;
+}
+
+.sticky-note:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.22);
+}
+
+@keyframes stickyPop {
+  from { opacity: 0; transform: scale(0.9) rotate(0deg); }
+  to   { opacity: 1; }
+}
+
+.sticky-note-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.sticky-note-icon-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: none;
+  background-color: rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: background-color 0.15s ease;
+}
+
+.sticky-note-icon-btn:hover {
+  background-color: rgba(0, 0, 0, 0.16);
+}
+
+.sticky-note-icon-btn img {
+  width: 12px;
+  height: 12px;
+  display: block;
+  pointer-events: none;
+}
+
+.sticky-note-icon-btn.note-close-btn {
+  color: #6b3a3a;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.sticky-note-color-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  display: block;
+  pointer-events: none;
+}
+
+/* Color picker dropdown that appears under the color-changer icon */
+.note-color-picker {
+  position: absolute;
+  top: 34px;
+  right: 8px;
+  display: none;
+  gap: 6px;
+  background-color: #FFFFFF;
+  border: 1px solid rgb(225, 225, 225);
+  border-radius: 20px;
+  padding: 6px 8px;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.14);
+  z-index: 3;
+}
+
+.note-color-picker.show {
+  display: flex;
+}
+
+.note-color-option {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  padding: 0;
+}
+
+.note-color-option:hover {
+  transform: scale(1.15);
+}
+
+.note-color-option.active {
+  outline: 2px solid rgb(80, 80, 80);
+  outline-offset: 1px;
+}
+
+/* Note body: static (read) vs editable (textarea) */
+.sticky-note-text {
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: rgb(60, 55, 40);
+  white-space: pre-wrap;
+  word-break: break-word;
+  min-height: 40px;
+}
+
+.sticky-note-textarea {
+  width: 100%;
+  min-height: 90px;
+  max-height: calc(var(--notes-max-height, 90vh) - 150px);
+  box-sizing: border-box;
+  overflow-y: auto;
+  resize: vertical;
+  border: none;
+  background-color: rgba(255, 255, 255, 0.45);
+  border-radius: 4px;
+  padding: 6px;
+  font-family: "Raleway", sans-serif;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: rgb(50, 45, 30);
+}
+
+.sticky-note-textarea:focus {
+  outline: 2px solid rgba(0, 0, 0, 0.15);
+}
+
+.sticky-note-meta {
+  position: absolute;
+  bottom: 10px;
+  left: 14px;
+  right: 14px;
+  font-size: 0.62rem;
+  color: rgba(60, 55, 40, 0.6);
+  display: flex;
+  justify-content: space-between;
+}
+
+.sticky-note-save-btn {
+  display: none;
+  margin-top: 8px;
+  align-self: flex-end;
+  background-color: rgba(0, 0, 0, 0.75);
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  padding: 5px 10px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.sticky-note.editing .sticky-note-save-btn {
+  display: inline-flex;
+}
+
+.sticky-note.editing .sticky-note-text {
+  display: none;
+}
+
+.sticky-note:not(.editing) .sticky-note-textarea,
+.sticky-note:not(.editing) .sticky-note-save-btn {
+  display: none;
+}
+
+@media (max-width: 860px) {
+  .appt-modal-wrap {
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+  }
+
+  .notes-panel {
+      margin-left: 0;
+      margin-top: 0;
+      width: 100%;
+      max-width: 420px;
+      flex-direction: row;
+      flex-wrap: wrap;
+  }
+
+  .sticky-note {
+      width: calc(50% - 7px);
+  }
+
+    .sticky-note-textarea {
+      max-height: calc(var(--notes-max-height, 92vh) - 150px);
+    }
+
+  .notes-trigger-btn {
+      top: -14px;
+      right: 6px;
+  }
 }

@@ -4,7 +4,7 @@
     "main": "index.js",
     "scripts": {
         "start": "node index.js",
-        "migrate": "node migrations/001-appointments-hardening.js && node migrations/002-seed-aestheticians.js"
+        "migrate": "node migrations/001-appointments-hardening.js && node migrations/002-seed-aestheticians.js && node migrations/003-treatment-notes.js"
     },
     "dependencies": {
         "bcryptjs": "^3.0.3",
