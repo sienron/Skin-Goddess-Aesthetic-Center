@@ -85,19 +85,84 @@ router.get('/mine', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ message: 'You must be logged in.' });
 
   try {
-    const result = await db.query(`
-      SELECT a.appointment_id, s.service_name,
-             a.appointment_date::text AS appointment_date,
-             a.appointment_time::text AS appointment_time,
-             a.appointment_end_time::text AS appointment_end_time,
-             a.appointment_status, a.payment_status,
-             a.booked_service_price, a.booked_reservation_fee
-      FROM appointments a
-      JOIN services s ON s.service_id = a.service_id
-      WHERE a.user_id = $1
-      ORDER BY a.appointment_date ASC, a.appointment_time ASC
-    `, [req.session.userId]);
-    return res.json(result.rows);
+    const userResult = await db.query('SELECT role FROM users WHERE user_id = $1', [req.session.userId]);
+    if (userResult.rows.length === 0) return res.status(401).json({ message: 'Your session is no longer valid. Please log in again.' });
+
+    const isAesthetician = userResult.rows[0].role === 'aesthetician';
+
+    const appointmentsQuery = isAesthetician
+      ? `
+        SELECT a.appointment_id,
+               a.appointment_date::text AS date,
+               a.appointment_time::text AS start,
+               a.appointment_end_time::text AS end,
+               a.appointment_status AS status,
+               a.payment_status,
+               s.service_name AS service,
+               a.booked_service_price AS fee,
+               a.booked_reservation_fee AS deposit_amount,
+               COALESCE(CONCAT(c.first_name, ' ', c.last_name), 'Client') AS client,
+               COALESCE(CONCAT(aesthetician.first_name, ' ', aesthetician.last_name), 'Aesthetician') AS aesthetician,
+               c.contact_number AS contact,
+               NULL::text AS remarks,
+               a.appointment_id AS apptNumber
+        FROM appointments a
+        JOIN services s ON s.service_id = a.service_id
+        JOIN users c ON c.user_id = a.user_id
+        JOIN users aesthetician ON aesthetician.user_id = a.aesthetician_id
+        WHERE a.aesthetician_id = $1
+        ORDER BY a.appointment_date ASC, a.appointment_time ASC
+      `
+      : `
+        SELECT a.appointment_id,
+               a.appointment_date::text AS date,
+               a.appointment_time::text AS start,
+               a.appointment_end_time::text AS end,
+               a.appointment_status AS status,
+               a.payment_status,
+               s.service_name AS service,
+               a.booked_service_price AS fee,
+               a.booked_reservation_fee AS deposit_amount,
+               COALESCE(CONCAT(c.first_name, ' ', c.last_name), 'Client') AS client,
+               COALESCE(CONCAT(aesthetician.first_name, ' ', aesthetician.last_name), 'Aesthetician') AS aesthetician,
+               c.contact_number AS contact,
+               NULL::text AS remarks,
+               a.appointment_id AS apptNumber
+        FROM appointments a
+        JOIN services s ON s.service_id = a.service_id
+        JOIN users c ON c.user_id = a.user_id
+        JOIN users aesthetician ON aesthetician.user_id = a.aesthetician_id
+        WHERE a.user_id = $1
+        ORDER BY a.appointment_date ASC, a.appointment_time ASC
+      `;
+
+    const result = await db.query(appointmentsQuery, [req.session.userId]);
+
+    const appointments = result.rows.map((row) => ({
+      ...row,
+      id: row.appointment_id,
+      date: row.date,
+      start: row.start,
+      end: row.end,
+      status: row.status,
+      service: row.service,
+      client: row.client,
+      aesthetician: row.aesthetician,
+      fee: row.fee,
+      depositAmount: row.deposit_amount,
+      remarks: row.remarks,
+      apptNumber: row.apptnumber || row.appointment_id,
+      appointment_id: row.appointment_id,
+      appointment_date: row.date,
+      appointment_time: row.start,
+      appointment_end_time: row.end,
+      appointment_status: row.status,
+      service_name: row.service,
+      booked_service_price: row.fee,
+      booked_reservation_fee: row.deposit_amount
+    }));
+
+    return res.json(appointments);
   } catch (error) {
     console.error('Error fetching client appointments:', error);
     return res.status(500).json({ message: 'Could not load appointments.' });

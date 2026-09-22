@@ -1,20 +1,73 @@
-const appointments = [
-    {
-        id: 1, client: "Test Client", date: "2026-08-01", start: "10:00", end: "11:00", status: "confirmed",
-        // placeholder detail fields below — replace with real data once backend is connected
-        apptNumber: "APT-0141", service: "Facial Treatment", aesthetician: "Sofia Reyes",
-        fee: 1200, depositPaid: true, depositAmount: 300, contact: "0917 000 0000",
-        remarks: "No notes yet."
-    },
-    {
-        id: 5, client: "Sienron", date: "2026-08-01", start: "14:00", end: "15:00", status: "in-progress",
-        apptNumber: "APT-0142", service: "Deep Cleansing Facial", aesthetician: "Sofia Reyes",
-        fee: 1200, depositPaid: true, depositAmount: 300, contact: "0917 123 4567",
-        remarks: "Client requested gentle extraction; mild sensitivity noted on left cheek area."
-    }
-];
-let currentDate = new Date(); // April 2026 — month is 0-indexed (3 = April)
+let appointments = [];
+let currentDate = new Date();
 const HOUR_HEIGHT = 100;
+
+async function loadCurrentUser() {
+    const profileName = document.querySelector('.profile-card .profile-name');
+    const profileRole = document.querySelector('.profile-card .profile-role');
+    const profileAvatar = document.querySelector('.profile-card .profile-avatar');
+
+    if (!profileName || !profileRole || !profileAvatar) return;
+
+    try {
+        const response = await fetch('/api/auth/me');
+        if (!response.ok) {
+            throw new Error('Not logged in');
+        }
+
+        const user = await response.json();
+        const firstName = user.firstName || '';
+        const lastName = user.lastName || '';
+        const role = typeof user.role === 'string' ? user.role : 'aesthetician';
+        const displayName = `${firstName} ${lastName}`.trim() || 'Aesthetician';
+        const initials = `${firstName[0] || ''}${lastName[0] || ''}`.toUpperCase() || 'AE';
+        const roleLabel = role === 'aesthetician' ? 'Aesthetician' : role.replace(/_/g, ' ');
+
+        profileName.textContent = displayName;
+        profileRole.textContent = roleLabel.charAt(0).toUpperCase() + roleLabel.slice(1);
+        profileAvatar.textContent = initials;
+    } catch (error) {
+        window.location.href = '/LoginPage.html';
+    }
+}
+
+async function loadAestheticianAppointments() {
+    try {
+        const response = await fetch('/api/appointments/mine');
+        if (!response.ok) throw new Error('No appointments available');
+        const data = await response.json();
+        appointments = Array.isArray(data) ? data.map(normalizeAppointment) : [];
+    } catch (error) {
+        appointments = [];
+    }
+}
+
+function normalizeAppointment(appt) {
+    if (!appt) return appt;
+
+    return {
+        ...appt,
+        id: appt.id ?? appt.appointment_id,
+        date: appt.date ?? appt.appointment_date,
+        start: appt.start ?? appt.appointment_time,
+        end: appt.end ?? appt.appointment_end_time,
+        status: appt.status ?? appt.appointment_status,
+        service: appt.service ?? appt.service_name,
+        client: appt.client ?? (`${appt.first_name || ''} ${appt.last_name || ''}`.trim() || 'Client'),
+        aesthetician: appt.aesthetician ?? (`${appt.aesthetician_first_name || ''} ${appt.aesthetician_last_name || ''}`.trim() || 'Aesthetician'),
+        fee: appt.fee ?? appt.booked_service_price,
+        depositAmount: appt.depositAmount ?? appt.deposit_amount ?? appt.booked_reservation_fee,
+        contact: appt.contact ?? appt.contact_number ?? '—',
+        remarks: appt.remarks ?? appt.notes ?? 'No notes yet.',
+        apptNumber: appt.apptNumber ?? appt.appt_number ?? appt.id
+    };
+}
+
+(async function initAestheticianPage() {
+    await loadCurrentUser();
+    await loadAestheticianAppointments();
+    renderMonth(currentDate);
+})();
 function renderMonth(date) {
     const grid = document.getElementById("monthGrid");
     grid.innerHTML = ""; // clear old cells

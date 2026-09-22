@@ -16,6 +16,7 @@
 
 const STATUS_LABELS = {
     "confirmed": "CONFIRMED",
+    "pending": "PENDING",
     "in-progress": "IN PROGRESS",
     "completed": "COMPLETED",
     "cancelled": "CANCELLED",
@@ -44,9 +45,30 @@ function formatDateLong(dateStr) {
     return dateObj.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
 }
 
+function normalizeAppt(appt) {
+    if (!appt) return {};
+
+    const appointment = { ...appt };
+    appointment.id = appointment.id ?? appointment.appointment_id;
+    appointment.status = appointment.status ?? appointment.appointment_status;
+    appointment.date = appointment.date ?? appointment.appointment_date;
+    appointment.start = appointment.start ?? appointment.appointment_time;
+    appointment.end = appointment.end ?? appointment.appointment_end_time;
+    appointment.service = appointment.service ?? appointment.service_name;
+    const fallbackClientName = [appointment.first_name, appointment.last_name].filter(Boolean).join(" ");
+    appointment.client = appointment.client ?? (fallbackClientName || "Client");
+    appointment.aesthetician = appointment.aesthetician ?? appointment.aesthetician_name ?? "Aesthetician";
+    appointment.fee = appointment.fee ?? appointment.booked_service_price ?? appointment.service_price;
+    appointment.depositAmount = appointment.depositAmount ?? appointment.deposit_amount ?? appointment.booked_reservation_fee ?? appointment.reservation_fee;
+    appointment.contact = appointment.contact ?? appointment.contact_number ?? "—";
+    appointment.remarks = appointment.remarks ?? appointment.notes ?? "No notes yet.";
+    appointment.apptNumber = appointment.apptNumber ?? appointment.appt_number ?? appointment.id;
+    return appointment;
+}
+
 function getDurationLabel(appt) {
-    const [startH, startM] = appt.start.split(":").map(Number);
-    const [endH, endM] = appt.end.split(":").map(Number);
+    const [startH, startM] = (appt.start || "00:00").split(":").map(Number);
+    const [endH, endM] = (appt.end || "00:00").split(":").map(Number);
     const minutes = (endH * 60 + endM) - (startH * 60 + startM);
     if (minutes % 60 === 0) return `${minutes / 60 * 60} minutes`.replace(/^60 minutes$/, "60 minutes");
     return `${minutes} minutes`;
@@ -61,9 +83,10 @@ function formatPeso(amount) {
 function openApptModal(appt) {
     if (!apptModalOverlay) return; // this page doesn't have the modal markup
 
-    // NOTE: all fields below are populated from placeholder data until the backend is wired up.
-    const statusClass = `status-${appt.status}`;
-    const statusLabel = STATUS_LABELS[appt.status] || appt.status.toUpperCase();
+    const normalizedAppt = normalizeAppt(appt);
+
+    const statusClass = `status-${normalizedAppt.status}`;
+    const statusLabel = STATUS_LABELS[normalizedAppt.status] || (normalizedAppt.status || "UNKNOWN").toUpperCase();
 
     // Top bar + status badge color reflect the appointment's actual status
     apptModalTopbar.className = `appt-modal-topbar ${statusClass}`;
@@ -72,30 +95,30 @@ function openApptModal(appt) {
     statusBadge.className = `appt-status-badge ${statusClass}`;
     statusBadge.textContent = statusLabel;
 
-    document.getElementById("apptModalAvatar").textContent = getInitials(appt.client);
-    document.getElementById("apptModalName").textContent = appt.client;
+    document.getElementById("apptModalAvatar").textContent = getInitials(normalizedAppt.client || "Client");
+    document.getElementById("apptModalName").textContent = normalizedAppt.client || "Client";
     document.getElementById("apptModalSubtitle").textContent =
-        `Appointment #${appt.apptNumber || appt.id} · ${appt.service || "—"}`;
+        `Appointment #${normalizedAppt.apptNumber || normalizedAppt.id} · ${normalizedAppt.service || "—"}`;
 
-    document.getElementById("apptModalDate").textContent = formatDateLong(appt.date);
-    document.getElementById("apptModalTime").textContent = `${formatTime(appt.start)} – ${formatTime(appt.end)}`;
+    document.getElementById("apptModalDate").textContent = formatDateLong(normalizedAppt.date);
+    document.getElementById("apptModalTime").textContent = `${formatTime(normalizedAppt.start)} – ${formatTime(normalizedAppt.end)}`;
 
-    document.getElementById("apptModalAesthetician").textContent = appt.aesthetician || "—";
-    document.getElementById("apptModalDuration").textContent = getDurationLabel(appt);
+    document.getElementById("apptModalAesthetician").textContent = normalizedAppt.aesthetician || "—";
+    document.getElementById("apptModalDuration").textContent = getDurationLabel(normalizedAppt);
 
-    document.getElementById("apptModalService").textContent = appt.service || "—";
-    document.getElementById("apptModalFee").textContent = appt.fee != null ? formatPeso(appt.fee) : "—";
+    document.getElementById("apptModalService").textContent = normalizedAppt.service || "—";
+    document.getElementById("apptModalFee").textContent = normalizedAppt.fee != null ? formatPeso(normalizedAppt.fee) : "—";
 
-    const depositText = appt.depositAmount != null
-        ? `${appt.depositPaid ? "PAID" : "UNPAID"} ${formatPeso(appt.depositAmount)}`
+    const depositText = normalizedAppt.depositAmount != null
+        ? `${normalizedAppt.depositPaid ? "PAID" : "UNPAID"} ${formatPeso(normalizedAppt.depositAmount)}`
         : "—";
     document.getElementById("apptModalDeposit").textContent = depositText;
-    document.getElementById("apptModalContact").textContent = appt.contact || "—";
+    document.getElementById("apptModalContact").textContent = normalizedAppt.contact || "—";
 
-    document.getElementById("apptModalRemarks").textContent = appt.remarks || "No notes yet.";
+    document.getElementById("apptModalRemarks").textContent = normalizedAppt.remarks || "No notes yet.";
 
-    apptModalCancelBtn.dataset.apptId = appt.id;
-    apptModalRescheduleBtn.dataset.apptId = appt.id;
+    apptModalCancelBtn.dataset.apptId = normalizedAppt.id;
+    apptModalRescheduleBtn.dataset.apptId = normalizedAppt.id;
 
     apptModalOverlay.classList.add("show");
     document.body.style.overflow = "hidden";

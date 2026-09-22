@@ -727,6 +727,8 @@ hr {
 
 .status-confirmed  { background-color: rgba(146,146,146,0.12); border-left-color: #929292; }
 
+.status-pending    { background-color: rgba(201,168,76,0.15); border-left-color: #C9A84C; }
+
 .status-in-progress{ background-color: rgba(201,168,76,0.15); border-left-color: #C9A84C; }
 
 .status-completed  { background-color: rgba(34,139,70,0.12);  border-left-color: #228B46; }
@@ -1074,6 +1076,8 @@ hr {
 /* Status-driven theming applied via JS adding one of these classes to the modal */
 .appt-modal-topbar.status-confirmed   { background-color: #929292; }
 
+.appt-modal-topbar.status-pending     { background-color: #C9A84C; }
+
 .appt-modal-topbar.status-in-progress { background-color: #C9A84C; }
 
 .appt-modal-topbar.status-completed   { background-color: #228B46; }
@@ -1083,6 +1087,8 @@ hr {
 .appt-modal-topbar.status-no-show     { background-color: #D1D1D1; }
 
 .appt-status-badge.status-confirmed   { background-color: rgba(146,146,146,0.15); color: #7a7a7a; }
+
+.appt-status-badge.status-pending     { background-color: rgba(201,168,76,0.18); color: #a9843a; }
 
 .appt-status-badge.status-in-progress { background-color: rgba(201,168,76,0.18); color: #a9843a; }
 

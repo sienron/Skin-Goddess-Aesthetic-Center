@@ -368,13 +368,11 @@ const key = formatAvailabilityKey(selectedDate.year, selectedDate.month, selecte
         buildGroup("AFTERNOON", AFTERNOON_SLOTS);
     }
 
-    /* ===== Submission =====
-       The reservation fee + payment now happen on the next page
-       (AppointmentSummary.html, via PayMongo), so this handler just
-       validates the booking, stashes it, and hands off. The actual
-       POST /api/appointments call should happen once PayMongo confirms
-       payment on the summary page — see appointment-summary.js. */
-    detailsForm.addEventListener("submit", async (e) => {
+     /* ===== Submission =====
+         Keep the appointment uncreated until the payment flow succeeds.
+         AppointmentSummary.html will later call /api/appointments after
+         PayMongo confirms payment. */
+     detailsForm.addEventListener("submit", (e) => {
         e.preventDefault();
 
         if (!selectedDate || !selectedTime) {
@@ -387,56 +385,25 @@ const key = formatAvailabilityKey(selectedDate.year, selectedDate.month, selecte
             return;
         }
 
-        const confirmBtn = document.getElementById("confirmBtn");
-        if (confirmBtn) confirmBtn.disabled = true;
-        setBookingStatus("Booking your appointment...", "info");
-
-        const payload = {
-            serviceId: selectedService.id,
+        const booking = {
+            serviceId: Number(selectedService.id),
+            service: selectedService.name,
+            servicePrice: selectedService.price,
+            reservationFee: selectedService.reservationFee,
             date: `${selectedDate.year}-${String(selectedDate.month + 1).padStart(2, "0")}-${String(selectedDate.day).padStart(2, "0")}`,
-            time: selectedTime
+            time: selectedTime,
+            firstName: document.getElementById("firstName").value.trim(),
+            lastName: document.getElementById("lastName").value.trim(),
+            email: document.getElementById("email").value.trim(),
+            phone: document.getElementById("phone").value.trim(),
+            total: selectedService.reservationFee
         };
 
         try {
-            const response = await fetch("/api/appointments", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(payload)
-            });
-
-            const data = await response.json().catch(() => ({}));
-
-            if (response.status === 401) {
-                window.location.href = "/LoginPage.html";
-                return;
-            }
-
-            if (response.status === 409 || (data && data.message === "That time slot was just taken. Please choose another.")) {
-                setBookingStatus("That slot was just taken", "error");
-                selectedTime = null;
-                renderSlots();
-                await fetchAvailability();
-                if (confirmBtn) confirmBtn.disabled = false;
-                return;
-            }
-
-            if (!response.ok) {
-                throw new Error(data.message || "Could not create appointment.");
-            }
-
-            setBookingStatus("Appointment booked successfully.", "success");
-            selectedDate = null;
-            selectedTime = null;
-            renderCalendar();
-            renderSlots();
+            localStorage.setItem("sg_pending_booking", JSON.stringify(booking));
+            window.location.href = "AppointmentSummary.html";
         } catch (error) {
-            setBookingStatus(error.message || "Could not create appointment.", "error");
-        } finally {
-            if (document.getElementById("confirmBtn")) {
-                document.getElementById("confirmBtn").disabled = false;
-            }
+            setBookingStatus("Could not prepare the appointment summary.", "error");
         }
     });
 
