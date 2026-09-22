@@ -152,27 +152,41 @@
 })();
 
 (function () {
+    const staffSearchBtn = document.getElementById("staffSearchBtn");
+    const searchInput = document.getElementById("searchInput");
+    const staffHeader = document.querySelector(".staff-header");
+
+    if (staffSearchBtn && searchInput) {
+        staffSearchBtn.addEventListener("click", () => {
+            staffHeader?.classList.toggle("search-open");
+            searchInput.focus();
+        });
+    }
+
     const hamburgerBtn = document.getElementById("hamburgerBtn");
     const mobileNavDrawer = document.getElementById("mobileNavDrawer");
+    const mobileSidebar = document.querySelector(".staff-sidebar");
     const mobileNavOverlay = document.getElementById("mobileNavOverlay");
     const mobileNavClose = document.getElementById("mobileNavClose");
 
     if (!hamburgerBtn || !mobileNavDrawer || !mobileNavOverlay) return;
 
     function openDrawer() {
-        mobileNavDrawer.classList.add("show");
+        const drawer = mobileSidebar || mobileNavDrawer;
+        drawer.classList.add(mobileSidebar ? "mobile-sidebar-open" : "show");
         mobileNavOverlay.classList.add("show");
-        mobileNavDrawer.setAttribute("aria-hidden", "false");
-        mobileNavDrawer.removeAttribute("inert");
+        drawer.setAttribute("aria-hidden", "false");
+        drawer.removeAttribute("inert");
         hamburgerBtn.setAttribute("aria-expanded", "true");
         document.body.style.overflow = "hidden";
     }
 
     function closeDrawer() {
-        mobileNavDrawer.classList.remove("show");
+        const drawer = mobileSidebar || mobileNavDrawer;
+        drawer.classList.remove(mobileSidebar ? "mobile-sidebar-open" : "show");
         mobileNavOverlay.classList.remove("show");
-        mobileNavDrawer.setAttribute("aria-hidden", "true");
-        mobileNavDrawer.setAttribute("inert", "");
+        drawer.setAttribute("aria-hidden", "true");
+        drawer.setAttribute("inert", "");
         hamburgerBtn.setAttribute("aria-expanded", "false");
         document.body.style.overflow = "";
     }
@@ -188,7 +202,8 @@
         if (e.key === "Escape") closeDrawer();
     });
 
-    mobileNavDrawer.querySelectorAll("a").forEach((link) => {
+    const drawerLinks = (mobileSidebar || mobileNavDrawer).querySelectorAll("a");
+    drawerLinks.forEach((link) => {
         link.addEventListener("click", closeDrawer);
     });
 })();

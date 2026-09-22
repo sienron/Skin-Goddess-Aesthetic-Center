@@ -148,6 +148,197 @@ main {
   margin: 0;
 }
 
+.staff-hamburger-btn,
+.staff-search-btn {
+  display: none;
+}
+
+.profile-menu {
+  position: relative;
+}
+
+.profile-menu .profile-card {
+  width: 100%;
+  border: none;
+  font: inherit;
+  text-align: left;
+}
+
+.profile-menu .profile-dropdown {
+  top: auto;
+  right: auto;
+  bottom: calc(100% + 8px);
+  left: 0;
+  width: 150px;
+}
+
+.staff-header .logout-btn {
+  display: none;
+}
+
+@media (max-width: 860px) {
+  .staff-header {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 8px;
+    min-height: 58px;
+    padding: 8px 12px;
+  }
+
+  .staff-hamburger-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    width: 70px;
+    height: 38px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .staff-hamburger-icon {
+    width: 19px;
+    height: 19px;
+    flex-shrink: 0;
+  }
+
+  .staff-hamburger-logo {
+    display: none;
+  }
+
+  .staff-header > .logo-container,
+  .staff-header .search,
+  .staff-header .logout-btn {
+    display: none;
+  }
+
+  .staff-header.search-open .search {
+    display: flex;
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 12px;
+    left: 12px;
+    z-index: 10;
+  }
+
+  .page-title {
+    min-width: 0;
+  }
+
+  .page-title h2 {
+    overflow: hidden;
+    font-size: 1rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .page-title p {
+    display: none;
+  }
+
+  .actions {
+    display: contents;
+  }
+
+  .staff-search-btn,
+  .notification {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 1px solid rgb(220, 220, 220);
+    border-radius: 6px;
+    background: #fff;
+    cursor: pointer;
+  }
+
+  .staff-search-btn {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .notification-wrap {
+    grid-column: 4;
+    grid-row: 1;
+  }
+
+  .notification {
+    width: 30px;
+    height: 30px;
+  }
+
+  .staff-search-btn .search-svg,
+  .notification .notification-bell {
+    width: 15px;
+    height: 15px;
+    object-fit: contain;
+  }
+
+  .notification-bell,
+  .staff-search-btn .search-svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  section.staff-sidebar {
+    display: none;
+  }
+
+  section.staff-sidebar.mobile-sidebar-open {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 999;
+    display: flex;
+    width: min(280px, 82vw);
+    height: 100vh;
+    max-height: 100vh;
+    overflow-y: auto;
+    box-shadow: 2px 0 16px rgba(0, 0, 0, 0.15);
+  }
+
+  .main-content {
+    min-width: 0;
+    padding: 14px 12px;
+  }
+
+  .profile-menu .profile-dropdown {
+    right: auto;
+    left: 0;
+  }
+}
+
+@media (max-width: 360px) {
+  .staff-header {
+    gap: 4px;
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .staff-hamburger-btn {
+    width: 62px;
+  }
+
+  .staff-hamburger-logo {
+    display: none;
+  }
+
+  .page-title h2 {
+    font-size: 0.9rem;
+  }
+
+  .staff-search-btn,
+  .notification {
+    width: 27px;
+    height: 27px;
+  }
+}
+
 
 /* ===== SIDEBAR NAVIGATION ===== */
 
@@ -163,6 +354,10 @@ main {
   box-shadow: 2px 0 4px rgba(0, 0, 0, 0.04);
   overflow-y: auto;
   transition: width 0.2s ease;
+}
+
+.staff-sidebar-logo-wrap {
+  display: none;
 }
 
 nav ul {
@@ -6625,5 +6820,40 @@ body.services{
   .notes-trigger-btn {
       top: -14px;
       right: 6px;
+  }
+}
+
+/* Keep the aesthetician sidebar vertical when opened as the mobile drawer. */
+@media (max-width: 860px) {
+  section.staff-sidebar.mobile-sidebar-open {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    padding: 0 15px 15px;
+  }
+
+  section.staff-sidebar.mobile-sidebar-open .staff-sidebar-logo-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 0 8px;
+  }
+
+  section.staff-sidebar.mobile-sidebar-open .staff-sidebar-logo {
+    width: 130px;
+    height: auto;
+  }
+
+  section.staff-sidebar.mobile-sidebar-open nav ul {
+    display: block;
+  }
+
+  section.staff-sidebar.mobile-sidebar-open .nav-item {
+    width: auto;
+  }
+
+  section.staff-sidebar.mobile-sidebar-open .profile-wrap {
+    width: auto;
+    margin-top: auto;
   }
 }

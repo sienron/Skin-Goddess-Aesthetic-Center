@@ -10,6 +10,10 @@
 
 <body>
     <header class="staff-header">
+        <button type="button" class="staff-hamburger-btn" id="hamburgerBtn" aria-label="Open menu" aria-expanded="false" aria-controls="mobileNavDrawer">
+            <img src="icons/hamburger.svg" alt="" class="staff-hamburger-icon">
+            <img src="images/logo_horizontal.jpg" alt="Skin Goddess logo" class="staff-hamburger-logo">
+        </button>
         <div class="logo-container">
             <img src="images/logo_horizontal.jpg" alt="logo" id="logo">
         </div>
@@ -42,6 +46,10 @@
                 <ul class="search-suggestions" id="searchSuggestions"></ul>
             </div>
 
+            <button type="button" class="staff-search-btn" id="staffSearchBtn" aria-label="Search appointments">
+                <img src="icons/magnifying-glass.svg" alt="" class="search-svg">
+            </button>
+
             <button class="logout-btn" id="logoutBtn">
                 <svg class="logout-icon" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M6 2H3.5C2.67157 2 2 2.67157 2 3.5V12.5C2 13.3284 2.67157 14 3.5 14H6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
@@ -52,8 +60,24 @@
             </button>
         </div>
     </header>
+    <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
+    <aside class="mobile-nav-drawer" id="mobileNavDrawer" aria-hidden="true" inert>
+        <div class="mobile-nav-top">
+            <img src="images/logo_horizontal.jpg" alt="Skin Goddess logo" class="mobile-nav-logo">
+            <button type="button" class="mobile-nav-close" id="mobileNavClose" aria-label="Close menu">&times;</button>
+        </div>
+        <ul class="mobile-nav-links">
+            <li><a href="#">Dashboard</a></li>
+            <li><a href="#">My Clients</a></li>
+            <li><a href="AestheticianAppointmentPage.html">Appointments</a></li>
+            <li><a href="#">Treatment History</a></li>
+        </ul>
+    </aside>
     <main>
-        <section class="sidebar">
+        <section class="sidebar staff-sidebar" aria-label="Aesthetician navigation">
+            <div class="staff-sidebar-logo-wrap">
+                <img src="images/logo_horizontal.jpg" alt="Skin Goddess logo" class="staff-sidebar-logo">
+            </div>
 
             <hr>
 
@@ -104,7 +128,8 @@
 
             <div class="profile-wrap">
                 <hr class="profile-divider">
-                <a href="#profile" class="profile-card">
+                <div class="profile-menu" id="profileWrap">
+                <button type="button" class="profile-card" id="profileBtn" aria-haspopup="true" aria-expanded="false">
                     <div class="profile-row">
                         <div class="profile-avatar">--</div>
                         <div class="profile-info">
@@ -113,7 +138,11 @@
                         </div>
                         <span class="profile-status"></span>
                     </div>
-                </a>
+                </button>
+                <div class="profile-dropdown" id="profileDropdown">
+                    <button type="button" class="profile-dropdown-item profile-dropdown-item--signout" id="signOutBtn">Sign out</button>
+                </div>
+                </div>
             </div>
         </section>
         <section class="main-content">
