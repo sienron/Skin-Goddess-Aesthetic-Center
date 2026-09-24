@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Inventory Management</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="InventoryManagement.css">
+</head>
+
+<body>
+     <!-- ================= HEADER ================= -->
+    <header class="inventory-header">
+
+        <div class="header-title">
+            <h1>Inventory Management</h1>
+            <p>Track stock, expiry, and low-stock alerts</p>
+        </div>
+
+        <div class="header-actions">
+         
+
+            <button class="btn btn-export">
+                Export
+            </button>
+
+            <button class="btn btn-add-product">
+                + Add Product
+            </button>
+        </div>
+
+    </header>
+
+    <main class="inventory-page">
+
+       
+       
+
+        <!-- ================= SUMMARY CARDS ================= -->
+        <section class="summary-cards">
+
+            <div class="summary-card">
+                <div class="summary-label">TOTAL PRODUCTS</div>
+                <div class="summary-value" id="totalProducts">247</div>
+                <div class="summary-info positive">
+                    ↑ 12 restocked today
+                </div>
+            </div>
+
+            <div class="summary-card">
+                <div class="summary-label">LOW STOCK ITEMS</div>
+                <div class="summary-value" id="lowStockCount">18</div>
+                <div class="summary-info warning">
+                    ↑ 2 new alerts
+                </div>
+            </div>
+
+            <div class="summary-card">
+                <div class="summary-label">EXPIRING SOON</div>
+                <div class="summary-value">5</div>
+                <div class="summary-info danger">
+                    Within 60 days
+                </div>
+            </div>
+
+            <div class="summary-card">
+                <div class="summary-label">TOTAL CATEGORIES</div>
+                <div class="summary-value">7</div>
+                <div class="summary-info positive">
+                    All categories tracked
+                </div>
+            </div>
+
+        </section>
+
+
+        <!-- ================= FILTERS ================= -->
+        <section class="filter-bar">
+
+            <div class="filter-group">
+                <label for="categoryFilter">Category</label>
+
+                <select id="categoryFilter">
+                    <option value="all">All Categories</option>
+                    <option value="medical">
+                        Medical/Injection Supplies
+                    </option>
+                    <option value="disposables">
+                        Disposables & Clinic Consumables
+                    </option>
+                    <option value="prep">
+                        Facial/Treatment Prep Products
+                    </option>
+                    <option value="professional">
+                        Facial Treatment Products (Professional Use)
+                    </option>
+                    <option value="retail">
+                        Skincare Products (Retail / Aftercare)
+                    </option>
+                    <option value="cleansers">
+                        Soaps & Cleansers
+                    </option>
+                    <option value="equipment">
+                        Tools/Equipment/Misc.
+                    </option>
+                </select>
+            </div>
+
+
+            <div class="filter-group">
+                <label for="stockFilter">Stock</label>
+
+                <select id="stockFilter">
+                    <option value="all">All Stock Levels</option>
+                    <option value="0">0</option>
+                    <option value="1-20">1–20</option>
+                    <option value="21-40">21–40</option>
+                    <option value="41-60">41–60</option>
+                    <option value="61-80">61–80</option>
+                    <option value="81-100">81–100</option>
+                </select>
+            </div>
+
+
+            <div class="filter-group">
+                <label for="expiryFilter">Expiration</label>
+
+                <select id="expiryFilter">
+                    <option value="all">All Expiration Dates</option>
+                    <option value="expired">Expired</option>
+                    <option value="30">Within 30 Days</option>
+                    <option value="60">31–60 Days</option>
+                    <option value="90">61–90 Days</option>
+                    <option value="over90">More Than 90 Days</option>
+                    <option value="none">No Expiration Date</option>
+                </select>
+            </div>
+
+
+            <div class="filter-group">
+               
+                <label for="statusFilter">Status</label>
+
+                <select id="statusFilter">
+                    <option value="all">All Status</option>
+                    <option value="low">Low Stock</option>
+                    <option value="in-stock">In Stock</option>
+                    <option value="critical">Critical</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="search-box">Search</label>
+            <div class="search-box">
+                <input
+                    type="text"
+                    id="searchInput"
+                    
+                    placeholder="Search products..."
+                >
+            </div>
+        </div>
+            <div>
+            <button class="clear-filters" id="clearFilters">
+                Clear Filters
+            </button>
+        </div>
+
+        </section>
+
+
+        <!-- ================= MAIN CONTENT ================= -->
+        <section class="inventory-layout">
+
+            <!-- PRODUCT TABLE -->
+            <div class="inventory-table-container">
+
+                <div class="table-heading">
+                
+                        <h2>Products</h2>
+                        <p>Manage product stock and expiration dates</p>
+                    
+                </div>
+
+
+                <div class="table-wrapper">
+
+                    <table class="inventory-table">
+
+                        <thead>
+                            <tr>
+                                <th>PRODUCT NAME</th>
+                                <th>CATEGORY</th>
+                                <th>STOCK</th>
+                                <th>EXPIRY DATE</th>
+                                <th>STATUS</th>
+                                <th>ACTIONS</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="inventoryBody">
+
+                            <!-- PRODUCT 1 -->
+                            <tr
+                                data-category="retail"
+                                data-stock="48"
+                                data-expiry="2026-12-15"
+                                data-status="in-stock"
+                            >
+                                <td >    <!--cell-->
+                                    <div class="product-name"> <!--content sa loob ng cell-->
+                                        Vitamin C Brightening Serum
+                                    </div>
+                                </td>
+
+                                <td>Skincare Products</td>
+
+                                <td class="stock-value">    <!--CHANGES-->
+                                    <span class="stock-number">48</span> units
+                                </td>
+
+                                <td>Dec 2026</td>
+
+                                <td> <!--CHANGES-->
+                                    <span class="status in-stock">
+                                        <span></span>
+                                        IN STOCK
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <div class="action-buttons">
+                                        <button class="action-btn increase" title="Add stock">
+                                            +
+                                        </button>
+
+                                        <button class="action-btn decrease" title="Remove stock">
+                                            −
+                                        </button>
+
+                                        <button class="action-btn delete" title="Delete product">
+                                            ×
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+
+
+                            <!-- PRODUCT 2 -->
+                            <tr
+                                data-category="retail"
+                                data-stock="12"
+                                data-expiry="2026-03-15"
+                                data-status="low"
+                            >
+                                <td>
+                                    <div class="product-name">
+                                        Hyaluronic Acid Moisturizer
+                                    </div>
+                                </td>
+
+                                <td>Skincare Products</td>
+
+                                <td class="stock-value">
+                                    <span class="stock-number">12</span> units
+                                </td>
+
+                                <td>Mar 2026</td>
+
+                                <td>
+                                    <span class="status low-stock">
+                                        <span></span>
+                                        LOW STOCK
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <div class="action-buttons">
+                                        <button class="action-btn increase">+</button>
+                                        <button class="action-btn decrease">−</button>
+                                        <button class="action-btn delete">×</button>
+                                    </div>
+                                </td>
+                            </tr>
+
+
+                            <!-- PRODUCT 3 -->
+                            <tr
+                                data-category="cleansers"
+                                data-stock="3"
+                                data-expiry="2025-08-15"
+                                data-status="critical"
+                            >
+                                <td>
+                                    <div class="product-name">
+                                        Salicylic Acid Cleanser
+                                    </div>
+                                </td>
+
+                                <td>Soaps & Cleansers</td>
+
+                                <td class="stock-value critical-stock">
+                                    <span class="stock-number">3</span> units
+                                </td>
+
+                                <td class="critical-text">
+                                    Aug 2025
+                                </td>
+
+                                <td>
+                                    <span class="status critical">
+                                        <span></span>
+                                        CRITICAL
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <div class="action-buttons">
+                                        <button class="action-btn increase">+</button>
+                                        <button class="action-btn decrease">−</button>
+                                        <button class="action-btn delete">×</button>
+                                    </div>
+                                </td>
+                            </tr>
+
+
+                            <!-- PRODUCT 4 -->
+                            <tr
+                                data-category="professional"
+                                data-stock="29"
+                                data-expiry="2027-01-15"
+                                data-status="in-stock"
+                            >
+                                <td>
+                                    <div class="product-name">
+                                        Retinol Night Cream
+                                    </div>
+                                </td>
+
+                                <td>Professional Use</td>
+
+                                <td class="stock-value">
+                                    <span class="stock-number">29</span> units
+                                </td>
+
+                                <td>Jan 2027</td>
+
+                                <td>
+                                    <span class="status in-stock">
+                                        <span></span>
+                                        IN STOCK
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <div class="action-buttons">
+                                        <button class="action-btn increase">+</button>
+                                        <button class="action-btn decrease">−</button>
+                                        <button class="action-btn delete">×</button>
+                                    </div>
+                                </td>
+                            </tr>
+
+
+                            <!-- PRODUCT 5 -->
+                            <tr
+                                data-category="retail"
+                                data-stock="8"
+                                data-expiry="2026-06-15"
+                                data-status="low"
+                            >
+                                <td>
+                                    <div class="product-name">
+                                        SPF 50 Sunscreen
+                                    </div>
+                                </td>
+
+                                <td>Skincare Products</td>
+
+                                <td class="stock-value">
+                                    <span class="stock-number">8</span> units
+                                </td>
+
+                                <td>Jun 2026</td>
+
+                                <td>
+                                    <span class="status low-stock">
+                                        <span></span>
+                                        LOW STOCK
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <div class="action-buttons">
+                                        <button class="action-btn increase">+</button>
+                                        <button class="action-btn decrease">−</button>
+                                        <button class="action-btn delete">×</button>
+                                    </div>
+                                </td>
+                            </tr>
+
+
+                            <!-- PRODUCT 6 -->
+                            <tr
+                                data-category="retail"
+                                data-stock="34"
+                                data-expiry="2026-10-15"
+                                data-status="in-stock"
+                            >
+                                <td>
+                                    <div class="product-name">
+                                        Niacinamide Toner
+                                    </div>
+                                </td>
+
+                                <td>Skincare Products</td>
+
+                                <td class="stock-value">
+                                    <span class="stock-number">34</span> units
+                                </td>
+
+                                <td>Oct 2026</td>
+
+                                <td>
+                                    <span class="status in-stock">
+                                        <span></span>
+                                        IN STOCK
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <div class="action-buttons">
+                                        <button class="action-btn increase">+</button>
+                                        <button class="action-btn decrease">−</button>
+                                        <button class="action-btn delete">×</button>
+                                    </div>
+                                </td>
+                            </tr>
+
+
+                            <!-- PRODUCT 7 -->
+                            <tr
+                                data-category="professional"
+                                data-stock="6"
+                                data-expiry="2025-07-15"
+                                data-status="low"
+                            >
+                                <td>
+                                    <div class="product-name">
+                                        AHA BHA Exfoliant
+                                    </div>
+                                </td>
+
+                                <td>Professional Use</td>
+
+                                <td class="stock-value">
+                                    <span class="stock-number">6</span> units
+                                </td>
+
+                                <td>Jul 2025</td>
+
+                                <td>
+                                    <span class="status low-stock">
+                                        <span></span>
+                                        LOW STOCK
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <div class="action-buttons">
+                                        <button class="action-btn increase">+</button>
+                                        <button class="action-btn decrease">−</button>
+                                        <button class="action-btn delete">×</button>
+                                    </div>
+                                </td>
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+
+            <!-- ================= RIGHT SIDEBAR ================= -->
+            <aside class="inventory-sidebar">
+
+                <!-- Stock by Category -->
+                <div class="side-card">
+
+                    <h3>STOCK BY CATEGORY</h3>
+
+                    <div class="category-stock">
+
+                        <div class="category-row">
+                            <span>Medical Supplies</span>
+                            <div class="progress">
+                                <div style="width:82%"></div>
+                            </div>
+                            <strong>82%</strong> <!--auto bold ng text-->
+                        </div>  
+
+                        <div class="category-row">
+                            <span>Consumables</span>
+                            <div class="progress">
+                                <div style="width:65%"></div>
+                            </div>
+                            <strong>65%</strong>
+                        </div>
+
+                        <div class="category-row">
+                            <span>Treatment Prep</span>
+                            <div class="progress">
+                                <div style="width:91%"></div>
+                            </div>
+                            <strong>91%</strong>
+                        </div>
+
+                        <div class="category-row">
+                            <span>Professional</span>
+                            <div class="progress">
+                                <div style="width:24%"></div>
+                            </div>
+                            <strong>24%</strong>
+                        </div>
+
+                        <div class="category-row">
+                            <span>Retail</span>
+                            <div class="progress">
+                                <div style="width:44%"></div>
+                            </div>
+                            <strong>44%</strong>
+                        </div>
+
+                        <div class="category-row">
+                            <span>Cleansers</span>
+                            <div class="progress">
+                                <div style="width:74%"></div>
+                            </div>
+                            <strong>74%</strong>
+                        </div>
+
+                        <div class="category-row">
+                            <span>Equipment</span>
+                            <div class="progress">
+                                <div style="width:85%"></div>
+                            </div>
+                                <strong>85%</strong>
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- Low Stock Alerts -->
+                <div class="side-card">
+
+                    <h3>LOW STOCK ALERTS</h3>
+
+                    <div class="alert-item critical-alert">
+                        <div>
+                            <strong>Salicylic Acid Cleanser</strong>
+                            <small>3 units · Expires Aug 2025</small>
+                        </div>
+
+                        <span>CRIT</span>
+                    </div>
+
+
+                    <div class="alert-item">
+                        <div>
+                            <strong>Hyaluronic Acid Moisturizer</strong>
+                            <small>12 units · Mar 2026</small>
+                        </div>
+
+                        <span>LOW</span>
+                    </div>
+
+
+                    <div class="alert-item">
+                        <div>
+                            <strong>SPF 50 Sunscreen</strong>
+                            <small>8 units · Jun 2026</small>
+                        </div>
+
+                        <span>LOW</span>
+                    </div>
+
+
+                    <div class="alert-item">
+                        <div>
+                            <strong>AHA BHA Exfoliant</strong>
+                            <small>6 units · Jul 2025</small>
+                        </div>
+
+                        <span>LOW</span>
+                    </div>
+
+                </div>
+
+            </aside>
+
+        </section>
+
+
+        <!-- ================= TRANSACTION LOG ================= -->
+        <section class="transaction-section">
+
+            <div class="transaction-header">
+
+                <div>
+                    <h2>Stock Transaction Log</h2>
+                    <p>All stock movements recorded here</p>
+                </div>
+
+                <div class="transaction-filters">
+
+                    <select>
+                        <option>All Time</option>
+                        <option>Today</option>
+                        <option>This Week</option>
+                        <option>This Month</option>
+                    </select>
+
+                    <select>
+                        <option>Filter</option>
+                        <option>Restock</option>
+                        <option>Used in Service</option>
+                        <option>Adjustment</option>
+                        <option>Disposed / Expired</option>
+                    </select>
+
+                    <button class="btn btn-export">
+                        Export
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <div class="transaction-table-wrapper">
+
+                <table class="transaction-table">
+
+                    <thead>
+                        <tr>
+                            <th>DATE & TIME</th>
+                            <th>PRODUCT</th>
+                            <th>ACTION</th>
+                            <th>QTY CHANGE</th>
+                            <th>STOCK AFTER</th>
+                            <th>PERFORMED BY</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        <tr>
+                            <td>Apr 18, 2026<br><small>09:15 AM</small></td>
+                            <td>Vitamin C Brightening Serum</td>
+                            <td><span class="transaction restock">● Restock</span></td>
+                            <td class="positive">+24 units</td>
+                            <td>48 units</td>
+                            <td>Admin User</td>
+                        </tr>
+
+                        <tr>
+                            <td>Apr 18, 2026<br><small>10:32 AM</small></td>
+                            <td>TCA Peel Solution 20%</td>
+                            <td><span class="transaction used">● Used in Service</span></td>
+                            <td>−1 unit</td>
+                            <td>3 units</td>
+                            <td>Sofia Reyes</td>
+                        </tr>
+
+                        <tr>
+                            <td>Apr 17, 2026<br><small>03:45 PM</small></td>
+                            <td>Hyaluronic Acid Moisturizer</td>
+                            <td><span class="transaction adjustment">● Adjustment</span></td>
+                            <td>−2 units</td>
+                            <td>12 units</td>
+                            <td>Admin User</td>
+                        </tr>
+
+                        <tr>
+                            <td>Apr 17, 2026<br><small>11:00 AM</small></td>
+                            <td>AHA BHA Exfoliant</td>
+                            <td><span class="transaction disposed">● Disposed</span></td>
+                            <td class="critical-text">−4 units</td>
+                            <td>6 units</td>
+                            <td>Admin User</td>
+                        </tr>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+            <div class="table-footer">
+                Showing 4 of 142 log entries
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <script src="InventoryManagement.js"></script>
+
+</body>
+</html>
