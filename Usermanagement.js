@@ -62,10 +62,6 @@ async function fetchUsers() {
 }
 
 function rowHTML(u) {
-  const suspendAction = u.status === 'suspended'
-    ? `<a href="#" class="um-action" data-action="restore" data-id="${u.id}">Restore</a>`
-    : `<a href="#" class="um-action" data-action="edit" data-id="${u.id}">Edit</a>`;
-
   const statusCell = u.status === 'suspended'
     ? `<span class="um-status um-status--suspended">&bull; SUSPENDED</span>`
     : `<span class="um-status um-status--active">&bull; ACTIVE</span>`;
@@ -88,7 +84,6 @@ function rowHTML(u) {
       <td>${statusCell}</td>
       <td class="um-actions">
         <a href="#" class="um-action um-action--view" data-action="view" data-id="${u.id}">View</a>
-        ${suspendAction}
         <a href="#" class="um-action um-action--danger" data-action="delete" data-id="${u.id}">Del</a>
       </td>
     </tr>`;
