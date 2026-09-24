@@ -328,6 +328,127 @@ router.get('/me', async (req, res) => {
 });
 
 // ============================================
+// ROUTE: GET PROFILE (editable fields, for account page)
+// ============================================
+router.get('/profile', async (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ message: 'Not logged in.' });
+  }
+
+  try {
+    const result = await db.query(
+      `SELECT first_name, last_name, email, contact_number
+       FROM users WHERE user_id = $1`,
+      [req.session.userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Account not found.' });
+    }
+
+    const user = result.rows[0];
+    res.status(200).json({
+      firstName: user.first_name,
+      lastName: user.last_name,
+      email: user.email,
+      contactNumber: user.contact_number,
+    });
+  } catch (error) {
+    console.log('Get profile error:', error);
+    res.status(500).json({ message: 'Error. Try again.' });
+  }
+});
+
+// ============================================
+// ROUTE: UPDATE PROFILE (name, email, contact number)
+// ============================================
+router.put('/update-profile', async (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ message: 'Not logged in.' });
+  }
+
+  const { firstName, lastName, email, contactNumber } = req.body;
+  const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+
+  if (!firstName || !lastName || !normalizedEmail) {
+    return res.status(400).json({ message: 'Name and email are required.' });
+  }
+
+  try {
+    // Make sure no OTHER account already uses this email
+    const existing = await db.query(
+      'SELECT user_id FROM users WHERE LOWER(email) = $1 AND user_id != $2',
+      [normalizedEmail, req.session.userId]
+    );
+
+    if (existing.rows.length > 0) {
+      return res.status(409).json({ message: 'This email is already in use by another account.' });
+    }
+
+    await db.query(
+      `UPDATE users
+       SET first_name = $1, last_name = $2, email = $3, contact_number = $4
+       WHERE user_id = $5`,
+      [firstName, lastName, normalizedEmail, contactNumber || null, req.session.userId]
+    );
+
+    res.status(200).json({ message: 'Profile updated successfully.' });
+  } catch (error) {
+    console.log('Update profile error:', error);
+    res.status(500).json({ message: 'Error. Try again.' });
+  }
+});
+
+// ============================================
+// ROUTE: CHANGE PASSWORD (requires current password)
+// ============================================
+router.put('/change-password', async (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ message: 'Not logged in.' });
+  }
+
+  const { currentPassword, newPassword } = req.body;
+
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ message: 'Current and new password are required.' });
+  }
+
+  if (!isValidPassword(newPassword)) {
+    return res.status(400).json({
+      message: 'Password must be at least 8 characters, contain both letters and numbers, and must not include special characters.',
+    });
+  }
+
+  try {
+    const result = await db.query('SELECT password_hash FROM users WHERE user_id = $1', [req.session.userId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Account not found.' });
+    }
+
+    const currentHash = result.rows[0].password_hash;
+
+    const isCurrentCorrect = await bcrypt.compare(currentPassword, currentHash);
+    if (!isCurrentCorrect) {
+      return res.status(401).json({ message: 'Current password is incorrect.' });
+    }
+
+    const isSameAsOld = await bcrypt.compare(newPassword, currentHash);
+    if (isSameAsOld) {
+      return res.status(400).json({ message: 'New password cannot be the same as your current password.' });
+    }
+
+    const newHash = await bcrypt.hash(newPassword, 10);
+    await db.query('UPDATE users SET password_hash = $1 WHERE user_id = $2', [newHash, req.session.userId]);
+
+    res.status(200).json({ message: 'Password changed successfully.' });
+  } catch (error) {
+    console.log('Change password error:', error);
+    res.status(500).json({ message: 'Error. Try again.' });
+  }
+});
+
+// ============================================
 // ROUTE 5: FORGOT PASSWORD (Send reset link)
 // ============================================
 router.post('/forgot-password', async (req, res) => {

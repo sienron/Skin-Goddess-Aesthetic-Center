@@ -207,3 +207,26 @@
         link.addEventListener("click", closeDrawer);
     });
 })();
+
+/* Ensure My Account appears in every profile dropdown */
+(function () {
+  const profileDropdown = document.getElementById('profileDropdown');
+
+  if (!profileDropdown) {
+    return;
+  }
+
+  const accountLink = profileDropdown.querySelector(
+    'a[href="UserAccount.html"]'
+  );
+
+  if (!accountLink) {
+    const newAccountLink = document.createElement('a');
+
+    newAccountLink.href = 'UserAccount.html';
+    newAccountLink.className = 'profile-dropdown-item';
+    newAccountLink.textContent = 'My Account';
+
+    profileDropdown.prepend(newAccountLink);
+  }
+})();

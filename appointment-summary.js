@@ -1,48 +1,138 @@
-/* appointment-summary.js
- * Runs on AppointmentSummary.html. Reads the booking that
- * appointment-booking.js saved to localStorage on confirm, renders it,
- * and is where the PayMongo checkout should be wired up.
- *
- * BACKEND / PAYMONGO TODO:
- * - Create a PayMongo Payment Intent / Checkout Session for
- *   booking.reservationFee (or booking.total, depending on what you charge
- *   upfront) inside #paymongoCheckout.
- * - On successful payment, POST the booking to /api/appointments (the call
- *   that used to live in appointment-booking.js's submit handler), then
- *   clear localStorage.removeItem("sg_pending_booking") and redirect to a
- *   confirmation page.
- */
+/* ===== Appointment Summary =====
+   Creates the appointment after the user confirms the booking.
+*/
 (function () {
-    const BOOKING_STORAGE_KEY = "sg_pending_booking";
+  const BOOKING_STORAGE_KEY = 'sg_pending_booking';
+  const summaryContainer = document.getElementById('checkoutSummary');
+  const paymentContainer = document.getElementById('paymongoCheckout');
 
-    const container = document.getElementById("checkoutSummary");
-    if (!container) return; // not on the summary page
+  if (!summaryContainer || !paymentContainer) {
+    return;
+  }
 
-    const raw = localStorage.getItem(BOOKING_STORAGE_KEY);
-    const booking = raw ? JSON.parse(raw) : null;
+  let booking;
 
-    if (!booking) {
-        // No booking in progress — send the user back to start over.
-        window.location.href = "UserAppointment.html";
-        return;
+  try {
+    const rawBooking = localStorage.getItem(BOOKING_STORAGE_KEY);
+    booking = rawBooking ? JSON.parse(rawBooking) : null;
+  } catch (error) {
+    booking = null;
+  }
+
+  if (!booking) {
+    window.location.href = 'UserAppointment.html';
+    return;
+  }
+
+  function setText(id, value) {
+    const element = document.getElementById(id);
+
+    if (element) {
+      element.textContent = value || '—';
+    }
+  }
+
+  function formatPeso(amount) {
+    const number = Number(amount) || 0;
+    return `₱${number.toLocaleString('en-US')}`;
+  }
+
+  function showMessage(message, type) {
+    let messageElement = document.getElementById('checkoutMessage');
+
+    if (!messageElement) {
+      messageElement = document.createElement('p');
+      messageElement.id = 'checkoutMessage';
+      messageElement.className = 'booking-status-message';
+      paymentContainer.after(messageElement);
     }
 
-    setText("summaryService", booking.service || "—");
-    setText("summaryFee", formatPeso(booking.reservationFee));
-    setText("summaryDate", booking.date || "Not selected");
-    setText("summaryTime", booking.time || "Not selected");
-    setText("summaryName", `${booking.firstName} ${booking.lastName}`.trim());
-    setText("summaryEmail", booking.email || "—");
-    setText("summaryPhone", booking.phone || "—");
-    setText("summaryTotal", formatPeso(booking.total));
+    messageElement.textContent = message;
+    messageElement.className = `booking-status-message ${type}`;
+  }
 
-    function setText(id, value) {
-        const el = document.getElementById(id);
-        if (el) el.textContent = value;
-    }
+  function renderSummary() {
+    setText('summaryService', booking.service);
+    setText('summaryFee', formatPeso(booking.reservationFee));
+    setText('summaryDate', booking.date);
+    setText('summaryTime', booking.time);
+    setText(
+      'summaryName',
+      `${booking.firstName || ''} ${booking.lastName || ''}`.trim()
+    );
+    setText('summaryEmail', booking.email);
+    setText('summaryPhone', booking.phone);
+    setText('summaryTotal', formatPeso(booking.total));
+  }
 
-    function formatPeso(amount) {
-        const n = Number(amount) || 0;
-        return `₱${n.toLocaleString("en-US")}`;
-    }
+  function renderConfirmButton() {
+    paymentContainer.innerHTML = '';
+
+    const heading = document.createElement('p');
+    heading.className = 'checkout-section-title';
+    heading.textContent = 'CONFIRM APPOINTMENT';
+
+    const description = document.createElement('p');
+    description.textContent =
+      'Click the button below to reserve this appointment.';
+
+    const confirmButton = document.createElement('button');
+    confirmButton.type = 'button';
+    confirmButton.id = 'confirmBookingBtn';
+    confirmButton.className = 'confirm-btn';
+    confirmButton.textContent = 'CONFIRM APPOINTMENT';
+
+    confirmButton.addEventListener('click', async () => {
+      confirmButton.disabled = true;
+      confirmButton.textContent = 'CREATING APPOINTMENT...';
+
+      showMessage('', '');
+
+      try {
+        const response = await fetch('/api/appointments', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            serviceId: booking.serviceId,
+            date: booking.date,
+            time: booking.time
+          })
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(
+            data.message || 'Could not create your appointment.'
+          );
+        }
+
+        localStorage.removeItem(BOOKING_STORAGE_KEY);
+
+        showMessage(
+          'Appointment created successfully. Redirecting...',
+          'success'
+        );
+
+        setTimeout(() => {
+          window.location.href = 'MyAppointments.html';
+        }, 1000);
+      } catch (error) {
+        showMessage(
+          error.message || 'Could not create your appointment.',
+          'error'
+        );
+
+        confirmButton.disabled = false;
+        confirmButton.textContent = 'CONFIRM APPOINTMENT';
+      }
+    });
+
+    paymentContainer.append(heading, description, confirmButton);
+  }
+
+  renderSummary();
+  renderConfirmButton();
 })();

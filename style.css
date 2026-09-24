@@ -7733,3 +7733,256 @@ body.services{
 
   .um-filter-panel { right: auto; left: 0; }
 }
+
+/* ===== ACCOUNT PAGE ===== */
+
+.account-page {
+  flex: 1;
+  display: block;
+  min-height: calc(100vh - 80px);
+  padding: 42px 24px 70px;
+  background: #fbf9f5;
+}
+
+.account-container {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.account-heading {
+  margin: 0;
+  color: #201c18;
+  font-family: "Playfair Display", serif;
+  font-size: 2.35rem;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.account-sub {
+  margin: 8px 0 28px;
+  color: #8c8177;
+  font-family: "Raleway", sans-serif;
+  font-size: 0.95rem;
+}
+
+.account-section {
+  width: 100%;
+  margin-bottom: 24px;
+  padding: 30px;
+  background: #ffffff;
+  border: 1px solid #e5ddd2;
+  border-radius: 10px;
+  box-shadow: 0 4px 14px rgba(80, 58, 35, 0.05);
+}
+
+.account-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 25px;
+}
+
+.account-section-title {
+  margin: 0;
+  color: #201c18;
+  font-family: "Raleway", sans-serif;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.account-edit-btn {
+  min-width: 58px;
+  padding: 9px 17px;
+  color: #b5892a;
+  background: #ffffff;
+  border: 1px solid #d4a937;
+  border-radius: 6px;
+  font-family: "Raleway", sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.account-edit-btn:hover {
+  color: #ffffff;
+  background: #d4a937;
+}
+
+.account-section .auth-form-group {
+  margin-bottom: 23px;
+}
+
+.account-section label {
+  display: block;
+  margin-bottom: 8px;
+  color: #82766b;
+  font-family: "Raleway", sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.account-section input {
+  width: 100%;
+  height: 47px;
+  padding: 0 14px;
+  color: #302923;
+  background: #ffffff;
+  border: 1px solid #ded5ca;
+  border-radius: 7px;
+  font-family: "Raleway", sans-serif;
+  font-size: 0.95rem;
+  outline: none;
+}
+
+.account-section input:disabled {
+  color: #3d352e;
+  background: #ffffff;
+  opacity: 1;
+  cursor: default;
+}
+
+.account-section input:not(:disabled):focus {
+  border-color: #d4a937;
+  box-shadow: 0 0 0 3px rgba(212, 169, 55, 0.14);
+}
+
+.account-form-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.account-form-actions[hidden] {
+  display: none;
+}
+
+.account-form-actions .btn {
+  min-width: 140px;
+  min-height: 39px;
+  padding: 10px 18px;
+  border-radius: 6px;
+  font-family: "Raleway", sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.account-form-actions .btn-primary {
+  color: #ffffff;
+  background: #d4a937;
+  border: 1px solid #d4a937;
+}
+
+.account-form-actions .btn-primary:hover {
+  background: #b5892a;
+  border-color: #b5892a;
+}
+
+.account-form-actions .btn-outline {
+  color: #806f60;
+  background: #ffffff;
+  border: 1px solid #ded5ca;
+}
+
+.account-form-actions .btn-outline:hover {
+  background: #f8f3ec;
+}
+
+.account-success {
+  margin: 14px 0 0;
+  color: #16833d;
+  font-family: "Raleway", sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.account-success[hidden] {
+  display: none;
+}
+
+.account-section .field-error {
+  display: block;
+  min-height: 16px;
+  margin-top: 5px;
+  color: #b93c3c;
+  font-family: "Raleway", sans-serif;
+  font-size: 0.75rem;
+}
+
+.account-section .has-error input {
+  border-color: #b93c3c;
+}
+
+#password-form {
+  margin-top: 24px;
+}
+
+#password-form[hidden] {
+  display: none;
+}
+
+.password-field {
+  position: relative;
+}
+
+.password-field input {
+  padding-right: 48px;
+}
+
+.toggle-password {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  transform: translateY(-50%);
+  cursor: pointer;
+}
+
+.toggle-password:hover svg path,
+.toggle-password:hover svg circle {
+  stroke: #b5892a;
+}
+
+@media (max-width: 600px) {
+  .account-page {
+    padding: 32px 16px 50px;
+  }
+
+  .account-heading {
+    font-size: 2rem;
+  }
+
+  .account-sub {
+    margin-bottom: 24px;
+    font-size: 0.88rem;
+  }
+
+  .account-section {
+    padding: 25px 28px;
+  }
+
+  .account-section-title {
+    font-size: 1.05rem;
+  }
+
+  .account-form-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .account-form-actions .btn {
+    width: 100%;
+  }
+}

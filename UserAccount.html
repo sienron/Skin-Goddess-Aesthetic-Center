@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Account | Skin Goddess Aesthetic Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600&family=Playfair+Display:ital,wght@1,500;1,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="homepage" data-page="account">
+
+    <header class="public-header">
+
+        <div class="logo-container">
+          <a href="index.html"><img id="logo" src="images/logo_horizontal.jpg" alt="Skin Goddess Aesthetic Center logo"></a>
+        </div>
+
+        <nav class="public-nav">
+            <ul class="public-nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="ServicesPage.html">Services</a></li>
+                <li><a href="AboutUsPage.html">About</a></li>
+                <li><a href="ContactUsPage.html">Contact</a></li>
+            </ul>
+        </nav>
+
+        <button type="button" class="hamburger-btn" id="hamburgerBtn" aria-label="Open menu" aria-expanded="false" aria-controls="mobileNavDrawer">
+            <img src="icons/hamburger.svg" alt="" class="hamburger-icon">
+        </button>
+
+        <div class="public-header-actions">
+
+            <div class="notification-wrap" id="notificationWrap">
+                <div class="notification" id="notificationBtn">
+                    <img src="icons/notification-bell.svg" alt="Notifications" class="notification-bell">
+                </div>
+
+                <div class="notification-dropdown" id="notificationDropdown">
+                    <div class="notification-dropdown-header">Notifications</div>
+                    <div class="notification-list">
+                        <!-- Notification items would be populated here -->
+                    </div>
+                </div>
+            </div>
+
+            <button class="book-now-btn" type="button" onclick="window.location.href='UserAppointment.html'">BOOK NOW</button>
+
+            <div class="public-divider"></div>
+
+            <div class="header-profile-wrap" id="profileWrap">
+              <button type="button" class="profile-row" id="profileBtn" aria-haspopup="true" aria-expanded="false">
+                  <div class="profile-avatar">AR</div>
+                  <div class="profile-info">
+                      <span class="profile-name">Anna Reyes</span>
+                  </div>
+              </button>
+          
+              <div class="profile-dropdown" id="profileDropdown">
+                  <a href="UserAccount.html" class="profile-dropdown-item">My Account</a>
+                  <a href="MyAppointments.html" class="profile-dropdown-item">My Appointments</a>
+                  <div class="profile-dropdown-divider"></div>
+                  <button type="button" class="profile-dropdown-item profile-dropdown-item--signout" id="signOutBtn">Sign out</button>
+              </div>
+          </div>
+
+        </div>
+
+    </header>
+
+    <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
+
+    <aside class="mobile-nav-drawer" id="mobileNavDrawer" aria-hidden="true" inert>
+
+        <div class="mobile-nav-top">
+            <img src="images/logo_horizontal.jpg" alt="Skin Goddess Aesthetic Center logo" class="mobile-nav-logo">
+            <button type="button" class="mobile-nav-close" id="mobileNavClose" aria-label="Close menu">&times;</button>
+        </div>
+
+        <ul class="mobile-nav-links">
+            <li><a href="index.html">Home</a></li>
+            <li><a href="ServicesPage.html">Services</a></li>
+            <li><a href="AboutUsPage.html">About</a></li>
+            <li><a href="ContactUsPage.html">Contact</a></li>
+        </ul>
+
+        <button class="book-now-btn mobile-nav-book-btn" type="button" onclick="window.location.href='UserAppointment.html'">BOOK NOW</button>
+
+        <div class="mobile-nav-profile">
+            <div class="profile-avatar">AR</div>
+            <div class="profile-info">
+                <span class="profile-name">Anna Reyes</span>
+            </div>
+        </div>
+
+    </aside>
+
+<main class="account-page">
+  <div class="account-container">
+    <h1 class="account-heading">My Account</h1>
+    <p class="account-sub">Update your personal information and password.</p>
+
+    <section class="account-section">
+      <div class="account-section-header">
+        <h2 class="account-section-title">Profile Information</h2>
+        <button type="button" class="account-edit-btn" id="profileEditBtn">Edit</button>
+      </div>
+      <form id="profile-form" novalidate>
+        <div class="auth-form-group" id="firstName-group">
+          <label for="firstName">First Name</label>
+          <input type="text" id="firstName" name="firstName" disabled>
+          <span class="field-error" data-error-for="firstName"></span>
+        </div>
+
+        <div class="auth-form-group" id="lastName-group">
+          <label for="lastName">Last Name</label>
+          <input type="text" id="lastName" name="lastName" disabled>
+          <span class="field-error" data-error-for="lastName"></span>
+        </div>
+
+        <div class="auth-form-group" id="email-group">
+          <label for="email">Email Address</label>
+          <input type="email" id="email" name="email" disabled>
+          <span class="field-error" data-error-for="email"></span>
+        </div>
+
+        <div class="auth-form-group" id="contactNumber-group">
+          <label for="contactNumber">Contact Number</label>
+          <input type="text" id="contactNumber" name="contactNumber" inputmode="numeric" maxlength="10" disabled>
+          <span class="field-error" data-error-for="contactNumber"></span>
+        </div>
+
+        <span class="field-error" data-error-for="profile-form"></span>
+
+        <div class="account-form-actions" id="profileFormActions" hidden>
+          <button type="submit" class="btn btn-primary" id="profileSubmitBtn">
+            <span class="btn-label">SAVE CHANGES</span>
+          </button>
+          <button type="button" class="btn btn-outline" id="profileCancelBtn">CANCEL</button>
+        </div>
+        <p class="account-success" id="profile-success" hidden>Profile updated successfully.</p>
+      </form>
+    </section>
+
+    <section class="account-section">
+      <div class="account-section-header">
+        <h2 class="account-section-title">Change Password</h2>
+      </div>
+
+      <button type="button" class="account-edit-btn" id="passwordEditBtn">Change Password</button>
+
+      <form id="password-form" novalidate hidden>
+        <div class="auth-form-group" id="currentPassword-group">
+  <label for="currentPassword">Current Password</label>
+  <div class="password-field">
+    <input type="password" id="currentPassword" name="currentPassword">
+    <button type="button" class="toggle-password" data-target="currentPassword" aria-label="Show password">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7z" stroke="#B0AAA3" stroke-width="1.5"/>
+        <circle cx="12" cy="12" r="3" stroke="#B0AAA3" stroke-width="1.5"/>
+      </svg>
+    </button>
+  </div>
+  <span class="field-error" data-error-for="currentPassword"></span>
+</div>
+
+<div class="auth-form-group" id="newPassword-group">
+  <label for="newPassword">New Password</label>
+  <div class="password-field">
+    <input type="password" id="newPassword" name="newPassword">
+    <button type="button" class="toggle-password" data-target="newPassword" aria-label="Show password">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7z" stroke="#B0AAA3" stroke-width="1.5"/>
+        <circle cx="12" cy="12" r="3" stroke="#B0AAA3" stroke-width="1.5"/>
+      </svg>
+    </button>
+  </div>
+  <span class="field-error" data-error-for="newPassword"></span>
+</div>
+
+<div class="auth-form-group" id="confirmNewPassword-group">
+  <label for="confirmNewPassword">Confirm New Password</label>
+  <div class="password-field">
+    <input type="password" id="confirmNewPassword" name="confirmNewPassword">
+    <button type="button" class="toggle-password" data-target="confirmNewPassword" aria-label="Show password">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7z" stroke="#B0AAA3" stroke-width="1.5"/>
+        <circle cx="12" cy="12" r="3" stroke="#B0AAA3" stroke-width="1.5"/>
+      </svg>
+    </button>
+  </div>
+  <span class="field-error" data-error-for="confirmNewPassword"></span>
+</div>
+
+        <span class="field-error" data-error-for="password-form"></span>
+
+        <div class="account-form-actions" id="passwordFormActions">
+          <button type="submit" class="btn btn-primary" id="passwordSubmitBtn">
+            <span class="btn-label">UPDATE PASSWORD</span>
+          </button>
+          <button type="button" class="btn btn-outline" id="passwordCancelBtn">CANCEL</button>
+        </div>
+        <p class="account-success" id="password-success" hidden>Password changed successfully.</p>
+      </form>
+    </section>
+  </div>
+</main>
+
+<script src="header.js"></script>
+<script src="account.js"></script>
+<script src="account-edit-toggle.js"></script>
+</body>
+</html>
