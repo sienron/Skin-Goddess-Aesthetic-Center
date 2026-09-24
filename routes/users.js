@@ -314,6 +314,11 @@ router.delete('/:id', async (req, res) => {
 
     res.status(200).json({ message: 'User deleted.' });
   } catch (error) {
+    if (error.code === '23503') {
+      return res.status(409).json({
+        message: 'This user has linked appointments or records and cannot be deleted. Suspend the account instead.',
+      });
+    }
     console.error('Delete user error:', error);
     res.status(500).json({ message: 'Could not delete user.' });
   }
