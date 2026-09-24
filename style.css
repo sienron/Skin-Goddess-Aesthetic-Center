@@ -1622,9 +1622,15 @@ hr {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 12px;
   border-bottom: 1px solid #eee7dc;
   padding: 16px 20px;
+}
+
+.staff-toolbar-search {
+  flex: 1 1 220px;
+  max-width: 320px;
 }
 
 .staff-table-toolbar h2 {
@@ -1719,6 +1725,11 @@ hr {
   .staff-table-toolbar {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .staff-toolbar-search {
+    width: 100%;
+    max-width: none;
   }
 }
 

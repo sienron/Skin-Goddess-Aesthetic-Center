@@ -26,11 +26,7 @@
                     <div class="notification-list" id="notificationList"></div>
                 </div>
             </div>
-            <div class="search" id="searchWrap"><img src="icons/magnifying-glass.svg" alt="" class="search-svg"><input
-                    type="text" id="searchInput" placeholder="Search expenses..." autocomplete="off"></div><button
-                type="button" class="staff-search-btn" id="staffSearchBtn" aria-label="Search expenses"><img
-                    src="icons/magnifying-glass.svg" alt="" class="search-svg"></button><button class="logout-btn"
-                id="logoutBtn"><span>Logout</span></button>
+            <button class="logout-btn" id="logoutBtn"><span>Logout</span></button>
         </div>
     </header>
     <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
@@ -50,7 +46,7 @@
             <div class="staff-sidebar-logo-wrap"><img src="images/logo_horizontal.jpg" alt="Skin Goddess logo"
                     class="staff-sidebar-logo"></div>
             <hr>
-            <h4 class="sidebar-heading">FINANCE</h4>
+            <h4 class="sidebar-heading">My Links</h4>
             <nav>
                 <ul>
                     <li class="nav-item"><img src="icons/circle.svg" alt="" class="nav-bullet"><a
@@ -81,16 +77,11 @@
             </div>
         </section>
         <section class="main-content staff-page-content">
-            <div class="staff-page-heading">
-                <div>
-                    <p class="eyebrow">FINANCE</p>
-                    <h1>Expenses</h1>
-                    <p>Keep operating costs organized by date and category.</p>
-                </div><button class="staff-primary-link" type="button">Add expense</button>
-            </div>
             <div class="staff-table-card">
                 <div class="staff-table-toolbar">
-                    <h2>Expense records</h2><span>0 records</span>
+                    <h2>Expense records</h2>
+                    <div class="search staff-toolbar-search" id="searchWrap"><img src="icons/magnifying-glass.svg" alt="" class="search-svg"><input type="text" id="searchInput" placeholder="Search expenses..." autocomplete="off"></div>
+                    <span>0 records</span>
                 </div>
                 <div class="staff-empty-state"><strong>No expenses recorded</strong>
                     <p>New operating costs will appear in this table.</p>

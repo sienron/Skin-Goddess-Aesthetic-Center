@@ -26,11 +26,7 @@
                     <div class="notification-list" id="notificationList"></div>
                 </div>
             </div>
-            <div class="search" id="searchWrap"><img src="icons/magnifying-glass.svg" alt="" class="search-svg"><input
-                    type="text" id="searchInput" placeholder="Search transactions..." autocomplete="off"></div><button
-                type="button" class="staff-search-btn" id="staffSearchBtn" aria-label="Search transactions"><img
-                    src="icons/magnifying-glass.svg" alt="" class="search-svg"></button><button class="logout-btn"
-                id="logoutBtn"><span>Logout</span></button>
+            <button class="logout-btn" id="logoutBtn"><span>Logout</span></button>
         </div>
     </header>
     <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
@@ -50,7 +46,7 @@
             <div class="staff-sidebar-logo-wrap"><img src="images/logo_horizontal.jpg" alt="Skin Goddess logo"
                     class="staff-sidebar-logo"></div>
             <hr>
-            <h4 class="sidebar-heading">FINANCE</h4>
+            <h4 class="sidebar-heading">My Links</h4>
             <nav>
                 <ul>
                     <li class="nav-item active"><img src="icons/circle.svg" alt="" class="nav-bullet"><a
@@ -81,13 +77,6 @@
             </div>
         </section>
         <section class="main-content staff-page-content">
-            <div class="staff-page-heading">
-                <div>
-                    <p class="eyebrow">FINANCE</p>
-                    <h1>Dashboard</h1>
-                    <p>Track the clinic's financial activity at a glance.</p>
-                </div><a class="staff-primary-link" href="FinanceReports.html">Open report</a>
-            </div>
             <div class="finance-summary-grid">
                 <article><span>Total sales</span><strong>PHP 0.00</strong><small>This month</small></article>
                 <article><span>Collected</span><strong>PHP 0.00</strong><small>Payments received</small></article>
@@ -96,7 +85,9 @@
             </div>
             <div class="staff-table-card">
                 <div class="staff-table-toolbar">
-                    <h2>Recent activity</h2><a href="FinancesTransactions.html">View all</a>
+                    <h2>Recent activity</h2>
+                    <div class="search staff-toolbar-search" id="searchWrap"><img src="icons/magnifying-glass.svg" alt="" class="search-svg"><input type="text" id="searchInput" placeholder="Search transactions..." autocomplete="off"></div>
+                    <a href="FinancesTransactions.html">View all</a>
                 </div>
                 <div class="staff-empty-state"><strong>No financial activity yet</strong>
                     <p>Sales and expenses will appear here once recorded.</p>

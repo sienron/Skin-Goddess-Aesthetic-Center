@@ -26,11 +26,7 @@
                     <div class="notification-list" id="notificationList"></div>
                 </div>
             </div>
-            <div class="search" id="searchWrap"><img src="icons/magnifying-glass.svg" alt="" class="search-svg"><input
-                    type="text" id="searchInput" placeholder="Search reports..." autocomplete="off"></div><button
-                type="button" class="staff-search-btn" id="staffSearchBtn" aria-label="Search reports"><img
-                    src="icons/magnifying-glass.svg" alt="" class="search-svg"></button><button class="logout-btn"
-                id="logoutBtn"><span>Logout</span></button>
+            <button class="logout-btn" id="logoutBtn"><span>Logout</span></button>
         </div>
     </header>
     <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
@@ -50,7 +46,7 @@
             <div class="staff-sidebar-logo-wrap"><img src="images/logo_horizontal.jpg" alt="Skin Goddess logo"
                     class="staff-sidebar-logo"></div>
             <hr>
-            <h4 class="sidebar-heading">FINANCE</h4>
+            <h4 class="sidebar-heading">My Links</h4>
             <nav>
                 <ul>
                     <li class="nav-item"><img src="icons/circle.svg" alt="" class="nav-bullet"><a
@@ -81,13 +77,6 @@
             </div>
         </section>
         <section class="main-content staff-page-content">
-            <div class="staff-page-heading">
-                <div>
-                    <p class="eyebrow">FINANCE</p>
-                    <h1>Reports</h1>
-                    <p>Generate a clear view of sales, expenses, and net income.</p>
-                </div><button class="staff-primary-link" type="button">Export report</button>
-            </div>
             <div class="finance-summary-grid">
                 <article><span>Sales</span><strong>PHP 0.00</strong><small>Selected period</small></article>
                 <article><span>Expenses</span><strong>PHP 0.00</strong><small>Selected period</small></article>
@@ -95,7 +84,9 @@
             </div>
             <div class="staff-table-card">
                 <div class="staff-table-toolbar">
-                    <h2>Monthly report</h2><span>No reporting data</span>
+                    <h2>Monthly report</h2>
+                    <div class="search staff-toolbar-search" id="searchWrap"><img src="icons/magnifying-glass.svg" alt="" class="search-svg"><input type="text" id="searchInput" placeholder="Search reports..." autocomplete="off"></div>
+                    <span>No reporting data</span>
                 </div>
                 <div class="staff-empty-state"><strong>Nothing to report yet</strong>
                     <p>Reports will populate as transactions and expenses are recorded.</p>
