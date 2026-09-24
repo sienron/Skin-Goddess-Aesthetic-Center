@@ -16,11 +16,11 @@ router.use(requireRole('admin'));
 // Roles a badge/filter tab can map to. Keep in sync with the "role" enum
 // in the database and with the tab data-role values in UserManagement.html.
 const ROLE_BADGE = {
-  admin: 'STAFF',
-  aesthetician: 'DOCTOR',
   client: 'CLIENT',
-  inventory_officer: 'STAFF',
-  finance_officer: 'STAFF',
+  aesthetician: 'AESTHETICIAN',
+  admin: 'ADMIN',
+  finance_officer: 'FINANCE OFFICER',
+  inventory_officer: 'INVENTORY PROCUREMENT',
   staff: 'STAFF',
 };
 

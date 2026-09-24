@@ -12,7 +12,7 @@
 <div class="um-shell">
 
   <!-- ============ MOBILE TOPBAR (hamburger, shows only on small screens) ============ -->
-  <button class="um-sidebar-toggle" id="umSidebarToggle" type="button" aria-label="Open menu">
+  <button class="um-sidebar-toggle" id="umSidebarToggle" type="button" aria-label="Open menu" aria-expanded="false">
     <span></span><span></span><span></span>
   </button>
   <div class="um-sidebar-overlay" id="umSidebarOverlay"></div>
@@ -90,7 +90,7 @@
       <div class="um-stat-card">
         <p class="um-stat-card__label">STAFF ACCOUNTS</p>
         <p class="um-stat-card__value" id="statStaff">—</p>
-        <p class="um-stat-card__hint">Doctors, admin, cashiers</p>
+        <p class="um-stat-card__hint">Aesthetician, admin, finance, inventory</p>
       </div>
       <div class="um-stat-card um-stat-card--wide">
         <p class="um-stat-card__label">INACTIVE / SUSPENDED</p>
@@ -101,10 +101,11 @@
 
     <nav class="um-tabs" id="umTabs">
       <button class="um-tab um-tab--active" data-role="ALL" type="button">ALL</button>
-      <button class="um-tab" data-role="CLIENT" type="button">CLIENTS</button>
-      <button class="um-tab" data-role="DOCTOR" type="button">DOCTORS</button>
-      <button class="um-tab" data-role="ADMIN" type="button">ADMIN</button>
-      <button class="um-tab" data-role="CASHIER" type="button">CASHIER</button>
+      <button class="um-tab" data-role="client" type="button">CLIENTS</button>
+      <button class="um-tab" data-role="aesthetician" type="button">AESTHETICIAN</button>
+      <button class="um-tab" data-role="admin" type="button">ADMIN</button>
+      <button class="um-tab" data-role="finance_officer" type="button">FINANCE OFFICER</button>
+      <button class="um-tab" data-role="inventory_officer" type="button">INVENTORY PROCUREMENT</button>
       <button class="um-tab" data-role="SUSPENDED" type="button">SUSPENDED</button>
     </nav>
 
@@ -254,10 +255,11 @@
       <div class="um-create-modal__row">
         <label>Role
           <select id="umNewRole">
-            <option value="CLIENT">Client</option>
-            <option value="DOCTOR">Doctor</option>
-            <option value="ADMIN">Admin / Staff</option>
-            <option value="CASHIER">Cashier</option>
+            <option value="client">Client</option>
+            <option value="aesthetician">Aesthetician</option>
+            <option value="admin">Admin</option>
+            <option value="finance_officer">Finance Officer</option>
+            <option value="inventory_officer">Inventory Procurement Officer</option>
           </select>
         </label>
         <label>Status

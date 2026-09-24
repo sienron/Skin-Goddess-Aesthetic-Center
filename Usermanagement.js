@@ -21,7 +21,7 @@ const paginationNav = document.getElementById('umPagination');
 
 // ---------- helpers ----------
 function badgeClass(role) {
-  return { admin: 'staff', client: 'client', aesthetician: 'doctor' }[role] || 'staff';
+  return { client: 'client', aesthetician: 'doctor' }[role] || 'staff';
 }
 
 function formatDate(isoString) {
@@ -149,7 +149,7 @@ if (tabsNav) {
     if (!btn) return;
     tabsNav.querySelectorAll('.um-tab').forEach((t) => t.classList.remove('um-tab--active'));
     btn.classList.add('um-tab--active');
-    currentTab = btn.dataset.role; // ALL | client | aesthetician | admin | SUSPENDED
+    currentTab = btn.dataset.role; // ALL | client | aesthetician | admin | finance_officer | inventory_officer | SUSPENDED
     currentPage = 1;
     renderTable();
   });
@@ -486,12 +486,8 @@ if (createForm) {
     e.preventDefault();
     const fullName = document.getElementById('umNewFullName').value.trim();
     const email = document.getElementById('umNewEmail').value.trim();
-    const roleSelect = document.getElementById('umNewRole').value; // CLIENT|DOCTOR|ADMIN|CASHIER (display labels)
+    const role = document.getElementById('umNewRole').value;
     const status = document.getElementById('umNewStatus').value;
-
-    // Map the form's display-role options to real DB role enum values.
-    const roleMap = { CLIENT: 'client', DOCTOR: 'aesthetician', ADMIN: 'admin', CASHIER: 'staff' };
-    const role = roleMap[roleSelect] || 'client';
 
     const submitBtn = createForm.querySelector('button[type="submit"]');
     submitBtn.disabled = true;
@@ -530,13 +526,18 @@ const sidebarOverlay = document.getElementById('umSidebarOverlay');
 function openSidebar() {
   sidebar.classList.add('um-sidebar--open');
   sidebarOverlay.classList.add('um-sidebar-overlay--open');
+  sidebarToggle.setAttribute('aria-expanded', 'true');
 }
 function closeSidebar() {
   sidebar.classList.remove('um-sidebar--open');
   sidebarOverlay.classList.remove('um-sidebar-overlay--open');
+  sidebarToggle.setAttribute('aria-expanded', 'false');
 }
-if (sidebarToggle) sidebarToggle.addEventListener('click', openSidebar);
+if (sidebarToggle) sidebarToggle.addEventListener('click', () => {
+  sidebar.classList.contains('um-sidebar--open') ? closeSidebar() : openSidebar();
+});
 if (sidebarOverlay) sidebarOverlay.addEventListener('click', closeSidebar);
+document.querySelectorAll('.um-sidebar__nav a').forEach((link) => link.addEventListener('click', closeSidebar));
 
 // ---------- init ----------
 renderAll();
