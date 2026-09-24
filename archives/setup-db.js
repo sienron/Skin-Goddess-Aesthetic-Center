@@ -22,6 +22,8 @@ async function setupTables() {
         medical_conditions TEXT,
         email_verified BOOLEAN DEFAULT FALSE,
         role VARCHAR(50) DEFAULT 'client',
+        status VARCHAR(50) NOT NULL DEFAULT 'active',
+        updated_at TIMESTAMP DEFAULT NOW(),
         created_at TIMESTAMP DEFAULT NOW()
       );
     `);
