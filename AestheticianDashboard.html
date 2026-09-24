@@ -10,7 +10,8 @@
 
 <body>
     <header class="staff-header">
-        <button type="button" class="staff-hamburger-btn" id="hamburgerBtn" aria-label="Open menu" aria-expanded="false" aria-controls="mobileNavDrawer">
+        <button type="button" class="staff-hamburger-btn" id="hamburgerBtn" aria-label="Open menu" aria-expanded="false"
+            aria-controls="mobileNavDrawer">
             <img src="icons/hamburger.svg" alt="" class="staff-hamburger-icon">
             <img src="images/logo_horizontal.jpg" alt="Skin Goddess logo" class="staff-hamburger-logo">
         </button>
@@ -25,7 +26,8 @@
 
         <div class="actions">
             <div class="notification-wrap" id="notificationWrap">
-                <button class="notification" id="notificationBtn" aria-label="View notifications" aria-haspopup="true" aria-expanded="false" aria-controls="notificationDropdown">
+                <button class="notification" id="notificationBtn" aria-label="View notifications" aria-haspopup="true"
+                    aria-expanded="false" aria-controls="notificationDropdown">
                     <img src="icons/notification-bell.svg" alt="" class="notification-bell">
                     <span class="badge"></span>
                 </button>
@@ -52,9 +54,12 @@
 
             <button class="logout-btn" id="logoutBtn">
                 <svg class="logout-icon" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M6 2H3.5C2.67157 2 2 2.67157 2 3.5V12.5C2 13.3284 2.67157 14 3.5 14H6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M10.5 11L14 8L10.5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M14 8H6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M6 2H3.5C2.67157 2 2 2.67157 2 3.5V12.5C2 13.3284 2.67157 14 3.5 14H6"
+                        stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" />
+                    <path d="M10.5 11L14 8L10.5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"
+                        stroke-linejoin="round" />
+                    <path d="M14 8H6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"
+                        stroke-linejoin="round" />
                 </svg>
                 <span>Logout</span>
             </button>
@@ -71,7 +76,7 @@
             <li><a href="AestheticianDashboard.html">Dashboard</a></li>
             <li><a href="#">My Clients</a></li>
             <li><a href="AestheticianAppointmentPage.html">Appointments</a></li>
-            <li><a href="#">Treatment History</a></li>
+            <li><a href="AestheticianTreatmentNotes.html">Treatment History</a></li>
             <li><a href="#">My Rating</a></li>
         </ul>
     </aside>
@@ -87,11 +92,16 @@
             <h4 class="sidebar-heading">MY PORTAL</h4>
             <nav>
                 <ul>
-                    <li class="nav-item active"><img src="icons/circle.svg" alt="bullet" class="nav-bullet"><a href="AestheticianDashboard.html">Dashboard</a></li>
-                    <li class="nav-item"><img src="icons/circle.svg" alt="bullet" class="nav-bullet"><a href="AestheticianUserManagement.html">My Clients</a></li>
-                    <li class="nav-item"><img src="icons/circle.svg" alt="bullet" class="nav-bullet"><a href="AestheticianAppointmentPage.html">Appointments</a></li>
-                    <li class="nav-item"><img src="icons/circle.svg" alt="bullet" class="nav-bullet"><a href="#">Treatment History</a></li>
-                    <li class="nav-item"><img src="icons/circle.svg" alt="bullet" class="nav-bullet"><a href="#">My Rating</a></li>
+                    <li class="nav-item active"><img src="icons/circle.svg" alt="bullet" class="nav-bullet"><a
+                            href="AestheticianDashboard.html">Dashboard</a></li>
+                    <li class="nav-item"><img src="icons/circle.svg" alt="bullet" class="nav-bullet"><a
+                            href="AestheticianUserManagement.html">My Clients</a></li>
+                    <li class="nav-item"><img src="icons/circle.svg" alt="bullet" class="nav-bullet"><a
+                            href="AestheticianAppointmentPage.html">Appointments</a></li>
+                    <li class="nav-item"><img src="icons/circle.svg" alt="bullet" class="nav-bullet"><a
+                            href="AestheticianTreatmentNotes.html">Treatment History</a></li>
+                    <li class="nav-item"><img src="icons/circle.svg" alt="bullet" class="nav-bullet"><a href="#">My
+                            Rating</a></li>
                 </ul>
             </nav>
 
@@ -122,7 +132,8 @@
             <div class="profile-wrap">
                 <hr class="profile-divider">
                 <div class="profile-menu" id="profileWrap">
-                    <button type="button" class="profile-card" id="profileBtn" aria-haspopup="true" aria-expanded="false">
+                    <button type="button" class="profile-card" id="profileBtn" aria-haspopup="true"
+                        aria-expanded="false">
                         <div class="profile-row">
                             <div class="profile-avatar">--</div>
                             <div class="profile-info">
@@ -133,7 +144,8 @@
                         </div>
                     </button>
                     <div class="profile-dropdown" id="profileDropdown">
-                        <button type="button" class="profile-dropdown-item profile-dropdown-item--signout" id="signOutBtn">Sign out</button>
+                        <button type="button" class="profile-dropdown-item profile-dropdown-item--signout"
+                            id="signOutBtn">Sign out</button>
                     </div>
                 </div>
             </div>
@@ -142,18 +154,28 @@
         <section class="main-content aesthetician-dashboard-content">
             <section class="dashboard-summary-grid" aria-label="Appointment summary">
                 <article class="dashboard-summary-card">
-                    <div><p>TEAM MEMO</p></div>
+                    <div>
+                        <p>TEAM MEMO</p>
+                    </div>
                 </article>
                 <article class="dashboard-summary-card">
-                    <div><p>CONFIRMED</p><strong id="dashboardConfirmedCount">—</strong><small>Ready for treatment</small></div>
+                    <div>
+                        <p>CONFIRMED</p><strong id="dashboardConfirmedCount">—</strong><small>Ready for
+                            treatment</small>
+                    </div>
                     <a href="#" class="dashboard-view-link" data-summary="confirmed">View</a>
                 </article>
                 <article class="dashboard-summary-card">
-                    <div><p>PENDING</p><strong id="dashboardPendingCount">—</strong><small>Awaiting confirmation</small></div>
+                    <div>
+                        <p>PENDING</p><strong id="dashboardPendingCount">—</strong><small>Awaiting confirmation</small>
+                    </div>
                     <a href="#" class="dashboard-view-link" data-summary="pending">View</a>
                 </article>
                 <article class="dashboard-summary-card">
-                    <div><p>CANCELLED THIS MONTH</p><strong id="dashboardCancelledCount">—</strong><small>Cancelled appointments</small></div>
+                    <div>
+                        <p>CANCELLED THIS MONTH</p><strong id="dashboardCancelledCount">—</strong><small>Cancelled
+                            appointments</small>
+                    </div>
                     <a href="#" class="dashboard-view-link" data-summary="cancelled">View</a>
                 </article>
             </section>
@@ -167,30 +189,87 @@
                         <table class="clients-table dashboard-client-table">
                             <thead>
                                 <tr>
-                                    <th><button type="button" class="dashboard-sort-button" data-sort="client">CLIENT <img src="icons/triangle-down.svg" alt="Sort client names" class="dashboard-sort-icon"></button></th>
-                                    <th><div class="dashboard-service-filter"><span>SERVICE</span><button type="button" id="dashboardServiceButton" class="dashboard-status-button" aria-label="Filter by service" aria-haspopup="true" aria-expanded="false"><img src="icons/triangle-down.svg" alt="" class="dashboard-status-icon"></button><div id="dashboardServiceMenu" class="dashboard-status-menu" role="menu"><button type="button" data-service="all" role="menuitem">ALL</button></div></div></th>
-                                    <th><button type="button" class="dashboard-sort-button" data-sort="date">DATE &amp; TIME <img src="icons/triangle-down.svg" alt="Sort dates" class="dashboard-sort-icon"></button></th>
-                                    <th><div class="dashboard-status-filter"><span>STATUS</span><button type="button" id="dashboardStatusButton" class="dashboard-status-button" aria-label="Filter by status" aria-haspopup="true" aria-expanded="false"><img src="icons/triangle-down.svg" alt="" class="dashboard-status-icon"></button><div id="dashboardStatusMenu" class="dashboard-status-menu" role="menu"><button type="button" data-status="all" role="menuitem">ALL</button><button type="button" data-status="confirmed" role="menuitem">CONFIRMED</button><button type="button" data-status="pending" role="menuitem">PENDING</button><button type="button" data-status="in-progress" role="menuitem">IN PROGRESS</button><button type="button" data-status="completed" role="menuitem">COMPLETED</button><button type="button" data-status="cancelled" role="menuitem">CANCELLED</button><button type="button" data-status="rescheduled" role="menuitem">RESCHEDULED</button><button type="button" data-status="no_show" role="menuitem">NO SHOW</button></div></div></th>
+                                    <th><button type="button" class="dashboard-sort-button" data-sort="client">CLIENT
+                                            <img src="icons/triangle-down.svg" alt="Sort client names"
+                                                class="dashboard-sort-icon"></button></th>
+                                    <th>
+                                        <div class="dashboard-service-filter"><span>SERVICE</span><button type="button"
+                                                id="dashboardServiceButton" class="dashboard-status-button"
+                                                aria-label="Filter by service" aria-haspopup="true"
+                                                aria-expanded="false"><img src="icons/triangle-down.svg" alt=""
+                                                    class="dashboard-status-icon"></button>
+                                            <div id="dashboardServiceMenu" class="dashboard-status-menu" role="menu">
+                                                <button type="button" data-service="all" role="menuitem">ALL</button>
+                                            </div>
+                                        </div>
+                                    </th>
+                                    <th><button type="button" class="dashboard-sort-button" data-sort="date">DATE &amp;
+                                            TIME <img src="icons/triangle-down.svg" alt="Sort dates"
+                                                class="dashboard-sort-icon"></button></th>
+                                    <th>
+                                        <div class="dashboard-status-filter"><span>STATUS</span><button type="button"
+                                                id="dashboardStatusButton" class="dashboard-status-button"
+                                                aria-label="Filter by status" aria-haspopup="true"
+                                                aria-expanded="false"><img src="icons/triangle-down.svg" alt=""
+                                                    class="dashboard-status-icon"></button>
+                                            <div id="dashboardStatusMenu" class="dashboard-status-menu" role="menu">
+                                                <button type="button" data-status="all"
+                                                    role="menuitem">ALL</button><button type="button"
+                                                    data-status="confirmed" role="menuitem">CONFIRMED</button><button
+                                                    type="button" data-status="pending"
+                                                    role="menuitem">PENDING</button><button type="button"
+                                                    data-status="in-progress" role="menuitem">IN
+                                                    PROGRESS</button><button type="button" data-status="completed"
+                                                    role="menuitem">COMPLETED</button><button type="button"
+                                                    data-status="cancelled" role="menuitem">CANCELLED</button><button
+                                                    type="button" data-status="rescheduled"
+                                                    role="menuitem">RESCHEDULED</button><button type="button"
+                                                    data-status="no_show" role="menuitem">NO SHOW</button></div>
+                                        </div>
+                                    </th>
                                 </tr>
                             </thead>
-                            <tbody id="dashboardClientsBody"><tr><td colspan="4" class="clients-table-message">Loading client appointments...</td></tr></tbody>
+                            <tbody id="dashboardClientsBody">
+                                <tr>
+                                    <td colspan="4" class="clients-table-message">Loading client appointments...</td>
+                                </tr>
+                            </tbody>
                         </table>
                     </div>
-                    <footer class="dashboard-table-footer"><p id="dashboardTableSummary">Showing 0 of 0 clients</p><div id="dashboardPagination" class="clients-pagination"></div></footer>
+                    <footer class="dashboard-table-footer">
+                        <p id="dashboardTableSummary">Showing 0 of 0 clients</p>
+                        <div id="dashboardPagination" class="clients-pagination"></div>
+                    </footer>
                 </section>
 
                 <aside class="dashboard-side-panels">
                     <section class="dashboard-side-card" aria-labelledby="dashboardTimelineTitle">
-                        <div class="dashboard-side-heading"><h2 id="dashboardTimelineTitle">TODAY'S TIMELINE</h2><a href="AestheticianAppointmentPage.html" id="dashboardTimelineDate">See all</a></div>
-                        <div class="dashboard-timeline" id="dashboardTimeline"><p class="dashboard-empty-state">Loading schedule...</p></div>
+                        <div class="dashboard-side-heading">
+                            <h2 id="dashboardTimelineTitle">TODAY'S TIMELINE</h2><a
+                                href="AestheticianAppointmentPage.html" id="dashboardTimelineDate">See all</a>
+                        </div>
+                        <div class="dashboard-timeline" id="dashboardTimeline">
+                            <p class="dashboard-empty-state">Loading schedule...</p>
+                        </div>
                     </section>
                     <section class="dashboard-side-card" aria-labelledby="dashboardBreakdownTitle">
-                        <div class="dashboard-side-heading"><h2 id="dashboardBreakdownTitle">STATUS BREAKDOWN</h2><span>THIS MONTH</span></div>
-                        <div class="dashboard-breakdown" id="dashboardBreakdown"><p class="dashboard-empty-state">Loading status...</p></div>
+                        <div class="dashboard-side-heading">
+                            <h2 id="dashboardBreakdownTitle">STATUS BREAKDOWN</h2><span>THIS MONTH</span>
+                        </div>
+                        <div class="dashboard-breakdown" id="dashboardBreakdown">
+                            <p class="dashboard-empty-state">Loading status...</p>
+                        </div>
                     </section>
                     <section class="dashboard-side-card dashboard-rating-card" aria-labelledby="dashboardRatingTitle">
-                        <div class="dashboard-side-heading"><h2 id="dashboardRatingTitle">MY RATING</h2><a href="#">View details</a></div>
-                        <div class="dashboard-rating-content"><strong id="dashboardRatingAverage">—</strong><div><div class="rating-stars" id="dashboardRatingStars"></div><p id="dashboardRatingCount">Loading reviews...</p></div></div>
+                        <div class="dashboard-side-heading">
+                            <h2 id="dashboardRatingTitle">MY RATING</h2><a href="#">View details</a>
+                        </div>
+                        <div class="dashboard-rating-content"><strong id="dashboardRatingAverage">—</strong>
+                            <div>
+                                <div class="rating-stars" id="dashboardRatingStars"></div>
+                                <p id="dashboardRatingCount">Loading reviews...</p>
+                            </div>
+                        </div>
                         <div class="rating-breakdown" id="dashboardRatingBreakdown"></div>
                     </section>
                 </aside>

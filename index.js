@@ -41,7 +41,10 @@ require('dotenv').config(); // read the .env file before doing anything else
     { path: '/AdminDashboard.html', roles: ['admin'] },
     { path: '/Usermanagement.html', roles: ['admin'] },
     { path: '/InventoryDashboard.html', roles: ['inventory_officer'] },
-    { path: '/FinanceDashboard.html', roles: ['finance_officer'] },
+    { path: '/FinanceDashboard.html', roles: ['finance_officer', 'admin'] },
+    { path: '/FinancesTransactions.html', roles: ['finance_officer', 'admin'] },
+    { path: '/FinanceExpenses.html', roles: ['finance_officer', 'admin'] },
+    { path: '/FinanceReports.html', roles: ['finance_officer', 'admin'] },
     { path: '/StaffDashboard.html', roles: ['staff'] },
   ];
   
@@ -81,6 +84,9 @@ require('dotenv').config(); // read the .env file before doing anything else
   app.use('/api/availability', require('./routes/availability'));
 
   app.use('/api/users', require('./routes/users'));
+
+  // Every finance API endpoint inherits the finance/admin role check.
+  app.use('/api/finance', require('./routes/finance'));
   
   app.listen(PORT, () => {
     console.log(`Server is running http://localhost:${PORT}`);

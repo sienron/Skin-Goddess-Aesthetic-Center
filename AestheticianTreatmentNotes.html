@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>Treatment History</title>
+</head>
+
+<body>
+    <header class="staff-header">
+        <button type="button" class="staff-hamburger-btn" id="hamburgerBtn" aria-label="Open menu" aria-expanded="false"
+            aria-controls="mobileNavDrawer"><img src="icons/hamburger.svg" alt="" class="staff-hamburger-icon"></button>
+        <div class="logo-container"><img src="images/logo_horizontal.jpg" alt="Skin Goddess logo" id="logo"></div>
+        <div class="page-title">
+            <h2>Treatment History</h2>
+            <p>Review client treatment notes</p>
+        </div>
+        <div class="actions">
+            <div class="notification-wrap" id="notificationWrap"><button class="notification" id="notificationBtn"
+                    aria-label="View notifications" aria-haspopup="true" aria-expanded="false"><img
+                        src="icons/notification-bell.svg" alt="" class="notification-bell"><span
+                        class="badge"></span></button>
+                <div class="notification-dropdown" id="notificationDropdown">
+                    <div class="notification-dropdown-header"><span>Notifications</span></div>
+                    <div class="notification-list" id="notificationList"></div>
+                </div>
+            </div>
+            <div class="search" id="searchWrap"><img src="icons/magnifying-glass.svg" alt="" class="search-svg"><input
+                    type="text" id="searchInput" placeholder="Search treatment notes..." autocomplete="off"></div>
+            <button type="button" class="staff-search-btn" id="staffSearchBtn" aria-label="Search treatment notes"><img
+                    src="icons/magnifying-glass.svg" alt="" class="search-svg"></button>
+            <button class="logout-btn" id="logoutBtn"><span>Logout</span></button>
+        </div>
+    </header>
+    <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
+    <aside class="mobile-nav-drawer" id="mobileNavDrawer" aria-hidden="true" inert>
+        <div class="mobile-nav-top"><img src="images/logo_horizontal.jpg" alt="Skin Goddess logo"
+                class="mobile-nav-logo"><button type="button" class="mobile-nav-close" id="mobileNavClose"
+                aria-label="Close menu">&times;</button></div>
+        <ul class="mobile-nav-links">
+            <li><a href="AestheticianDashboard.html">Dashboard</a></li>
+            <li><a href="AestheticianUserManagement.html">My Clients</a></li>
+            <li><a href="AestheticianAppointmentPage.html">Appointments</a></li>
+            <li><a href="AestheticianTreatmentNotes.html">Treatment History</a></li>
+            <li><a href="#">My Rating</a></li>
+        </ul>
+    </aside>
+    <main>
+        <section class="sidebar staff-sidebar" aria-label="Aesthetician navigation">
+            <div class="staff-sidebar-logo-wrap"><img src="images/logo_horizontal.jpg" alt="Skin Goddess logo"
+                    class="staff-sidebar-logo"></div>
+            <hr>
+            <h4 class="sidebar-heading">MY PORTAL</h4>
+            <nav>
+                <ul>
+                    <li class="nav-item"><img src="icons/circle.svg" alt="" class="nav-bullet"><a
+                            href="AestheticianDashboard.html">Dashboard</a></li>
+                    <li class="nav-item"><img src="icons/circle.svg" alt="" class="nav-bullet"><a
+                            href="AestheticianUserManagement.html">My Clients</a></li>
+                    <li class="nav-item"><img src="icons/circle.svg" alt="" class="nav-bullet"><a
+                            href="AestheticianAppointmentPage.html">Appointments</a></li>
+                    <li class="nav-item active"><img src="icons/circle.svg" alt="" class="nav-bullet"><a
+                            href="AestheticianTreatmentNotes.html">Treatment History</a></li>
+                    <li class="nav-item"><img src="icons/circle.svg" alt="" class="nav-bullet"><a href="#">My Rating</a>
+                    </li>
+                </ul>
+            </nav>
+            <hr>
+            <h4 class="sidebar-heading">STATUS LEGEND</h4>
+            <div class="status-item"><span class="Completed-icon"></span><span>Completed</span></div>
+            <div class="status-item"><span class="Pending-icon"></span><span>In Progress</span></div>
+            <div class="status-item"><span class="No-Show-icon"></span><span>No Show</span></div>
+            <div class="profile-wrap">
+                <hr class="profile-divider">
+                <div class="profile-menu" id="profileWrap"><button type="button" class="profile-card" id="profileBtn"
+                        aria-haspopup="true" aria-expanded="false">
+                        <div class="profile-row">
+                            <div class="profile-avatar">--</div>
+                            <div class="profile-info"><span class="profile-name">Loading...</span><span
+                                    class="profile-role">Aesthetician</span></div><span class="profile-status"></span>
+                        </div>
+                    </button>
+                    <div class="profile-dropdown" id="profileDropdown"><button type="button"
+                            class="profile-dropdown-item profile-dropdown-item--signout" id="signOutBtn">Sign
+                            out</button></div>
+                </div>
+            </div>
+        </section>
+        <section class="main-content staff-page-content">
+            <div class="staff-page-heading">
+                <div>
+                    <p class="eyebrow">CLIENT CARE</p>
+                    <h1>Treatment history</h1>
+                    <p>Keep notes from completed appointments easy to find.</p>
+                </div><a class="staff-primary-link" href="AestheticianAppointmentPage.html">View appointments</a>
+            </div>
+            <div class="staff-table-card">
+                <div class="staff-table-toolbar">
+                    <h2>Recent treatment notes</h2><span>0 notes</span>
+                </div>
+                <div class="staff-empty-state"><strong>No treatment notes yet</strong>
+                    <p>Notes added from an appointment will appear here.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+    <script src="header.js"></script>
+</body>
+
+</html>
