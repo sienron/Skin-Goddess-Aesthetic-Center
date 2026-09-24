@@ -13,6 +13,146 @@ const clearFilters = document.getElementById("clearFilters");
 
 const inventoryBody = document.getElementById("inventoryBody");
 
+let inventoryProducts = [];
+
+//getting Inventory data from Postgres after communicating with Express
+async function loadInventory(){
+
+    try{
+
+        const response =
+            await fetch("/api/inventory");
+
+        if(!response.ok){
+
+            throw new Error(
+                "Failed to fetch inventory."
+            );
+
+        }
+
+        inventoryProducts =
+            await response.json();
+
+        console.log(
+            "Inventory loaded:",
+            inventoryProducts
+        );
+        //added
+        renderInventory();
+    }
+
+    catch(error){
+
+        console.error(
+            "Error loading inventory:",
+            error
+        );
+
+    }
+
+}
+
+//translate JSON to JS table row
+function renderInventory(){
+
+    inventoryBody.innerHTML = "";
+
+    inventoryProducts.forEach(product => {
+
+        const row = document.createElement("tr");
+        row.dataset.id = product.product_id;
+
+        row.dataset.category = product.category;
+        row.dataset.stock = product.stock_quantity;
+        row.dataset.expiry =
+            product.expiry_date || "none";
+
+        let status;
+
+        if(product.stock_quantity <= 5){
+            status = "critical";
+        }
+        else if(product.stock_quantity <= 20){
+            status = "low";
+        }
+        else{
+            status = "in-stock";
+        }
+
+        row.dataset.status = status;
+
+        row.innerHTML = `
+            <td>
+                <div class="product-name">
+                    ${product.product_name}
+                </div>
+            </td>
+
+            <td>
+                ${product.category}
+            </td>
+
+            <td>
+                <div class="stock-control">
+
+                    <button
+                        class="action-btn decrease"
+                        type="button"
+                    >
+                        −
+                    </button>
+
+                    <span class="stock-number">
+                        ${product.stock_quantity}
+                    </span>
+
+                    <button
+                        class="action-btn increase"
+                        type="button"
+                    >
+                        +
+                    </button>
+
+                </div>
+            </td>
+
+            <td>
+                ${
+                    product.expiry_date
+                        ? product.expiry_date
+                        : "No Expiration"
+                }
+            </td>
+
+            <td>
+                <div class="status ${status}">
+                    <span></span>
+                    ${
+                        status === "critical"
+                            ? "CRITICAL"
+                            : status === "low"
+                                ? "LOW STOCK"
+                                : "IN STOCK"
+                    }
+                </div>
+            </td>
+
+            <td>
+                <button
+                    class="action-btn delete"
+                    type="button"
+                >
+                    ×
+                </button>
+            </td>
+        `;
+
+        inventoryBody.appendChild(row);
+
+    });
+
+}
 
 /* =========================================================
    SEARCH + FILTER
@@ -48,22 +188,26 @@ function filterInventory(){
                 .toLowerCase();
 
         const category =
-            row.dataset.category;
+            row.dataset.category.toLowerCase();
 
         const stock =
             Number(row.dataset.stock);
 
         const expiry =
-            row.dataset.expiry;
+            row.dataset.expiry.toLowerCase();
 
         const status =
-            row.dataset.status;
+            row.dataset.status.toLowerCase();
 
 
         /* SEARCH */
 
         const matchesSearch =
-            productName.includes(searchValue);
+            productName.includes(searchValue) ||
+            category.includes(searchValue) ||
+            String(stock).includes(searchValue) ||
+            expiry.includes(searchValue) ||
+            status.includes(searchValue);
 
 
         /* CATEGORY */
@@ -237,7 +381,7 @@ clearFilters.addEventListener("click", () => {
    ADD / MINUS STOCK
    ========================================================= */
 
-inventoryBody.addEventListener("click", function(event){
+inventoryBody.addEventListener("click", async function(event){
 
     const button = event.target.closest(".action-btn");
 
@@ -292,6 +436,10 @@ inventoryBody.addEventListener("click", function(event){
                 .trim();
 
 
+        const productId =
+            row.dataset.id;
+
+
         const confirmed =
             confirm(
                 `Are you sure you want to delete "${productName}"?\n\nThis action cannot be undone.`
@@ -300,7 +448,40 @@ inventoryBody.addEventListener("click", function(event){
 
         if(confirmed){
 
-            row.remove();
+            try{
+
+                const response =
+                    await fetch(`/api/inventory/${productId}`, {
+
+                        method: "DELETE"
+
+                    });
+
+
+                if(!response.ok){
+
+                    throw new Error(
+                        "Failed to delete product."
+                    );
+
+                }
+
+
+                row.remove();
+
+
+            } catch(error){
+
+                console.error(
+                    "Error deleting product:",
+                    error
+                );
+
+                alert(
+                    "Failed to delete product. Please try again."
+                );
+
+            }
 
         }
 
@@ -313,73 +494,128 @@ inventoryBody.addEventListener("click", function(event){
    UPDATE STOCK
    ========================================================= */
 
-function updateStock(row, stock){
+   async function updateStock(row, stock){
 
-    row.dataset.stock = stock;
-            //JS value
-    row.querySelector(".stock-number").textContent = stock;
-            //HTML value
-
-    const statusElement =
-        row.querySelector(".status");
+    const productId =
+        row.dataset.id;
 
 
-    /* Remove existing status classes */
+    try {
 
-    statusElement.classList.remove(
-        "in-stock",
-        "low-stock",
-        "critical"
-    );
+        const response =
+            await fetch(`/api/inventory/${productId}/stock`, {
+
+                method: "PUT",
+
+                headers: {
+                    "Content-Type": "application/json"
+                },
+
+                body: JSON.stringify({
+                    stock: stock
+                })
+
+            });
 
 
-    /* Determine new status */
+        if(!response.ok){
 
-    let newStatus;
+            throw new Error(
+                "Failed to update stock."
+            );
+
+        }
 
 
-    if(stock <= 5){
+        const updatedProduct =
+            await response.json();
 
-        newStatus = "critical";
 
-        statusElement.classList.add(
+        row.dataset.stock =
+            updatedProduct.stock_quantity;
+
+        row.querySelector(".stock-number").textContent =
+            updatedProduct.stock_quantity;
+
+
+        const statusElement =
+            row.querySelector(".status");
+
+
+        /* Remove existing status classes */
+
+        statusElement.classList.remove(
+            "in-stock",
+            "low-stock",
             "critical"
         );
 
-        statusElement.innerHTML =
-            "<span></span> CRITICAL";
 
-    }
+        /* Determine new status */
 
-    else if(stock <= 20){
+        let newStatus;
 
-        newStatus = "low";
 
-        statusElement.classList.add(
-            "low-stock"
+        if(updatedProduct.stock_quantity <= 5){
+
+            newStatus = "critical";
+
+            statusElement.classList.add(
+                "critical"
+            );
+
+            statusElement.innerHTML =
+                "<span></span> CRITICAL";
+
+        }
+
+        else if(updatedProduct.stock_quantity <= 20){
+
+            newStatus = "low";
+
+            statusElement.classList.add(
+                "low-stock"
+            );
+
+            statusElement.innerHTML =
+                "<span></span> LOW STOCK";
+
+        }
+
+        else{
+
+            newStatus = "in-stock";
+
+            statusElement.classList.add(
+                "in-stock"
+            );
+
+            statusElement.innerHTML =
+                "<span></span> IN STOCK";
+
+        }
+
+
+        row.dataset.status =
+            newStatus;
+
+
+        filterInventory();
+
+
+    } catch(error){
+
+        console.error(
+            "Error updating stock:",
+            error
         );
 
-        statusElement.innerHTML =
-            "<span></span> LOW STOCK";
-
-    }
-
-    else{
-
-        newStatus = "in-stock";
-
-        statusElement.classList.add(
-            "in-stock"
+        alert(
+            "Failed to update stock. Please try again."
         );
 
-        statusElement.innerHTML =
-            "<span></span> IN STOCK";
-
     }
-
-
-    row.dataset.status = newStatus;
-
-    filterInventory();
 
 }
+
+loadInventory();
