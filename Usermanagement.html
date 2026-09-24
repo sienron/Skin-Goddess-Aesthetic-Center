@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -10,8 +11,14 @@
 
 <div class="um-shell">
 
+  <!-- ============ MOBILE TOPBAR (hamburger, shows only on small screens) ============ -->
+  <button class="um-sidebar-toggle" id="umSidebarToggle" type="button" aria-label="Open menu">
+    <span></span><span></span><span></span>
+  </button>
+  <div class="um-sidebar-overlay" id="umSidebarOverlay"></div>
+
   <!-- ============ SIDEBAR ============ -->
-  <aside class="um-sidebar">
+  <aside class="um-sidebar" id="umSidebar">
     <a href="Dashboard.html" class="um-sidebar__logo">
         <div class="logo-container">
             <img id="logo" src="images/logo_horizontal.jpg" alt="Skin Goddess Aesthetic Center logo">
@@ -20,7 +27,7 @@
 
     <p class="um-sidebar__label">MAIN MENU</p>
     <nav class="um-sidebar__nav">
-      <a href="Dashboard.html" class="um-nav-link">Dashboard</a>
+      <a href="AdminDashboard.html" class="um-nav-link">Dashboard</a>
       <a href="Appointments.html" class="um-nav-link">Appointments</a>
       <a href="Inventory.html" class="um-nav-link">Inventory</a>
       <a href="Reports.html" class="um-nav-link">Reports</a>
@@ -50,9 +57,22 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <input type="text" id="umSearchInput" placeholder="Search users...">
         </div>
-        <button class="um-btn um-btn--ghost" id="umFilterBtn" type="button">Filter</button>
+        <!-- um-header__actions-row wraps the button group so it can wrap onto its own line on narrow screens -->
+        <div class="um-header__actions-row">
+
+        <div class="um-filter-wrap">
+          <button class="um-btn um-btn--ghost" id="umFilterBtn" type="button">Filter</button>
+          <div class="um-filter-panel" id="umFilterPanel">
+            <p class="um-filter-panel__label">STATUS</p>
+            <label><input type="radio" name="umStatusFilter" value="ALL" checked> All</label>
+            <label><input type="radio" name="umStatusFilter" value="active"> Active</label>
+            <label><input type="radio" name="umStatusFilter" value="suspended"> Suspended</label>
+          </div>
+        </div>
+
         <button class="um-btn um-btn--ghost" id="umExportBtn" type="button">Export</button>
         <button class="um-btn um-btn--primary" id="umCreateBtn" type="button">+ Create New User</button>
+        </div>
       </div>
     </header>
 
@@ -104,26 +124,20 @@
           </tr>
         </thead>
         <tbody id="umTableBody">
-          <!-- Rows rendered by user-management.js from USERS_DATA / your API -->
+          <!-- Rows rendered by user-management.js from USERS_DATA -->
         </tbody>
       </table>
     </section>
 
     <footer class="um-table-footer">
       <p id="umShowingText">Showing 0 of 0 users</p>
-      <div class="um-pagination" id="umPagination">
-        <button type="button" data-page="prev">‹</button>
-        <button type="button" data-page="1" class="active">1</button>
-        <button type="button" data-page="2">2</button>
-        <button type="button" data-page="3">3</button>
-        <button type="button" data-page="next">›</button>
-      </div>
+      <div class="um-pagination" id="umPagination"></div>
     </footer>
 
   </div>
 </div>
 
-<!-- ============ USER INFORMATION POP UP (View) ============ -->
+<!-- ============ USER INFORMATION POP UP (View / Edit) ============ -->
 <div class="um-modal-overlay" id="umModalOverlay">
   <div class="um-modal" id="umModal" role="dialog" aria-modal="true" aria-labelledby="umModalName">
     <button class="um-modal__close" id="umModalClose" type="button" aria-label="Close">&times;</button>
@@ -154,7 +168,11 @@
 
       <p class="um-modal__label">QUICK ACTIONS</p>
       <button class="um-modal__btn-primary" id="umModalEditBtn" type="button">EDIT PROFILE</button>
-      <div class="um-modal__btn-row">
+      <div class="um-modal__btn-row" id="umModalSaveRow" style="display:none;">
+        <button class="um-modal__btn-outline-gold" id="umModalSaveBtn" type="button">SAVE</button>
+        <button class="um-modal__btn-outline-red" id="umModalCancelBtn" type="button">CANCEL</button>
+      </div>
+      <div class="um-modal__btn-row" id="umModalQuickRow">
         <button class="um-modal__btn-outline-gold" id="umModalSuspendBtn" type="button">SUSPEND</button>
         <button class="um-modal__btn-outline-red" id="umModalDeleteBtn" type="button">DELETE</button>
       </div>
@@ -164,23 +182,23 @@
       <p class="um-modal__section-title">PERSONAL INFORMATION</p>
       <hr>
       <div class="um-modal__grid">
-        <div><span>Full Name</span><strong id="umPiFullName">—</strong></div>
-        <div><span>Date of Birth</span><strong id="umPiDob">—</strong></div>
+        <div><span>Full Name</span><strong id="umPiFullName" data-field="fullName">—</strong></div>
+        <div><span>Date of Birth</span><strong id="umPiDob" data-field="dob">—</strong></div>
       </div>
       <hr>
       <div class="um-modal__grid">
-        <div><span>Sex</span><strong id="umPiSex">—</strong></div>
-        <div><span>Civil Status</span><strong id="umPiCivilStatus">—</strong></div>
+        <div><span>Sex</span><strong id="umPiSex" data-field="sex" data-type="select" data-options="Female,Male,Other">—</strong></div>
+        <div><span>Civil Status</span><strong id="umPiCivilStatus" data-field="civilStatus" data-type="select" data-options="Single,Married,Widowed,Separated">—</strong></div>
       </div>
       <hr>
       <div class="um-modal__grid">
-        <div><span>Contact Number</span><strong id="umPiContact">—</strong></div>
-        <div><span>Email Address</span><strong id="umPiEmail">—</strong></div>
+        <div><span>Contact Number</span><strong id="umPiContact" data-field="contact">—</strong></div>
+        <div><span>Email Address</span><strong id="umPiEmail" data-field="email">—</strong></div>
       </div>
       <hr>
       <div class="um-modal__grid">
-        <div><span>Home Address</span><strong id="umPiAddress">—</strong></div>
-        <div><span>Emergency Contact</span><strong id="umPiEmergency">—</strong></div>
+        <div><span>Home Address</span><strong id="umPiAddress" data-field="address">—</strong></div>
+        <div><span>Emergency Contact</span><strong id="umPiEmergency" data-field="emergency">—</strong></div>
       </div>
       <hr>
 
@@ -188,18 +206,18 @@
         <p class="um-modal__section-title">SKIN AND HEALTH PROFILE</p>
         <hr>
         <div class="um-modal__grid">
-          <div><span>Skin Type</span><strong id="umShSkinType">—</strong></div>
-          <div><span>Primary Concern</span><strong id="umShConcern">—</strong></div>
+          <div><span>Skin Type</span><strong id="umShSkinType" data-field="skinType">—</strong></div>
+          <div><span>Primary Concern</span><strong id="umShConcern" data-field="concern">—</strong></div>
         </div>
         <hr>
         <div>
           <span class="um-modal__grid-label">Known Allergies</span>
-          <div class="um-allergy-tags" id="umShAllergies"></div>
+          <div class="um-allergy-tags" id="umShAllergies" data-field="allergies">—</div>
         </div>
         <hr>
         <div class="um-modal__grid">
-          <div><span>Medical Conditions</span><strong id="umShConditions">—</strong></div>
-          <div><span>Current Medications</span><strong id="umShMeds">—</strong></div>
+          <div><span>Medical Conditions</span><strong id="umShConditions" data-field="conditions">—</strong></div>
+          <div><span>Current Medications</span><strong id="umShMeds" data-field="medications">—</strong></div>
         </div>
         <hr>
       </div>
@@ -220,6 +238,41 @@
   </div>
 </div>
 
-<script src="user-management.js"></script>
+<!-- ============ CREATE NEW USER POP UP ============ -->
+<div class="um-modal-overlay" id="umCreateOverlay">
+  <div class="um-create-modal" role="dialog" aria-modal="true" aria-labelledby="umCreateTitle">
+    <button class="um-modal__close" id="umCreateClose" type="button" aria-label="Close">&times;</button>
+    <p class="um-modal__section-title" id="umCreateTitle">CREATE NEW USER</p>
+    <hr>
+    <form id="umCreateForm">
+      <label>Full Name
+        <input type="text" id="umNewFullName" required>
+      </label>
+      <label>Email Address
+        <input type="email" id="umNewEmail" required>
+      </label>
+      <div class="um-create-modal__row">
+        <label>Role
+          <select id="umNewRole">
+            <option value="CLIENT">Client</option>
+            <option value="DOCTOR">Doctor</option>
+            <option value="ADMIN">Admin / Staff</option>
+            <option value="CASHIER">Cashier</option>
+          </select>
+        </label>
+        <label>Status
+          <select id="umNewStatus">
+            <option value="active">Active</option>
+            <option value="suspended">Suspended</option>
+          </select>
+        </label>
+      </div>
+      <button type="submit" class="um-btn um-btn--primary um-create-modal__submit">Create User</button>
+    </form>
+  </div>
+</div>
+
+<script src="Usermanagement.js"></script>
 </body>
 </html>
+
