@@ -3,7 +3,7 @@
 // routes/users.js. Requires an active admin session (cookie), which the
 // browser sends automatically since this page itself is behind requireRole('admin').
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 7;
 let currentPage = 1;
 let currentTab = 'ALL';     // maps to ?role=
 let currentStatus = 'ALL';  // maps to ?status=
