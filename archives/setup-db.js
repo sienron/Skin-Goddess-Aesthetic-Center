@@ -110,7 +110,7 @@ async function setupTables() {
         payment_status VARCHAR(50) DEFAULT 'unpaid' NOT NULL CHECK (payment_status IN ('unpaid','pending', 'paid', 'refunded', 'failed')),
         appointment_date DATE NOT NULL,
         appointment_time TIME NOT NULL,
-        appointment_status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (appointment_status IN ('pending', 'confirmed', 'completed', 'cancelled')),
+        appointment_status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (appointment_status IN ('pending', 'confirmed', 'completed', 'cancelled', 'no_show')),
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
       );

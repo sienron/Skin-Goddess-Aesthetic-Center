@@ -16,7 +16,7 @@
         completed: "COMPLETED",
         cancelled: "CANCELLED",
         rescheduled: "RESCHEDULED",
-        "no-show": "NO SHOW"
+        no_show: "NO SHOW"
     };
 
     function localDateString(date = new Date()) {
@@ -37,7 +37,7 @@
     }
 
     function statusClass(status) {
-        return `client-status--${String(status || "pending").toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+        return `client-status--${String(status || "pending").toLowerCase().replace(/_/g, "-").replace(/[^a-z0-9-]+/g, "-")}`;
     }
 
     function initials(name) {
@@ -72,12 +72,8 @@
     }
 
     function renderSummary() {
-        const today = localDateString();
         const thisMonth = new Date().toISOString().slice(0, 7);
         const count = (status) => appointments.filter((item) => String(item.status || "").toLowerCase() === status).length;
-        const todayCount = appointments.filter((item) => item.date === today && item.status !== "cancelled").length;
-        document.getElementById("dashboardTodayCount").textContent = todayCount;
-        document.getElementById("dashboardTodayHint").textContent = `${todayCount} remaining today`;
         document.getElementById("dashboardConfirmedCount").textContent = count("confirmed");
         document.getElementById("dashboardPendingCount").textContent = count("pending");
         document.getElementById("dashboardCancelledCount").textContent = appointments.filter((item) => String(item.status || "").toLowerCase() === "cancelled" && String(item.date || "").startsWith(thisMonth)).length;

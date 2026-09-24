@@ -32,7 +32,8 @@
     details.textContent = `${appointment.appointment_date} · ${appointment.appointment_time.slice(0, 5)}–${appointment.appointment_end_time.slice(0, 5)}`;
     const status = document.createElement('p');
     status.className = 'appointment-status';
-    status.textContent = `${appointment.appointment_status} · ${appointment.payment_status}`;
+    const statusLabel = String(appointment.appointment_status || '').replace(/_/g, ' ').toUpperCase();
+    status.textContent = `${statusLabel} · ${appointment.payment_status}`;
     const fee = document.createElement('p');
     fee.className = 'appointment-fee';
     fee.textContent = `Reservation fee: ₱${Number(appointment.booked_reservation_fee).toLocaleString('en-US')}`;

@@ -51,7 +51,7 @@ function normalizeAppointment(appt) {
         date: appt.date ?? appt.appointment_date,
         start: appt.start ?? appt.appointment_time,
         end: appt.end ?? appt.appointment_end_time,
-        status: appt.status ?? appt.appointment_status,
+        status: (appt.status ?? appt.appointment_status ?? '').replace(/-/g, '_'),
         service: appt.service ?? appt.service_name,
         client: appt.client ?? (`${appt.first_name || ''} ${appt.last_name || ''}`.trim() || 'Client'),
         aesthetician: appt.aesthetician ?? (`${appt.aesthetician_first_name || ''} ${appt.aesthetician_last_name || ''}`.trim() || 'Aesthetician'),
@@ -143,7 +143,7 @@ function updateMonthLabel(date) {
 
 function createMonthChip(appt) {
     const chip = document.createElement("div");
-    chip.className = `appt-chip status-${appt.status}`;
+    chip.className = `appt-chip status-${String(appt.status || '').replace(/_/g, '-')}`;
     chip.dataset.apptId = appt.id;
 
     const client = document.createElement("span");

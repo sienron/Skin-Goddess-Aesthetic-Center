@@ -1,7 +1,7 @@
 // Shared appointment-slot rules. Update this one file if operating hours change.
 const VALID_SLOTS = ['9:00 AM', '10:00 AM', '11:00 AM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM'];
 const CLOSING_TIME = '18:00';
-const CLOSED_WEEKDAYS = [0]; // Sunday; confirm the center's operating days before production.
+const CLOSED_WEEKDAYS = [];
 const MAX_ADVANCE_DAYS = 60;
 const MIN_BOOKING_LEAD_MINUTES = 30;
 

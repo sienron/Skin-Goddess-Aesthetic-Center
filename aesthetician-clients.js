@@ -25,7 +25,7 @@
         completed: "COMPLETED",
         cancelled: "CANCELLED",
         rescheduled: "RESCHEDULED",
-        "no-show": "NO SHOW",
+        no_show: "NO SHOW",
     };
 
     function localDateString(date = new Date()) {

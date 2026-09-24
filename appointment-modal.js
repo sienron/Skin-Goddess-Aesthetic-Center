@@ -20,7 +20,7 @@ const STATUS_LABELS = {
     "in-progress": "IN PROGRESS",
     "completed": "COMPLETED",
     "cancelled": "CANCELLED",
-    "no-show": "NO SHOW"
+    no_show: "NO SHOW"
 };
 
 const apptModalOverlay = document.getElementById("apptModalOverlay");
@@ -50,7 +50,7 @@ function normalizeAppt(appt) {
 
     const appointment = { ...appt };
     appointment.id = appointment.id ?? appointment.appointment_id;
-    appointment.status = appointment.status ?? appointment.appointment_status;
+    appointment.status = (appointment.status ?? appointment.appointment_status ?? "").replace(/-/g, "_");
     appointment.date = appointment.date ?? appointment.appointment_date;
     appointment.start = appointment.start ?? appointment.appointment_time;
     appointment.end = appointment.end ?? appointment.appointment_end_time;
@@ -85,7 +85,7 @@ function openApptModal(appt) {
 
     const normalizedAppt = normalizeAppt(appt);
 
-    const statusClass = `status-${normalizedAppt.status}`;
+    const statusClass = `status-${normalizedAppt.status.replace(/_/g, "-")}`;
     const statusLabel = STATUS_LABELS[normalizedAppt.status] || (normalizedAppt.status || "UNKNOWN").toUpperCase();
 
     // Top bar + status badge color reflect the appointment's actual status
