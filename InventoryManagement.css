@@ -134,13 +134,33 @@ button{
     transition: .3s ease;
 }
 
+.btn-batch-upload{
+    background: var(--gold);
+    color: var(--white);
+    padding:8px 16px;
+    display:flex;
+    align-items:center;
+    justify-content: center;
+}
+
+.btn-batch-upload:hover{
+
+    transform:translateY(-2px);
+}
+.ocr-img{
+    height:100%;
+    width:auto;
+    margin-right: 5px;
+}
+
+
 .btn-export{
     background: var(--gold);
     color: var(--white);
 }
 
 .btn-export:hover{
-    background: var(--gold-dark);
+
     transform:translateY(-2px);
 }
 
@@ -150,7 +170,7 @@ button{
 }
 
 .btn-add-product:hover{
-    background: var(--gold-dark);
+
     transform:translateY(-2px);
 }
 
@@ -277,7 +297,6 @@ button{
 }
 
 .clear-filters:hover{
-    background-color: var(--gold-dark);
     transform:translateY(-2px);
     transition: .2s ease;
 }
