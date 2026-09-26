@@ -13,6 +13,13 @@ const clearFilters = document.getElementById("clearFilters");
 
 const inventoryBody = document.getElementById("inventoryBody");
 
+const deleteModal = document.getElementById("deleteModal");
+const deleteProductName = document.getElementById("deleteProductName");
+const cancelDelete = document.getElementById("cancelDelete");
+const confirmDelete = document.getElementById("confirmDelete");
+
+let productToDelete = null;
+
 let inventoryProducts = [];
 
 //getting Inventory data from Postgres after communicating with Express
@@ -94,27 +101,9 @@ function renderInventory(){
             </td>
 
             <td>
-                <div class="stock-control">
-
-                    <button
-                        class="action-btn decrease"
-                        type="button"
-                    >
-                        −
-                    </button>
-
-                    <span class="stock-number">
-                        ${product.stock_quantity}
-                    </span>
-
-                    <button
-                        class="action-btn increase"
-                        type="button"
-                    >
-                        +
-                    </button>
-
-                </div>
+                <span class="stock-number">
+                    ${product.stock_quantity}
+                </span>
             </td>
 
             <td>
@@ -139,12 +128,30 @@ function renderInventory(){
             </td>
 
             <td>
-                <button
-                    class="action-btn delete"
-                    type="button"
-                >
-                    ×
-                </button>
+                <div class="action-buttons">
+
+                    <button
+                        class="action-btn decrease"
+                        type="button"
+                    >
+                        −
+                    </button>
+
+                    <button
+                        class="action-btn increase"
+                        type="button"
+                    >
+                        +
+                    </button>
+
+                    <button
+                        class="action-btn delete"
+                        type="button"
+                    >
+                        ×
+                    </button>
+
+                </div>
             </td>
         `;
 
@@ -163,8 +170,8 @@ function filterInventory(){
     const searchValue =
         searchInput.value.toLowerCase().trim();
 
-    const categoryValue =
-        categoryFilter.value;
+        const categoryValue =
+        categoryFilter.value.toLowerCase();
 
     const stockValue =
         stockFilter.value;
@@ -428,67 +435,84 @@ inventoryBody.addEventListener("click", async function(event){
 
     /* DELETE */
 
-    if(button.classList.contains("delete")){
 
-        const productName =
-            row.querySelector(".product-name")
-                .textContent
-                .trim();
+        if(button.classList.contains("delete")){
 
+            const productName =
+                row.querySelector(".product-name")
+                    .textContent
+                    .trim();
 
-        const productId =
-            row.dataset.id;
+            const productId =
+                row.dataset.id;
 
+            productToDelete = {
+                product_id: productId,
+                product_name: productName
+            };
 
-        const confirmed =
-            confirm(
-                `Are you sure you want to delete "${productName}"?\n\nThis action cannot be undone.`
-            );
+            deleteProductName.textContent = productName;
 
+            deleteModal.classList.add("show");
 
-        if(confirmed){
-
-            try{
-
-                const response =
-                    await fetch(`/api/inventory/${productId}`, {
-
-                        method: "DELETE"
-
-                    });
-
-
-                if(!response.ok){
-
-                    throw new Error(
-                        "Failed to delete product."
-                    );
-
-                }
-
-
-                row.remove();
-
-
-            } catch(error){
-
-                console.error(
-                    "Error deleting product:",
-                    error
-                );
-
-                alert(
-                    "Failed to delete product. Please try again."
-                );
-
-            }
-
+            return;
         }
 
-    }
+    
+    
 
 });
 
+
+        cancelDelete.addEventListener("click", () => {
+
+            deleteModal.classList.remove("show");
+
+            productToDelete = null;
+        });
+
+        confirmDelete.addEventListener("click", async () => {
+
+            if (!productToDelete) return;
+
+            const productId = productToDelete.product_id;
+
+            try {
+
+                const response = await fetch(
+                    `/api/inventory/${productId}`,
+                    {
+                        method: "DELETE"
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error("Failed to delete product.");
+                }
+
+                deleteModal.classList.remove("show");
+
+                productToDelete = null;
+
+                await loadInventory();
+
+            } catch (error) {
+
+                console.error("Delete error:", error);
+
+                alert("Failed to delete the product.");
+            }
+        });
+
+        deleteModal.addEventListener("click", (event) => {
+
+            if (event.target === deleteModal) {
+
+                deleteModal.classList.remove("show");
+
+                productToDelete = null;
+            }
+        });
 
 /* =========================================================
    UPDATE STOCK
