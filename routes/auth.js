@@ -354,41 +354,134 @@ router.get('/profile', async (req, res) => {
 });
 
 // ============================================
-// ROUTE: UPDATE PROFILE (name, email, contact number)
+// ROUTE: UPDATE PROFILE (name, contact number only — email has its own flow)
 // ============================================
 router.put('/update-profile', async (req, res) => {
   if (!req.session.userId) {
     return res.status(401).json({ message: 'Not logged in.' });
   }
 
-  const { firstName, lastName, email, contactNumber } = req.body;
-  const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+  const { firstName, lastName, contactNumber } = req.body;
 
-  if (!firstName || !lastName || !normalizedEmail) {
-    return res.status(400).json({ message: 'Name and email are required.' });
+  if (!firstName || !lastName) {
+    return res.status(400).json({ message: 'First and last name are required.' });
   }
 
   try {
-    // Make sure no OTHER account already uses this email
-    const existing = await db.query(
-      'SELECT user_id FROM users WHERE LOWER(email) = $1 AND user_id != $2',
-      [normalizedEmail, req.session.userId]
-    );
-
-    if (existing.rows.length > 0) {
-      return res.status(409).json({ message: 'This email is already in use by another account.' });
-    }
-
     await db.query(
       `UPDATE users
-       SET first_name = $1, last_name = $2, email = $3, contact_number = $4
-       WHERE user_id = $5`,
-      [firstName, lastName, normalizedEmail, contactNumber || null, req.session.userId]
+       SET first_name = $1, last_name = $2, contact_number = $3
+       WHERE user_id = $4`,
+      [firstName, lastName, contactNumber || null, req.session.userId]
     );
 
     res.status(200).json({ message: 'Profile updated successfully.' });
   } catch (error) {
     console.log('Update profile error:', error);
+    res.status(500).json({ message: 'Error. Try again.' });
+  }
+});
+
+// ============================================
+// ROUTE: REQUEST EMAIL CHANGE (sends a code to the NEW email)
+// ============================================
+router.post('/request-email-change', async (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ message: 'Not logged in.' });
+  }
+
+  const { newEmail } = req.body;
+  const normalizedEmail = typeof newEmail === 'string' ? newEmail.trim().toLowerCase() : '';
+
+  if (!normalizedEmail) {
+    return res.status(400).json({ message: 'A new email address is required.' });
+  }
+
+  try {
+    const currentUser = await db.query('SELECT email FROM users WHERE user_id = $1', [req.session.userId]);
+    if (currentUser.rows.length === 0) {
+      return res.status(404).json({ message: 'Account not found.' });
+    }
+
+    if (currentUser.rows[0].email.toLowerCase() === normalizedEmail) {
+      return res.status(400).json({ message: 'That is already your current email address.' });
+    }
+
+    const existing = await db.query(
+      'SELECT user_id FROM users WHERE LOWER(email) = $1 AND user_id != $2',
+      [normalizedEmail, req.session.userId]
+    );
+    if (existing.rows.length > 0) {
+      return res.status(409).json({ message: 'This email is already in use by another account.' });
+    }
+
+    const code = generateOtpCode();
+    await db.query(
+      `INSERT INTO pending_email_changes (user_id, new_email, code, expires_at)
+       VALUES ($1, $2, $3, NOW() + INTERVAL '10 minutes')`,
+      [req.session.userId, normalizedEmail, code]
+    );
+
+    await sendOtpEmail(normalizedEmail, code);
+
+    res.status(200).json({ message: 'A verification code has been sent to your new email address.' });
+  } catch (error) {
+    console.log('Request email change error:', error);
+    res.status(500).json({ message: 'Error. Try again.' });
+  }
+});
+
+// ============================================
+// ROUTE: CONFIRM EMAIL CHANGE (verifies the code, applies the change)
+// ============================================
+router.post('/confirm-email-change', async (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ message: 'Not logged in.' });
+  }
+
+  const { code } = req.body;
+
+  if (!code) {
+    return res.status(400).json({ message: 'Enter the six digit code.' });
+  }
+
+  try {
+    const result = await db.query(
+      `SELECT change_id, new_email, code
+       FROM pending_email_changes
+       WHERE user_id = $1
+         AND is_used = FALSE
+         AND expires_at > NOW()
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [req.session.userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(400).json({ message: 'Code expired or not found. Please request a new one.' });
+    }
+
+    const row = result.rows[0];
+
+    if (row.code !== code) {
+      return res.status(400).json({ message: 'Wrong code. Try again.' });
+    }
+
+    // Double-check the email wasn't taken by someone else in the meantime
+    const existing = await db.query(
+      'SELECT user_id FROM users WHERE LOWER(email) = $1 AND user_id != $2',
+      [row.new_email, req.session.userId]
+    );
+    if (existing.rows.length > 0) {
+      return res.status(409).json({ message: 'This email is already in use by another account.' });
+    }
+
+    await db.query('UPDATE users SET email = $1 WHERE user_id = $2', [row.new_email, req.session.userId]);
+    await db.query('UPDATE pending_email_changes SET is_used = TRUE WHERE change_id = $1', [row.change_id]);
+
+    res.status(200).json({ message: 'Email address updated successfully.', newEmail: row.new_email });
+  } catch (error) {
+    console.log('Confirm email change error:', error);
     res.status(500).json({ message: 'Error. Try again.' });
   }
 });

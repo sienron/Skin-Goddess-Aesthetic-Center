@@ -122,7 +122,6 @@ document.addEventListener('DOMContentLoaded', () => {
     setLoading(true);
 
     try {
-      // Adjust the endpoint to match your Express route
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -161,11 +160,17 @@ document.addEventListener('DOMContentLoaded', () => {
     resetEmailInput.focus();
   }
 
+  function setResetLoading(isLoading) {
+    resetSubmitBtn.disabled = isLoading;
+    resetSubmitBtn.querySelector('.btn-label').textContent = isLoading ? 'SENDING...' : 'SEND RESET LINK';
+  }
+
   function closeForgotPasswordModal() {
     forgotPasswordOverlay.hidden = true;
     document.body.classList.remove('modal-open');
     clearErrors(forgotPasswordForm);
     forgotPasswordForm.reset();
+    setResetLoading(false); // re-enable + reset label back to "SEND RESET LINK"
   }
 
   // Open on "Forgot password?" click — prevents the default link navigation
@@ -188,11 +193,6 @@ document.addEventListener('DOMContentLoaded', () => {
       closeForgotPasswordModal();
     }
   });
-
-  function setResetLoading(isLoading) {
-    resetSubmitBtn.disabled = isLoading;
-    resetSubmitBtn.querySelector('.btn-label').textContent = isLoading ? 'SENDING...' : 'SEND RESET LINK';
-  }
 
   forgotPasswordForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -223,17 +223,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (!response.ok) {
         setFieldError('reset-form', data.message || 'Something went wrong. Please try again.');
+        setResetLoading(false); // re-enable the button on failure
         return;
       }
 
-      // Simple success state — swap this for a toast/snackbar if you have one
+      // Success — stays disabled with a confirmation label, nothing more to do here
       resetSubmitBtn.querySelector('.btn-label').textContent = 'LINK SENT ✓';
     } catch (err) {
       setFieldError('reset-form', 'Something went wrong. Please try again.');
       console.error('Forgot password request failed:', err);
       setResetLoading(false);
     }
-
-    
   });
 });

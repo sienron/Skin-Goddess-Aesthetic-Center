@@ -205,6 +205,46 @@
       </form>
     </section>
   </div>
+
+<div class="auth-modal-overlay" id="emailOtpModal" hidden>
+  <div class="modal-box otp-modal">
+    <div class="modal-top-bar"></div>
+    <button type="button" class="auth-modal-close" id="emailOtpClose" aria-label="Close">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M18 6L6 18M6 6l12 12"/>
+      </svg>
+    </button>
+
+    <div class="modal-icon">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.6">
+        <rect x="2" y="4" width="20" height="16" rx="2"/>
+        <path d="M2 6l10 7 10-7"/>
+      </svg>
+    </div>
+
+    <h2 class="modal-title">Verify your new email</h2>
+    <p class="modal-subtitle">
+      We sent a 6-digit code to<br>
+      <span class="otp-email" id="emailOtpDisplay"></span>
+    </p>
+
+    <div class="otp-inputs" id="emailOtpInputs">
+      <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" aria-label="Digit 1">
+      <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" aria-label="Digit 2">
+      <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" aria-label="Digit 3">
+      <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" aria-label="Digit 4">
+      <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" aria-label="Digit 5">
+      <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" aria-label="Digit 6">
+    </div>
+
+    <span class="field-error" data-error-for="email-otp"></span>
+
+    <button type="button" class="auth-btn btn-gold btn-block" id="emailOtpVerifyBtn">VERIFY CODE</button>
+
+    <p class="otp-resend">Didn't receive it? <a href="#" class="link-gold" id="emailOtpResend">Resend code</a></p>
+  </div>
+</div>
+
 </main>
 
 <script src="header.js"></script>

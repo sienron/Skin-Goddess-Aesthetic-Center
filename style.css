@@ -8009,3 +8009,12 @@ body.services{
     width: 100%;
   }
 }
+
+[hidden] {
+  display: none !important;
+}
+
+.reset-success p {
+  color: #2e7d32;
+  font-weight: 600;
+}
