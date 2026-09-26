@@ -141,7 +141,8 @@ button{
     display:flex;
     align-items:center;
     justify-content: center;
-}
+    white-space: nowrap;
+}   
 
 .btn-batch-upload:hover{
 
@@ -286,14 +287,8 @@ button{
 }
 
 .clear-filters{
-    height: 36px;
-    border: none;
     background: var(--gold);
-    padding: 6px;
     color: var(--white);
-    font-size: 11px;
-    white-space: nowrap;
-    width: 100%;
 }
 
 .clear-filters:hover{
@@ -323,9 +318,16 @@ button{
     min-width: 0;
 }
 
-.table-heading{
+.table-heading {
     padding: 14px 15px;
     border-bottom: 1px solid #EEEAE3;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+
+    min-width: 0;
 }
 
 .table-heading h2{
@@ -339,9 +341,97 @@ button{
     font-size: 10px;
 }
 
-.table-wrapper{
-    width: 100%;
-    background-color: var(--white);
+/* Table header filters */
+.table-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+}
+
+.table-title {
+    min-width: 0;
+}
+
+.table-filters {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.table-filters .search-box {
+    min-width: 0;
+}
+
+.table-filters .search-box input {
+    width: 220px;
+    max-width: 100%;
+}
+
+.table-filters .clear-filters {
+    height: 36px;
+    padding: 0 12px;
+    white-space: nowrap;
+}
+
+
+/* Dropdowns inside table headers */
+.table-header-filter {
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+}
+
+.table-header-filter select {
+    width: auto;
+    min-width: 0;
+    padding: 0 22px 0 0;
+
+    border: none;
+    background-color: transparent;
+
+    color: inherit;
+    font: inherit;
+    font-weight: inherit;
+    text-transform: inherit;
+
+    cursor: pointer;
+    outline: none;
+
+    appearance: auto;
+    -webkit-appearance: auto;
+}
+
+.table-header-filter select option {
+    background: white;
+    color: #333;
+}
+
+.table-header-filter select:focus {
+    outline: none;
+}
+
+
+
+.inventory-table th select:focus {
+    outline: none;
+}
+
+
+/* Keep the header dropdowns neat */
+.inventory-table th {
+    white-space: nowrap;
+}
+
+.inventory-table th select option {
+    background: white;
+    color: #333;
+}
+
+.table-wrapper {
+    max-height: 500px;
+    overflow-y: auto;
     overflow-x: auto;
 }
 
@@ -350,6 +440,12 @@ button{
     min-width: 850px;
     border-collapse: collapse;
     
+}
+
+.inventory-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
 }
 
 .inventory-table th{
@@ -454,10 +550,11 @@ button{
    ACTION BUTTONS
    ========================================================= */
 
-.action-buttons{
-    display: flex;
+.action-buttons {
+    display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 5px;
+    white-space: nowrap;
 }
 
 .action-btn{
@@ -836,6 +933,33 @@ button{
         gap: 10px;
     }
 
+    .table-heading {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .table-filters {
+        width: 100%;
+    }
+    
+    .table-filters .search-box {
+        flex: 1;
+    }
+    
+    .table-filters .search-box input {
+        width: 100%;
+    }
+    
+    .table-filters .clear-filters {
+        width: auto;
+    }
+
+    .um-sidebar {
+        display: none;
+    }
+
+    
+
 }
 
 
@@ -894,6 +1018,368 @@ button{
     .transaction-filters select,
     .transaction-filters button{
         width: 100%;
+    }
+
+    .table-heading {
+        gap: 12px;
+    }
+    
+    .table-filters {
+        display: flex;
+        
+        width: 100%;
+    }
+    
+    .table-filters .clear-filters {
+        width: auto;
+    }
+
+    .um-sidebar {
+        display: none;
+    }
+
+    .inventory-page {
+        margin-left: 0;
+    }
+
+}
+
+/* ============================= */
+/* DELETE CONFIRMATION MODAL */
+/* ============================= */
+
+.delete-modal-overlay {
+    position: fixed;
+    inset: 0;
+
+    background: rgba(0, 0, 0, 0.35);
+
+    display: none;
+    align-items: center;
+    justify-content: center;
+
+    z-index: 9999;
+
+    padding: 20px;
+}
+
+.delete-modal-overlay.show {
+    display: flex;
+}
+
+.delete-modal {
+    width: 100%;
+    max-width: 400px;
+
+    background: #ffffff;
+
+    border: 1px solid #EEEAE3;
+    border-radius: 12px;
+
+    padding: 28px;
+
+    text-align: center;
+
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+
+    animation: deleteModalAppear 0.2s ease;
+}
+
+
+
+.delete-modal h3 {
+    margin: 0 0 10px;
+
+    color: var(--ink);
+
+    font-family: var(--font-display);
+    font-size: 22px;
+}
+
+.delete-modal p {
+    margin: 0 auto;
+
+    max-width: 320px;
+
+    color: #777;
+
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.delete-modal p strong {
+    color: var(--ink);
+}
+
+.delete-modal-actions {
+    display: flex;
+    justify-content: center;
+
+    gap: 10px;
+
+    margin-top: 24px;
+}
+
+.modal-btn {
+    min-width: 100px;
+
+    padding: 10px 18px;
+
+    border-radius: 6px;
+
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition: 0.2s ease;
+}
+
+.cancel-btn {
+    background: #ffffff;
+
+    border: 1px solid #D8D3CA;
+
+    color: #666;
+}
+
+.cancel-btn:hover {
+    background: #F7F5F1;
+}
+
+.confirm-delete-btn {
+    background: #B85C50;
+
+    border: 1px solid #B85C50;
+
+    color: #ffffff;
+}
+
+.confirm-delete-btn:hover {
+    background: #9F4D43;
+    border-color: #9F4D43;
+}
+
+@keyframes deleteModalAppear {
+    from {
+        opacity: 0;
+        transform: translateY(-8px) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@media (max-width: 500px) {
+
+    .delete-modal {
+        padding: 24px 20px;
+    }
+
+    .delete-modal-actions {
+        flex-direction: column-reverse;
+    }
+
+    .modal-btn {
+        width: 100%;
+    }
+}
+
+
+/* =========================================================
+   SIDEBAR
+   ========================================================= */
+
+   /* =========================================================
+   LEFT SIDEBAR
+   ========================================================= */
+
+.um-sidebar {
+    width: 220px;
+    min-width: 220px;
+    height: 100vh;
+
+    position: fixed;
+    left: 0;
+    top: 0;
+
+    background: #FFFFFF;
+    border-right: 1px solid #E8E3DB;
+
+    display: flex;
+    flex-direction: column;
+
+    padding: 0 0 20px;
+
+    z-index: 1000;
+}
+
+
+/* LOGO */
+
+.um-sidebar__logo {
+    display: flex;
+    align-items: center;
+
+    height: 72px;
+
+    padding: 0 20px;
+
+    box-sizing: border-box;
+
+    text-decoration: none;
+
+    border-bottom: 1px solid #E8E3DB;
+
+    margin-bottom: 16px;
+}
+
+.um-sidebar__logo .logo-container {
+    margin-left: 0;
+}
+
+.um-sidebar__logo img {
+    display: block;
+
+    width: 180px;
+    max-width: 100%;
+    height: auto;
+}
+
+
+/* MAIN MENU */
+
+.um-sidebar__label {
+    margin: 0 0 8px 20px;
+
+    font-size: 8px;
+    letter-spacing: 0.08em;
+
+    color: #99938A;
+}
+
+
+.um-sidebar__nav {
+    display: flex;
+    flex-direction: column;
+}
+
+
+.um-nav-link {
+    padding: 10px 20px;
+
+    font-size: 12px;
+
+    color: #4B4843;
+
+    text-decoration: none;
+
+    border-left: 3px solid transparent;
+
+    transition:
+        background 0.2s ease,
+        color 0.2s ease;
+}
+
+
+.um-nav-link:hover {
+    background: #F8F5EF;
+}
+
+
+.um-nav-link--active {
+    color: #B5892A;
+
+    border-left-color: #B5892A;
+
+    background: #FBF8EF;
+
+    font-weight: 500;
+}
+
+
+/* ACCOUNT */
+
+.um-sidebar__account {
+    margin-top: auto;
+
+    display: flex;
+    align-items: center;
+
+    gap: 10px;
+
+    padding: 12px 20px;
+
+    border-top: 1px solid #E8E3DB;
+}
+
+
+.um-avatar {
+    width: 32px;
+    height: 32px;
+
+    border-radius: 50%;
+
+    background: #F5EEDC;
+
+    color: #B5892A;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 10px;
+    font-weight: 600;
+
+    flex-shrink: 0;
+}
+
+
+.um-sidebar__account-name {
+    margin: 0;
+
+    font-size: 12px;
+
+    color: #4B4843;
+}
+
+
+.um-sidebar__account-role {
+    margin: 0;
+
+    font-size: 10px;
+
+    color: #99938A;
+}
+
+/* =========================================================
+    
+    PAGE SPACE FOR SIDEBAR (DELETED SOMETHING I JUST ADDED)
+   ========================================================= */
+/* =========================================================
+   SIDEBAR PAGE OFFSET
+   ========================================================= */
+
+   body {
+    padding-left: 220px;
+}
+
+.inventory-header,
+.inventory-page {
+    width: 100%;
+}
+
+@media (max-width: 800px) {
+
+    body {
+        padding-left: 0;
+    }
+
+    .um-sidebar {
+        display: none;
     }
 
 }

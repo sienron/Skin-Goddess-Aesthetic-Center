@@ -15,6 +15,76 @@
 </head>
 
 <body>
+
+    
+
+        <!-- ================= SIDEBAR ================= -->
+        <aside class="um-sidebar" id="umSidebar">
+    
+            <a href="Dashboard.html" class="um-sidebar__logo">
+                <div class="logo-container">
+                    <img
+                        id="logo"
+                        src="images/logo_horizontal.jpg"
+                        alt="Skin Goddess Aesthetic Center logo"
+                    >
+                </div>
+            </a>
+    
+            <p class="um-sidebar__label">MAIN MENU</p>
+    
+            <nav class="um-sidebar__nav">
+    
+                <a href="Dashboard.html" class="um-nav-link">
+                    Dashboard
+                </a>
+    
+                <a href="Appointments.html" class="um-nav-link">
+                    Appointments
+                </a>
+    
+                <a href="Inventory.html" class="um-nav-link um-nav-link--active">
+                    Inventory
+                </a>
+    
+                <a href="Reports.html" class="um-nav-link">
+                    Reports
+                </a>
+    
+                <a href="Usermanagement.html" class="um-nav-link">
+                    User Management
+                </a>
+    
+                <a href="ContentManagement.html" class="um-nav-link">
+                    Content Management
+                </a>
+    
+            </nav>
+    
+            <div class="um-sidebar__account">
+    
+                <div class="um-avatar">
+                    A
+                </div>
+    
+                <div>
+                    <p class="um-sidebar__account-name">
+                        Admin User
+                    </p>
+    
+                    <p class="um-sidebar__account-role">
+                        Owner
+                    </p>
+                </div>
+    
+            </div>
+    
+        </aside>
+    
+    
+    
+
+    
      <!-- ================= HEADER ================= -->
     <header class="inventory-header">
 
@@ -43,6 +113,8 @@
         </div>
 
     </header>
+
+    
 
     <main class="inventory-page">
 
@@ -87,99 +159,8 @@
         </section>
 
 
-        <!-- ================= FILTERS ================= -->
-        <section class="filter-bar">
+        <!-- ================= FILTERS (just removed) ================= -->
 
-            <div class="filter-group">
-                <label for="categoryFilter">Category</label>
-
-                <select id="categoryFilter">
-                    <option value="all">All Categories</option>
-                    <option value="medical">
-                        Medical/Injection Supplies
-                    </option>
-                    <option value="disposables">
-                        Disposables & Clinic Consumables
-                    </option>
-                    <option value="prep">
-                        Facial/Treatment Prep Products
-                    </option>
-                    <option value="professional">
-                        Facial Treatment Products (Professional Use)
-                    </option>
-                    <option value="retail">
-                        Skincare Products (Retail / Aftercare)
-                    </option>
-                    <option value="cleansers">
-                        Soaps & Cleansers
-                    </option>
-                    <option value="equipment">
-                        Tools/Equipment/Misc.
-                    </option>
-                </select>
-            </div>
-
-
-            <div class="filter-group">
-                <label for="stockFilter">Stock</label>
-
-                <select id="stockFilter">
-                    <option value="all">All Stock Levels</option>
-                    <option value="0">0</option>
-                    <option value="1-20">1–20</option>
-                    <option value="21-40">21–40</option>
-                    <option value="41-60">41–60</option>
-                    <option value="61-80">61–80</option>
-                    <option value="81-100">81–100</option>
-                </select>
-            </div>
-
-
-            <div class="filter-group">
-                <label for="expiryFilter">Expiration</label>
-
-                <select id="expiryFilter">
-                    <option value="all">All Expiration Dates</option>
-                    <option value="expired">Expired</option>
-                    <option value="30">Within 30 Days</option>
-                    <option value="60">31–60 Days</option>
-                    <option value="90">61–90 Days</option>
-                    <option value="over90">More Than 90 Days</option>
-                    <option value="none">No Expiration Date</option>
-                </select>
-            </div>
-
-
-            <div class="filter-group">
-               
-                <label for="statusFilter">Status</label>
-
-                <select id="statusFilter">
-                    <option value="all">All Status</option>
-                    <option value="low">Low Stock</option>
-                    <option value="in-stock">In Stock</option>
-                    <option value="critical">Critical</option>
-                </select>
-            </div>
-
-            <div class="filter-group">
-                <label for="search-box">Search</label>
-            <div class="search-box">
-                <input
-                    type="text"
-                    id="searchInput"
-                    
-                    placeholder="Search products..."
-                >
-            </div>
-        </div>
-            <div>
-            <button class="clear-filters" id="clearFilters">
-                Clear Filters
-            </button>
-        </div>
-
-        </section>
 
 
         <!-- ================= MAIN CONTENT ================= -->
@@ -189,10 +170,28 @@
             <div class="inventory-table-container">
 
                 <div class="table-heading">
-                
+
+                    <div class="table-title">
                         <h2>Products</h2>
                         <p>Manage product stock and expiration dates</p>
-                    
+                    </div>
+                
+                    <div class="table-filters">
+                
+                        <div class="search-box">
+                            <input 
+                                type="text" 
+                                id="searchInput" 
+                                placeholder="Search products..."
+                            >
+                        </div>
+                
+                        <button class="btn clear-filters" id="clearFilters">
+                            Clear Filters
+                        </button>
+                
+                    </div>
+                
                 </div>
 
 
@@ -203,10 +202,65 @@
                         <thead>
                             <tr>
                                 <th>PRODUCT NAME</th>
-                                <th>CATEGORY</th>
-                                <th>STOCK</th>
-                                <th>EXPIRY DATE</th>
-                                <th>STATUS</th>
+                            
+                                <th>
+                                    <div class="table-header-filter">
+                                        
+                                        <select id="categoryFilter">
+                                            <option value="all">ALL CATEGORIES</option>
+                                            <option value="Medical/Injection Supplies">Medical/Injection Supplies</option>
+                                            <option value="Disposables & Clinic Consumables">Disposables & Clinic Consumables</option>
+                                            <option value="Facial/Treatment Prep Products">Facial/Treatment Prep Products</option>
+                                            <option value="Facial Treatment Products (Professional Use)">Facial Treatment Products (Professional Use)</option>
+                                            <option value="Skincare Products (Retail / Aftercare)">Skincare Products (Retail / Aftercare)</option>
+                                            <option value="Soaps & Cleansers">Soaps & Cleansers</option>
+                                            <option value="Tools/Equipment/Misc.">Tools/Equipment/Misc.</option>
+                                        </select>
+                                    </div>
+                                </th>
+                            
+                                <th>
+                                    <div class="table-header-filter">
+                                       
+                                        <select id="stockFilter">
+                                            <option value="all">ALL STOCKS</option>
+                                            <option value="0">0</option>
+                                            <option value="1-20">1–20</option>
+                                            <option value="21-40">21–40</option>
+                                            <option value="41-60">41–60</option>
+                                            <option value="61-80">61–80</option>
+                                            <option value="81-100">81–100</option>
+                                        </select>
+                                    </div>
+                                </th>
+                            
+                                <th>
+                                    <div class="table-header-filter">
+                                        
+                                        <select id="expiryFilter">
+                                            <option value="all">ALL EXPIRY DATES</option>
+                                            <option value="expired">Expired</option>
+                                            <option value="30">Within 30 Days</option>
+                                            <option value="60">31–60 Days</option>
+                                            <option value="90">61–90 Days</option>
+                                            <option value="over90">Over 90 Days</option>
+                                            <option value="none">No Expiration</option>
+                                        </select>
+                                    </div>
+                                </th>
+                            
+                                <th>
+                                    <div class="table-header-filter">
+                                        
+                                        <select id="statusFilter">
+                                            <option value="all">ALL STATUS</option>
+                                            <option value="critical">Critical</option>
+                                            <option value="low">Low Stock</option>
+                                            <option value="in-stock">In Stock</option>
+                                        </select>
+                                    </div>
+                                </th>
+                            
                                 <th>ACTIONS</th>
                             </tr>
                         </thead>
@@ -721,7 +775,40 @@
         </section>
 
     </main>
+        <!-- Delete Confirmation Modal -->
+        <div class="delete-modal-overlay" id="deleteModal">
+            <div class="delete-modal">
 
+              
+
+                <h3>Delete Product?</h3>
+
+                <p>
+                    Are you sure you want to delete
+                    <strong id="deleteProductName"></strong>?
+                    This action cannot be undone.
+                </p>
+
+                <div class="delete-modal-actions">
+                    <button
+                        type="button"
+                        class="modal-btn cancel-btn"
+                        id="cancelDelete"
+                    >
+                        Cancel
+                    </button>
+
+                    <button
+                        type="button"
+                        class="modal-btn confirm-delete-btn"
+                        id="confirmDelete"
+                    >
+                        Delete
+                    </button>
+                </div>
+
+            </div>
+        </div>
 
     <script src="InventoryManagement.js"></script>
 
