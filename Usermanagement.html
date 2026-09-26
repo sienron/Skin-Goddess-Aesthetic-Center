@@ -31,7 +31,7 @@
       <a href="Appointments.html" class="um-nav-link">Appointments</a>
       <a href="Inventory.html" class="um-nav-link">Inventory</a>
       <a href="Reports.html" class="um-nav-link">Reports</a>
-      <a href="UserManagement.html" class="um-nav-link um-nav-link--active">User Management</a>
+      <a href="Usermanagement.html" class="um-nav-link um-nav-link--active">User Management</a>
       <a href="ContentManagement.html" class="um-nav-link">Content Management</a>
     </nav>
 
@@ -200,6 +200,19 @@
       <div class="um-modal__grid">
         <div><span>Home Address</span><strong id="umPiAddress" data-field="address">—</strong></div>
         <div><span>Emergency Contact</span><strong id="umPiEmergency" data-field="emergency">—</strong></div>
+      </div>
+      <hr>
+      <div class="um-password-change" id="umPasswordChangeSection">
+        <button class="um-modal__btn-primary um-password-change__button" id="umChangePassword" type="button" aria-expanded="false" aria-controls="umPasswordFields">CHANGE PASSWORD</button>
+        <div class="um-modal__grid um-password-fields" id="umPasswordFields">
+          <label>New password
+            <input type="password" id="umNewPassword" class="um-edit-input" autocomplete="new-password">
+          </label>
+          <label>Confirm new password
+            <input type="password" id="umConfirmPassword" class="um-edit-input" autocomplete="new-password">
+          </label>
+          <p class="um-password-change__hint">Use at least 8 letters and numbers, with no special characters.</p>
+        </div>
       </div>
       <hr>
 

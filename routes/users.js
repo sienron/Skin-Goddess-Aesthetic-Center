@@ -9,6 +9,7 @@ const crypto = require('crypto');
 const router = express.Router();
 const db = require('../db');
 const { requireRole } = require('../middleware/auth');
+const isValidPassword = require('../utils/password');
 
 // Every route below is admin-only.
 router.use(requireRole('admin'));
@@ -215,14 +216,21 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   const {
     fullName, email, dob, sex, civilStatus, contact, address,
-    skinType, concern, allergies, conditions,
+    skinType, concern, allergies, conditions, password,
   } = req.body;
+
+  if (password !== undefined && !isValidPassword(password)) {
+    return res.status(400).json({
+      message: 'Password must be at least 8 characters, contain both letters and numbers, and must not include special characters.',
+    });
+  }
 
   const trimmedName = typeof fullName === 'string' ? fullName.trim() : '';
   const [firstName, ...rest] = trimmedName.split(' ');
   const lastName = rest.join(' ') || '';
 
   try {
+    const passwordHash = password === undefined ? null : await bcrypt.hash(password, 10);
     const result = await db.query(
       `UPDATE users SET
          first_name = COALESCE($1, first_name),
@@ -235,8 +243,9 @@ router.put('/:id', async (req, res) => {
          home_address = COALESCE($8, home_address),
          allergies = COALESCE($9, allergies),
          medical_conditions = COALESCE($10, medical_conditions),
+         password_hash = COALESCE($11, password_hash),
          updated_at = NOW()
-       WHERE user_id = $11
+       WHERE user_id = $12
        RETURNING user_id, first_name, last_name, email, role, status, gender,
                  date_of_birth, civil_status, contact_number, home_address,
                  allergies, medical_conditions, email_verified, created_at, updated_at`,
@@ -251,6 +260,7 @@ router.put('/:id', async (req, res) => {
         address || null,
         Array.isArray(allergies) ? allergies.join(', ') : (allergies || null),
         conditions || null,
+        passwordHash,
         req.params.id,
       ]
     );

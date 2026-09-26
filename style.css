@@ -6427,7 +6427,7 @@ body.services{
   .um-header__title { margin: 0; font-size: 20px; font-weight: 600; color: var(--text-dark); }
   .um-header__subtitle { margin: 6px 0 0; font-size: 11px; color: var(--text-muted); }
   .um-header__actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-  .um-search { display: flex; align-items: center; gap: 8px; border: 1px solid var(--um-border); border-radius: 6px; padding: 8px 12px; width: 210px; color: var(--um-text-faint); }
+  .um-search { display: flex; align-items: center; gap: 8px; width: 210px; color: var(--um-text-faint); }
   .um-search input { border: none; outline: none; font-family: inherit; font-size: 12px; width: 100%; background: transparent; color: var(--text-dark); }
   .um-btn { font-family: inherit; font-size: 11px; border-radius: 6px; padding: 9px 16px; cursor: pointer; border: 1px solid var(--um-border); }
   .um-btn--ghost { background: #fff; color: var(--um-text-body); }
@@ -7556,6 +7556,7 @@ body.services{
 .um-header__title { font-size: 20px; color: #1a1714; margin: 0; }
 .um-header__subtitle { font-size: 11px; color: #8a837a; margin: 4px 0 0; }
 .um-header__actions { display: flex; align-items: center; gap: 10px; position: relative; }
+#adminDashboardMain > .um-header { flex: 1; }
 
 .um-search { position: relative; display: flex; align-items: center; }
 .um-search svg { position: absolute; left: 14px; color: #b0aaa3; }
@@ -7674,6 +7675,11 @@ body.services{
 
 .um-edit-input { width: 100%; padding: 5px 7px; font-size: 12px; border: 1px solid #c9a84c; border-radius: 4px; font-family: inherit; }
 .um-modal--editing .um-modal__grid strong { margin-top: 2px; }
+.um-password-change { display: none; }
+.um-password-fields { margin-top: 10px; }
+.um-password-fields > label { display: flex; flex-direction: column; gap: 4px; font-size: 10px; color: #8a837a; }
+.um-password-fields .um-password-change__hint { grid-column: 1 / -1; margin: 0; }
+.um-password-change__hint { margin: 6px 0 0; font-size: 10px; color: #8a837a; }
 
 /* Create user modal */
 .um-create-modal { background: #fff; width: 380px; max-width: 92vw; border-radius: 8px; border-top: 4px solid #c9a84c; padding: 22px; position: relative; font-family: 'Inter', sans-serif; }
@@ -7708,6 +7714,7 @@ body.services{
   .um-main { width: 100%; min-width: 0; overflow-x: hidden; overflow-y: auto; padding: 14px 14px 20px; }
 
   .um-header { height: auto; padding: 0; flex-direction: column; align-items: stretch; gap: 12px; margin: 0 0 20px; }
+  #adminDashboardMain > .um-header { margin-right: -14px; }
   .um-header > div:first-child { order: 2; }
   .um-header__actions { order: 1; width: calc(100% - 46px); margin-left: 46px; flex-direction: column; align-items: stretch; gap: 8px; }
   .um-search input { width: 100%; }

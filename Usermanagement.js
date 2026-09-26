@@ -237,6 +237,12 @@ const modalSaveBtn = document.getElementById('umModalSaveBtn');
 const modalCancelBtn = document.getElementById('umModalCancelBtn');
 const modalSuspendBtn = document.getElementById('umModalSuspendBtn');
 const modalDeleteBtn = document.getElementById('umModalDeleteBtn');
+const passwordChangeSection = document.getElementById('umPasswordChangeSection');
+const changePasswordBtn = document.getElementById('umChangePassword');
+const passwordFields = document.getElementById('umPasswordFields');
+const newPasswordInput = document.getElementById('umNewPassword');
+const confirmPasswordInput = document.getElementById('umConfirmPassword');
+let passwordChangeEnabled = false;
 
 async function openModal(id) {
   editingUserId = id;
@@ -344,6 +350,9 @@ function enterEditMode() {
     el.innerHTML = `<select class="um-edit-input">${opts}</select>`;
   });
 
+  setPasswordFieldsVisible(false);
+  passwordChangeSection.style.display = 'block';
+
   modal.classList.add('um-modal--editing');
   modalEditBtn.style.display = 'none';
   modalSaveRow.style.display = 'flex';
@@ -352,9 +361,22 @@ function enterEditMode() {
 
 function exitEditMode() {
   modal.classList.remove('um-modal--editing');
+  setPasswordFieldsVisible(false);
+  passwordChangeSection.style.display = 'none';
   modalEditBtn.style.display = '';
   modalSaveRow.style.display = 'none';
   modalQuickRow.style.display = 'flex';
+}
+
+function setPasswordFieldsVisible(visible) {
+  passwordChangeEnabled = visible;
+  passwordFields.style.display = visible ? 'grid' : 'none';
+  changePasswordBtn.setAttribute('aria-expanded', String(visible));
+  changePasswordBtn.textContent = visible ? 'CANCEL PASSWORD CHANGE' : 'CHANGE PASSWORD';
+  if (!visible) {
+    newPasswordInput.value = '';
+    confirmPasswordInput.value = '';
+  }
 }
 
 async function saveEdits() {
@@ -367,6 +389,20 @@ async function saveEdits() {
     sex: document.querySelector('#umPiSex select').value,
     civilStatus: document.querySelector('#umPiCivilStatus select').value,
   };
+
+  if (passwordChangeEnabled) {
+    const newPassword = newPasswordInput.value;
+    const passwordPattern = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
+    if (!passwordPattern.test(newPassword)) {
+      alert('Password must be at least 8 characters, contain both letters and numbers, and must not include special characters.');
+      return;
+    }
+    if (newPassword !== confirmPasswordInput.value) {
+      alert('The new password and confirmation do not match.');
+      return;
+    }
+    payload.password = newPassword;
+  }
 
   modalSaveBtn.disabled = true;
   modalSaveBtn.textContent = 'SAVING…';
@@ -396,6 +432,9 @@ function escapeHtml(str) {
 
 if (modalEditBtn) modalEditBtn.addEventListener('click', enterEditMode);
 if (modalSaveBtn) modalSaveBtn.addEventListener('click', saveEdits);
+if (changePasswordBtn) changePasswordBtn.addEventListener('click', () => {
+  setPasswordFieldsVisible(!passwordChangeEnabled);
+});
 if (modalCancelBtn) modalCancelBtn.addEventListener('click', () => {
   if (editingUserCache) populateModal(editingUserCache);
   exitEditMode();

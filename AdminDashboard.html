@@ -22,11 +22,11 @@
 
     <p class="um-sidebar__label">MAIN MENU</p>
     <nav class="um-sidebar__nav">
-      <a href="Dashboard.html" class="um-nav-link">Dashboard</a>
+      <a href="AdminDashboard.html" class="um-nav-link um-nav-link--active">Dashboard</a>
       <a href="Appointments.html" class="um-nav-link">Appointments</a>
       <a href="Inventory.html" class="um-nav-link">Inventory</a>
       <a href="Reports.html" class="um-nav-link">Reports</a>
-      <a href="Usermanagement.html" class="um-nav-link um-nav-link--active">User Management</a>
+      <a href="Usermanagement.html" class="um-nav-link">User Management</a>
       <a href="ContentManagement.html" class="um-nav-link">Content Management</a>
     </nav>
 
@@ -40,9 +40,9 @@
   </aside>
 
     <!-- ===== MAIN CONTENT ===== -->
-    <main class="um-main">
+    <main class="um-main" id="adminDashboardMain">
 
-      <div class="um-header">
+      <header class="um-header">
         <div>
           <h1 class="um-header__title">Admin Dashboard</h1>
           <p class="um-header__subtitle">Overview of accounts, appointments, and activity</p>
@@ -50,13 +50,16 @@
 
         <div class="um-header__actions">
           <div class="um-search">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
             <input type="text" id="dashboardSearch" placeholder="Search users...">
           </div>
-          <button class="um-btn um-btn--ghost" id="filterBtn">Filter</button>
-          <button class="um-btn um-btn--ghost" id="exportBtn">Export</button>
-          <button class="um-btn um-btn--primary" id="createUserBtn">+ Create New User</button>
+          <div class="um-header__actions-row">
+            <button class="um-btn um-btn--ghost" id="filterBtn" type="button">Filter</button>
+            <button class="um-btn um-btn--ghost" id="exportBtn" type="button">Export</button>
+            <button class="um-btn um-btn--primary" id="createUserBtn" type="button">+ Create New User</button>
+          </div>
         </div>
-      </div>
+      </header>
 
     </main>
   </div>

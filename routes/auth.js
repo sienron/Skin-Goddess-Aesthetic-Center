@@ -16,18 +16,12 @@ const router = express.Router();
 
 const db = require('../db'); // used to query the database
 const { sendOtpEmail, sendPasswordResetEmail } = require('../utils/mailer'); // for sending actual emails
+const isValidPassword = require('../utils/password');
 
 function generateOtpCode() {
   // Generates a random 6-digit number, e.g. "042917"
   const randomNumber = Math.floor(100000 + Math.random() * 900000);
   return String(randomNumber);
-}
-
-function isValidPassword(password) {
-  // At least 8 characters, must contain both a letter and a number,
-  // and must not contain special characters.
-  const passwordPattern = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
-  return typeof password === 'string' && passwordPattern.test(password);
 }
 
 // ============================================
