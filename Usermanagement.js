@@ -560,11 +560,13 @@ const sidebarOverlay = document.getElementById('umSidebarOverlay');
 function openSidebar() {
   sidebar.classList.add('um-sidebar--open');
   sidebarOverlay.classList.add('um-sidebar-overlay--open');
+  sidebarToggle.classList.add('um-sidebar-toggle--open');
   sidebarToggle.setAttribute('aria-expanded', 'true');
 }
 function closeSidebar() {
   sidebar.classList.remove('um-sidebar--open');
   sidebarOverlay.classList.remove('um-sidebar-overlay--open');
+  sidebarToggle.classList.remove('um-sidebar-toggle--open');
   sidebarToggle.setAttribute('aria-expanded', 'false');
 }
 if (sidebarToggle) sidebarToggle.addEventListener('click', () => {
