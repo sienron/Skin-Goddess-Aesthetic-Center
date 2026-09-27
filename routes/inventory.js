@@ -81,6 +81,93 @@ router.put('/:id/stock', async (req, res) => {
 
 });
 
+//PUT for editing an entire inventory product
+router.put("/:id", async (req, res) => {
+
+    try {
+
+        const productId = Number(req.params.id);
+
+        const {
+            product_name,
+            category,
+            stock,
+            expiry_date
+        } = req.body;
+
+
+        // Check product name
+        if (!product_name || product_name.trim() === "") {
+
+            return res.status(400).json({
+                message: "Product name is required."
+            });
+
+        }
+
+
+        // Check stock
+        if (!Number.isInteger(stock) || stock < 0) {
+
+            return res.status(400).json({
+                message: "Stock must be a non-negative integer."
+            });
+
+        }
+
+
+        const result = await db.query(`
+            UPDATE inventory_products
+            SET
+                product_name = $1,
+                category = $2,
+                stock_quantity = $3,
+                expiry_date = $4,
+                updated_at = NOW()
+            WHERE product_id = $5
+            RETURNING
+                product_id,
+                product_name,
+                category,
+                stock_quantity,
+                expiry_date
+        `, [
+            product_name.trim(),
+            category,
+            stock,
+            expiry_date || null,
+            productId
+        ]);
+
+
+        if (result.rows.length === 0) {
+
+            return res.status(404).json({
+                message: "Product not found."
+            });
+
+        }
+
+
+        res.json(result.rows[0]);
+
+
+    } catch (error) {
+
+        console.error(
+            "Error updating inventory product:",
+            error
+        );
+
+
+        res.status(500).json({
+            message: "Failed to update inventory product."
+        });
+
+    }
+
+});
+
 //delete entire product
 router.delete('/:id', async (req, res) => {
 

@@ -18,6 +18,34 @@ const deleteProductName = document.getElementById("deleteProductName");
 const cancelDelete = document.getElementById("cancelDelete");
 const confirmDelete = document.getElementById("confirmDelete");
 
+const editModal =
+    document.getElementById("editModal");
+
+const closeEditModal =
+    document.getElementById("closeEditModal");
+
+const cancelEdit =
+    document.getElementById("cancelEdit");
+
+const saveEdit =
+    document.getElementById("saveEdit");
+
+const editProductName =
+    document.getElementById("editProductName");
+
+const editCategory =
+    document.getElementById("editCategory");
+
+const editExpiryDate =
+    document.getElementById("editExpiryDate");
+
+const editNoExpiration =
+    document.getElementById("editNoExpiration");
+
+const editStock =
+    document.getElementById("editStock");
+
+
 let productToDelete = null;
 
 let inventoryProducts = [];
@@ -101,9 +129,29 @@ function renderInventory(){
             </td>
 
             <td>
-                <span class="stock-number">
-                    ${product.stock_quantity}
-                </span>
+                <div class="stock-control">
+
+                    <span class="stock-number">
+                        ${product.stock_quantity}
+                    </span>
+
+                    <button
+                        class="action-btn decrease"
+                        type="button"
+                        title="Remove stock"
+                    >
+                        −
+                    </button>
+
+                    <button
+                        class="action-btn increase"
+                        type="button"
+                        title="Add stock"
+                    >
+                        +
+                    </button>
+
+                </div>
             </td>
 
             <td>
@@ -128,31 +176,26 @@ function renderInventory(){
             </td>
 
             <td>
-                <div class="action-buttons">
+            <div class="action-buttons">
 
-                    <button
-                        class="action-btn decrease"
-                        type="button"
-                    >
-                        −
-                    </button>
+                <button
+                    class="action-btn edit"
+                    type="button"
+                    title="Edit product"
+                >
+                    Edit
+                </button>
 
-                    <button
-                        class="action-btn increase"
-                        type="button"
-                    >
-                        +
-                    </button>
+                <button
+                    class="action-btn delete"
+                    type="button"
+                    title="Delete product"
+                >
+                    ×
+                </button>
 
-                    <button
-                        class="action-btn delete"
-                        type="button"
-                    >
-                        ×
-                    </button>
-
-                </div>
-            </td>
+            </div>
+        </td>
         `;
 
         inventoryBody.appendChild(row);
@@ -388,26 +431,24 @@ clearFilters.addEventListener("click", () => {
    ADD / MINUS STOCK
    ========================================================= */
 
-inventoryBody.addEventListener("click", async function(event){
+   inventoryBody.addEventListener("click", async function(event){
 
     const button = event.target.closest(".action-btn");
 
-    if(!button) return; 
-
-            //stops the function from executing if the button is not found.
-            //if the button is found, the function continues.
+    if(!button) return;
 
     const row = button.closest("tr");
 
-             //finds the closest row to the button
-             
-    const stockNumber = row.querySelector(".stock-number");
+    const stockNumber =
+        row.querySelector(".stock-number");
+
+    let stock =
+        Number(stockNumber.textContent);
 
 
-    let stock = Number(stockNumber.textContent);
-
-
-    /* ADD */
+    /* =====================================================
+       ADD STOCK
+       ===================================================== */
 
     if(button.classList.contains("increase")){
 
@@ -415,10 +456,13 @@ inventoryBody.addEventListener("click", async function(event){
 
         updateStock(row, stock);
 
+        return;
     }
 
 
-    /* MINUS */
+    /* =====================================================
+       REMOVE STOCK
+       ===================================================== */
 
     if(button.classList.contains("decrease")){
 
@@ -430,89 +474,238 @@ inventoryBody.addEventListener("click", async function(event){
 
         }
 
+        return;
     }
 
 
-    /* DELETE */
+    /* =====================================================
+       EDIT PRODUCT
+       ===================================================== */
+
+if(button.classList.contains("edit")){
+
+    const productId =
+        row.dataset.id;
+
+    const product =
+        inventoryProducts.find(
+            item => item.product_id == productId
+        );
+
+    if(!product) return;
 
 
-        if(button.classList.contains("delete")){
+    /* Product Name */
 
-            const productName =
-                row.querySelector(".product-name")
-                    .textContent
-                    .trim();
+    editProductName.value = product.product_name;
 
-            const productId =
-                row.dataset.id;
+    editModal.dataset.productId = productId;
 
-            productToDelete = {
-                product_id: productId,
-                product_name: productName
-            };
 
-            deleteProductName.textContent = productName;
+    /* Category */
 
-            deleteModal.classList.add("show");
+    editCategory.value =
+        product.category;
 
-            return;
-        }
 
-    
-    
+    /* Stock */
+
+    editStock.value =
+        product.stock_quantity;
+
+
+    /* Expiration */
+
+    if(product.expiry_date){
+
+        editNoExpiration.checked =
+            false;
+
+        editExpiryDate.value =
+            product.expiry_date;
+
+        editExpiryDate.disabled =
+            false;
+
+    }
+
+    else{
+
+        editNoExpiration.checked =
+            true;
+
+        editExpiryDate.value =
+            "";
+
+        editExpiryDate.disabled =
+            true;
+
+    }
+
+
+    editModal.classList.add("show");
+
+    return;
+}
+
+
+    /* =====================================================
+       DELETE PRODUCT
+       ===================================================== */
+
+    if(button.classList.contains("delete")){
+
+        const productName =
+            row.querySelector(".product-name")
+                .textContent
+                .trim();
+
+        const productId =
+            row.dataset.id;
+
+        productToDelete = {
+            product_id: productId,
+            product_name: productName
+        };
+
+        deleteProductName.textContent =
+            productName;
+
+        deleteModal.classList.add("show");
+
+        return;
+    }
 
 });
 
+editNoExpiration.addEventListener("change", () => {
 
-        cancelDelete.addEventListener("click", () => {
+    if(editNoExpiration.checked){
 
-            deleteModal.classList.remove("show");
+        editExpiryDate.value = "";
+        editExpiryDate.disabled = true;
 
-            productToDelete = null;
-        });
+    }
 
-        confirmDelete.addEventListener("click", async () => {
+    else{
 
-            if (!productToDelete) return;
+        editExpiryDate.disabled = false;
 
-            const productId = productToDelete.product_id;
+    }
 
-            try {
+});
 
-                const response = await fetch(
-                    `/api/inventory/${productId}`,
-                    {
-                        method: "DELETE"
-                    }
-                );
+/* =========================================================
+   SAVE EDIT
+   ========================================================= */
 
-                if (!response.ok) {
-                    throw new Error("Failed to delete product.");
-                }
+   saveEdit.addEventListener("click", async () => {
 
-                deleteModal.classList.remove("show");
+    // Get the product currently being edited
+    const productName = editProductName.value.trim();
+    const category = editCategory.value;
+    const stock = Number(editStock.value);
 
-                productToDelete = null;
+    // Get expiration date
+    const expiryDate =
+        editNoExpiration.checked
+            ? null
+            : editExpiryDate.value || null;
 
-                await loadInventory();
 
-            } catch (error) {
+    // Basic validation
+    if(productName === ""){
 
-                console.error("Delete error:", error);
+        alert("Product name is required.");
+        return;
 
-                alert("Failed to delete the product.");
+    }
+
+    if(!Number.isInteger(stock) || stock < 0){
+
+        alert("Stock must be a non-negative integer.");
+        return;
+
+    }
+
+
+    // Find the product ID from the open modal
+    const productId =
+    editModal.dataset.productId;
+
+    if(!productId){
+
+        alert("Product could not be identified.");
+        return;
+
+}
+
+
+    try{
+
+        const response = await fetch(
+            `/api/inventory/${productId}`,
+            {
+                method: "PUT",
+
+                headers: {
+                    "Content-Type": "application/json"
+                },
+
+                body: JSON.stringify({
+                    product_name: productName,
+                    category: category,
+                    stock: stock,
+                    expiry_date: expiryDate
+                })
             }
-        });
+        );
 
-        deleteModal.addEventListener("click", (event) => {
 
-            if (event.target === deleteModal) {
+        if(!response.ok){
 
-                deleteModal.classList.remove("show");
+            const errorData =
+                await response.json();
 
-                productToDelete = null;
-            }
-        });
+            throw new Error(
+                errorData.message ||
+                "Failed to update product."
+            );
+
+        }
+
+
+        const updatedProduct =
+            await response.json();
+
+        console.log(
+            "Product updated:",
+            updatedProduct
+        );
+
+
+        // Close modal
+        editModal.classList.remove("show");
+
+
+        // Reload inventory from PostgreSQL
+        await loadInventory();
+
+
+    } catch(error){
+
+        console.error(
+            "Error updating product:",
+            error
+        );
+
+        alert(
+            "Failed to update product. Please try again."
+        );
+
+    }
+
+});
 
 /* =========================================================
    UPDATE STOCK
@@ -641,5 +834,19 @@ inventoryBody.addEventListener("click", async function(event){
     }
 
 }
+    //hiding sidebar
+        const sidebarToggle = document.getElementById("sidebarToggle");
+        const invSidebar = document.getElementById("invSidebar");
+        const sidebarBackdrop = document.getElementById("sidebarBackdrop");
+
+        sidebarToggle.addEventListener("click", () => {
+            invSidebar.classList.toggle("sidebar-open");
+            sidebarBackdrop.classList.toggle("show");
+        });
+
+        sidebarBackdrop.addEventListener("click", () => {
+            invSidebar.classList.remove("sidebar-open");
+            sidebarBackdrop.classList.remove("show");
+        });
 
 loadInventory();

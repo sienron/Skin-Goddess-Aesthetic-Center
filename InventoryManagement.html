@@ -19,60 +19,60 @@
     
 
         <!-- ================= SIDEBAR ================= -->
-        <aside class="um-sidebar" id="umSidebar">
+        <aside class="inv-sidebar" id="invSidebar">
     
-            <a href="Dashboard.html" class="um-sidebar__logo">
+            <a href="Dashboard.html" class="inv-sidebar__logo">
                 <div class="logo-container">
                     <img
-                        id="logo"
+                        id="invLogo"
                         src="images/logo_horizontal.jpg"
                         alt="Skin Goddess Aesthetic Center logo"
                     >
                 </div>
             </a>
     
-            <p class="um-sidebar__label">MAIN MENU</p>
+            <p class="inv-sidebar__label">MAIN MENU</p>
     
-            <nav class="um-sidebar__nav">
+            <nav class="inv-sidebar__nav">
     
-                <a href="Dashboard.html" class="um-nav-link">
+                <a href="Dashboard.html" class="inv-nav-link">
                     Dashboard
                 </a>
     
-                <a href="Appointments.html" class="um-nav-link">
+                <a href="Appointments.html" class="inv-nav-link">
                     Appointments
                 </a>
     
-                <a href="Inventory.html" class="um-nav-link um-nav-link--active">
+                <a href="Inventory.html" class="inv-nav-link inv-nav-link--active">
                     Inventory
                 </a>
     
-                <a href="Reports.html" class="um-nav-link">
+                <a href="Reports.html" class="inv-nav-link">
                     Reports
                 </a>
     
-                <a href="Usermanagement.html" class="um-nav-link">
+                <a href="Usermanagement.html" class="inv-nav-link">
                     User Management
                 </a>
     
-                <a href="ContentManagement.html" class="um-nav-link">
+                <a href="ContentManagement.html" class="inv-nav-link">
                     Content Management
                 </a>
     
             </nav>
     
-            <div class="um-sidebar__account">
+            <div class="inv-sidebar__account">
     
-                <div class="um-avatar">
+                <div class="inv-avatar">
                     A
                 </div>
     
                 <div>
-                    <p class="um-sidebar__account-name">
+                    <p class="inv-sidebar__account-name">
                         Admin User
                     </p>
     
-                    <p class="um-sidebar__account-role">
+                    <p class="inv-sidebar__account-role">
                         Owner
                     </p>
                 </div>
@@ -81,6 +81,8 @@
     
         </aside>
     
+        <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
     
     
 
@@ -88,9 +90,15 @@
      <!-- ================= HEADER ================= -->
     <header class="inventory-header">
 
-        <div class="header-title">
-            <h1>Inventory Management</h1>
-            <p>Track stock, expiry, and low-stock alerts</p>
+        <div class="header-left">
+            <button class="sidebar-toggle" id="sidebarToggle" type="button" aria-label="Open menu">
+                ☰
+            </button>
+    
+            <div class="header-title">
+                <h1>Inventory Management</h1>
+                <p>Track stock, expiry, and low-stock alerts</p>
+            </div>
         </div>
 
         <div class="header-actions">
@@ -808,6 +816,148 @@
                 </div>
 
             </div>
+        </div>
+
+                <!-- Edit Product Modal -->
+        <div class="edit-modal-overlay" id="editModal">
+
+            <div class="edit-modal">
+
+                <div class="edit-modal-header">
+                    <div>
+                        <h3>Edit Product</h3>
+                        <p>Update product information</p>
+                    </div>
+
+                    <button
+                        type="button"
+                        class="edit-modal-close"
+                        id="closeEditModal"
+                    >
+                        ×
+                    </button>
+                </div>
+
+                <div class="edit-modal-body">
+
+                    <!-- Product Name -->
+                    <div class="edit-form-group">
+                        <label for="editProductName">
+                            Product Name
+                        </label>
+                
+                        <input
+                            type="text"
+                            id="editProductName"
+                            placeholder="Enter product name"
+                        >
+                    </div>
+                
+                
+                    <!-- Category -->
+                    <div class="edit-form-group">
+                        <label for="editCategory">
+                            Category
+                        </label>
+                
+                        <select id="editCategory">
+                
+                            <option value="Medical/Injection Supplies">
+                                Medical/Injection Supplies
+                            </option>
+                
+                            <option value="Disposables & Clinic Consumables">
+                                Disposables & Clinic Consumables
+                            </option>
+                
+                            <option value="Facial/Treatment Prep Products">
+                                Facial/Treatment Prep Products
+                            </option>
+                
+                            <option value="Facial Treatment Products (Professional Use)">
+                                Facial Treatment Products (Professional Use)
+                            </option>
+                
+                            <option value="Skincare Products (Retail / Aftercare)">
+                                Skincare Products (Retail / Aftercare)
+                            </option>
+                
+                            <option value="Soaps & Cleansers">
+                                Soaps & Cleansers
+                            </option>
+                
+                            <option value="Tools/Equipment/Misc.">
+                                Tools/Equipment/Misc.
+                            </option>
+                
+                        </select>
+                    </div>
+                
+                
+                    <!-- Expiration Date -->
+                    <div class="edit-form-group">
+                
+                        <label for="editExpiryDate">
+                            Expiration Date
+                        </label>
+                
+                        <input
+                            type="date"
+                            id="editExpiryDate"
+                        >
+                
+                        <label class="no-expiration-option">
+                            <input
+                                type="checkbox"
+                                id="editNoExpiration"
+                            >
+                
+                            No expiration
+                        </label>
+                
+                    </div>
+                
+                
+                    <!-- Stock -->
+                    <div class="edit-form-group">
+                
+                        <label for="editStock">
+                            Stock Quantity
+                        </label>
+                
+                        <input
+                            type="number"
+                            id="editStock"
+                            min="0"
+                            step="1"
+                        >
+                
+                    </div>
+                
+                </div>
+
+                <div class="edit-modal-actions">
+
+                    <button
+                        type="button"
+                        class="modal-btn cancel-btn"
+                        id="cancelEdit"
+                    >
+                        Cancel
+                    </button>
+
+                    <button
+                        type="button"
+                        class="modal-btn save-edit-btn"
+                        id="saveEdit"
+                    >
+                        Save Changes
+                    </button>
+
+                </div>
+
+            </div>
+
         </div>
 
     <script src="InventoryManagement.js"></script>
