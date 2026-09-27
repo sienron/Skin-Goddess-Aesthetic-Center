@@ -11,7 +11,7 @@ router.get('/', async (req, res) => {
         product_name,
         category,
         stock_quantity,
-        expiry_date
+        expiry_date::text AS expiry_date
       FROM inventory_products
       ORDER BY product_id ASC
     `);
@@ -23,6 +23,62 @@ router.get('/', async (req, res) => {
       message: 'Failed to fetch inventory products.'
     });
   }
+});
+
+// POST for adding a new inventory product
+router.post('/', async (req, res) => {
+    try {
+        const {
+            product_name,
+            category,
+            stock,
+            expiry_date
+        } = req.body;
+
+        // Check product name
+        if (!product_name || product_name.trim() === "") {
+            return res.status(400).json({
+                message: "Product name is required."
+            });
+        }
+
+        // Check stock
+        if (!Number.isInteger(stock) || stock < 0) {
+            return res.status(400).json({
+                message: "Stock must be a non-negative integer."
+            });
+        }
+
+        const result = await db.query(`
+            INSERT INTO inventory_products
+                (product_name, category, stock_quantity, expiry_date)
+            VALUES
+                ($1, $2, $3, $4)
+            RETURNING
+                product_id,
+                product_name,
+                category,
+                stock_quantity,
+                expiry_date
+        `, [
+            product_name.trim(),
+            category,
+            stock,
+            expiry_date || null
+        ]);
+
+        res.status(201).json(result.rows[0]);
+
+    } catch (error) {
+        console.error(
+            "Error adding inventory product:",
+            error
+        );
+
+        res.status(500).json({
+            message: "Failed to add inventory product."
+        });
+    }
 });
 
 //PUT for updating inventory records

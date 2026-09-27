@@ -90,7 +90,10 @@ document.addEventListener('DOMContentLoaded', () => {
       fee: Number(record.fee ?? record.booked_service_price) || 0,
       depositAmount: Number(record.deposit_amount ?? record.depositAmount ?? record.booked_reservation_fee) || 0,
       paymentStatus: String(record.payment_status || 'unpaid').toLowerCase(),
-      contact: String(record.contact || record.contact_number || '—')
+      contact: String(record.contact || record.contact_number || '—'),
+      cancellationRequestStatus: record.cancellation_request_status || null,
+      cancellationReason: record.cancellation_reason || '',
+      cancellationDescription: record.cancellation_description || ''
     };
   }
 
@@ -103,6 +106,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (className) node.className = className;
     if (text !== undefined) node.textContent = text;
     return node;
+  }
+
+  async function readApiResponse(response) {
+    const bodyText = await response.text();
+    try {
+      return bodyText ? JSON.parse(bodyText) : {};
+    } catch (error) {
+      return { message: response.status === 401 || response.status === 403 ? 'Your admin session is no longer valid. Please sign in again.' : `Request failed (${response.status}).` };
+    }
   }
 
   function getInitials(name) {
@@ -449,6 +461,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const sumCollected = document.getElementById('aptSumCollected');
   const sumRefunded = document.getElementById('aptSumRefunded');
   const sumForfeited = document.getElementById('aptSumForfeited');
+  const cancellationRequestsModal = document.getElementById('cancellationRequestsModal');
+  const cancellationRequestsBtn = document.getElementById('cancellationRequestsBtn');
+  const cancellationRequestsClose = document.getElementById('cancellationRequestsClose');
+  const cancellationRequestsList = document.getElementById('cancellationRequestsList');
+  const cancellationRequestsSubtitle = document.getElementById('cancellationRequestsSubtitle');
 
   if (!cancelledModal || !cancelledViewBtn || !cancelledBody || !cancelledPills || !reasonList) return;
 
@@ -561,6 +578,84 @@ document.addEventListener('DOMContentLoaded', () => {
     cancelledViewBtn.focus();
   }
 
+  function formatRequestDate(value) {
+    if (!value) return 'Date unavailable';
+    return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
+  }
+
+  function renderCancellationRequests(requests) {
+    cancellationRequestsList.textContent = '';
+    cancellationRequestsSubtitle.textContent = requests.length + (requests.length === 1 ? ' pending request' : ' pending requests');
+    if (!requests.length) {
+      cancellationRequestsList.appendChild(el('p', 'apt-sub cancellation-requests-empty', 'No pending cancellation requests.'));
+      return;
+    }
+    requests.forEach((request) => {
+      const card = el('article', 'cancellation-request-card');
+      const requestType = request.request_type || 'cancellation';
+      const title = el('div', 'cancellation-request-card__title');
+      title.appendChild(el('strong', '', (requestType === 'reschedule' ? 'Reschedule' : 'Cancellation') + ' · ' + (request.client || 'Client')));
+      title.appendChild(el('span', 'apt-sub', 'Appointment #' + request.appointment_id));
+      card.appendChild(title);
+      card.appendChild(el('p', 'apt-sub', [request.service, request.date, request.start, request.aesthetician].filter(Boolean).join(' · ')));
+      if (requestType === 'reschedule') {
+        card.appendChild(el('p', 'cancellation-request-card__reason', 'Proposed schedule: ' + [request.requested_date, request.requested_time].filter(Boolean).join(' · ')));
+      }
+      card.appendChild(el('p', 'cancellation-request-card__reason', 'Reason: ' + (request.request_reason || '—')));
+      card.appendChild(el('p', 'cancellation-request-card__description', request.request_description || '—'));
+      card.appendChild(el('p', 'apt-sub', 'Requested ' + formatRequestDate(request.requested_at)));
+      const actions = el('div', 'cancellation-request-card__actions');
+      const reject = el('button', 'um-btn um-btn--ghost', 'Reject');
+      const allow = el('button', 'um-btn um-btn--primary', 'Allow');
+      [reject, allow].forEach((button) => {
+        button.type = 'button';
+        button.addEventListener('click', async () => {
+          reject.disabled = true;
+          allow.disabled = true;
+          try {
+            const response = await fetch(`/api/appointments/${request.appointment_id}/cancellation-request/review`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ decision: button === allow ? 'allow' : 'reject', requestType })
+            });
+            const data = await readApiResponse(response);
+            if (!response.ok) throw new Error(data.message || 'Could not review request.');
+            await loadCancellationRequests();
+            await loadAppointments();
+          } catch (error) {
+            window.alert(error.message);
+            reject.disabled = false;
+            allow.disabled = false;
+          }
+        });
+      });
+      actions.append(reject, allow);
+      card.appendChild(actions);
+      cancellationRequestsList.appendChild(card);
+    });
+  }
+
+  async function loadCancellationRequests() {
+    const response = await fetch('/api/appointments/admin/cancellation-requests', { headers: { Accept: 'application/json' }, cache: 'no-store' });
+    const data = await readApiResponse(response);
+    if (!response.ok) throw new Error(data.message || 'Could not load cancellation requests.');
+    renderCancellationRequests(Array.isArray(data) ? data : []);
+  }
+
+  async function openCancellationRequests() {
+    cancellationRequestsModal.classList.add('apt-modal-overlay--open');
+    document.body.classList.add('modal-open');
+    cancellationRequestsList.textContent = '';
+    cancellationRequestsList.appendChild(el('p', 'apt-sub cancellation-requests-empty', 'Loading requests…'));
+    try { await loadCancellationRequests(); } catch (error) { cancellationRequestsList.textContent = ''; cancellationRequestsList.appendChild(el('p', 'apt-sub cancellation-requests-empty', error.message)); }
+    cancellationRequestsClose.focus();
+  }
+
+  function closeCancellationRequests() {
+    cancellationRequestsModal.classList.remove('apt-modal-overlay--open');
+    document.body.classList.remove('modal-open');
+  }
+
   cancelledViewBtn.addEventListener('click', openCancelledModal);
   if (cancelledClose) cancelledClose.addEventListener('click', closeCancelledModal);
 
@@ -572,6 +667,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (event.key === 'Escape' && cancelledModal.classList.contains('apt-modal-overlay--open')) {
       closeCancelledModal();
     }
+  });
+
+  cancellationRequestsBtn.addEventListener('click', openCancellationRequests);
+  cancellationRequestsClose.addEventListener('click', closeCancellationRequests);
+  cancellationRequestsModal.addEventListener('click', (event) => {
+    if (event.target === cancellationRequestsModal) closeCancellationRequests();
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && cancellationRequestsModal.classList.contains('apt-modal-overlay--open')) closeCancellationRequests();
   });
 
   loadAppointments();

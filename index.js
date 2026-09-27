@@ -46,12 +46,16 @@ function requireRole(...allowedRoles) {
 
     try {
       const result = await db.query(
-        'SELECT role FROM users WHERE user_id = $1',
+        'SELECT role, status FROM users WHERE user_id = $1',
         [req.session.userId]
       );
 
       if (result.rows.length === 0) {
         return res.status(401).send('Your session is no longer valid.');
+      }
+
+      if (result.rows[0].status === 'suspended') {
+        return res.status(403).send('Your account is suspended.');
       }
 
       const currentRole = result.rows[0].role;

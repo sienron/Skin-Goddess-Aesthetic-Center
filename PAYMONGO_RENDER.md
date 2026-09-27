@@ -1,6 +1,10 @@
 # PayMongo on Render
 
-This app uses PayMongo Hosted Checkout v2 in live mode only. Checkout and webhook handling are server-side. The public key is not needed for Hosted Checkout.
+This app uses PayMongo Hosted Checkout v2. Non-production environments use test mode; production requires live credentials. Checkout and webhook handling are server-side. The public key is not needed for Hosted Checkout.
+
+## Configure Test Mode
+
+For local or other non-production environments, set `NODE_ENV` to a value other than `production`, then configure `PAYMONGO_TEST_SECRET_KEY` with an `sk_test_` secret key and `PAYMONGO_TEST_WEBHOOK_SECRET` with the signing secret from the test-mode webhook endpoint. Test checkout requests use the PayMongo test environment and the `te` webhook signature. Live keys are rejected outside production, and test keys are rejected in production.
 
 ## Configure Render
 

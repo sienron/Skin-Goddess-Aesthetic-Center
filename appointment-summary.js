@@ -74,9 +74,6 @@
     heading.className = 'checkout-section-title';
     heading.textContent = 'CONFIRM APPOINTMENT';
 
-    const description = document.createElement('p');
-    description.textContent = 'Complete payment on PayMongo. Your appointment is created only after payment is verified.';
-
     const confirmButton = document.createElement('button');
     confirmButton.type = 'button';
     confirmButton.id = 'confirmBookingBtn';
@@ -198,7 +195,7 @@
       }
     });
 
-    paymentContainer.append(heading, description, confirmButton);
+    paymentContainer.append(heading, confirmButton);
 
     const query = new URLSearchParams(window.location.search);
     const returnedReference = query.get('reference');

@@ -40,7 +40,6 @@
             <li><a href="AestheticianUserManagement.html">My Clients</a></li>
             <li><a href="AestheticianAppointmentPage.html">Appointments</a></li>
             <li><a href="AestheticianTreatmentNotes.html">Treatment History</a></li>
-            <li><a href="#">My Rating</a></li>
         </ul>
     </aside>
     <main>
@@ -59,15 +58,23 @@
                             href="AestheticianAppointmentPage.html">Appointments</a></li>
                     <li class="nav-item active"><img src="icons/circle.svg" alt="" class="nav-bullet"><a
                             href="AestheticianTreatmentNotes.html">Treatment History</a></li>
-                    <li class="nav-item"><img src="icons/circle.svg" alt="" class="nav-bullet"><a href="#">My Rating</a>
-                    </li>
                 </ul>
             </nav>
             <hr>
             <h4 class="sidebar-heading">STATUS LEGEND</h4>
+            <div class="status-item"><span class="Confirmed-icon"></span><span>Confirmed</span></div>
             <div class="status-item"><span class="Completed-icon"></span><span>Completed</span></div>
             <div class="status-item"><span class="Pending-icon"></span><span>In Progress</span></div>
+            <div class="status-item"><span class="Cancelled-icon"></span><span>Cancelled</span></div>
             <div class="status-item"><span class="No-Show-icon"></span><span>No Show</span></div>
+            <hr class="status-divider">
+            <h4 class="sidebar-heading">MY RATING</h4>
+            <div class="rating-widget" id="ratingWidget">
+                <h1 id="ratingAverage">—</h1>
+                <div class="rating-stars" id="ratingStars"></div>
+                <p class="rating-count" id="ratingReviewCount">Loading reviews…</p>
+                <div class="rating-breakdown" id="ratingBreakdown"></div>
+            </div>
             <div class="profile-wrap">
                 <hr class="profile-divider">
                 <div class="profile-menu" id="profileWrap"><button type="button" class="profile-card" id="profileBtn"
@@ -98,6 +105,7 @@
         </section>
     </main>
     <script src="header.js"></script>
+    <script src="aesthetician-rating.js"></script>
 </body>
 
 </html>

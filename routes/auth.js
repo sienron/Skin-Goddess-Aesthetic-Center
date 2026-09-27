@@ -255,6 +255,10 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ message: 'Incorrect email or password.' });
     }
 
+    if (user.status === 'suspended') {
+      return res.status(403).json({ message: 'Your account is suspended.' });
+    }
+
     if (!user.email_verified) {
       return res.status(403).json({ message: 'Verify email to login.' });
     }

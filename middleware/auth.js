@@ -7,7 +7,7 @@ const db = require('../db');
 
 function requireLogin(req, res, next) {
   if (!req.session.userId) {
-    if (req.accepts('html')) {
+    if (req.accepts('html') && !req.originalUrl.startsWith('/api/')) {
       return res.redirect('/LoginPage.html');
     }
     return res.status(401).json({ message: 'You must be logged in.' });
@@ -20,16 +20,20 @@ function requireRole(...allowedRoles) {
     if (!req.session.userId) return requireLogin(req, res, next);
 
     try {
-      const result = await db.query('SELECT role FROM users WHERE user_id = $1', [req.session.userId]);
+      const result = await db.query('SELECT role, status FROM users WHERE user_id = $1', [req.session.userId]);
       if (result.rows.length === 0) {
         return res.status(401).json({ message: 'Your session is no longer valid.' });
+      }
+
+      if (result.rows[0].status === 'suspended') {
+        return res.status(403).json({ message: 'Your account is suspended.' });
       }
 
       const currentRole = result.rows[0].role;
       req.session.role = currentRole;
 
       if (!allowedRoles.includes(currentRole)) {
-        if (req.accepts('html') && !req.path.startsWith('/api/')) {
+        if (req.accepts('html') && !req.originalUrl.startsWith('/api/')) {
           return res.status(403).send('You are not authorized to access this page.');
         }
         return res.status(403).json({ message: 'You are not authorized to do this.' });
