@@ -29,6 +29,8 @@ const apptModalTopbar = document.getElementById("apptModalTopbar");
 const apptModalClose = document.getElementById("apptModalClose");
 const apptModalCancelBtn = document.getElementById("apptModalCancelBtn");
 const apptModalRescheduleBtn = document.getElementById("apptModalRescheduleBtn");
+const apptRescheduleForm = document.getElementById("apptRescheduleForm");
+const apptActionMessage = document.getElementById("apptActionMessage");
 
 function getInitials(name) {
     return name
@@ -119,6 +121,15 @@ function openApptModal(appt) {
 
     apptModalCancelBtn.dataset.apptId = normalizedAppt.id;
     apptModalRescheduleBtn.dataset.apptId = normalizedAppt.id;
+    const canManageAppointment = ["pending", "confirmed"].includes(normalizedAppt.status);
+    apptModalCancelBtn.disabled = !canManageAppointment;
+    apptModalRescheduleBtn.disabled = !canManageAppointment;
+    if (apptRescheduleForm) {
+        apptRescheduleForm.hidden = true;
+        apptRescheduleForm.elements.date.value = normalizedAppt.date || "";
+        apptRescheduleForm.elements.time.value = (normalizedAppt.start || "").slice(0, 5);
+    }
+    if (apptActionMessage) apptActionMessage.textContent = "";
 
     apptModalOverlay.classList.add("show");
     document.body.style.overflow = "hidden";
@@ -143,14 +154,49 @@ if (apptModalOverlay) {
         }
     });
 
-    // Placeholder handlers — wire these up to real cancel/reschedule logic once the backend exists
-    apptModalCancelBtn.addEventListener("click", () => {
-        console.log("Cancel requested for appointment:", apptModalCancelBtn.dataset.apptId);
-        closeApptModal();
+    apptModalCancelBtn.addEventListener("click", async () => {
+        if (!window.confirm("Cancel this appointment? This cannot be undone.")) return;
+        apptModalCancelBtn.disabled = true;
+        if (apptActionMessage) apptActionMessage.textContent = "Cancelling appointment...";
+        try {
+            const response = await fetch(`/api/appointments/${apptModalCancelBtn.dataset.apptId}/cancel`, { method: "POST" });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || "Could not cancel appointment.");
+            closeApptModal();
+            if (typeof refreshAestheticianAppointments === "function") await refreshAestheticianAppointments();
+        } catch (error) {
+            if (apptActionMessage) apptActionMessage.textContent = error.message;
+            apptModalCancelBtn.disabled = false;
+        }
     });
 
     apptModalRescheduleBtn.addEventListener("click", () => {
-        console.log("Reschedule requested for appointment:", apptModalRescheduleBtn.dataset.apptId);
-        closeApptModal();
+        if (!apptRescheduleForm) return;
+        apptRescheduleForm.hidden = !apptRescheduleForm.hidden;
+        if (apptActionMessage) apptActionMessage.textContent = "";
+    });
+
+    apptRescheduleForm?.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const submitButton = apptRescheduleForm.querySelector("[type=submit]");
+        submitButton.disabled = true;
+        if (apptActionMessage) apptActionMessage.textContent = "Updating appointment...";
+        try {
+            const response = await fetch(`/api/appointments/${apptModalRescheduleBtn.dataset.apptId}/reschedule`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    date: apptRescheduleForm.elements.date.value,
+                    time: apptRescheduleForm.elements.time.value
+                })
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || "Could not reschedule appointment.");
+            closeApptModal();
+            if (typeof refreshAestheticianAppointments === "function") await refreshAestheticianAppointments();
+        } catch (error) {
+            if (apptActionMessage) apptActionMessage.textContent = error.message;
+            submitButton.disabled = false;
+        }
     });
 }

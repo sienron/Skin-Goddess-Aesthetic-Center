@@ -1,5 +1,5 @@
 /* ===== Appointment Summary =====
-   Creates the appointment after the user confirms the booking.
+   Redirects to PayMongo Hosted Checkout and confirms only verified payments.
 */
 (function () {
   const BOOKING_STORAGE_KEY = 'sg_pending_booking';
@@ -19,7 +19,9 @@
     booking = null;
   }
 
-  if (!booking) {
+  if (!booking || !Number.isSafeInteger(Number(booking.serviceId)) || Number(booking.serviceId) <= 0
+    || !/^\d{4}-\d{2}-\d{2}$/.test(booking.date || '')
+    || !/^\d{1,2}:\d{2} (AM|PM)$/.test(booking.time || '')) {
     window.location.href = 'UserAppointment.html';
     return;
   }
@@ -73,64 +75,138 @@
     heading.textContent = 'CONFIRM APPOINTMENT';
 
     const description = document.createElement('p');
-    description.textContent =
-      'Click the button below to reserve this appointment.';
+    description.textContent = 'Complete payment on PayMongo. Your appointment is created only after payment is verified.';
 
     const confirmButton = document.createElement('button');
     confirmButton.type = 'button';
     confirmButton.id = 'confirmBookingBtn';
     confirmButton.className = 'confirm-btn';
-    confirmButton.textContent = 'CONFIRM APPOINTMENT';
+    confirmButton.textContent = 'PAY RESERVATION FEE WITH PAYMONGO';
+    let checkoutReference = null;
+    let checkoutState = 'ready';
 
-    confirmButton.addEventListener('click', async () => {
+    async function createCheckoutSession() {
       confirmButton.disabled = true;
-      confirmButton.textContent = 'CREATING APPOINTMENT...';
-
+      confirmButton.textContent = 'STARTING SECURE CHECKOUT...';
       showMessage('', '');
 
       try {
-        const response = await fetch('/api/appointments', {
+        const response = await fetch('/api/appointments/paymongo/checkout-session', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             serviceId: booking.serviceId,
             date: booking.date,
             time: booking.time
           })
         });
-
         const data = await response.json().catch(() => ({}));
-
-        if (!response.ok) {
-          throw new Error(
-            data.message || 'Could not create your appointment.'
-          );
+        if (response.status === 401) {
+          window.location.href = '/LoginPage.html';
+          return;
         }
+        if (!response.ok) throw new Error(data.message || 'Could not start PayMongo checkout.');
 
-        localStorage.removeItem(BOOKING_STORAGE_KEY);
-
-        showMessage(
-          'Appointment created successfully. Redirecting...',
-          'success'
-        );
-
-        setTimeout(() => {
-          window.location.href = 'MyAppointments.html';
-        }, 1000);
+        setText('summaryFee', formatPeso(data.amount));
+        setText('summaryTotal', formatPeso(data.amount));
+        showMessage('Redirecting to PayMongo secure checkout...', 'info');
+        window.location.assign(data.checkoutUrl);
       } catch (error) {
-        showMessage(
-          error.message || 'Could not create your appointment.',
-          'error'
-        );
-
+        showMessage(error.message || 'Could not start PayMongo checkout.', 'error');
         confirmButton.disabled = false;
-        confirmButton.textContent = 'CONFIRM APPOINTMENT';
+        confirmButton.textContent = 'PAY RESERVATION FEE WITH PAYMONGO';
+      }
+    }
+
+    async function verifyAndConfirmPayment(reference, attempts = 15) {
+      checkoutReference = reference;
+      checkoutState = 'checking';
+      confirmButton.disabled = true;
+      confirmButton.textContent = 'VERIFYING PAYMENT...';
+      showMessage('Waiting for PayMongo to confirm your payment...', 'info');
+
+      for (let attempt = 0; attempt < attempts; attempt += 1) {
+        try {
+          const statusResponse = await fetch(`/api/appointments/paymongo/status/${encodeURIComponent(reference)}`);
+          const statusData = await statusResponse.json().catch(() => ({}));
+          if (statusResponse.status === 401) {
+            window.location.href = '/LoginPage.html';
+            return;
+          }
+          if (!statusResponse.ok) throw new Error(statusData.message || 'Could not check payment status.');
+
+          if (statusData.status === 'failed' || statusData.status === 'expired') {
+            checkoutReference = null;
+            checkoutState = 'ready';
+            showMessage('PayMongo did not complete this payment. You can try checkout again.', 'error');
+            confirmButton.disabled = false;
+            confirmButton.textContent = 'PAY RESERVATION FEE WITH PAYMONGO';
+            return;
+          }
+
+          if (statusData.status === 'paid' || statusData.status === 'consumed') {
+            const confirmResponse = await fetch('/api/appointments/paymongo/confirm', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ referenceNumber: reference })
+            });
+            const confirmData = await confirmResponse.json().catch(() => ({}));
+            if (!confirmResponse.ok) {
+              if (confirmData.pending) {
+                await new Promise((resolve) => setTimeout(resolve, 2000));
+                continue;
+              }
+              if (confirmResponse.status === 409) {
+                checkoutState = 'blocked';
+                confirmButton.textContent = 'CONTACT SUPPORT';
+                showMessage(confirmData.message || 'Payment was received, but the appointment needs assistance.', 'error');
+                return;
+              }
+              throw new Error(confirmData.message || 'Payment was received, but the appointment could not be confirmed.');
+            }
+
+            localStorage.removeItem(BOOKING_STORAGE_KEY);
+            checkoutState = 'complete';
+            showMessage('Payment verified and appointment created. Redirecting...', 'success');
+            setTimeout(() => {
+              window.location.href = 'MyAppointments.html';
+            }, 1000);
+            return;
+          }
+
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+        } catch (error) {
+          checkoutState = 'retry';
+          showMessage(error.message || 'Could not verify payment.', 'error');
+          confirmButton.disabled = false;
+          confirmButton.textContent = 'CHECK PAYMENT STATUS';
+          return;
+        }
+      }
+
+      checkoutState = 'retry';
+      showMessage('Payment is still processing. Check again in a moment.', 'info');
+      confirmButton.disabled = false;
+      confirmButton.textContent = 'CHECK PAYMENT STATUS';
+    }
+
+    confirmButton.addEventListener('click', async () => {
+      if (checkoutState === 'retry' && checkoutReference) {
+        await verifyAndConfirmPayment(checkoutReference);
+      } else if (checkoutState === 'ready') {
+        await createCheckoutSession();
       }
     });
 
     paymentContainer.append(heading, description, confirmButton);
+
+    const query = new URLSearchParams(window.location.search);
+    const returnedReference = query.get('reference');
+    if (query.get('payment') === 'success' && returnedReference) {
+      verifyAndConfirmPayment(returnedReference);
+    } else if (query.get('payment') === 'cancelled') {
+      showMessage('Checkout was cancelled. No appointment has been created.', 'info');
+    }
   }
 
   renderSummary();

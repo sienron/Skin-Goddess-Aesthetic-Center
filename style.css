@@ -1950,6 +1950,38 @@ hr {
   padding: 16px 24px 24px 24px;
 }
 
+.appt-action-message {
+  margin: 0;
+  padding: 0 24px;
+  color: #8f3030;
+  font-size: 0.8rem;
+}
+
+.appt-reschedule-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+  padding: 12px 24px 0;
+  font-size: 0.8rem;
+}
+
+.appt-reschedule-form[hidden] {
+  display: none;
+}
+
+.appt-reschedule-form input,
+.appt-reschedule-form select {
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid #c9c9c9;
+  border-radius: 4px;
+  font: inherit;
+}
+
+.appt-reschedule-form button {
+  grid-column: 1 / -1;
+}
+
 .modal-btn {
   flex: 1;
   padding: 11px 0;

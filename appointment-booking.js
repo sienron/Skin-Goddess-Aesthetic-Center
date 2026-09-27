@@ -369,9 +369,8 @@ const key = formatAvailabilityKey(selectedDate.year, selectedDate.month, selecte
     }
 
      /* ===== Submission =====
-         Keep the appointment uncreated until the payment flow succeeds.
-         AppointmentSummary.html will later call /api/appointments after
-         PayMongo confirms payment. */
+         Keep the appointment uncreated until checkout reports payment success.
+         Checkout redirects to PayMongo; appointments are created only after a verified payment. */
      detailsForm.addEventListener("submit", (e) => {
         e.preventDefault();
 

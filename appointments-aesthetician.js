@@ -42,6 +42,12 @@ async function loadAestheticianAppointments() {
     }
 }
 
+async function refreshAestheticianAppointments() {
+    await loadAestheticianAppointments();
+    if (weekViewEl.style.display === "block") renderWeek(currentDate);
+    else renderMonth(currentDate);
+}
+
 function normalizeAppointment(appt) {
     if (!appt) return appt;
 
