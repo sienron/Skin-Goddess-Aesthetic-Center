@@ -84,6 +84,7 @@ const protectedPages = [
 
   { path: '/AdminDashboard.html', roles: ['admin'] },
   { path: '/AdminAppointment.html', roles: ['admin'] },
+  { path: '/AdminInquiries.html', roles: ['admin'] },
   { path: '/Usermanagement.html', roles: ['admin'] },
 
   { path: '/InventoryDashboard.html', roles: ['inventory_officer'] },
@@ -125,6 +126,7 @@ app.use('/api/appointments', require('./routes/appointments'));
 app.use('/api/availability', require('./routes/availability'));
 app.use('/api/inventory', require('./routes/inventory'));
 app.use('/api/users', require('./routes/users'));
+app.use('/api/inquiries', require('./routes/inquiries'));
 
 app.listen(PORT, () => {
   console.log(`Server is running http://localhost:${PORT}`);

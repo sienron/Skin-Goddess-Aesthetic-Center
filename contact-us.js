@@ -7,7 +7,7 @@ if (!contactForm) {
 } else {
   const formStatus = document.getElementById('formStatus');
 
-  contactForm.addEventListener('submit', (e) => {
+  contactForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const firstName = document.getElementById('firstName').value.trim();
@@ -30,19 +30,26 @@ if (!contactForm) {
       return;
     }
 
-    // TODO: replace with real API call once the Express backend exists, e.g.:
-    // const res = await fetch('/api/contact', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ firstName, lastName, email, phone, subject, message })
-    // });
+    const submitButton = contactForm.querySelector('[type="submit"]');
+    submitButton.disabled = true;
+    showStatus('Sending your message...', '');
 
-    console.log('Contact form submitted (no backend wired yet):', {
-      firstName, lastName, email, phone, subject, message
-    });
+    try {
+      const response = await fetch('/api/inquiries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ firstName, lastName, email, phone, subject, message }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'We could not send your inquiry.');
 
-    showStatus("Message sent! We'll get back to you within 24 hours.", 'success');
-    contactForm.reset();
+      showStatus("Message sent! We'll get back to you as soon as we can.", 'success');
+      contactForm.reset();
+    } catch (error) {
+      showStatus(error.message || 'We could not send your inquiry. Please try again.', 'error');
+    } finally {
+      submitButton.disabled = false;
+    }
   });
 
   function showStatus(text, type) {

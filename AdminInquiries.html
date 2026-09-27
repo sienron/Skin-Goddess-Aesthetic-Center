@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inquiries — Skin Goddess Aesthetic Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="um-shell">
+    <button class="um-sidebar-toggle um-sidebar-toggle--admin" id="umSidebarToggle" type="button" aria-label="Toggle menu" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="um-sidebar-overlay" id="umSidebarOverlay"></div>
+
+    <aside class="um-sidebar" id="umSidebar">
+      <a href="AdminDashboard.html" class="um-sidebar__logo">
+        <div class="logo-container"><img id="logo" src="images/logo_horizontal.jpg" alt="Skin Goddess Aesthetic Center logo"></div>
+      </a>
+      <p class="um-sidebar__label">MAIN MENU</p>
+      <nav class="um-sidebar__nav">
+        <a href="AdminDashboard.html" class="um-nav-link">Dashboard</a>
+        <a href="AdminAppointment.html" class="um-nav-link">Appointments</a>
+        <a href="AdminInquiries.html" class="um-nav-link um-nav-link--active">Inquiries</a>
+        <a href="Inventory.html" class="um-nav-link">Inventory</a>
+        <a href="Reports.html" class="um-nav-link">Reports</a>
+        <a href="Usermanagement.html" class="um-nav-link">User Management</a>
+        <a href="ContentManagement.html" class="um-nav-link">Content Management</a>
+      </nav>
+      <div class="um-sidebar__account">
+        <div class="um-avatar">A</div>
+        <div><p class="um-sidebar__account-name">Admin User</p><p class="um-sidebar__account-role">Owner</p></div>
+      </div>
+    </aside>
+
+    <main class="um-main inquiries-main">
+      <header class="um-header">
+        <div>
+          <h1 class="um-header__title">Customer Inquiries</h1>
+          <p class="um-header__subtitle">Messages submitted through the Contact Us page</p>
+        </div>
+        <button class="um-btn um-btn--ghost" type="button" id="refreshInquiries" aria-label="Refresh inquiries">Refresh</button>
+      </header>
+
+      <section class="inquiries-workspace" aria-label="Customer inquiries">
+        <div class="inquiries-list-panel">
+          <div class="inquiries-list-toolbar">
+            <div class="inquiries-filters" role="group" aria-label="Filter inquiries">
+              <button class="inquiry-filter inquiry-filter--active" type="button" data-filter="all">All</button>
+              <button class="inquiry-filter" type="button" data-filter="unanswered">Unanswered</button>
+              <button class="inquiry-filter" type="button" data-filter="replied">Replied</button>
+            </div>
+            <label class="inquiries-search-label" for="inquirySearch">Search inquiries</label>
+            <input class="inquiries-search" id="inquirySearch" type="search" placeholder="Search name, email, or message">
+          </div>
+          <p class="inquiries-list-count" id="inquiryCount" aria-live="polite">Loading inquiries...</p>
+          <div class="inquiries-list" id="inquiryList" aria-live="polite"></div>
+        </div>
+
+        <section class="inquiry-detail" id="inquiryDetail" aria-label="Selected inquiry" aria-live="polite">
+          <div class="inquiry-detail-empty">Select an inquiry to read the message and reply.</div>
+        </section>
+      </section>
+    </main>
+  </div>
+  <script src="inquiries-admin.js"></script>
+</body>
+</html>

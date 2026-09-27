@@ -73,4 +73,47 @@ async function sendPasswordResetEmail(toEmail, resetLink) {
   }
 }
 
-module.exports = { sendOtpEmail, sendPasswordResetEmail };
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (character) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  })[character]);
+}
+
+async function sendInquiryReply(toEmail, firstName, reply) {
+  const safeName = escapeHtml(firstName);
+  const safeReply = escapeHtml(reply).replace(/\r?\n/g, '<br>');
+  const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'api-key': process.env.BREVO_API_KEY,
+    },
+    body: JSON.stringify({
+      sender: {
+        name: 'Skin Goddess Aesthetic Center',
+        email: process.env.EMAIL_USER,
+      },
+      to: [{ email: toEmail }],
+      subject: 'Reply to your inquiry',
+      htmlContent: `
+        <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto; color: #1A1714;">
+          <h2 style="color: #C9A84C;">Skin Goddess Aesthetic Center</h2>
+          <p>Hello ${safeName},</p>
+          <p>${safeReply}</p>
+          <p style="color: #6B6459; font-size: 13px;">Thank you for contacting Skin Goddess Aesthetic Center.</p>
+        </div>
+      `,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`The inquiry reply was not sent: ${errorText}`);
+  }
+}
+
+module.exports = { sendOtpEmail, sendPasswordResetEmail, sendInquiryReply };
