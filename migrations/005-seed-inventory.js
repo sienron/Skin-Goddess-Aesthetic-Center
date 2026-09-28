@@ -77,20 +77,34 @@ const PRODUCTS = [
 async function seedInventory() {
   try {
     for (const product of PRODUCTS) {
-      await db.query(
+      const result = await db.query(
         `
-        INSERT INTO inventory_products
-          (product_name, category, stock_quantity, expiry_date)
-        VALUES
-          ($1, $2, 0, NULL)
+        SELECT product_id
+        FROM inventory_products
+        WHERE product_name = $1
+          AND category = $2
         `,
         [product.name, product.category]
       );
-
-      console.log(`Seeded inventory product: ${product.name}`);
+      
+      if (result.rows.length === 0) {
+        await db.query(
+          `
+          INSERT INTO inventory_products
+            (product_name, category, stock_quantity, expiry_date)
+          VALUES
+            ($1, $2, 0, NULL)
+          `,
+          [product.name, product.category]
+        );
+      
+        console.log(`Seeded inventory product: ${product.name}`);
+      } else {
+        console.log(`Skipped existing product: ${product.name}`);
+      }
     }
 
-    console.log(`Inventory seed completed successfully. ${PRODUCTS.length} products added.`);
+    console.log(`Inventory seed completed successfully. ${PRODUCTS.length} products checked.`);
   } catch (error) {
     console.error('Inventory seed stopped unexpectedly.');
     console.error(error.message);

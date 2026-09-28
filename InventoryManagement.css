@@ -1548,7 +1548,17 @@ button{
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
+    border-top: 10px solid var(--gold-dark);
+    padding: 22px 24px;
 
+    border-bottom: 1px solid var(--line);
+}
+
+.add-modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    border-top: 10px solid var(--gold);
     padding: 22px 24px;
 
     border-bottom: 1px solid var(--line);
@@ -1638,6 +1648,7 @@ button{
     flex-direction: column;
     gap: 7px;
     margin-bottom: 18px;
+    
 }
 
 .edit-form-group:last-child {

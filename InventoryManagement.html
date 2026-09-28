@@ -969,6 +969,163 @@
 
         </div>
 
+                <!-- Add Product Modal -->
+        <div class="edit-modal-overlay" id="addProductModal">
+
+            <div class="edit-modal">
+
+                <div class="add-modal-header">
+
+                    <div>
+                        <h3>Add Product</h3>
+                        <p>Add a new product to your inventory</p>
+                    </div>
+
+                    <button
+                        type="button"
+                        class="edit-modal-close"
+                        id="closeAddProductModal"
+                    >
+                        ×
+                    </button>
+
+                </div>
+
+
+                <div class="edit-modal-body">
+
+                    <!-- Product Name -->
+
+                    <div class="edit-form-group">
+
+                        <label for="addProductName">
+                            Product Name
+                        </label>
+
+                        <input
+                            type="text"
+                            id="addProductName"
+                            placeholder="Enter product name"
+                        >
+
+                    </div>
+
+
+                    <!-- Category -->
+
+                    <div class="edit-form-group">
+
+                        <label for="addCategory">
+                            Category
+                        </label>
+
+                        <select id="addCategory">
+
+                            <option value="Medical/Injection Supplies">
+                                Medical/Injection Supplies
+                            </option>
+
+                            <option value="Disposables & Clinic Consumables">
+                                Disposables & Clinic Consumables
+                            </option>
+
+                            <option value="Facial/Treatment Prep Products">
+                                Facial/Treatment Prep Products
+                            </option>
+
+                            <option value="Facial Treatment Products (Professional Use)">
+                                Facial Treatment Products (Professional Use)
+                            </option>
+
+                            <option value="Skincare Products (Retail / Aftercare)">
+                                Skincare Products (Retail / Aftercare)
+                            </option>
+
+                            <option value="Soaps & Cleansers">
+                                Soaps & Cleansers
+                            </option>
+
+                            <option value="Tools/Equipment/Misc.">
+                                Tools/Equipment/Misc.
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+                    <!-- Expiration Date -->
+
+                    <div class="edit-form-group">
+
+                        <label for="addExpiryDate">
+                            Expiration Date
+                        </label>
+
+                        <input
+                            type="date"
+                            id="addExpiryDate"
+                        >
+
+                        <label class="no-expiration-option">
+
+                            <input
+                                type="checkbox"
+                                id="addNoExpiration"
+                            >
+
+                            No expiration
+
+                        </label>
+
+                    </div>
+
+
+                    <!-- Stock Quantity -->
+
+                    <div class="edit-form-group">
+
+                        <label for="addStock">
+                            Stock Quantity
+                        </label>
+
+                        <input
+                            type="number"
+                            id="addStock"
+                            min="0"
+                            step="1"
+                            value="0"
+                        >
+
+                    </div>
+
+                </div>
+
+
+                <div class="edit-modal-actions">
+
+                    <button
+                        type="button"
+                        class="modal-btn cancel-btn"
+                        id="cancelAddProduct"
+                    >
+                        Cancel
+                    </button>
+
+                    <button
+                        type="button"
+                        class="modal-btn save-edit-btn"
+                        id="confirmAddProduct"
+                    >
+                        Add Product
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
     <script src="InventoryManagement.js"></script>
     <script src="admin-notifications.js"></script>
 
