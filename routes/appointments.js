@@ -151,6 +151,36 @@ router.get('/:id/notes', async (req, res) => {
   }
 });
 
+router.get('/client/:clientId/notes', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ message: 'You must be logged in.' });
+  const clientId = validAppointmentId(req.params.clientId);
+  if (!clientId) return res.status(400).json({ message: 'Choose a valid client.' });
+
+  try {
+    const result = await db.query(`
+      SELECT tn.note_id, tn.note_text, tn.color, tn.updated_at,
+             a.appointment_id, a.appointment_date::text AS appointment_date,
+             a.appointment_status, s.service_name
+      FROM treatment_notes tn
+      JOIN appointments a ON a.appointment_id = tn.appointment_id
+      JOIN services s ON s.service_id = a.service_id
+      WHERE a.user_id = $1 AND a.aesthetician_id = $2
+      ORDER BY a.appointment_date DESC, a.appointment_time DESC, tn.created_at ASC, tn.note_id ASC
+    `, [clientId, req.session.userId]);
+
+    return res.json(result.rows.map((row) => ({
+      ...noteResponse(row),
+      appointmentId: row.appointment_id,
+      appointmentDate: row.appointment_date,
+      appointmentStatus: row.appointment_status,
+      service: row.service_name,
+    })));
+  } catch (error) {
+    console.error('Error fetching client treatment notes:', error);
+    return res.status(500).json({ message: 'Could not load client treatment notes.' });
+  }
+});
+
 router.post('/:id/notes', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ message: 'You must be logged in.' });
   const appointmentId = validAppointmentId(req.params.id);
@@ -361,7 +391,9 @@ router.get('/mine', async (req, res) => {
                s.service_name AS service,
                a.booked_service_price AS fee,
                a.booked_reservation_fee AS deposit_amount,
+               a.user_id AS client_id,
                COALESCE(CONCAT(c.first_name, ' ', c.last_name), 'Client') AS client,
+               c.email AS client_email,
                COALESCE(CONCAT(aesthetician.first_name, ' ', aesthetician.last_name), 'Aesthetician') AS aesthetician,
                c.contact_number AS contact,
                NULL::text AS remarks,
@@ -410,6 +442,8 @@ router.get('/mine', async (req, res) => {
       aesthetician: row.aesthetician,
       fee: row.fee,
       depositAmount: row.deposit_amount,
+      clientId: row.client_id,
+      clientEmail: row.client_email,
       remarks: row.remarks,
       apptNumber: row.apptnumber || row.appointment_id,
       appointment_id: row.appointment_id,

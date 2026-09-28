@@ -32,6 +32,7 @@
 
     let currentApptId = null;
     let noteIdCounter = 1;
+    let notesScrollIndicator = null;
 
     function syncNotesMaxHeight() {
         const modalHeight = apptModal.getBoundingClientRect().height;
@@ -95,6 +96,29 @@
         notesPanel.querySelectorAll(".note-color-picker.show").forEach((picker) => {
             if (picker !== exceptEl) picker.classList.remove("show");
         });
+    }
+
+    function updateNotesScrollIndicator() {
+        if (!notesScrollIndicator) return;
+        const hasMoreNotes = notesPanel.scrollHeight > notesPanel.clientHeight + 2
+            && notesPanel.scrollTop < notesPanel.scrollHeight - notesPanel.clientHeight - 2;
+        notesScrollIndicator.classList.toggle("show", hasMoreNotes);
+    }
+
+    function createNotesScrollIndicator() {
+        const indicator = document.createElement("button");
+        indicator.type = "button";
+        indicator.className = "notes-scroll-indicator";
+        indicator.setAttribute("aria-label", "More treatment notes below");
+        indicator.title = "More treatment notes below";
+        const icon = document.createElement("img");
+        icon.src = "icons/triangle-down.svg";
+        icon.alt = "";
+        indicator.appendChild(icon);
+        indicator.addEventListener("click", () => {
+            notesPanel.scrollBy({ top: notesPanel.clientHeight * 0.75, behavior: "smooth" });
+        });
+        return indicator;
     }
 
     function buildNoteElement(note) {
@@ -237,6 +261,7 @@
                         const idx = list.findIndex((n) => n.id === note.id);
                         if (idx !== -1) list.splice(idx, 1);
                         el.remove();
+                        updateNotesScrollIndicator();
                     })
                     .catch((error) => window.alert(error.message));
             }
@@ -258,8 +283,13 @@
         notesPanel.replaceChildren();
         const notes = getNotesForCurrentAppt();
         notes.forEach((note) => notesPanel.appendChild(buildNoteElement(note)));
+        notesScrollIndicator = notes.length > 0 ? createNotesScrollIndicator() : null;
+        if (notesScrollIndicator) notesPanel.appendChild(notesScrollIndicator);
         notesPanel.setAttribute("aria-hidden", notes.length === 0 ? "true" : "false");
+        requestAnimationFrame(updateNotesScrollIndicator);
     }
+
+    notesPanel.addEventListener("scroll", updateNotesScrollIndicator, { passive: true });
 
     notesTriggerBtn.addEventListener("click", () => {
         if (currentApptId == null) return; // no appointment open yet
@@ -272,10 +302,12 @@
                 const note = { ...savedNote, updatedAt: new Date(savedNote.updatedAt) };
                 getNotesForCurrentAppt().push(note);
                 const el = buildNoteElement(note);
-                notesPanel.appendChild(el);
+                if (notesScrollIndicator) notesPanel.insertBefore(el, notesScrollIndicator);
+                else notesPanel.appendChild(el);
                 notesPanel.setAttribute("aria-hidden", "false");
                 el.classList.add("editing");
                 el.querySelector(".sticky-note-textarea").focus();
+                requestAnimationFrame(updateNotesScrollIndicator);
             })
             .catch((error) => window.alert(error.message));
     });

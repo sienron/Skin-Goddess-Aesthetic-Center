@@ -1633,6 +1633,134 @@ hr {
   max-width: 320px;
 }
 
+.staff-appointments-table-wrap {
+  max-height: min(62vh, 620px);
+  overflow: auto;
+}
+
+.staff-appointments-table {
+  min-width: 1320px;
+}
+
+.treatment-notes-view-btn {
+  white-space: nowrap;
+}
+
+.treatment-notes-modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(32, 28, 24, 0.48);
+}
+
+.treatment-notes-modal-overlay.show {
+  display: flex;
+}
+
+.treatment-notes-modal {
+  position: relative;
+  width: min(620px, 100%);
+  max-height: min(80vh, 680px);
+  overflow: auto;
+  border-radius: 8px;
+  background: #fff;
+  padding: 28px;
+  box-shadow: 0 18px 50px rgba(32, 28, 24, 0.2);
+}
+
+.treatment-notes-modal-eyebrow {
+  margin: 0 0 6px;
+  color: #a9843a;
+  font-family: "Raleway", sans-serif;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.treatment-notes-modal h2 {
+  margin: 0 34px 20px 0;
+  color: #201c18;
+  font-family: "Playfair Display", serif;
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+.treatment-notes-modal-close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 50%;
+  background: #f6f4ef;
+  color: #756c62;
+  cursor: pointer;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.treatment-notes-list {
+  display: grid;
+  gap: 12px;
+}
+
+.treatment-note-item {
+  border: 1px solid #e7ddc9;
+  border-left: 5px solid #fff3b0;
+  border-radius: 5px;
+  padding: 13px 15px;
+}
+
+.treatment-note-item-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.treatment-note-item-heading strong {
+  color: #201c18;
+  font-family: "Raleway", sans-serif;
+  font-size: 0.78rem;
+}
+
+.treatment-note-item-heading time,
+.treatment-note-item-appointment {
+  color: #756c62;
+  font-family: "Raleway", sans-serif;
+  font-size: 0.65rem;
+}
+
+.treatment-note-item-appointment {
+  margin: 5px 0 9px;
+}
+
+.treatment-note-item-text {
+  margin: 0;
+  color: #201c18;
+  font-family: "Raleway", sans-serif;
+  font-size: 0.74rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.treatment-notes-empty {
+  margin: 12px 0;
+  color: #756c62;
+  font-family: "Raleway", sans-serif;
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+.treatment-notes-error {
+  color: #b93c3c;
+}
+
 .staff-table-toolbar h2 {
   margin: 0;
   color: #201c18;
@@ -6770,7 +6898,7 @@ body.services{
 .appt-modal-wrap {
   position: relative;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
 }
 
@@ -6814,14 +6942,45 @@ body.services{
   display: flex;
   flex-direction: column;
   gap: 14px;
-  max-height: var(--notes-max-height, 90vh);
-  overflow-y: hidden;
+  max-height: min(var(--notes-max-height, 90vh), 560px);
+  overflow-y: auto;
   overflow-x: hidden;
   padding-top: 6px;
+  padding-bottom: 6px;
+  scrollbar-width: thin;
 }
 
-.notes-panel:empty {
+.notes-panel[aria-hidden="true"] {
   display: none;
+}
+
+.notes-scroll-indicator {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  border: 1px solid rgba(90, 58, 30, 0.18);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 4px 12px rgba(90, 58, 30, 0.18);
+  cursor: pointer;
+  z-index: 4;
+}
+
+.notes-scroll-indicator.show {
+  display: flex;
+}
+
+.notes-scroll-indicator img {
+  width: 12px;
+  height: 12px;
+  display: block;
 }
 
 /* Individual sticky note */
@@ -7019,6 +7178,7 @@ body.services{
       max-width: 420px;
       flex-direction: row;
       flex-wrap: wrap;
+        overflow-y: auto;
   }
 
   .sticky-note {
