@@ -39,27 +39,6 @@
     fee.textContent = `Reservation fee: ₱${Number(appointment.booked_reservation_fee).toLocaleString('en-US')}`;
     card.append(title, details, status, fee);
 
-    if (['pending', 'confirmed'].includes(appointment.appointment_status)) {
-      const cancel = document.createElement('button');
-      cancel.type = 'button';
-      cancel.className = 'appointment-cancel-btn';
-      cancel.textContent = 'Cancel appointment';
-      cancel.addEventListener('click', async () => {
-        if (!window.confirm('Cancel this appointment? This cannot be undone.')) return;
-        cancel.disabled = true;
-        try {
-          const response = await fetch(`/api/appointments/${appointment.appointment_id}/cancel`, { method: 'POST' });
-          const data = await response.json();
-          if (!response.ok) throw new Error(data.message || 'Could not cancel appointment.');
-          message.textContent = data.message;
-          loadAppointments();
-        } catch (error) {
-          message.textContent = error.message;
-          cancel.disabled = false;
-        }
-      });
-      card.appendChild(cancel);
-    }
     return card;
   }
 

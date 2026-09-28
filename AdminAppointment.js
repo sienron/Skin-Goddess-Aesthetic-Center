@@ -19,7 +19,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const STATUS_LABELS = {
     'confirmed': 'CONFIRMED',
     'in-progress': 'IN PROGRESS',
-    'pending': 'PENDING',
     'completed': 'COMPLETED',
     'cancelled': 'CANCELLED',
     'no-show': 'NO SHOW'
@@ -264,7 +263,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const values = {
       aptTodayCount: APPOINTMENTS.filter((appointment) => appointment.isToday).length,
       aptConfirmedCount: APPOINTMENTS.filter((appointment) => appointment.status === 'confirmed').length,
-      aptPendingCount: APPOINTMENTS.filter((appointment) => appointment.status === 'pending').length,
       aptCancelledCount: APPOINTMENTS.filter((appointment) => appointment.status === 'cancelled').length
     };
     Object.entries(values).forEach(([id, value]) => {
@@ -322,7 +320,6 @@ document.addEventListener('DOMContentLoaded', () => {
         ['completed', 'Completed', 'var(--um-role-client)'],
         ['confirmed', 'Confirmed', 'var(--um-status-active)'],
         ['in-progress', 'In progress', 'var(--um-role-doctor)'],
-        ['pending', 'Pending', 'var(--gold-2)'],
         ['cancelled', 'Cancelled', '#B96B6B'],
         ['no-show', 'No show', '#8a4545']
       ];

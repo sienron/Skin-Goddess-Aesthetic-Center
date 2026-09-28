@@ -41,8 +41,6 @@ router.get('/', async (req, res) => {
   if (year < 1 || month < 1 || month > 12) return res.status(400).json({ message: 'month must use YYYY-MM.' });
 
   try {
-    await db.query(`UPDATE appointments SET appointment_status = 'cancelled' WHERE appointment_status = 'pending' AND payment_status = 'unpaid' AND created_at < NOW() - INTERVAL '30 minutes'`);
-
     const serviceResult = await db.query('SELECT duration_minutes FROM services WHERE service_id = $1 AND is_active = TRUE', [serviceId]);
     if (serviceResult.rows.length === 0) return res.status(404).json({ message: 'Service not found.' });
     const duration = Number(serviceResult.rows[0].duration_minutes);
@@ -54,7 +52,7 @@ router.get('/', async (req, res) => {
     const appointments = await db.query(`
       SELECT aesthetician_id, appointment_date::text AS appointment_date, appointment_time::text AS appointment_time, appointment_end_time::text AS appointment_end_time
       FROM appointments
-      WHERE appointment_status IN ('pending', 'confirmed', 'completed')
+      WHERE appointment_status IN ('confirmed', 'completed')
         AND appointment_date BETWEEN $1::date AND $2::date
     `, [firstDate, lastDate]);
     const now = manilaNow();

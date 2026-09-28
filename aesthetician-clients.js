@@ -19,7 +19,6 @@
     let currentPage = 1;
 
     const statusLabels = {
-        pending: "PENDING",
         confirmed: "CONFIRMED",
         "in-progress": "IN PROGRESS",
         completed: "COMPLETED",
@@ -54,7 +53,7 @@
     }
 
     function statusClass(status) {
-        return `client-status--${String(status || "pending").toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+        return `client-status--${String(status || "unknown").toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
     }
 
     function setModalValue(id, value) {
@@ -68,7 +67,7 @@
 
     function openClientModal(appointment) {
         const clientName = appointment.client || "Client";
-        const status = String(appointment.status || "pending").toLowerCase();
+        const status = String(appointment.status || "unknown").toLowerCase();
         const avatar = clientName.split(" ").map((part) => part[0] || "").slice(0, 2).join("").toUpperCase();
         setModalValue("clientModalTitle", clientName);
         setModalValue("clientModalAvatar", avatar || "--");
@@ -133,7 +132,7 @@
         } else {
             pageAppointments.forEach((appointment) => {
                 const row = document.createElement("tr");
-                const status = String(appointment.status || "pending").toLowerCase();
+                const status = String(appointment.status || "unknown").toLowerCase();
                 row.innerHTML = `
                     <td>
                         <div class="client-name-cell">

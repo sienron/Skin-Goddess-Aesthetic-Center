@@ -16,7 +16,6 @@
 
 const STATUS_LABELS = {
     "confirmed": "CONFIRMED",
-    "pending": "PENDING",
     "in-progress": "IN PROGRESS",
     "completed": "COMPLETED",
     "cancelled": "CANCELLED",
@@ -133,7 +132,7 @@ function openApptModal(appt) {
     apptModalCancelBtn.dataset.apptId = normalizedAppt.id;
     apptModalRescheduleBtn.dataset.apptId = normalizedAppt.id;
     if (apptModalFinishBtn) apptModalFinishBtn.dataset.apptId = normalizedAppt.id;
-    const canManageAppointment = ["pending", "confirmed"].includes(normalizedAppt.status);
+    const canManageAppointment = normalizedAppt.status === "confirmed";
     const manilaToday = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
     apptModalCancelBtn.disabled = !canManageAppointment || Boolean(normalizedAppt.cancellationRequestStatus);
     apptModalRescheduleBtn.disabled = !canManageAppointment || Boolean(normalizedAppt.rescheduleRequestStatus);

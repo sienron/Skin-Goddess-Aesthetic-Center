@@ -120,18 +120,18 @@ function validRequestText(value, maxLength) {
   return typeof value === 'string' && value.trim().length > 0 && value.length <= maxLength ? value.trim() : null;
 }
 
-async function markPastPendingAppointments() {
+async function markPastConfirmedAppointments() {
   await db.query(`
     UPDATE appointments
     SET appointment_status = 'no_show'
-    WHERE appointment_status = 'pending'
+    WHERE appointment_status = 'confirmed'
       AND appointment_date + appointment_end_time < (NOW() AT TIME ZONE 'Asia/Manila')
   `);
 }
 
 router.get('/admin', requireRole('admin'), async (req, res) => {
   try {
-    await markPastPendingAppointments();
+    await markPastConfirmedAppointments();
     const result = await db.query(`
       SELECT a.appointment_id,
              a.appointment_date::text AS date,
@@ -458,7 +458,7 @@ function findAvailableAestheticians(queryClient, booking) {
       AND NOT EXISTS (
         SELECT 1 FROM appointments a
         WHERE a.aesthetician_id = u.user_id
-          AND a.appointment_status IN ('pending', 'confirmed', 'completed')
+          AND a.appointment_status IN ('confirmed', 'completed')
           AND tsrange(a.appointment_date + a.appointment_time, a.appointment_date + a.appointment_end_time) && tsrange($1::date + $2::time, $1::date + $3::time)
       )
     ORDER BY u.user_id
@@ -474,7 +474,7 @@ router.get('/mine', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ message: 'You must be logged in.' });
 
   try {
-    await markPastPendingAppointments();
+    await markPastConfirmedAppointments();
     const userResult = await db.query('SELECT role FROM users WHERE user_id = $1', [req.session.userId]);
     if (userResult.rows.length === 0) return res.status(401).json({ message: 'Your session is no longer valid. Please log in again.' });
 
@@ -571,14 +571,14 @@ router.get('/mine', async (req, res) => {
   }
 });
 
-router.post('/:id/cancel', async (req, res) => {
+router.post('/:id/cancel', requireRole('admin'), async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ message: 'You must be logged in.' });
   const appointmentId = validAppointmentId(req.params.id);
   if (!appointmentId) return res.status(400).json({ message: 'Choose a valid appointment.' });
 
   try {
     const result = await db.query(`
-      SELECT appointment_id, user_id, aesthetician_id, appointment_date::text AS appointment_date,
+      SELECT appointment_id, appointment_date::text AS appointment_date,
              appointment_time::text AS appointment_time, appointment_status
       FROM appointments
       WHERE appointment_id = $1
@@ -586,14 +586,9 @@ router.post('/:id/cancel', async (req, res) => {
     if (result.rows.length === 0) return res.status(404).json({ message: 'Appointment not found.' });
 
     const appointment = result.rows[0];
-    const isClient = appointment.user_id === req.session.userId;
-    const isAssignedAesthetician = appointment.aesthetician_id === req.session.userId;
-    if (!isClient && !isAssignedAesthetician) return res.status(403).json({ message: 'You cannot cancel this appointment.' });
-    if (isAssignedAesthetician && !isClient) return res.status(400).json({ message: 'Aesthetician cancellations require an admin-approved cancellation request.' });
-    if (!['pending', 'confirmed'].includes(appointment.appointment_status)) return res.status(400).json({ message: 'Only pending or confirmed appointments can be cancelled.' });
+    if (appointment.appointment_status !== 'confirmed') return res.status(400).json({ message: 'Only confirmed appointments can be cancelled.' });
     const minutesToAppointment = minutesUntil(appointment.appointment_date, appointment.appointment_time, manilaNow());
     if (minutesToAppointment <= 0) return res.status(400).json({ message: 'Appointments that have already started cannot be cancelled.' });
-    if (isClient && minutesToAppointment < 24 * 60) return res.status(400).json({ message: 'Appointments can only be cancelled at least 24 hours in advance.' });
 
     await db.query(`UPDATE appointments SET appointment_status = 'cancelled' WHERE appointment_id = $1`, [appointmentId]);
     return res.json({ message: 'Appointment cancelled successfully.' });
@@ -620,7 +615,7 @@ router.post('/:id/cancellation-request', async (req, res) => {
     if (result.rows.length === 0) return res.status(404).json({ message: 'Appointment not found.' });
     const appointment = result.rows[0];
     if (appointment.aesthetician_id !== req.session.userId) return res.status(403).json({ message: 'Only the assigned aesthetician can request cancellation.' });
-    if (!['pending', 'confirmed'].includes(appointment.appointment_status)) return res.status(400).json({ message: 'Only pending or confirmed appointments can be cancelled.' });
+    if (appointment.appointment_status !== 'confirmed') return res.status(400).json({ message: 'Only confirmed appointments can be cancelled.' });
     if (appointment.cancellation_request_status) return res.status(409).json({ message: 'A cancellation request has already been submitted for this appointment.' });
 
     await db.query(`
@@ -704,7 +699,7 @@ router.post('/:id/finish', async (req, res) => {
     `, [appointmentId, req.session.userId]);
     if (result.rows.length === 0) return res.status(404).json({ message: 'Appointment not found.' });
     if (result.rows[0].appointment_date !== manilaNow().dateStr) return res.status(400).json({ message: 'An appointment can only be finished on its scheduled date.' });
-    if (!['pending', 'confirmed'].includes(result.rows[0].appointment_status)) return res.status(400).json({ message: 'Only pending or confirmed appointments can be finished.' });
+    if (result.rows[0].appointment_status !== 'confirmed') return res.status(400).json({ message: 'Only confirmed appointments can be finished.' });
     await db.query(`UPDATE appointments SET appointment_status = 'completed' WHERE appointment_id = $1`, [appointmentId]);
     return res.json({ message: 'Appointment marked as completed.' });
   } catch (error) {
@@ -737,13 +732,17 @@ router.post('/:id/reschedule', async (req, res) => {
     if (result.rows.length === 0) return res.status(404).json({ message: 'Appointment not found.' });
 
     const appointment = result.rows[0];
-    if (appointment.user_id !== req.session.userId && appointment.aesthetician_id !== req.session.userId) {
-      return res.status(403).json({ message: 'You cannot reschedule this appointment.' });
+    const userResult = await db.query('SELECT role FROM users WHERE user_id = $1', [req.session.userId]);
+    if (userResult.rows.length === 0) return res.status(401).json({ message: 'Your session is no longer valid.' });
+    const isAdmin = userResult.rows[0].role === 'admin';
+    const isAssignedAesthetician = userResult.rows[0].role === 'aesthetician'
+      && appointment.aesthetician_id === req.session.userId;
+    if (!isAdmin && !isAssignedAesthetician) {
+      return res.status(403).json({ message: 'Only an admin or the assigned aesthetician can reschedule this appointment.' });
     }
-    if (!['pending', 'confirmed'].includes(appointment.appointment_status)) {
-      return res.status(400).json({ message: 'Only pending or confirmed appointments can be rescheduled.' });
+    if (appointment.appointment_status !== 'confirmed') {
+      return res.status(400).json({ message: 'Only confirmed appointments can be rescheduled.' });
     }
-    const isAssignedAesthetician = appointment.aesthetician_id === req.session.userId;
     const reason = validRequestText(body.reason, 255);
     const description = validRequestText(body.description, 2000);
     if (isAssignedAesthetician && appointment.reschedule_request_status) {
@@ -980,7 +979,6 @@ router.post('/paymongo/confirm', async (req, res) => {
         throw error;
       }
 
-      await client.query(`UPDATE appointments SET appointment_status = 'cancelled' WHERE appointment_status = 'pending' AND payment_status = 'unpaid' AND created_at < NOW() - INTERVAL '30 minutes'`);
       const candidates = await findAvailableAestheticians(client, {
         appointmentDate: payment.appointment_date,
         appointmentTime: payment.appointment_time,
@@ -992,7 +990,7 @@ router.post('/paymongo/confirm', async (req, res) => {
         try {
           const result = await client.query(`
             INSERT INTO appointments (user_id, service_id, booked_service_price, booked_reservation_fee, appointment_date, appointment_time, appointment_end_time, aesthetician_id, appointment_status, payment_status)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', 'paid')
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'confirmed', 'paid')
             RETURNING appointment_id, appointment_status, payment_status
           `, [payment.user_id, payment.service_id, payment.service_price,
             Number(payment.amount_cents) / 100, payment.appointment_date,
@@ -1026,7 +1024,7 @@ router.post('/paymongo/confirm', async (req, res) => {
         service_name: payment.service_name,
         appointment_date: payment.appointment_date,
         appointment_time: payment.appointment_time,
-        appointment_status: appointment.appointment_status || 'pending',
+        appointment_status: appointment.appointment_status || 'confirmed',
         payment_status: appointment.payment_status || 'paid'
       }
     });

@@ -10,7 +10,6 @@
     let statusFilter = "all";
     let serviceFilter = "all";
     const statusLabels = {
-        pending: "PENDING",
         confirmed: "CONFIRMED",
         "in-progress": "IN PROGRESS",
         completed: "COMPLETED",
@@ -37,7 +36,7 @@
     }
 
     function statusClass(status) {
-        return `client-status--${String(status || "pending").toLowerCase().replace(/_/g, "-").replace(/[^a-z0-9-]+/g, "-")}`;
+        return `client-status--${String(status || "unknown").toLowerCase().replace(/_/g, "-").replace(/[^a-z0-9-]+/g, "-")}`;
     }
 
     function initials(name) {
@@ -47,7 +46,7 @@
     function filteredAppointments() {
         const search = document.getElementById("searchInput").value.trim().toLowerCase();
         const result = appointments.filter((appointment) => {
-            const status = String(appointment.status || "pending").toLowerCase();
+            const status = String(appointment.status || "unknown").toLowerCase();
             const searchable = `${appointment.client || ""} ${appointment.service || ""} ${formatDate(appointment.date, appointment.start)} ${statusLabels[status] || status}`.toLowerCase();
             return (statusFilter === "all" || status === statusFilter) && (serviceFilter === "all" || appointment.service === serviceFilter) && (!search || searchable.includes(search));
         });
@@ -75,7 +74,6 @@
         const thisMonth = new Date().toISOString().slice(0, 7);
         const count = (status) => appointments.filter((item) => String(item.status || "").toLowerCase() === status).length;
         document.getElementById("dashboardConfirmedCount").textContent = count("confirmed");
-        document.getElementById("dashboardPendingCount").textContent = count("pending");
         document.getElementById("dashboardCancelledCount").textContent = appointments.filter((item) => String(item.status || "").toLowerCase() === "cancelled" && String(item.date || "").startsWith(thisMonth)).length;
         document.getElementById("dashboardClientTotal").textContent = `(${appointments.length})`;
     }
@@ -88,7 +86,7 @@
         const visible = visibleAppointments.slice(start, start + pageSize);
         tableBody.replaceChildren();
         visible.forEach((appointment) => {
-            const status = String(appointment.status || "pending").toLowerCase();
+            const status = String(appointment.status || "unknown").toLowerCase();
             const row = document.createElement("tr");
             row.innerHTML = `<td><div class="client-name-cell"><span class="client-avatar">${initials(appointment.client)}</span><span><strong>${appointment.client || "Client"}</strong><small>Appointment #${appointment.id || "—"}</small></span></div></td><td>${appointment.service || "—"}</td><td><div class="client-appointment-cell"><strong>${formatDate(appointment.date, appointment.start)}</strong><span>${formatTime(appointment.start)}</span></div></td><td><span class="client-status ${statusClass(status)}"><span></span>${statusLabels[status] || status.toUpperCase()}</span></td>`;
             tableBody.appendChild(row);
@@ -116,7 +114,7 @@
         timeline.replaceChildren();
         todayAppointments.forEach((appointment) => {
             const item = document.createElement("div");
-            const status = String(appointment.status || "pending").toLowerCase();
+            const status = String(appointment.status || "unknown").toLowerCase();
             item.className = `timeline-item ${statusClass(status)}`;
             item.innerHTML = `<span class="timeline-dot"></span><div><time>${formatTime(appointment.start)}</time><strong>${appointment.client || "Client"} - ${appointment.service || "Appointment"}</strong><small>${statusLabels[status] || status.toUpperCase()}</small></div>`;
             timeline.appendChild(item);
@@ -125,7 +123,7 @@
     }
 
     function renderBreakdown() {
-        const statuses = ["completed", "confirmed", "pending", "cancelled"];
+        const statuses = ["completed", "confirmed", "cancelled"];
         const breakdown = document.getElementById("dashboardBreakdown");
         breakdown.replaceChildren();
         statuses.forEach((status) => {

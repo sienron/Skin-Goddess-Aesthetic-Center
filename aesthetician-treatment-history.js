@@ -9,7 +9,6 @@
     if (!tableBody || !searchInput || !tableSummary || !notesModal || !notesModalClose || !notesModalTitle || !notesList) return;
 
     const statusLabels = {
-        pending: "PENDING",
         confirmed: "CONFIRMED",
         "in-progress": "IN PROGRESS",
         completed: "COMPLETED",
@@ -52,7 +51,7 @@
     }
 
     function statusClass(status) {
-        return `client-status--${String(status || "pending").toLowerCase().replace(/_/g, "-")}`;
+        return `client-status--${String(status || "unknown").toLowerCase().replace(/_/g, "-")}`;
     }
 
     function appendCell(row, value, className = "") {
@@ -65,7 +64,7 @@
     function appendStatusCell(row, status) {
         const cell = document.createElement("td");
         const badge = document.createElement("span");
-        const normalizedStatus = String(status || "pending").toLowerCase();
+        const normalizedStatus = String(status || "unknown").toLowerCase();
         badge.className = `client-status ${statusClass(normalizedStatus)}`;
         const dot = document.createElement("span");
         badge.append(dot, document.createTextNode(statusLabels[normalizedStatus] || normalizedStatus.toUpperCase()));
