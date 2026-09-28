@@ -83,6 +83,7 @@ const protectedPages = [
   { path: '/AestheticianDashboard.html', roles: ['aesthetician'] },
 
   { path: '/AdminDashboard.html', roles: ['admin'] },
+  { path: '/AdminAppointment.html', roles: ['admin'] },
   { path: '/Usermanagement.html', roles: ['admin'] },
 
   { path: '/InventoryDashboard.html', roles: ['inventory_officer'] },

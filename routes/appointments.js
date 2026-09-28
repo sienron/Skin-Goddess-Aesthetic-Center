@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const { requireRole } = require('../middleware/auth');
 const { createHmac, randomBytes, timingSafeEqual } = require('crypto');
 const { VALID_SLOTS, CLOSING_TIME, CLOSED_WEEKDAYS, MAX_ADVANCE_DAYS, MIN_BOOKING_LEAD_MINUTES, to24h, from24h, addMinutes, manilaNow, isSlotInPast, isSlotTooSoon } = require('../utils/slots');
 
@@ -109,6 +110,43 @@ function validNoteColor(value) {
 function validNoteText(value) {
   return typeof value === 'string' && value.length <= 5000 ? value : null;
 }
+
+router.get('/admin', requireRole('admin'), async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT a.appointment_id,
+             a.appointment_date::text AS date,
+             a.appointment_time::text AS start,
+             a.appointment_end_time::text AS end,
+             a.appointment_status AS status,
+             a.payment_status,
+             s.service_name AS service,
+             s.duration_minutes,
+             a.booked_service_price AS fee,
+             a.booked_reservation_fee AS deposit_amount,
+             CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')) AS client,
+             c.gender,
+             c.date_of_birth::text AS date_of_birth,
+             c.contact_number AS contact,
+             COALESCE(NULLIF(BTRIM(CONCAT_WS(' ', NULLIF(BTRIM(aesthetician.first_name), ''), NULLIF(BTRIM(aesthetician.last_name), ''))), ''), 'Unassigned') AS assigned_to,
+             (
+               SELECT COUNT(*)
+               FROM appointments previous
+               WHERE previous.user_id = a.user_id
+                 AND (previous.appointment_date, previous.appointment_time) < (a.appointment_date, a.appointment_time)
+             ) AS previous_appointment_count
+      FROM appointments a
+      JOIN users c ON c.user_id = a.user_id
+      JOIN services s ON s.service_id = a.service_id
+      LEFT JOIN users aesthetician ON aesthetician.user_id = a.aesthetician_id
+      ORDER BY a.appointment_date ASC, a.appointment_time ASC, a.appointment_id ASC
+    `);
+    return res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching admin appointments:', error);
+    return res.status(500).json({ message: 'Could not load appointments.' });
+  }
+});
 
 async function getAssignedAppointment(appointmentId, userId) {
   const result = await db.query(`
