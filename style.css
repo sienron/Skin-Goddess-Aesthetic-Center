@@ -8457,7 +8457,6 @@ body.services{
   .apt-modal__pills { width: 100%; }
 }
 
-<<<<<<< HEAD
 /* ---------- Admin inquiries ---------- */
 .inquiries-main { min-width: 0; }
 .inquiries-workspace { display: grid; grid-template-columns: minmax(280px, .9fr) minmax(0, 1.1fr); min-height: calc(100vh - 132px); border: 1px solid var(--um-border); background: #fff; }
@@ -8519,7 +8518,8 @@ body.services{
   .inquiry-filter { padding-right: 8px; padding-left: 8px; }
   .inquiry-list-heading { align-items: flex-start; flex-direction: column; gap: 3px; }
   .inquiry-detail-header h2 { font-size: 17px; }
-=======
+}
+
 .appt-cancellation-form {
   display: grid;
   gap: 8px;
@@ -8590,5 +8590,5 @@ body.services{
 .cancellation-requests-empty {
   padding: 24px;
   text-align: center;
->>>>>>> fe7a23c8b8211e82da54cc49dcd6872f7f8343a8
+}
 }
