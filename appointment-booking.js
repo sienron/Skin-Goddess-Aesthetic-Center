@@ -314,7 +314,11 @@
             const isSunday = date.getDay() === 0;
             const key = formatAvailabilityKey(viewYear, viewMonth, day);
             const daySlots = currentAvailability[key] || [];
-            const isSelectable = !isPast && !isSunday;
+
+            // Bookings close at 4 PM Manila time, so today stops being selectable past that cutoff.
+            const now = getManilaNow();
+            const isPastCutoffToday = isToday && (now.hour * 60 + now.minute) >= 16 * 60;
+            const isSelectable = !isPast && !isSunday && !isPastCutoffToday;
 
             if (isSelectable) {
                 cell.classList.add("available");
@@ -331,7 +335,7 @@
                 cell.classList.add("selected");
             }
 
-            if (!isSelectable && !isToday) {
+            if (!isSelectable) {
                 cell.classList.add("disabled");
             }
 
@@ -486,7 +490,14 @@ const key = formatAvailabilityKey(selectedDate.year, selectedDate.month, selecte
                 });
         }
 
+        function setDetailFieldsDisabled(disabled) {
+            [firstNameInput, lastNameInput, emailInput, phoneInput].forEach((input) => {
+                if (input) input.disabled = disabled;
+            });
+        }
+
         sameAsUserCheckbox.addEventListener("change", () => {
+            setDetailFieldsDisabled(sameAsUserCheckbox.checked);
             if (sameAsUserCheckbox.checked) {
                 autofillUserDetails();
             } else {
