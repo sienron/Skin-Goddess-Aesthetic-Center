@@ -6,13 +6,18 @@ const { createHmac, randomBytes, timingSafeEqual } = require('crypto');
 const { VALID_SLOTS, CLOSING_TIME, CLOSED_WEEKDAYS, MAX_ADVANCE_DAYS, MIN_BOOKING_LEAD_MINUTES, to24h, from24h, addMinutes, manilaNow, isSlotInPast, isSlotTooSoon } = require('../utils/slots');
 
 function getPayMongoConfig() {
-  if (process.env.NODE_ENV !== 'production') return null;
+  const isLive = process.env.NODE_ENV === 'production';
+  const secretKey = isLive
+    ? (process.env.PAYMONGO_LIVE_SECRET_KEY || process.env.PAYMONGO_SK)
+    : (process.env.PAYMONGO_TEST_SECRET_KEY || process.env.PAYMONGO_SK);
+  const webhookSecret = isLive
+    ? process.env.PAYMONGO_LIVE_WEBHOOK_SECRET
+    : process.env.PAYMONGO_TEST_WEBHOOK_SECRET;
+  const keyPrefix = isLive ? 'sk_live_' : 'sk_test_';
 
-  const secretKey = process.env.PAYMONGO_LIVE_SECRET_KEY || process.env.PAYMONGO_SK;
-  const webhookSecret = process.env.PAYMONGO_LIVE_WEBHOOK_SECRET;
-  if (!secretKey || !secretKey.startsWith('sk_live_') || !webhookSecret) return null;
+  if (!secretKey || !secretKey.startsWith(keyPrefix) || !webhookSecret) return null;
 
-  return { mode: 'live', isLive: true, secretKey, webhookSecret };
+  return { mode: isLive ? 'live' : 'test', isLive, secretKey, webhookSecret };
 }
 
 function payMongoSignatureIsValid(signatureHeader, rawBody, config) {
@@ -111,8 +116,22 @@ function validNoteText(value) {
   return typeof value === 'string' && value.length <= 5000 ? value : null;
 }
 
+function validRequestText(value, maxLength) {
+  return typeof value === 'string' && value.trim().length > 0 && value.length <= maxLength ? value.trim() : null;
+}
+
+async function markPastPendingAppointments() {
+  await db.query(`
+    UPDATE appointments
+    SET appointment_status = 'no_show'
+    WHERE appointment_status = 'pending'
+      AND appointment_date + appointment_end_time < (NOW() AT TIME ZONE 'Asia/Manila')
+  `);
+}
+
 router.get('/admin', requireRole('admin'), async (req, res) => {
   try {
+    await markPastPendingAppointments();
     const result = await db.query(`
       SELECT a.appointment_id,
              a.appointment_date::text AS date,
@@ -124,6 +143,10 @@ router.get('/admin', requireRole('admin'), async (req, res) => {
              s.duration_minutes,
              a.booked_service_price AS fee,
              a.booked_reservation_fee AS deposit_amount,
+             a.cancellation_request_status,
+             a.cancellation_reason,
+             a.cancellation_description,
+             a.cancellation_requested_at,
              CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')) AS client,
              c.gender,
              c.date_of_birth::text AS date_of_birth,
@@ -145,6 +168,44 @@ router.get('/admin', requireRole('admin'), async (req, res) => {
   } catch (error) {
     console.error('Error fetching admin appointments:', error);
     return res.status(500).json({ message: 'Could not load appointments.' });
+  }
+});
+
+router.get('/admin/cancellation-requests', requireRole('admin'), async (req, res) => {
+  try {
+    const result = await db.query(`
+            SELECT a.appointment_id, a.appointment_date::text AS date, a.appointment_time::text AS start,
+              a.appointment_status AS status, 'cancellation' AS request_type,
+              a.cancellation_reason AS request_reason, a.cancellation_description AS request_description,
+              a.cancellation_requested_at AS requested_at, NULL::text AS requested_date, NULL::text AS requested_time,
+             CONCAT_WS(' ', c.first_name, c.last_name) AS client,
+             CONCAT_WS(' ', aesthetician.first_name, aesthetician.last_name) AS aesthetician,
+             s.service_name AS service
+      FROM appointments a
+      JOIN users c ON c.user_id = a.user_id
+      JOIN users aesthetician ON aesthetician.user_id = a.aesthetician_id
+      JOIN services s ON s.service_id = a.service_id
+      WHERE a.cancellation_request_status = 'pending'
+      UNION ALL
+      SELECT a.appointment_id, a.appointment_date::text AS date, a.appointment_time::text AS start,
+             a.appointment_status AS status, 'reschedule' AS request_type,
+             a.reschedule_reason AS request_reason, a.reschedule_description AS request_description,
+             a.reschedule_requested_at AS requested_at, a.reschedule_requested_date::text AS requested_date,
+             a.reschedule_requested_time::text AS requested_time,
+             CONCAT_WS(' ', c.first_name, c.last_name) AS client,
+             CONCAT_WS(' ', aesthetician.first_name, aesthetician.last_name) AS aesthetician,
+             s.service_name AS service
+      FROM appointments a
+      JOIN users c ON c.user_id = a.user_id
+      JOIN users aesthetician ON aesthetician.user_id = a.aesthetician_id
+      JOIN services s ON s.service_id = a.service_id
+      WHERE a.reschedule_request_status = 'pending'
+      ORDER BY requested_at ASC, appointment_id ASC
+    `);
+    return res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching cancellation requests:', error);
+    return res.status(500).json({ message: 'Could not load cancellation requests.' });
   }
 });
 
@@ -393,7 +454,7 @@ async function getValidatedBooking(userId, body, res) {
 function findAvailableAestheticians(queryClient, booking) {
   return queryClient.query(`
     SELECT u.user_id FROM users u
-    WHERE u.role = 'aesthetician' AND u.email_verified = TRUE
+    WHERE u.role = 'aesthetician' AND u.status = 'active' AND u.email_verified = TRUE
       AND NOT EXISTS (
         SELECT 1 FROM appointments a
         WHERE a.aesthetician_id = u.user_id
@@ -413,6 +474,7 @@ router.get('/mine', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ message: 'You must be logged in.' });
 
   try {
+    await markPastPendingAppointments();
     const userResult = await db.query('SELECT role FROM users WHERE user_id = $1', [req.session.userId]);
     if (userResult.rows.length === 0) return res.status(401).json({ message: 'Your session is no longer valid. Please log in again.' });
 
@@ -429,6 +491,14 @@ router.get('/mine', async (req, res) => {
                s.service_name AS service,
                a.booked_service_price AS fee,
                a.booked_reservation_fee AS deposit_amount,
+               a.cancellation_request_status,
+               a.cancellation_reason,
+               a.cancellation_description,
+               a.reschedule_request_status,
+               a.reschedule_requested_date::text AS reschedule_requested_date,
+               a.reschedule_requested_time::text AS reschedule_requested_time,
+               a.reschedule_reason,
+               a.reschedule_description,
                a.user_id AS client_id,
                COALESCE(CONCAT(c.first_name, ' ', c.last_name), 'Client') AS client,
                c.email AS client_email,
@@ -519,6 +589,7 @@ router.post('/:id/cancel', async (req, res) => {
     const isClient = appointment.user_id === req.session.userId;
     const isAssignedAesthetician = appointment.aesthetician_id === req.session.userId;
     if (!isClient && !isAssignedAesthetician) return res.status(403).json({ message: 'You cannot cancel this appointment.' });
+    if (isAssignedAesthetician && !isClient) return res.status(400).json({ message: 'Aesthetician cancellations require an admin-approved cancellation request.' });
     if (!['pending', 'confirmed'].includes(appointment.appointment_status)) return res.status(400).json({ message: 'Only pending or confirmed appointments can be cancelled.' });
     const minutesToAppointment = minutesUntil(appointment.appointment_date, appointment.appointment_time, manilaNow());
     if (minutesToAppointment <= 0) return res.status(400).json({ message: 'Appointments that have already started cannot be cancelled.' });
@@ -529,6 +600,116 @@ router.post('/:id/cancel', async (req, res) => {
   } catch (error) {
     console.error('Error cancelling appointment:', error);
     return res.status(500).json({ message: 'Could not cancel appointment.' });
+  }
+});
+
+router.post('/:id/cancellation-request', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ message: 'You must be logged in.' });
+  const appointmentId = validAppointmentId(req.params.id);
+  if (!appointmentId) return res.status(400).json({ message: 'Choose a valid appointment.' });
+  const body = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
+  const reason = validRequestText(body.reason, 255);
+  const description = validRequestText(body.description, 2000);
+  if (!reason || !description) return res.status(400).json({ message: 'Reason and description are required.' });
+
+  try {
+    const result = await db.query(`
+      SELECT appointment_id, aesthetician_id, appointment_status, cancellation_request_status
+      FROM appointments WHERE appointment_id = $1
+    `, [appointmentId]);
+    if (result.rows.length === 0) return res.status(404).json({ message: 'Appointment not found.' });
+    const appointment = result.rows[0];
+    if (appointment.aesthetician_id !== req.session.userId) return res.status(403).json({ message: 'Only the assigned aesthetician can request cancellation.' });
+    if (!['pending', 'confirmed'].includes(appointment.appointment_status)) return res.status(400).json({ message: 'Only pending or confirmed appointments can be cancelled.' });
+    if (appointment.cancellation_request_status) return res.status(409).json({ message: 'A cancellation request has already been submitted for this appointment.' });
+
+    await db.query(`
+      UPDATE appointments
+      SET cancellation_request_status = 'pending', cancellation_reason = $1,
+          cancellation_description = $2, cancellation_requested_by = $3,
+          cancellation_requested_at = NOW(), cancellation_reviewed_by = NULL,
+          cancellation_reviewed_at = NULL
+      WHERE appointment_id = $4
+    `, [reason, description, req.session.userId, appointmentId]);
+    return res.json({ message: 'Cancellation request sent to the admin.' });
+  } catch (error) {
+    console.error('Error creating cancellation request:', error);
+    return res.status(500).json({ message: 'Could not send cancellation request.' });
+  }
+});
+
+router.post('/:id/cancellation-request/review', requireRole('admin'), async (req, res) => {
+  const appointmentId = validAppointmentId(req.params.id);
+  if (!appointmentId) return res.status(400).json({ message: 'Choose a valid appointment.' });
+  const decision = req.body && req.body.decision;
+  const requestType = req.body && req.body.requestType;
+  if (!['allow', 'reject'].includes(decision)) return res.status(400).json({ message: 'Choose allow or reject.' });
+  if (!['cancellation', 'reschedule'].includes(requestType)) return res.status(400).json({ message: 'Choose a valid request type.' });
+
+  try {
+    const result = await db.query(`
+      SELECT appointment_status, service_id, cancellation_request_status,
+             reschedule_request_status, reschedule_requested_date,
+             reschedule_requested_time, reschedule_requested_end_time
+      FROM appointments WHERE appointment_id = $1
+    `, [appointmentId]);
+    if (result.rows.length === 0) return res.status(404).json({ message: 'Appointment not found.' });
+    const appointment = result.rows[0];
+    const requestStatus = requestType === 'cancellation' ? appointment.cancellation_request_status : appointment.reschedule_request_status;
+    if (requestStatus !== 'pending') return res.status(400).json({ message: 'This request is no longer pending.' });
+
+    if (requestType === 'reschedule' && decision === 'allow') {
+      await db.query(`
+        UPDATE appointments
+        SET appointment_date = reschedule_requested_date,
+            appointment_time = reschedule_requested_time,
+            appointment_end_time = reschedule_requested_end_time,
+            reschedule_request_status = 'approved', reschedule_reviewed_by = $1,
+            reschedule_reviewed_at = NOW()
+        WHERE appointment_id = $2
+      `, [req.session.userId, appointmentId]);
+    } else if (requestType === 'reschedule') {
+      await db.query(`
+        UPDATE appointments
+        SET reschedule_request_status = 'rejected', reschedule_reviewed_by = $1,
+            reschedule_reviewed_at = NOW()
+        WHERE appointment_id = $2
+      `, [req.session.userId, appointmentId]);
+    } else {
+      const nextStatus = decision === 'allow' ? 'cancelled' : appointment.appointment_status;
+      await db.query(`
+        UPDATE appointments
+        SET appointment_status = $1, cancellation_request_status = $2,
+            cancellation_reviewed_by = $3, cancellation_reviewed_at = NOW()
+        WHERE appointment_id = $4
+      `, [nextStatus, decision === 'allow' ? 'approved' : 'rejected', req.session.userId, appointmentId]);
+    }
+    const label = requestType === 'reschedule' ? 'Reschedule' : 'Cancellation';
+    return res.json({ message: decision === 'allow' ? `${label} allowed.` : `${label} request rejected.` });
+  } catch (error) {
+    console.error('Error reviewing cancellation request:', error);
+    return res.status(500).json({ message: 'Could not review cancellation request.' });
+  }
+});
+
+router.post('/:id/finish', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ message: 'You must be logged in.' });
+  const appointmentId = validAppointmentId(req.params.id);
+  if (!appointmentId) return res.status(400).json({ message: 'Choose a valid appointment.' });
+  try {
+    const result = await db.query(`
+      SELECT appointment_date::text AS appointment_date, appointment_status
+      FROM appointments
+      WHERE appointment_id = $1 AND aesthetician_id = $2
+    `, [appointmentId, req.session.userId]);
+    if (result.rows.length === 0) return res.status(404).json({ message: 'Appointment not found.' });
+    if (result.rows[0].appointment_date !== manilaNow().dateStr) return res.status(400).json({ message: 'An appointment can only be finished on its scheduled date.' });
+    if (!['pending', 'confirmed'].includes(result.rows[0].appointment_status)) return res.status(400).json({ message: 'Only pending or confirmed appointments can be finished.' });
+    await db.query(`UPDATE appointments SET appointment_status = 'completed' WHERE appointment_id = $1`, [appointmentId]);
+    return res.json({ message: 'Appointment marked as completed.' });
+  } catch (error) {
+    console.error('Error finishing appointment:', error);
+    return res.status(500).json({ message: 'Could not finish appointment.' });
   }
 });
 
@@ -547,8 +728,8 @@ router.post('/:id/reschedule', async (req, res) => {
 
   try {
     const result = await db.query(`
-      SELECT a.appointment_id, a.user_id, a.aesthetician_id, a.service_id,
-             a.appointment_status, s.duration_minutes
+            SELECT a.appointment_id, a.user_id, a.aesthetician_id, a.service_id,
+              a.appointment_status, a.reschedule_request_status, s.duration_minutes
       FROM appointments a
       JOIN services s ON s.service_id = a.service_id
       WHERE a.appointment_id = $1
@@ -561,6 +742,15 @@ router.post('/:id/reschedule', async (req, res) => {
     }
     if (!['pending', 'confirmed'].includes(appointment.appointment_status)) {
       return res.status(400).json({ message: 'Only pending or confirmed appointments can be rescheduled.' });
+    }
+    const isAssignedAesthetician = appointment.aesthetician_id === req.session.userId;
+    const reason = validRequestText(body.reason, 255);
+    const description = validRequestText(body.description, 2000);
+    if (isAssignedAesthetician && appointment.reschedule_request_status) {
+      return res.status(409).json({ message: 'A reschedule request has already been submitted for this appointment.' });
+    }
+    if (isAssignedAesthetician && (!reason || !description)) {
+      return res.status(400).json({ message: 'Reason and description are required for a reschedule request.' });
     }
 
     const now = manilaNow();
@@ -575,6 +765,19 @@ router.post('/:id/reschedule', async (req, res) => {
     const appointmentEndTime = addMinutes(appointmentTime, Number(appointment.duration_minutes));
     if (!appointmentEndTime || appointmentEndTime > CLOSING_TIME) {
       return res.status(400).json({ message: 'This service does not fit within operating hours at the selected time.' });
+    }
+
+    if (isAssignedAesthetician) {
+      await db.query(`
+        UPDATE appointments
+        SET reschedule_request_status = 'pending', reschedule_requested_date = $1,
+            reschedule_requested_time = $2, reschedule_requested_end_time = $3,
+            reschedule_reason = $4, reschedule_description = $5,
+            reschedule_requested_by = $6, reschedule_requested_at = NOW(),
+            reschedule_reviewed_by = NULL, reschedule_reviewed_at = NULL
+        WHERE appointment_id = $7
+      `, [appointmentDate, appointmentTime, appointmentEndTime, reason, description, req.session.userId, appointmentId]);
+      return res.json({ message: 'Reschedule request sent to the admin.' });
     }
 
     await db.query(`
@@ -778,7 +981,11 @@ router.post('/paymongo/confirm', async (req, res) => {
       }
 
       await client.query(`UPDATE appointments SET appointment_status = 'cancelled' WHERE appointment_status = 'pending' AND payment_status = 'unpaid' AND created_at < NOW() - INTERVAL '30 minutes'`);
-      const candidates = await findAvailableAestheticians(client, payment);
+      const candidates = await findAvailableAestheticians(client, {
+        appointmentDate: payment.appointment_date,
+        appointmentTime: payment.appointment_time,
+        appointmentEndTime: payment.appointment_end_time,
+      });
 
       for (const candidate of candidates.rows) {
         await client.query('SAVEPOINT appointment_candidate');

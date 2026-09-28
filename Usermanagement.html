@@ -54,22 +54,21 @@
         <p class="um-header__subtitle">Create, view, update, and delete system users and client accounts</p>
       </div>
       <div class="um-header__actions">
+        <div class="admin-notification-wrap">
+          <button class="admin-notification-btn" id="adminNotificationBtn" type="button" aria-label="View notifications" aria-haspopup="true" aria-expanded="false" aria-controls="adminNotificationDropdown">
+            <img src="icons/notification-bell.svg" alt="">
+          </button>
+          <div class="admin-notification-dropdown" id="adminNotificationDropdown">
+            <strong>Notifications</strong>
+            <div class="admin-notification-list">No notifications yet</div>
+          </div>
+        </div>
         <div class="um-search">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <input type="text" id="umSearchInput" placeholder="Search users...">
         </div>
         <!-- um-header__actions-row wraps the button group so it can wrap onto its own line on narrow screens -->
         <div class="um-header__actions-row">
-
-        <div class="um-filter-wrap">
-          <button class="um-btn um-btn--ghost" id="umFilterBtn" type="button">Filter</button>
-          <div class="um-filter-panel" id="umFilterPanel">
-            <p class="um-filter-panel__label">STATUS</p>
-            <label><input type="radio" name="umStatusFilter" value="ALL" checked> All</label>
-            <label><input type="radio" name="umStatusFilter" value="active"> Active</label>
-            <label><input type="radio" name="umStatusFilter" value="suspended"> Suspended</label>
-          </div>
-        </div>
 
         <button class="um-btn um-btn--ghost" id="umExportBtn" type="button">Export</button>
         <button class="um-btn um-btn--primary" id="umCreateBtn" type="button">+ Create New User</button>
@@ -289,6 +288,7 @@
 </div>
 
 <script src="Usermanagement.js"></script>
+<script src="admin-notifications.js"></script>
 </body>
 </html>
 

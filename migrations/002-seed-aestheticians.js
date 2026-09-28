@@ -5,7 +5,6 @@ const db = require('../db');
 
 const AESTHETICIANS = [
   { email: 'geraselragudo123@gmail.com', firstName: 'Gerase', lastName: 'Ragudo' },
-  { email: 'loidadeguzman123@gmail.com', firstName: 'Loida', lastName: 'De Guzman' },
 ];
 
 async function seedAestheticians() {

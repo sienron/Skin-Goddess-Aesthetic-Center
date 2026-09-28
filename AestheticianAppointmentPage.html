@@ -97,8 +97,6 @@
                             href="AestheticianAppointmentPage.html">Appointments</a></li>
                     <li class="nav-item"><img src="icons/circle.svg" alt="bullet" class="nav-bullet"><a
                             href="AestheticianTreatmentHistory.html">Treatment History</a></li>
-                    <li class="nav-item"><img src="icons/circle.svg" alt="bullet" class="nav-bullet"><a href="#">My
-                            Rating</a></li>
                 </ul>
             </nav>
 
@@ -287,11 +285,6 @@
                     </div>
                 </div>
 
-                <div class="appt-modal-remarks">
-                    <span class="appt-field-label">REMARKS &amp; NOTES</span>
-                    <p id="apptModalRemarks"></p>
-                </div>
-
                 <p class="appt-action-message" id="apptActionMessage" role="status" aria-live="polite"></p>
                 <form class="appt-reschedule-form" id="apptRescheduleForm" hidden>
                     <label for="apptRescheduleDate">New date</label>
@@ -306,12 +299,24 @@
                         <option value="15:00">3:00 PM</option>
                         <option value="16:00">4:00 PM</option>
                     </select>
+                    <label for="apptRescheduleReason">Reason</label>
+                    <input type="text" name="reason" id="apptRescheduleReason" maxlength="255">
+                    <label for="apptRescheduleDescription">Description</label>
+                    <textarea name="description" id="apptRescheduleDescription" maxlength="2000" rows="4"></textarea>
                     <button class="modal-btn modal-btn-reschedule" type="submit">Save new time</button>
+                </form>
+                <form class="appt-cancellation-form" id="apptCancellationForm" hidden>
+                    <label for="apptCancellationReason">Reason</label>
+                    <input type="text" name="reason" id="apptCancellationReason" maxlength="255" required>
+                    <label for="apptCancellationDescription">Description</label>
+                    <textarea name="description" id="apptCancellationDescription" maxlength="2000" rows="4" required></textarea>
+                    <button class="modal-btn modal-btn-cancel" type="submit">Send cancellation request</button>
                 </form>
 
                 <div class="appt-modal-actions">
                     <button class="modal-btn modal-btn-cancel" id="apptModalCancelBtn">Cancel</button>
                     <button class="modal-btn modal-btn-reschedule" id="apptModalRescheduleBtn">Reschedule</button>
+                    <button class="modal-btn modal-btn-finish" id="apptModalFinishBtn">Finish</button>
                 </div>
             </div>
         </div>
@@ -320,6 +325,7 @@
     <script src="header.js"></script>
     <script src="appointment-modal.js"></script>
     <script src="appointments-aesthetician.js"></script>
+    <script src="aesthetician-rating.js"></script>
     <script src="treatment-notes.js"></script>
 </body>
 

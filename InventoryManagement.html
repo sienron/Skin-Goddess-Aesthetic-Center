@@ -102,6 +102,15 @@
         </div>
 
         <div class="header-actions">
+            <div class="admin-notification-wrap">
+                <button class="admin-notification-btn" id="adminNotificationBtn" type="button" aria-label="View notifications" aria-haspopup="true" aria-expanded="false" aria-controls="adminNotificationDropdown">
+                    <img src="icons/notification-bell.svg" alt="">
+                </button>
+                <div class="admin-notification-dropdown" id="adminNotificationDropdown">
+                    <strong>Notifications</strong>
+                    <div class="admin-notification-list">No notifications yet</div>
+                </div>
+            </div>
          
             <button class="btn btn-batch-upload">
                 <img class = "ocr-img" src="images/OCRImg.png" alt="OCR LOGO">  
@@ -961,6 +970,7 @@
         </div>
 
     <script src="InventoryManagement.js"></script>
+    <script src="admin-notifications.js"></script>
 
 </body>
 </html>

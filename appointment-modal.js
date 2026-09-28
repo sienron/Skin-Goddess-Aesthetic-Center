@@ -29,7 +29,9 @@ const apptModalTopbar = document.getElementById("apptModalTopbar");
 const apptModalClose = document.getElementById("apptModalClose");
 const apptModalCancelBtn = document.getElementById("apptModalCancelBtn");
 const apptModalRescheduleBtn = document.getElementById("apptModalRescheduleBtn");
+const apptModalFinishBtn = document.getElementById("apptModalFinishBtn");
 const apptRescheduleForm = document.getElementById("apptRescheduleForm");
+const apptCancellationForm = document.getElementById("apptCancellationForm");
 const apptActionMessage = document.getElementById("apptActionMessage");
 
 function getInitials(name) {
@@ -64,6 +66,8 @@ function normalizeAppt(appt) {
     appointment.depositAmount = appointment.depositAmount ?? appointment.deposit_amount ?? appointment.booked_reservation_fee ?? appointment.reservation_fee;
     appointment.contact = appointment.contact ?? appointment.contact_number ?? "—";
     appointment.remarks = appointment.remarks ?? appointment.notes ?? "No notes yet.";
+    appointment.cancellationRequestStatus = appointment.cancellationRequestStatus ?? appointment.cancellation_request_status;
+    appointment.rescheduleRequestStatus = appointment.rescheduleRequestStatus ?? appointment.reschedule_request_status;
     appointment.apptNumber = appointment.apptNumber ?? appointment.appt_number ?? appointment.id;
     return appointment;
 }
@@ -80,6 +84,15 @@ function formatPeso(amount) {
     const n = Number(amount);
     if (isNaN(n)) return "—";
     return `₱${n.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+async function readApiResponse(response) {
+    const bodyText = await response.text();
+    try {
+        return bodyText ? JSON.parse(bodyText) : {};
+    } catch (_) {
+        return { message: response.ok ? "The server returned an invalid response." : `Request failed (${response.status}). Please sign in again.` };
+    }
 }
 
 function openApptModal(appt) {
@@ -117,17 +130,24 @@ function openApptModal(appt) {
     document.getElementById("apptModalDeposit").textContent = depositText;
     document.getElementById("apptModalContact").textContent = normalizedAppt.contact || "—";
 
-    document.getElementById("apptModalRemarks").textContent = normalizedAppt.remarks || "No notes yet.";
-
     apptModalCancelBtn.dataset.apptId = normalizedAppt.id;
     apptModalRescheduleBtn.dataset.apptId = normalizedAppt.id;
+    if (apptModalFinishBtn) apptModalFinishBtn.dataset.apptId = normalizedAppt.id;
     const canManageAppointment = ["pending", "confirmed"].includes(normalizedAppt.status);
-    apptModalCancelBtn.disabled = !canManageAppointment;
-    apptModalRescheduleBtn.disabled = !canManageAppointment;
+    const manilaToday = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+    apptModalCancelBtn.disabled = !canManageAppointment || Boolean(normalizedAppt.cancellationRequestStatus);
+    apptModalRescheduleBtn.disabled = !canManageAppointment || Boolean(normalizedAppt.rescheduleRequestStatus);
+    if (apptModalFinishBtn) apptModalFinishBtn.disabled = !canManageAppointment || normalizedAppt.date !== manilaToday;
     if (apptRescheduleForm) {
         apptRescheduleForm.hidden = true;
         apptRescheduleForm.elements.date.value = normalizedAppt.date || "";
         apptRescheduleForm.elements.time.value = (normalizedAppt.start || "").slice(0, 5);
+        if (apptRescheduleForm.elements.reason) apptRescheduleForm.elements.reason.value = "";
+        if (apptRescheduleForm.elements.description) apptRescheduleForm.elements.description.value = "";
+    }
+    if (apptCancellationForm) {
+        apptCancellationForm.hidden = true;
+        apptCancellationForm.reset();
     }
     if (apptActionMessage) apptActionMessage.textContent = "";
 
@@ -154,25 +174,56 @@ if (apptModalOverlay) {
         }
     });
 
-    apptModalCancelBtn.addEventListener("click", async () => {
-        if (!window.confirm("Cancel this appointment? This cannot be undone.")) return;
-        apptModalCancelBtn.disabled = true;
-        if (apptActionMessage) apptActionMessage.textContent = "Cancelling appointment...";
+    apptModalCancelBtn.addEventListener("click", () => {
+        if (!apptCancellationForm) return;
+        apptCancellationForm.hidden = !apptCancellationForm.hidden;
+        if (apptRescheduleForm) apptRescheduleForm.hidden = true;
+        if (apptActionMessage) apptActionMessage.textContent = "";
+    });
+
+    apptCancellationForm?.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const submitButton = apptCancellationForm.querySelector("[type=submit]");
+        submitButton.disabled = true;
+        if (apptActionMessage) apptActionMessage.textContent = "Sending cancellation request...";
         try {
-            const response = await fetch(`/api/appointments/${apptModalCancelBtn.dataset.apptId}/cancel`, { method: "POST" });
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.message || "Could not cancel appointment.");
+            const response = await fetch(`/api/appointments/${apptModalCancelBtn.dataset.apptId}/cancellation-request`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    reason: apptCancellationForm.elements.reason.value,
+                    description: apptCancellationForm.elements.description.value,
+                }),
+            });
+            const data = await readApiResponse(response);
+            if (!response.ok) throw new Error(data.message || "Could not send cancellation request.");
             closeApptModal();
             if (typeof refreshAestheticianAppointments === "function") await refreshAestheticianAppointments();
         } catch (error) {
             if (apptActionMessage) apptActionMessage.textContent = error.message;
-            apptModalCancelBtn.disabled = false;
+            submitButton.disabled = false;
+        }
+    });
+
+    apptModalFinishBtn?.addEventListener("click", async () => {
+        apptModalFinishBtn.disabled = true;
+        if (apptActionMessage) apptActionMessage.textContent = "Finishing appointment...";
+        try {
+            const response = await fetch(`/api/appointments/${apptModalFinishBtn.dataset.apptId}/finish`, { method: "POST" });
+            const data = await readApiResponse(response);
+            if (!response.ok) throw new Error(data.message || "Could not finish appointment.");
+            closeApptModal();
+            if (typeof refreshAestheticianAppointments === "function") await refreshAestheticianAppointments();
+        } catch (error) {
+            if (apptActionMessage) apptActionMessage.textContent = error.message;
+            apptModalFinishBtn.disabled = false;
         }
     });
 
     apptModalRescheduleBtn.addEventListener("click", () => {
         if (!apptRescheduleForm) return;
         apptRescheduleForm.hidden = !apptRescheduleForm.hidden;
+        if (apptCancellationForm) apptCancellationForm.hidden = true;
         if (apptActionMessage) apptActionMessage.textContent = "";
     });
 
@@ -187,10 +238,12 @@ if (apptModalOverlay) {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     date: apptRescheduleForm.elements.date.value,
-                    time: apptRescheduleForm.elements.time.value
+                    time: apptRescheduleForm.elements.time.value,
+                    reason: apptRescheduleForm.elements.reason?.value || "",
+                    description: apptRescheduleForm.elements.description?.value || ""
                 })
             });
-            const data = await response.json();
+            const data = await readApiResponse(response);
             if (!response.ok) throw new Error(data.message || "Could not reschedule appointment.");
             closeApptModal();
             if (typeof refreshAestheticianAppointments === "function") await refreshAestheticianAppointments();

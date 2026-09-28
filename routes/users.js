@@ -183,6 +183,17 @@ router.post('/', async (req, res) => {
   const lastName = rest.join(' ') || '';
 
   try {
+    if (role === 'aesthetician' && (status || 'active') === 'active') {
+      const activeAesthetician = await db.query(
+        `SELECT user_id FROM users
+         WHERE role = 'aesthetician' AND status = 'active' AND email_verified = TRUE
+         LIMIT 1`
+      );
+      if (activeAesthetician.rows.length > 0) {
+        return res.status(409).json({ message: 'Only one active aesthetician can be assigned appointments.' });
+      }
+    }
+
     const existing = await db.query('SELECT user_id FROM users WHERE LOWER(email) = $1', [normalizedEmail]);
     if (existing.rows.length > 0) {
       return res.status(409).json({ message: 'This email is already registered.' });
@@ -287,6 +298,22 @@ router.patch('/:id/status', async (req, res) => {
   }
 
   try {
+    const target = await db.query('SELECT role FROM users WHERE user_id = $1', [req.params.id]);
+    if (target.rows.length === 0) return res.status(404).json({ message: 'User not found.' });
+
+    if (status === 'active' && target.rows[0].role === 'aesthetician') {
+      const activeAesthetician = await db.query(
+        `SELECT user_id FROM users
+         WHERE role = 'aesthetician' AND status = 'active' AND email_verified = TRUE
+           AND user_id <> $1
+         LIMIT 1`,
+        [req.params.id]
+      );
+      if (activeAesthetician.rows.length > 0) {
+        return res.status(409).json({ message: 'Only one active aesthetician can be assigned appointments.' });
+      }
+    }
+
     const result = await db.query(
       `UPDATE users SET status = $1, updated_at = NOW() WHERE user_id = $2
        RETURNING user_id, first_name, last_name, email, role, status, gender,

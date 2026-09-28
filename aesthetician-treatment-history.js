@@ -210,7 +210,7 @@
         if (visibleAppointments.length === 0) {
             const row = document.createElement("tr");
             const cell = document.createElement("td");
-            cell.colSpan = 13;
+            cell.colSpan = 12;
             cell.className = "clients-table-message";
             cell.textContent = appointments.length === 0 ? "No recent appointments." : "No appointments match your search.";
             row.appendChild(cell);
@@ -229,7 +229,6 @@
                 appendCell(row, formatCurrency(appointment.fee));
                 appendCell(row, formatCurrency(appointment.depositAmount));
                 appendCell(row, appointment.aesthetician);
-                appendCell(row, appointment.remarks);
                 appendNotesButtonCell(row, appointment);
                 tableBody.appendChild(row);
             });
@@ -269,7 +268,7 @@
             tableBody.innerHTML = "";
             const row = document.createElement("tr");
             const cell = document.createElement("td");
-            cell.colSpan = 13;
+            cell.colSpan = 12;
             cell.className = "clients-table-message";
             cell.textContent = error.message;
             row.appendChild(cell);

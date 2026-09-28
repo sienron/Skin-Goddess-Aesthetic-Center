@@ -46,7 +46,7 @@ router.get('/', async (req, res) => {
     const serviceResult = await db.query('SELECT duration_minutes FROM services WHERE service_id = $1 AND is_active = TRUE', [serviceId]);
     if (serviceResult.rows.length === 0) return res.status(404).json({ message: 'Service not found.' });
     const duration = Number(serviceResult.rows[0].duration_minutes);
-    const aestheticians = await db.query("SELECT user_id FROM users WHERE role = 'aesthetician' AND email_verified = TRUE ORDER BY user_id");
+    const aestheticians = await db.query("SELECT user_id FROM users WHERE role = 'aesthetician' AND status = 'active' AND email_verified = TRUE ORDER BY user_id");
     if (aestheticians.rows.length === 0) return res.json({});
 
     const firstDate = formatDate(year, month, 1);
