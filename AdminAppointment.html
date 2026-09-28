@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Appointment — Skin Goddess Aesthetic Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="um-shell">
+
+    <!-- Mobile-only hamburger + overlay (handled by admin-dashboard.js) -->
+    <button class="um-sidebar-toggle um-sidebar-toggle--admin" id="umSidebarToggle" type="button" aria-label="Toggle menu" aria-expanded="false">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+    <div class="um-sidebar-overlay" id="umSidebarOverlay"></div>
+
+    <!-- ============ SIDEBAR ============ -->
+    <aside class="um-sidebar" id="umSidebar">
+      <a href="Dashboard.html" class="um-sidebar__logo">
+        <div class="logo-container">
+          <img id="logo" src="images/logo_horizontal.jpg" alt="Skin Goddess Aesthetic Center logo">
+        </div>
+      </a>
+
+      <p class="um-sidebar__label">MAIN MENU</p>
+      <nav class="um-sidebar__nav">
+        <a href="AdminDashboard.html" class="um-nav-link">Dashboard</a>
+        <a href="AdminAppointment.html" class="um-nav-link um-nav-link--active">Appointments</a>
+        <a href="Inventory.html" class="um-nav-link">Inventory</a>
+        <a href="Reports.html" class="um-nav-link">Reports</a>
+        <a href="Usermanagement.html" class="um-nav-link">User Management</a>
+        <a href="ContentManagement.html" class="um-nav-link">Content Management</a>
+      </nav>
+
+      <div class="um-sidebar__account">
+        <div class="um-avatar">A</div>
+        <div>
+          <p class="um-sidebar__account-name">Admin User</p>
+          <p class="um-sidebar__account-role">Owner</p>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ===== MAIN CONTENT ===== -->
+    <div class="um-main" id="appointmentsMain">
+
+      <header class="um-header">
+        <div>
+          <h1 class="um-header__title">Appointment Management</h1>
+          <p class="um-header__subtitle">View, manage, and track all client appointments</p>
+        </div>
+
+        <div class="um-header__actions">
+          <div class="um-search">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="text" id="aptSearchInput" placeholder="Search appointments..." aria-label="Search appointments">
+          </div>
+          <div class="um-header__actions-row">
+            <button class="um-btn um-btn--ghost" id="filterBtn" type="button">Filter</button>
+            <button class="um-btn um-btn--ghost" id="exportBtn" type="button">Export</button>
+            <button class="um-btn um-btn--primary" id="newAppointmentBtn" type="button">+ New Appointment</button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Live appointment summary -->
+      <section class="um-stats apt-stats" aria-label="Appointment summary">
+        <article class="um-stat-card">
+          <p class="um-stat-card__label">TODAY'S APPOINTMENTS</p>
+          <button class="apt-stat-link" type="button" data-apt-filter="today">View</button>
+          <p class="um-stat-card__value" id="aptTodayCount">0</p>
+          <p class="um-stat-card__hint um-stat-card__hint--positive">Scheduled for today</p>
+        </article>
+        <article class="um-stat-card">
+          <p class="um-stat-card__label">CONFIRMED</p>
+          <button class="apt-stat-link" type="button" data-apt-filter="confirmed">View</button>
+          <p class="um-stat-card__value" id="aptConfirmedCount">0</p>
+          <p class="um-stat-card__hint um-stat-card__hint--positive">Current appointments</p>
+        </article>
+        <article class="um-stat-card">
+          <p class="um-stat-card__label">PENDING</p>
+          <button class="apt-stat-link" type="button" data-apt-filter="pending">View</button>
+          <p class="um-stat-card__value" id="aptPendingCount">0</p>
+          <p class="um-stat-card__hint apt-hint--warn">Awaiting confirmation</p>
+        </article>
+        <article class="um-stat-card">
+          <p class="um-stat-card__label">CANCELLED APPOINTMENTS</p>
+          <button class="apt-stat-link" type="button" id="aptCancelledViewBtn" aria-haspopup="dialog">View</button>
+          <p class="um-stat-card__value" id="aptCancelledCount">0</p>
+          <p class="um-stat-card__hint um-stat-card__hint--negative">All recorded cancellations</p>
+        </article>
+      </section>
+
+      <div class="apt-layout">
+
+        <!-- ===== Appointments table ===== -->
+        <section class="apt-card" id="aptTableCard" aria-label="All appointments">
+          <div class="apt-toolbar">
+            <div class="um-tabs" id="aptTabs">
+              <button class="um-tab um-tab--active" type="button" data-status="all" data-label="ALL">ALL</button>
+              <button class="um-tab" type="button" data-status="confirmed" data-label="CONFIRMED">CONFIRMED</button>
+              <button class="um-tab" type="button" data-status="in-progress" data-label="IN PROGRESS">IN PROGRESS</button>
+              <button class="um-tab" type="button" data-status="pending" data-label="PENDING">PENDING</button>
+              <button class="um-tab" type="button" data-status="completed" data-label="COMPLETED">COMPLETED</button>
+              <button class="um-tab" type="button" data-status="cancelled" data-label="CANCELLED">CANCELLED</button>
+              <button class="um-tab" type="button" data-status="no-show" data-label="NO SHOW">NO SHOW</button>
+            </div>
+
+            <div class="apt-toolbar__tools">
+              <button class="apt-chip" id="aptTodayChip" type="button" hidden>Today &times;</button>
+              <button class="apt-date-range" id="aptDateRange" type="button">
+                <span id="aptDateRangeLabel"></span>
+                <span aria-hidden="true">▾</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="apt-table-wrap">
+            <table class="apt-table">
+              <thead>
+                <tr>
+                  <th>REF NO.</th>
+                  <th>CLIENT</th>
+                  <th>SERVICE</th>
+                  <th>DATE &amp; TIME</th>
+                  <th>ASSIGNED TO</th>
+                  <th>STATUS</th>
+                  <th>ACTION</th>
+                </tr>
+              </thead>
+              <tbody id="aptTableBody"></tbody>
+            </table>
+          </div>
+
+          <div class="um-table-footer">
+            <span id="aptFooterText">Showing 0 of 0 appointments</span>
+            <div class="um-pagination" id="aptPagination"></div>
+          </div>
+        </section>
+
+        <!-- ===== Live appointment insights ===== -->
+        <aside class="apt-side" aria-label="Appointment insights">
+
+          <section class="apt-side-card">
+            <div class="apt-side-head">
+              <h2 class="apt-side-title">TODAY'S TIMELINE</h2>
+              <span class="apt-side-meta" id="aptTimelineDate"></span>
+            </div>
+            <ol class="apt-timeline" id="aptTimelineList">
+              <li class="apt-timeline__item">Loading appointments…</li>
+            </ol>
+          </section>
+
+          <section class="apt-side-card">
+            <div class="apt-side-head">
+              <h2 class="apt-side-title">STATUS BREAKDOWN</h2>
+              <span class="apt-side-meta">This month</span>
+            </div>
+            <div class="apt-breakdown" id="aptBreakdown">
+              <p class="apt-sub">Loading appointment statuses…</p>
+            </div>
+            <div class="apt-total">
+              <span>Total appointments</span>
+              <strong id="aptTotalCount">0</strong>
+            </div>
+          </section>
+
+          <section class="apt-side-card">
+            <div class="apt-side-head">
+              <h2 class="apt-side-title">TOP SERVICES THIS MONTH</h2>
+            </div>
+            <ol class="apt-top-services" id="aptTopServices">
+              <li><span>Loading services…</span></li>
+            </ol>
+          </section>
+
+        </aside>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== Cancelled Appointments modal ===== -->
+  <div class="apt-modal-overlay" id="aptCancelledModal">
+    <div class="apt-modal" role="dialog" aria-modal="true" aria-labelledby="aptCancelledTitle">
+      <header class="apt-modal__head">
+        <span class="apt-modal__accent"></span>
+        <div class="apt-modal__titles">
+          <h2 class="apt-modal__title" id="aptCancelledTitle">Cancelled Appointments</h2>
+          <p class="apt-modal__subtitle" id="aptCancelledSubtitle"></p>
+        </div>
+        <div class="apt-modal__pills" id="aptCancelledPills"></div>
+        <button class="apt-modal__close" id="aptCancelledClose" type="button" aria-label="Close">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="1" y1="1" x2="13" y2="13"></line><line x1="13" y1="1" x2="1" y2="13"></line></svg>
+        </button>
+      </header>
+
+      <div class="apt-table-wrap">
+        <table class="apt-table apt-table--cancelled">
+          <thead>
+            <tr>
+              <th>REF NO.</th>
+              <th>CLIENT</th>
+              <th>SERVICE</th>
+              <th>SCHEDULED FOR</th>
+              <th>STATUS</th>
+              <th>PAYMENT</th>
+            </tr>
+          </thead>
+          <tbody id="aptCancelledBody"></tbody>
+        </table>
+      </div>
+
+      <div class="apt-modal__summary">
+        <div>
+          <h3 class="apt-modal__summary-title">RESERVATION FEES</h3>
+          <div class="apt-summary-row"><span>Paid reservation fees</span><strong id="aptSumCollected"></strong></div>
+          <div class="apt-summary-row"><span>Refunded reservation fees</span><strong class="apt-summary-row__good" id="aptSumRefunded"></strong></div>
+          <div class="apt-summary-row"><span>Outstanding reservation fees</span><strong class="apt-summary-row__bad" id="aptSumForfeited"></strong></div>
+        </div>
+        <div>
+          <h3 class="apt-modal__summary-title">PAYMENT STATUS</h3>
+          <div id="aptReasonList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="admin-dashboard.js"></script>
+  <script src="AdminAppointment.js"></script>
+</body>
+</html>
