@@ -3854,7 +3854,6 @@ a{ text-decoration:none; color:inherit; }
 .eyebrow-line{
   display:flex;
   align-items:center;
-  gap:12px;
   font-family: var(--font-body);
   font-weight:700;
   font-size:12px;
@@ -5430,6 +5429,45 @@ font-family: var(--font-body);
    
    @media (max-width: 520px) {
      .modal-box { padding: 32px 16px 24px; }
+   }
+
+   /* Login-page keyword FAQ chat */
+   .faq-chat { position: fixed; right: 28px; bottom: 28px; z-index: 1200; font-family: 'Poppins', sans-serif; }
+   .faq-chat-launcher {
+     display: grid; place-items: center; width: 76px; height: 76px; padding: 0;
+     border-radius: 50%; background: #C9A84C; box-shadow: 0 5px 18px rgba(26, 23, 20, 0.2);
+     transition: transform 0.18s ease, background 0.18s ease;
+   }
+   .faq-chat-launcher:hover { background: #B3923D; transform: translateY(-2px); }
+   .faq-chat-launcher:focus-visible, .faq-chat-close:focus-visible, .faq-chat-form button:focus-visible { outline: 3px solid #1A1714; outline-offset: 3px; }
+   .faq-chat-launcher svg { width: 76%; height: 76%; }
+   .faq-chat-bubble { fill: #FAF9F2; }
+   .faq-chat-launcher circle { fill: #C9A84C; }
+   .faq-chat-panel {
+     position: absolute; right: 0; bottom: 92px; display: flex; flex-direction: column;
+     width: min(360px, calc(100vw - 32px)); height: min(470px, calc(100vh - 130px));
+     overflow: hidden; border: 1px solid #E4E0DA; border-radius: 8px; background: #FFFFFF;
+     box-shadow: 0 12px 38px rgba(26, 23, 20, 0.2);
+   }
+   .faq-chat-panel[hidden] { display: none; }
+   .faq-chat-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px; background: #C9A84C; color: #1A1714; }
+   .faq-chat-title { font-size: 15px; font-weight: 600; }
+   .faq-chat-status { margin-top: 2px; font-size: 11px; }
+   .faq-chat-close { width: 32px; height: 32px; color: #1A1714; font-size: 26px; line-height: 1; }
+   .faq-chat-messages { display: flex; flex: 1; flex-direction: column; align-items: flex-start; gap: 10px; overflow-y: auto; padding: 16px; }
+   .faq-chat-message { max-width: 88%; padding: 10px 12px; border-radius: 8px; font-size: 13px; line-height: 1.55; overflow-wrap: anywhere; white-space: pre-line; }
+   .faq-chat-message--bot { background: #F5F2EC; color: #1A1714; }
+   .faq-chat-message--user { align-self: flex-end; background: #C9A84C; color: #1A1714; }
+   .faq-chat-form { display: flex; gap: 8px; padding: 12px; border-top: 1px solid #E4E0DA; }
+   .faq-chat-form input { min-width: 0; flex: 1; padding: 10px 12px; border: 1px solid #D8D3CB; border-radius: 6px; font: inherit; font-size: 13px; }
+   .faq-chat-form input:focus { outline: 2px solid #C9A84C; outline-offset: 1px; }
+   .faq-chat-form button { display: grid; flex: 0 0 40px; place-items: center; border-radius: 6px; background: #C9A84C; }
+   .faq-chat-form button svg { width: 19px; height: 19px; fill: none; stroke: #1A1714; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+   .faq-chat-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; clip-path: inset(50%); }
+   @media (max-width: 520px) {
+     .faq-chat { right: 16px; bottom: 16px; }
+     .faq-chat-launcher { width: 64px; height: 64px; }
+     .faq-chat-panel { bottom: 78px; height: min(470px, calc(100dvh - 112px)); }
    }
 
    main.page {
@@ -8629,4 +8667,283 @@ body.services{
   padding: 24px;
   text-align: center;
 }
+
+main.my-appointments-main {
+  display: block;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 40px 24px 60px;
+  box-sizing: border-box;
+}
+
+main.my-appointments-main .booking-intro {
+  margin-bottom: 24px;
+}
+
+.appointments-message {
+  min-height: 1.2em;
+  margin: 0 0 12px;
+  color: #6b6b6b;
+  font-size: 14px;
+}
+
+/* ---------- Toolbar ---------- */
+.client-calendar {
+  width: 100%;
+}
+
+.cal-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.cal-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cal-icon {
+  color: #1a1a1a;
+}
+
+.cal-title {
+  margin: 0 8px 0 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.cal-nav-btn,
+.cal-toggle-btn {
+  font: inherit;
+  cursor: pointer;
+  border: 1px solid #ddd;
+  background: #fff;
+  color: #1a1a1a;
+  border-radius: 6px;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.cal-nav-btn {
+  width: 32px;
+  height: 32px;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.cal-nav-btn:hover,
+.cal-toggle-btn:hover {
+  background: #f5f5f5;
+}
+
+.cal-toggle {
+  display: flex;
+  gap: 8px;
+}
+
+.cal-toggle-btn {
+  padding: 8px 16px;
+  font-size: 14px;
+}
+
+.cal-toggle-btn.active {
+  background: #000;
+  border-color: #000;
+  color: #fff;
+}
+
+/* ---------- Grid ---------- */
+.cal-scroll {
+  overflow-x: auto;
+}
+
+.cal-inner {
+  min-width: 760px;
+}
+
+.cal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: #8a8a8a;
+  padding-bottom: 8px;
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  border-top: 1px solid #e6e6e6;
+  border-left: 1px solid #e6e6e6;
+}
+
+.cal-cell {
+  min-height: 110px;
+  padding: 8px 6px 6px;
+  border-right: 1px solid #e6e6e6;
+  border-bottom: 1px solid #e6e6e6;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.cal-grid.is-week .cal-cell {
+  min-height: 360px;
+}
+
+.cal-cell.other-month {
+  background: #fcfcfc;
+}
+
+.cal-cell.other-month .cal-daynum {
+  color: #bdbdbd;
+}
+
+.cal-cell.other-month .cal-chip {
+  opacity: 0.55;
+}
+
+.cal-daynum {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: #1f3a5f;
+}
+
+.cal-daynum.is-today {
+  border: 1.5px solid #c9a84a;
+  border-radius: 50%;
+  color: #1a1a1a;
+}
+
+/* ---------- Appointment chips ---------- */
+.cal-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  margin-bottom: 4px;
+  padding: 5px 8px;
+  font: inherit;
+  font-size: 11px;
+  text-align: left;
+  color: #4a2a2a;
+  background: #f7e8e8;
+  border: none;
+  border-left: 3px solid #c0454a;
+  border-radius: 4px;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: filter 0.15s;
+}
+
+.cal-chip:hover {
+  filter: brightness(0.96);
+}
+
+.cal-chip-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cal-chip-time {
+  flex-shrink: 0;
+  color: #7a5a5a;
+}
+
+.cal-chip.is-past {
+  opacity: 0.6;
+}
+
+.cal-chip.is-cancelled {
+  background: #efefef;
+  border-left-color: #a5a5a5;
+  color: #8a8a8a;
+}
+
+.cal-chip.is-cancelled .cal-chip-name {
+  text-decoration: line-through;
+}
+
+/* ---------- Details modal ---------- */
+.appt-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.appt-modal[hidden] {
+  display: none;
+}
+
+.appt-modal-card {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  padding: 28px 24px 24px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+}
+
+.appt-modal-card h3 {
+  margin: 0 0 16px;
+  font-size: 20px;
+  color: #1a1a1a;
+}
+
+.appt-modal-close {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  border: none;
+  background: none;
+  font-size: 26px;
+  line-height: 1;
+  color: #777;
+  cursor: pointer;
+}
+
+.appt-modal-close:hover {
+  color: #000;
+}
+
+.appt-detail-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 9px 0;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 14px;
+}
+
+.appt-detail-row:last-child {
+  border-bottom: none;
+}
+
+.appt-detail-label {
+  color: #8a8a8a;
+}
+
+.appt-detail-value {
+  text-align: right;
+  color: #1a1a1a;
+  font-weight: 500;
 }
