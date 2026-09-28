@@ -19,11 +19,16 @@ router.use(requireRole('admin'));
 const ROLE_BADGE = {
   client: 'CLIENT',
   aesthetician: 'AESTHETICIAN',
+  nail_tech: 'NAIL TECH',
   admin: 'ADMIN',
   finance_officer: 'FINANCE OFFICER',
   inventory_officer: 'INVENTORY PROCUREMENT',
   staff: 'STAFF',
 };
+
+// Only one active account per staff role can be assigned appointments (mirrors the
+// single-aesthetician business rule, extended to the nail tech role).
+const SINGLE_ACTIVE_STAFF_ROLES = ['aesthetician', 'nail_tech'];
 
 function toInitials(firstName, lastName) {
   const a = (firstName || '').trim().charAt(0);
@@ -183,14 +188,15 @@ router.post('/', async (req, res) => {
   const lastName = rest.join(' ') || '';
 
   try {
-    if (role === 'aesthetician' && (status || 'active') === 'active') {
-      const activeAesthetician = await db.query(
+    if (SINGLE_ACTIVE_STAFF_ROLES.includes(role) && (status || 'active') === 'active') {
+      const activeStaffMember = await db.query(
         `SELECT user_id FROM users
-         WHERE role = 'aesthetician' AND status = 'active' AND email_verified = TRUE
-         LIMIT 1`
+         WHERE role = $1 AND status = 'active' AND email_verified = TRUE
+         LIMIT 1`,
+        [role]
       );
-      if (activeAesthetician.rows.length > 0) {
-        return res.status(409).json({ message: 'Only one active aesthetician can be assigned appointments.' });
+      if (activeStaffMember.rows.length > 0) {
+        return res.status(409).json({ message: `Only one active ${ROLE_BADGE[role] || role} can be assigned appointments.` });
       }
     }
 
@@ -301,16 +307,16 @@ router.patch('/:id/status', async (req, res) => {
     const target = await db.query('SELECT role FROM users WHERE user_id = $1', [req.params.id]);
     if (target.rows.length === 0) return res.status(404).json({ message: 'User not found.' });
 
-    if (status === 'active' && target.rows[0].role === 'aesthetician') {
-      const activeAesthetician = await db.query(
+    if (status === 'active' && SINGLE_ACTIVE_STAFF_ROLES.includes(target.rows[0].role)) {
+      const activeStaffMember = await db.query(
         `SELECT user_id FROM users
-         WHERE role = 'aesthetician' AND status = 'active' AND email_verified = TRUE
-           AND user_id <> $1
+         WHERE role = $1 AND status = 'active' AND email_verified = TRUE
+           AND user_id <> $2
          LIMIT 1`,
-        [req.params.id]
+        [target.rows[0].role, req.params.id]
       );
-      if (activeAesthetician.rows.length > 0) {
-        return res.status(409).json({ message: 'Only one active aesthetician can be assigned appointments.' });
+      if (activeStaffMember.rows.length > 0) {
+        return res.status(409).json({ message: `Only one active ${ROLE_BADGE[target.rows[0].role] || target.rows[0].role} can be assigned appointments.` });
       }
     }
 

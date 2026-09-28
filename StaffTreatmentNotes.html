@@ -36,10 +36,10 @@
                 class="mobile-nav-logo"><button type="button" class="mobile-nav-close" id="mobileNavClose"
                 aria-label="Close menu">&times;</button></div>
         <ul class="mobile-nav-links">
-            <li><a href="AestheticianDashboard.html">Dashboard</a></li>
-            <li><a href="AestheticianUserManagement.html">My Clients</a></li>
-            <li><a href="AestheticianAppointmentPage.html">Appointments</a></li>
-            <li><a href="AestheticianTreatmentHistory.html">Treatment History</a></li>
+            <li><a href="StaffDashboard.html">Dashboard</a></li>
+            <li><a href="StaffUserManagement.html">My Clients</a></li>
+            <li><a href="StaffAppointmentPage.html">Appointments</a></li>
+            <li><a href="StaffTreatmentNotes.html">Treatment History</a></li>
         </ul>
     </aside>
     <main>
@@ -51,13 +51,13 @@
             <nav>
                 <ul>
                     <li class="nav-item"><img src="icons/circle.svg" alt="" class="nav-bullet"><a
-                            href="AestheticianDashboard.html">Dashboard</a></li>
+                            href="StaffDashboard.html">Dashboard</a></li>
                     <li class="nav-item"><img src="icons/circle.svg" alt="" class="nav-bullet"><a
-                            href="AestheticianUserManagement.html">My Clients</a></li>
+                            href="StaffUserManagement.html">My Clients</a></li>
                     <li class="nav-item"><img src="icons/circle.svg" alt="" class="nav-bullet"><a
-                            href="AestheticianAppointmentPage.html">Appointments</a></li>
+                            href="StaffAppointmentPage.html">Appointments</a></li>
                     <li class="nav-item active"><img src="icons/circle.svg" alt="" class="nav-bullet"><a
-                            href="AestheticianTreatmentHistory.html">Treatment History</a></li>
+                            href="StaffTreatmentNotes.html">Treatment History</a></li>
                 </ul>
             </nav>
             <hr>
@@ -94,48 +94,18 @@
         <section class="main-content staff-page-content">
             <div class="staff-table-card">
                 <div class="staff-table-toolbar">
-                    <h2>Recent Appointments</h2>
+                    <h2>Recent treatment notes</h2>
                     <div class="search staff-toolbar-search" id="searchWrap"><img src="icons/magnifying-glass.svg" alt="" class="search-svg"><input
-                            type="text" id="searchInput" placeholder="Search appointments..." autocomplete="off"></div>
+                            type="text" id="searchInput" placeholder="Search treatment notes..." autocomplete="off"></div>
                 </div>
-                <div class="staff-appointments-table-wrap">
-                    <table class="clients-table staff-appointments-table">
-                        <thead>
-                            <tr>
-                                <th>APPOINTMENT</th>
-                                <th>CLIENT</th>
-                                <th>CONTACT</th>
-                                <th>SERVICE</th>
-                                <th>DATE</th>
-                                <th>TIME</th>
-                                <th>STATUS</th>
-                                <th>PAYMENT</th>
-                                <th>SERVICE FEE</th>
-                                <th>RESERVATION FEE</th>
-                                <th>AESTHETICIAN</th>
-                                <th>TREATMENT NOTES</th>
-                            </tr>
-                        </thead>
-                        <tbody id="appointmentsTableBody">
-                            <tr><td colspan="12" class="clients-table-message">Loading appointments...</td></tr>
-                        </tbody>
-                    </table>
+                <div class="staff-empty-state"><strong>No treatment notes yet</strong>
+                    <p>Notes added from an appointment will appear here.</p>
                 </div>
-                <footer class="clients-table-footer"><p id="appointmentsTableSummary">Showing 0 appointments</p></footer>
             </div>
         </section>
     </main>
-    <div class="treatment-notes-modal-overlay" id="treatmentNotesModal" aria-hidden="true">
-        <section class="treatment-notes-modal" role="dialog" aria-modal="true" aria-labelledby="treatmentNotesModalTitle">
-            <button type="button" class="treatment-notes-modal-close" id="treatmentNotesModalClose" aria-label="Close notes">&times;</button>
-            <p class="treatment-notes-modal-eyebrow">TREATMENT NOTES</p>
-            <h2 id="treatmentNotesModalTitle">Client notes</h2>
-            <div class="treatment-notes-list" id="treatmentNotesList"></div>
-        </section>
-    </div>
     <script src="header.js"></script>
-    <script src="aesthetician-rating.js"></script>
-    <script src="aesthetician-treatment-history.js"></script>
+    <script src="staff-rating.js"></script>
 </body>
 
 </html>

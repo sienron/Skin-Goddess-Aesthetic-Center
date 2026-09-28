@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const { VALID_SLOTS, CLOSING_TIME, CLOSED_WEEKDAYS, MAX_ADVANCE_DAYS, to24h, addMinutes, manilaNow, isSlotInPast, isSlotTooSoon } = require('../utils/slots');
+const { roleForCategory } = require('../utils/staffRoles');
 
 function isLeapYear(year) { return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0); }
 function daysInMonth(year, month) { return [31, isLeapYear(year) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1]; }
@@ -41,10 +42,11 @@ router.get('/', async (req, res) => {
   if (year < 1 || month < 1 || month > 12) return res.status(400).json({ message: 'month must use YYYY-MM.' });
 
   try {
-    const serviceResult = await db.query('SELECT duration_minutes FROM services WHERE service_id = $1 AND is_active = TRUE', [serviceId]);
+    const serviceResult = await db.query('SELECT duration_minutes, category FROM services WHERE service_id = $1 AND is_active = TRUE', [serviceId]);
     if (serviceResult.rows.length === 0) return res.status(404).json({ message: 'Service not found.' });
     const duration = Number(serviceResult.rows[0].duration_minutes);
-    const aestheticians = await db.query("SELECT user_id FROM users WHERE role = 'aesthetician' AND status = 'active' AND email_verified = TRUE ORDER BY user_id");
+    const staffRole = roleForCategory(serviceResult.rows[0].category);
+    const aestheticians = await db.query('SELECT user_id FROM users WHERE role = $1 AND status = \'active\' AND email_verified = TRUE ORDER BY user_id', [staffRole]);
     if (aestheticians.rows.length === 0) return res.json({});
 
     const firstDate = formatDate(year, month, 1);

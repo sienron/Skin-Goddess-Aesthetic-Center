@@ -35,12 +35,18 @@
         return;
     }
 
-    function fillProfile(container, fullName, initials) {
+    function formatRoleLabel(role) {
+        return String(role || '').split('_').map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+    }
+
+    function fillProfile(container, fullName, initials, roleLabel) {
         if (!container) return;
         const avatarEl = container.querySelector('.profile-avatar');
         const nameEl = container.querySelector('.profile-name');
+        const roleEl = container.querySelector('.profile-role');
         if (avatarEl) avatarEl.textContent = initials;
         if (nameEl) nameEl.textContent = fullName;
+        if (roleEl && roleLabel) roleEl.textContent = roleLabel;
     }
 
     function showSignInButton(isMobile) {
@@ -66,8 +72,9 @@
         .then((data) => {
             const fullName = `${data.firstName} ${data.lastName}`.trim();
             const initials = `${data.firstName?.[0] || ''}${data.lastName?.[0] || ''}`.toUpperCase();
-            fillProfile(profileBtn, fullName, initials);
-            fillProfile(mobileProfile, fullName, initials);
+            const roleLabel = formatRoleLabel(data.role);
+            fillProfile(profileBtn, fullName, initials, roleLabel);
+            fillProfile(mobileProfile, fullName, initials, roleLabel);
         })
         .catch(() => {
             showSignInButton(false);

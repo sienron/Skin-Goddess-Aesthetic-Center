@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const { requireRole } = require('../middleware/auth');
+const { roleForCategory } = require('../utils/staffRoles');
 const { createHmac, randomBytes, timingSafeEqual } = require('crypto');
 const { VALID_SLOTS, CLOSING_TIME, CLOSED_WEEKDAYS, MAX_ADVANCE_DAYS, MIN_BOOKING_LEAD_MINUTES, to24h, from24h, addMinutes, manilaNow, isSlotInPast, isSlotTooSoon } = require('../utils/slots');
 
@@ -451,10 +452,12 @@ async function getValidatedBooking(userId, body, res) {
   return { user, service, appointmentDate, appointmentTime, appointmentEndTime };
 }
 
-function findAvailableAestheticians(queryClient, booking) {
+async function findAvailableAestheticians(queryClient, booking) {
+  const serviceResult = await queryClient.query('SELECT category FROM services WHERE service_id = $1', [booking.serviceId]);
+  const staffRole = roleForCategory(serviceResult.rows[0]?.category);
   return queryClient.query(`
     SELECT u.user_id FROM users u
-    WHERE u.role = 'aesthetician' AND u.status = 'active' AND u.email_verified = TRUE
+    WHERE u.role = $4 AND u.status = 'active' AND u.email_verified = TRUE
       AND NOT EXISTS (
         SELECT 1 FROM appointments a
         WHERE a.aesthetician_id = u.user_id
@@ -462,7 +465,7 @@ function findAvailableAestheticians(queryClient, booking) {
           AND tsrange(a.appointment_date + a.appointment_time, a.appointment_date + a.appointment_end_time) && tsrange($1::date + $2::time, $1::date + $3::time)
       )
     ORDER BY u.user_id
-  `, [booking.appointmentDate, booking.appointmentTime, booking.appointmentEndTime]);
+  `, [booking.appointmentDate, booking.appointmentTime, booking.appointmentEndTime, staffRole]);
 }
 
 function validPaymentReference(value) {
@@ -478,7 +481,7 @@ router.get('/mine', async (req, res) => {
     const userResult = await db.query('SELECT role FROM users WHERE user_id = $1', [req.session.userId]);
     if (userResult.rows.length === 0) return res.status(401).json({ message: 'Your session is no longer valid. Please log in again.' });
 
-    const isAesthetician = userResult.rows[0].role === 'aesthetician';
+    const isAesthetician = ['aesthetician', 'nail_tech'].includes(userResult.rows[0].role);
 
     const appointmentsQuery = isAesthetician
       ? `
@@ -735,7 +738,7 @@ router.post('/:id/reschedule', async (req, res) => {
     const userResult = await db.query('SELECT role FROM users WHERE user_id = $1', [req.session.userId]);
     if (userResult.rows.length === 0) return res.status(401).json({ message: 'Your session is no longer valid.' });
     const isAdmin = userResult.rows[0].role === 'admin';
-    const isAssignedAesthetician = userResult.rows[0].role === 'aesthetician'
+    const isAssignedAesthetician = ['aesthetician', 'nail_tech'].includes(userResult.rows[0].role)
       && appointment.aesthetician_id === req.session.userId;
     if (!isAdmin && !isAssignedAesthetician) {
       return res.status(403).json({ message: 'Only an admin or the assigned aesthetician can reschedule this appointment.' });
@@ -809,7 +812,7 @@ router.post('/paymongo/checkout-session', async (req, res) => {
     if (!Number.isSafeInteger(amountCents) || amountCents <= 0) {
       return res.status(400).json({ message: 'This service has an invalid reservation fee.' });
     }
-    const availableAestheticians = await findAvailableAestheticians(db, booking);
+    const availableAestheticians = await findAvailableAestheticians(db, { ...booking, serviceId: booking.service.service_id });
     if (availableAestheticians.rows.length === 0) {
       return res.status(409).json({ message: 'That time slot is no longer available. Choose another time.' });
     }
@@ -983,6 +986,7 @@ router.post('/paymongo/confirm', async (req, res) => {
         appointmentDate: payment.appointment_date,
         appointmentTime: payment.appointment_time,
         appointmentEndTime: payment.appointment_end_time,
+        serviceId: payment.service_id,
       });
 
       for (const candidate of candidates.rows) {

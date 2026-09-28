@@ -83,8 +83,8 @@ const protectedPages = [
   { path: '/MyAppointments.html', roles: ['client'] },
   { path: '/UserDashboard.html', roles: ['client'] },
 
-  { path: '/AestheticianAppointmentPage.html', roles: ['aesthetician'] },
-  { path: '/AestheticianDashboard.html', roles: ['aesthetician'] },
+  { path: '/StaffAppointmentPage.html', roles: ['aesthetician', 'nail_tech', 'staff'] },
+  { path: '/StaffDashboard.html', roles: ['aesthetician', 'nail_tech', 'staff'] },
 
   { path: '/AdminDashboard.html', roles: ['admin'] },
   { path: '/AdminAppointment.html', roles: ['admin'] },
@@ -92,8 +92,7 @@ const protectedPages = [
   { path: '/Usermanagement.html', roles: ['admin'] },
 
   { path: '/InventoryDashboard.html', roles: ['inventory_officer'] },
-  { path: '/FinanceDashboard.html', roles: ['finance_officer'] },
-  { path: '/StaffDashboard.html', roles: ['staff'] }
+  { path: '/FinanceDashboard.html', roles: ['finance_officer'] }
 ];
 
 protectedPages.forEach(({ path: page, roles }) => {

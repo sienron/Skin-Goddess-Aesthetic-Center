@@ -7,7 +7,7 @@
      closeApptModal()      — closes it
 
    Depends on formatTime() being defined elsewhere on the page (currently
-   in appointments-aesthetician.js). If a future page includes this modal
+   in appointments-staff.js). If a future page includes this modal
    without that calendar file, copy formatTime() into its own script too.
 
    All DOM lookups are guarded — if the modal markup isn't on the page,

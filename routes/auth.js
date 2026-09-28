@@ -266,7 +266,8 @@ router.post('/login', async (req, res) => {
     const dashboardPerRole = {
       client: '/index.html',
       admin: '/AdminDashboard.html',
-      aesthetician: '/AestheticianDashboard.html',
+      aesthetician: '/StaffDashboard.html',
+      nail_tech: '/StaffDashboard.html',
       inventory_officer: '/InventoryDashboard.html',
       finance_officer: '/FinanceDashboard.html',
       staff: '/StaffDashboard.html',
