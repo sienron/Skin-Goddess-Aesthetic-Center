@@ -17,6 +17,9 @@ const deleteModal = document.getElementById("deleteModal");
 const deleteProductName = document.getElementById("deleteProductName");
 const cancelDelete = document.getElementById("cancelDelete");
 const confirmDelete = document.getElementById("confirmDelete");
+/*
+const closeDeleteModal =
+    document.getElementById("closeDeleteModal"); */
 
 const editModal =
     document.getElementById("editModal");
@@ -44,6 +47,37 @@ const editNoExpiration =
 
 const editStock =
     document.getElementById("editStock");
+
+//ADD PRODUCT
+const addProductButton =
+    document.querySelector(".btn-add-product");
+
+const addProductModal =
+    document.getElementById("addProductModal");
+
+const closeAddProductModal =
+    document.getElementById("closeAddProductModal");
+
+const cancelAddProduct =
+    document.getElementById("cancelAddProduct");
+
+const addExpiryDate =
+    document.getElementById("addExpiryDate");
+
+const addNoExpiration =
+    document.getElementById("addNoExpiration");
+
+const confirmAddProduct =
+    document.getElementById("confirmAddProduct");
+
+const addProductName =
+    document.getElementById("addProductName");
+
+const addCategory =
+    document.getElementById("addCategory");
+
+const addStock =
+    document.getElementById("addStock");
 
 
 let productToDelete = null;
@@ -103,19 +137,30 @@ function renderInventory(){
         row.dataset.expiry =
             product.expiry_date || "none";
 
-        let status;
+            let status;
+            let statusClass;
+            
+            if(product.stock_quantity <= 5){
+            
+                status = "critical";
+                statusClass = "critical";
+            
+            }
+            else if(product.stock_quantity <= 20){
+            
+                status = "low";
+                statusClass = "low-stock";
+            
+            }
+            else{
+            
+                status = "in-stock";
+                statusClass = "in-stock";
+            
+            }
+            
+            row.dataset.status = status;
 
-        if(product.stock_quantity <= 5){
-            status = "critical";
-        }
-        else if(product.stock_quantity <= 20){
-            status = "low";
-        }
-        else{
-            status = "in-stock";
-        }
-
-        row.dataset.status = status;
 
         row.innerHTML = `
             <td>
@@ -163,7 +208,7 @@ function renderInventory(){
             </td>
 
             <td>
-                <div class="status ${status}">
+                <div class="status ${statusClass}">
                     <span></span>
                     ${
                         status === "critical"
@@ -312,18 +357,15 @@ function filterInventory(){
 
             else{
 
-                const today =
-                    new Date();
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
 
-                const expiryDate =
-                    new Date(expiry);
+                const [year, month, day] = expiry.split("-").map(Number);
+                const expiryDate = new Date(year, month - 1, day);
+                expiryDate.setHours(0, 0, 0, 0);
 
-                const difference =
-                    expiryDate - today;
-
-                const days =
-                    difference /
-                    (1000 * 60 * 60 * 24);
+                const difference = expiryDate - today;
+                const days = difference / (1000 * 60 * 60 * 24);
 
 
                 if(expiryValue === "expired"){
@@ -549,6 +591,8 @@ if(button.classList.contains("edit")){
 }
 
 
+
+
     /* =====================================================
        DELETE PRODUCT
        ===================================================== */
@@ -578,6 +622,85 @@ if(button.classList.contains("edit")){
 
 });
 
+//cancel button in DELETE MODAL
+cancelDelete.addEventListener("click", () => {
+
+    deleteModal.classList.remove("show");
+
+    productToDelete = null;
+
+});
+
+confirmDelete.addEventListener("click", async () => {
+
+    if(!productToDelete){
+        return;
+    }
+
+    try{
+
+        const response = await fetch(
+            `/api/inventory/${productToDelete.product_id}`,
+            {
+                method: "DELETE"
+            }
+        );
+
+        if(!response.ok){
+
+            const errorData =
+                await response.json();
+
+            throw new Error(
+                errorData.message ||
+                "Failed to delete product."
+            );
+
+        }
+
+        const result =
+            await response.json();
+
+        console.log(
+            "Product deleted:",
+            result
+        );
+
+        deleteModal.classList.remove("show");
+
+        productToDelete = null;
+
+        await loadInventory();
+
+    } catch(error){
+
+        console.error(
+            "Error deleting product:",
+            error
+        );
+
+        alert(
+            "Failed to delete product. Please try again."
+        );
+
+    }
+
+});
+
+deleteModal.addEventListener("click", (event) => {
+
+    if(event.target === deleteModal){
+
+        deleteModal.classList.remove("show");
+
+        productToDelete = null;
+
+    }
+
+});
+
+//NO EXPIRY RADIO BUTTON
+
 editNoExpiration.addEventListener("change", () => {
 
     if(editNoExpiration.checked){
@@ -594,6 +717,153 @@ editNoExpiration.addEventListener("change", () => {
     }
 
 });
+
+closeEditModal.addEventListener("click", () => {
+
+    editModal.classList.remove("show");
+
+});
+
+cancelEdit.addEventListener("click", () => {
+
+   editModal.classList.remove("show");
+
+});
+
+//Add Product event listeners =========================================
+
+addProductButton.addEventListener("click", () => {
+
+    addProductName.value = "";
+
+    addCategory.value =
+        "Medical/Injection Supplies";
+
+    addExpiryDate.value = "";
+
+    addNoExpiration.checked = false;
+
+    addExpiryDate.disabled = false;
+
+    addStock.value = 0;
+
+    addProductModal.classList.add("show");
+
+});
+
+closeAddProductModal.addEventListener("click", () => {
+
+    addProductModal.classList.remove("show");
+
+});
+
+cancelAddProduct.addEventListener("click", () => {
+
+    addProductModal.classList.remove("show");
+
+});
+
+addProductModal.addEventListener("click", (event) => {
+
+    if(event.target === addProductModal){
+
+        addProductModal.classList.remove("show");
+
+    }
+
+});
+
+addNoExpiration.addEventListener("change", () => {
+
+    if(addNoExpiration.checked){
+
+        addExpiryDate.value = "";
+        addExpiryDate.disabled = true;
+
+    } else {
+
+        addExpiryDate.disabled = false;
+
+    }
+
+});
+
+confirmAddProduct.addEventListener("click", async () => {
+
+    const productName = addProductName.value.trim();
+    const category = addCategory.value;
+    const stock = Number(addStock.value);
+
+    const expiryDate =
+        addNoExpiration.checked
+            ? null
+            : addExpiryDate.value || null;
+
+    // Check product name
+    if(productName === ""){
+        alert("Product name is required.");
+        return;
+    }
+
+    // Check stock
+    if(!Number.isInteger(stock) || stock < 0){
+        alert("Stock must be a non-negative integer.");
+        return;
+    }
+
+    try {
+
+        const response = await fetch("/api/inventory", {
+            method: "POST",
+
+            headers: {
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+                product_name: productName,
+                category: category,
+                stock: stock,
+                expiry_date: expiryDate
+            })
+        });
+
+        if(!response.ok){
+
+            const errorData = await response.json();
+
+            throw new Error(
+                errorData.message ||
+                "Failed to add product."
+            );
+        }
+
+        const newProduct = await response.json();
+
+        console.log(
+            "Product added:",
+            newProduct
+        );
+
+        addProductModal.classList.remove("show");
+
+        await loadInventory();
+
+    } catch(error) {
+
+        console.error(
+            "Error adding product:",
+            error
+        );
+
+        alert(
+            "Failed to add product. Please try again."
+        );
+    }
+
+});
+
+
 
 /* =========================================================
    SAVE EDIT
@@ -788,7 +1058,7 @@ editNoExpiration.addEventListener("change", () => {
 
         else if(updatedProduct.stock_quantity <= 20){
 
-            newStatus = "low";
+            newStatus = "low"; //previously low-stock but oriiginally low
 
             statusElement.classList.add(
                 "low-stock"
