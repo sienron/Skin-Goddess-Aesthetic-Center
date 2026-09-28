@@ -13,13 +13,14 @@ const clearFilters = document.getElementById("clearFilters");
 
 const inventoryBody = document.getElementById("inventoryBody");
 
+const totalProducts = document.getElementById("totalProducts");
+const restockedToday = document.getElementById("restockedToday");
+
 const deleteModal = document.getElementById("deleteModal");
 const deleteProductName = document.getElementById("deleteProductName");
 const cancelDelete = document.getElementById("cancelDelete");
 const confirmDelete = document.getElementById("confirmDelete");
-/*
-const closeDeleteModal =
-    document.getElementById("closeDeleteModal"); */
+
 
 const editModal =
     document.getElementById("editModal");
@@ -100,15 +101,17 @@ async function loadInventory(){
 
         }
 
-        inventoryProducts =
-            await response.json();
+        inventoryProducts = await response.json();
 
         console.log(
             "Inventory loaded:",
             inventoryProducts
         );
-        //added
-        renderInventory();
+
+        totalProducts.textContent = inventoryProducts.length;
+
+//added
+renderInventory();
     }
 
     catch(error){
@@ -117,6 +120,45 @@ async function loadInventory(){
             "Error loading inventory:",
             error
         );
+
+    }
+
+}
+
+async function loadRestockedToday(){
+
+    try{
+
+        const response =
+            await fetch("/api/inventory/restocked-today");
+
+        if(!response.ok){
+
+            throw new Error(
+                "Failed to fetch today's restocks."
+            );
+
+        }
+
+        const data =
+            await response.json();
+
+            
+
+        restockedToday.textContent =
+        `↑ ${data.total_restocked} ${data.total_restocked === 1 ? "unit" : "units"} restocked today`;
+
+    }
+
+    catch(error){
+
+        console.error(
+            "Error loading today's restocks:",
+            error
+        );
+
+        restockedToday.textContent =
+            "↑ 0 units restocked today";
 
     }
 
@@ -961,6 +1003,8 @@ confirmAddProduct.addEventListener("click", async () => {
         // Reload inventory from PostgreSQL
         await loadInventory();
 
+        // Reload today's restocked total
+        await loadRestockedToday();
 
     } catch(error){
 
@@ -1086,6 +1130,7 @@ confirmAddProduct.addEventListener("click", async () => {
         row.dataset.status =
             newStatus;
 
+        await loadRestockedToday();
 
         filterInventory();
 
@@ -1120,3 +1165,4 @@ confirmAddProduct.addEventListener("click", async () => {
         });
 
 loadInventory();
+loadRestockedToday();
