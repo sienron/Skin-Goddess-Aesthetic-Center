@@ -4,9 +4,6 @@
    flow), per the "one thin page-specific file per page" convention.
 
    BACKEND TODO:
-   - Services: replace the hardcoded .service-card markup in
-     UserAppointment.html with data fetched from GET /api/services, then
-     call renderServices(data) instead of relying on the static HTML.
    - Availability: replace generatePlaceholderAvailability() with a call to
      GET /api/availability?month=YYYY-MM (and ideally scoped by service id,
      since different services may need different durations/slots).
@@ -15,6 +12,7 @@
      email, phone, paymentMethod }.
 */
 (function () {
+    const categorySelect = document.getElementById("serviceCategorySelect");
     const serviceList = document.getElementById("serviceList");
     const calendarMonthLabel = document.getElementById("calendarMonthLabel");
     const calendarDays = document.getElementById("calendarDays");
@@ -25,7 +23,7 @@
     const detailsForm = document.getElementById("detailsForm");
 
     // Self-guard: if this page's booking markup isn't present, do nothing.
-    if (!serviceList || !calendarDays || !detailsForm) return;
+    if (!categorySelect || !serviceList || !calendarDays || !detailsForm) return;
 
     const MONTH_NAMES = [
         "January", "February", "March", "April", "May", "June",
@@ -86,13 +84,8 @@
         return slotMinutes !== null && slotMinutes <= nowMinutes;
     }
 
-    const initiallySelectedCard = serviceList.querySelector(".service-card.selected");
-    let selectedService = {
-        id: initiallySelectedCard ? initiallySelectedCard.dataset.serviceId : null,
-        name: initiallySelectedCard ? initiallySelectedCard.dataset.service : null,
-        price: initiallySelectedCard ? Number(initiallySelectedCard.dataset.price) : 0,
-        reservationFee: initiallySelectedCard ? Number(initiallySelectedCard.dataset.reservationFee || 100) : 100
-    };
+    let allServices = [];
+    let selectedService = { id: null, name: null, price: 0, reservationFee: 100 };
 
     const today = new Date();
     let viewYear = today.getFullYear();
@@ -162,9 +155,21 @@
         }
     }
 
-    /* ===== Service selection ===== */
-    function renderServices(services) {
+    /* ===== Service selection =====
+       Two-step flow: a category dropdown (e.g. "IPL Hair Removal") narrows
+       the variant list (e.g. "Full Legs") rendered below it in the same
+       card, instead of showing every service flat. */
+    function renderServiceVariants(services) {
         serviceList.replaceChildren();
+
+        if (services.length === 0) {
+            const placeholder = document.createElement("p");
+            placeholder.className = "service-list-placeholder";
+            placeholder.textContent = "No options available for this treatment yet.";
+            serviceList.appendChild(placeholder);
+            selectedService = { id: null, name: null, price: 0, reservationFee: 100 };
+            return;
+        }
 
         services.forEach(service => {
             const card = document.createElement("div");
@@ -232,7 +237,13 @@
             const response = await fetch("/api/services");
             if (!response.ok) throw new Error("Failed to fetch services");
 
-            renderServices(await response.json());
+            allServices = await response.json();
+            populateCategorySelect(allServices);
+
+            if (categorySelect.value) {
+                renderServiceVariants(servicesForCategory(categorySelect.value));
+            }
+
             if (selectedService && selectedService.id) {
                 fetchAvailability();
             }
@@ -240,6 +251,43 @@
             console.error("Error fetching services:", error);
         }
     }
+
+    function populateCategorySelect(services) {
+        const categories = [];
+        services.forEach((service) => {
+            const category = service.category || "Other";
+            if (!categories.includes(category)) categories.push(category);
+        });
+
+        categorySelect.replaceChildren();
+
+        if (categories.length === 0) {
+            const option = document.createElement("option");
+            option.value = "";
+            option.textContent = "No treatments available";
+            categorySelect.appendChild(option);
+            return;
+        }
+
+        categories.forEach((category) => {
+            const option = document.createElement("option");
+            option.value = category;
+            option.textContent = category;
+            categorySelect.appendChild(option);
+        });
+    }
+
+    function servicesForCategory(category) {
+        return allServices.filter((service) => (service.category || "Other") === category);
+    }
+
+    categorySelect.addEventListener("change", () => {
+        renderServiceVariants(servicesForCategory(categorySelect.value));
+        selectedDate = null;
+        selectedTime = null;
+        setBookingStatus("");
+        fetchAvailability();
+    });
 
     /* ===== Calendar ===== */
     function renderCalendar() {

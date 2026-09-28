@@ -104,57 +104,20 @@
         <div class="booking-layout">
 
             <!-- ===== Column 1: Service selection =====
-                 Placeholder services below. Once the backend exists, replace this
-                 static list with services fetched from the API and re-render
-                 renderServices() in appointment-booking.js. -->
+                 Populated from GET /api/services by appointment-booking.js. The
+                 category dropdown groups repetitive services (e.g. IPL Hair
+                 Removal) so the variant list only shows once a category is chosen. -->
             <div class="booking-col">
                 <div class="booking-panel">
                     <p class="booking-panel-label">SELECT A SERVICE</p>
 
+                    <label for="serviceCategorySelect" class="service-category-label">Treatment</label>
+                    <select class="service-category-select" id="serviceCategorySelect">
+                        <option value="">Loading treatments...</option>
+                    </select>
+
                     <div class="service-list" id="serviceList">
-
-                        <div class="service-card selected" data-service="Hydrating Facial" data-price="1200">
-                            <span class="service-name">Hydrating Facial</span>
-                            <span class="service-desc">60 min &middot; Deep moisture boost</span>
-                            <span class="service-price">₱1,200</span>
-                            <span class="service-check">✓</span>
-                        </div>
-
-                        <div class="service-card" data-service="Skin Whitening" data-price="1800">
-                            <span class="service-name">Skin Whitening</span>
-                            <span class="service-desc">90 min &middot; Even skin tone</span>
-                            <span class="service-price">₱1,800</span>
-                            <span class="service-check">✓</span>
-                        </div>
-
-                        <div class="service-card" data-service="Anti-Aging Therapy" data-price="2500">
-                            <span class="service-name">Anti-Aging Therapy</span>
-                            <span class="service-desc">75 min &middot; Collagen boost</span>
-                            <span class="service-price">₱2,500</span>
-                            <span class="service-check">✓</span>
-                        </div>
-
-                        <div class="service-card" data-service="Laser Rejuvenation" data-price="3200">
-                            <span class="service-name">Laser Rejuvenation</span>
-                            <span class="service-desc">90 min &middot; Advanced laser</span>
-                            <span class="service-price">₱3,200</span>
-                            <span class="service-check">✓</span>
-                        </div>
-
-                        <div class="service-card" data-service="Acne Treatment" data-price="1500">
-                            <span class="service-name">Acne Treatment</span>
-                            <span class="service-desc">60 min &middot; Blemish control</span>
-                            <span class="service-price">₱1,500</span>
-                            <span class="service-check">✓</span>
-                        </div>
-
-                        <div class="service-card" data-service="Chemical Peel" data-price="2000">
-                            <span class="service-name">Chemical Peel</span>
-                            <span class="service-desc">45 min &middot; Skin renewal</span>
-                            <span class="service-price">₱2,000</span>
-                            <span class="service-check">✓</span>
-                        </div>
-
+                        <p class="service-list-placeholder" id="serviceListPlaceholder">Choose a treatment above to see available options.</p>
                     </div>
                 </div>
             </div>

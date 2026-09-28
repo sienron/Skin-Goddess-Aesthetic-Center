@@ -5,7 +5,7 @@ const db = require('../db');
 router.get('/', async (req, res) => {
     try {
         const result = await db.query(
-            'SELECT service_id, service_name, description, duration_minutes, service_price, reservation_fee FROM services WHERE is_active = true'
+            'SELECT service_id, service_name, category, description, duration_minutes, service_price, reservation_fee FROM services WHERE is_active = true ORDER BY category, service_name'
         );
         res.json(result.rows);
     } catch (error) {

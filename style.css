@@ -2996,6 +2996,44 @@ hr {
 
 /* --- Service selection --- */
 
+.service-category-label {
+  font-family: "Raleway", sans-serif;
+  font-size: calc(0.68rem + 1px);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: rgb(150, 150, 150);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.service-category-select {
+  width: 100%;
+  font-family: "Raleway", sans-serif;
+  font-size: calc(0.85rem + 1px);
+  font-weight: 600;
+  color: rgb(50, 50, 50);
+  border: 1px solid rgb(228, 228, 228);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  background-color: white;
+  cursor: pointer;
+}
+
+.service-category-select:focus {
+  outline: none;
+  border-color: #C9A84C;
+}
+
+.service-list-placeholder {
+  font-family: "Raleway", sans-serif;
+  font-size: calc(0.8rem + 1px);
+  color: rgb(150, 150, 150);
+  margin: 0;
+  padding: 10px 2px;
+}
+
 .service-list {
   display: flex;
   flex-direction: column;
