@@ -1,8 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const { requireRole } = require('../middleware/auth');
 const { notifyRoles } = require('../utils/notifications');
 const { LOW_STOCK_THRESHOLD, CRITICAL_STOCK_THRESHOLD } = require('../utils/inventoryThresholds');
+
+router.use(requireRole('inventory_officer', 'admin'));
 
 async function notifyStockTransition(previousStock, currentStock, productName) {
     let type;

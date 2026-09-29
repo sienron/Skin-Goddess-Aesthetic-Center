@@ -83,16 +83,25 @@ const protectedPages = [
   { path: '/MyAppointments.html', roles: ['client'] },
   { path: '/UserDashboard.html', roles: ['client'] },
 
+  { path: '/AestheticianAppointmentPage.html', roles: ['aesthetician', 'nail_tech', 'staff'] },
   { path: '/StaffAppointmentPage.html', roles: ['aesthetician', 'nail_tech', 'staff'] },
   { path: '/StaffDashboard.html', roles: ['aesthetician', 'nail_tech', 'staff'] },
+  { path: '/StaffTreatmentHistory.html', roles: ['aesthetician', 'nail_tech', 'staff'] },
+  { path: '/StaffTreatmentNotes.html', roles: ['aesthetician', 'nail_tech', 'staff'] },
+  { path: '/StaffUserManagement.html', roles: ['aesthetician', 'nail_tech', 'staff'] },
 
   { path: '/AdminDashboard.html', roles: ['admin'] },
   { path: '/AdminAppointment.html', roles: ['admin'] },
+  { path: '/AdminContentManagement.html', roles: ['admin'] },
   { path: '/AdminInquiries.html', roles: ['admin'] },
   { path: '/Usermanagement.html', roles: ['admin'] },
 
+  { path: '/InventoryManagement.html', roles: ['inventory_officer', 'admin'] },
   { path: '/InventoryDashboard.html', roles: ['inventory_officer'] },
-  { path: '/FinanceDashboard.html', roles: ['finance_officer'] }
+  { path: '/FinanceDashboard.html', roles: ['finance_officer'] },
+  { path: '/FinanceExpenses.html', roles: ['finance_officer'] },
+  { path: '/FinanceReports.html', roles: ['finance_officer'] },
+  { path: '/FinancesTransactions.html', roles: ['finance_officer'] }
 ];
 
 protectedPages.forEach(({ path: page, roles }) => {

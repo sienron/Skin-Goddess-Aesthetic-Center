@@ -137,7 +137,14 @@
     async function loadNotifications() {
         try {
             const response = await fetch('/api/notifications');
-            if (!response.ok) return;
+            if (!response.ok) {
+                if (notificationList) {
+                    notificationList.textContent = response.status === 401
+                        ? 'Sign in to view notifications'
+                        : 'Notifications could not be loaded';
+                }
+                return;
+            }
             const data = await response.json();
             const notifications = Array.isArray(data.notifications) ? data.notifications : [];
 
@@ -163,6 +170,7 @@
             });
         } catch (error) {
             console.error('Could not load notifications:', error);
+            if (notificationList) notificationList.textContent = 'Notifications could not be loaded';
         }
     }
 
