@@ -238,7 +238,7 @@ router.put('/:id', async (req, res) => {
 
   if (password !== undefined && !isValidPassword(password)) {
     return res.status(400).json({
-      message: 'Password must be at least 8 characters, contain both letters and numbers, and must not include special characters.',
+      message: 'Password must be between 8 and 72 characters.',
     });
   }
 

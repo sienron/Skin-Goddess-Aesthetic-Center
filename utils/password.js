@@ -1,6 +1,7 @@
 function isValidPassword(password) {
-  const passwordPattern = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
-  return typeof password === 'string' && passwordPattern.test(password);
+  return typeof password === 'string'
+    && password.length >= 8
+    && Buffer.byteLength(password, 'utf8') <= 72;
 }
 
 module.exports = isValidPassword;

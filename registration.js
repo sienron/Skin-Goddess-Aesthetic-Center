@@ -27,7 +27,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let secondsLeft = 0;
   let countdownInterval = null;
-  let currentUserId = null; // set after a successful register response
 
   // ===== Inline error helpers (same pattern as reset-password.js) =====
   function setFieldError(fieldName, message) {
@@ -109,9 +108,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let hasError = false;
 
-    const passwordPattern = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z0-9]{8,}$/;
-    if (!passwordPattern.test(password)) {
-      setFieldError('password', 'Password must be at least 8 characters, contain both letters and numbers, and must not include special characters.');
+    if (password.length < 8 || password.length > 72) {
+      setFieldError('password', 'Password must be between 8 and 72 characters.');
       hasError = true;
     }
 
@@ -154,7 +152,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      currentUserId = data.userId; // save this — verify-otp needs it
       otpEmailDisplay.textContent = maskEmail(formData.email);
       openOtpModal();
     } catch (err) {
@@ -197,7 +194,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const response = await fetch('/api/auth/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: currentUserId, code }),
+        body: JSON.stringify({ code }),
       });
 
       const data = await response.json().catch(() => ({}));
@@ -238,7 +235,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const response = await fetch('/api/auth/resend-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: currentUserId }),
+        body: JSON.stringify({}),
       });
 
       const data = await response.json().catch(() => ({}));

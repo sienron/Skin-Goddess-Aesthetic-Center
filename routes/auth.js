@@ -6,6 +6,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
+const { rateLimit } = require('express-rate-limit');
 // bcryptjs is used to hash passwords before saving them.
 // crypto (built into Node) is used to generate random reset tokens
 // for the forgot password feature.
@@ -18,16 +19,47 @@ const db = require('../db'); // used to query the database
 const { sendOtpEmail, sendPasswordResetEmail } = require('../utils/mailer'); // for sending actual emails
 const isValidPassword = require('../utils/password');
 
+const registerLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 5, message: { message: 'Too many registration attempts. Try again later.' } });
+const verifyOtpLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, message: { message: 'Too many verification attempts. Try again later.' } });
+const resendOtpLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 3, message: { message: 'Too many code requests. Try again later.' } });
+const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, message: { message: 'Too many sign-in attempts. Try again later.' } });
+const forgotPasswordLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 5, message: { message: 'Too many reset requests. Try again later.' } });
+const emailChangeLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 3, message: { message: 'Too many code requests. Try again later.' } });
+const verifyEmailChangeLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, message: { message: 'Too many verification attempts. Try again later.' } });
+
+function regenerateSession(req) {
+  return new Promise((resolve, reject) => {
+    req.session.regenerate((error) => error ? reject(error) : resolve());
+  });
+}
+
+async function recentVerificationCodeCount(userId) {
+  const result = await db.query(`
+    SELECT COUNT(*)::integer AS count
+    FROM otp_codes
+    WHERE user_id = $1 AND purpose = 'email_verification'
+      AND created_at > NOW() - INTERVAL '1 hour'
+  `, [userId]);
+  return result.rows[0].count;
+}
+
+async function recentEmailChangeCodeCount(userId) {
+  const result = await db.query(`
+    SELECT COUNT(*)::integer AS count
+    FROM pending_email_changes
+    WHERE user_id = $1 AND created_at > NOW() - INTERVAL '1 hour'
+  `, [userId]);
+  return result.rows[0].count;
+}
+
 function generateOtpCode() {
-  // Generates a random 6-digit number, e.g. "042917"
-  const randomNumber = Math.floor(100000 + Math.random() * 900000);
-  return String(randomNumber);
+  return String(crypto.randomInt(100000, 1000000));
 }
 
 // ============================================
 // ROUTE 1: REGISTER (Create a new account)
 // ============================================
-router.post('/register', async (req, res) => {
+router.post('/register', registerLimiter, async (req, res) => {
   const {
     firstName,
     lastName,
@@ -50,7 +82,7 @@ router.post('/register', async (req, res) => {
 
   if (!isValidPassword(password)) {
     return res.status(400).json({
-      message: 'Password must be at least 8 characters, contain both letters and numbers, and must not include special characters.',
+      message: 'Password must be between 8 and 72 characters.',
     });
   }
 
@@ -72,6 +104,9 @@ router.post('/register', async (req, res) => {
 
       // Account exists but was never verified — send a fresh code
       // instead of dead-ending the user here
+      if (await recentVerificationCodeCount(foundUser.user_id) >= 5) {
+        return res.status(429).json({ message: 'Too many code requests. Try again later.' });
+      }
       const freshOtpCode = generateOtpCode();
       await db.query(
         `INSERT INTO otp_codes (user_id, code, purpose, expires_at)
@@ -88,9 +123,11 @@ router.post('/register', async (req, res) => {
         });
       }
 
+      await regenerateSession(req);
+      req.session.pendingVerificationUserId = foundUser.user_id;
+
       return res.status(200).json({
         message: 'Account already exists but is not verified. A new code has been sent.',
-        userId: foundUser.user_id,
       });
     }
 
@@ -138,9 +175,11 @@ router.post('/register', async (req, res) => {
       });
     }
 
+    await regenerateSession(req);
+    req.session.pendingVerificationUserId = newUser.user_id;
+
     res.status(201).json({
       message: 'Account created. Check email for verification code.',
-      userId: newUser.user_id,
     });
   } catch (error) {
     console.log('Registration error:', error);
@@ -151,44 +190,49 @@ router.post('/register', async (req, res) => {
 // ============================================
 // ROUTE 2: VERIFY OTP (Verify the 6-digit code)
 // ============================================
-router.post('/verify-otp', async (req, res) => {
-  const { userId, code } = req.body;
+router.post('/verify-otp', verifyOtpLimiter, async (req, res) => {
+  const userId = req.session.pendingVerificationUserId;
+  const code = typeof req.body.code === 'string' ? req.body.code : '';
 
-  if (!userId || !code) {
+  if (!userId || !/^\d{6}$/.test(code)) {
     return res.status(400).json({ message: 'Enter six digit code.' });
   }
 
   try {
-    // Note: expiration is checked directly in SQL (expires_at > NOW())
-    // instead of comparing dates in JavaScript, to avoid timezone
-    // mismatch issues between the server and the database.
-    const otpResult = await db.query(
-      `SELECT otp_id, code
-       FROM otp_codes
-       WHERE user_id = $1
-         AND purpose = 'email_verification'
-         AND is_used = FALSE
-         AND expires_at > NOW()
-       ORDER BY created_at DESC
-       LIMIT 1`,
-      [userId]
-    );
+    const outcome = await db.transaction(async (client) => {
+      const otpResult = await client.query(`
+        SELECT otp_id, code, attempts
+        FROM otp_codes
+        WHERE user_id = $1 AND purpose = 'email_verification'
+          AND is_used = FALSE AND expires_at > NOW() AND attempts < 5
+        ORDER BY created_at DESC
+        LIMIT 1
+        FOR UPDATE
+      `, [userId]);
+      if (otpResult.rows.length === 0) return 'invalid';
 
-    if (otpResult.rows.length === 0) {
-      return res.status(400).json({ message: 'Code expired or not found. Resend code.' });
+      const otp = otpResult.rows[0];
+      if (otp.code !== code) {
+        await client.query(`
+          UPDATE otp_codes
+          SET attempts = attempts + 1,
+              is_used = (attempts + 1 >= 5)
+          WHERE otp_id = $1
+        `, [otp.otp_id]);
+        return 'invalid';
+      }
+
+      await client.query('UPDATE otp_codes SET is_used = TRUE WHERE otp_id = $1', [otp.otp_id]);
+      await client.query('UPDATE users SET email_verified = TRUE WHERE user_id = $1', [userId]);
+      return 'verified';
+    });
+
+    if (outcome !== 'verified') {
+      return res.status(400).json({ message: 'Invalid, expired, or locked verification code.' });
     }
 
-    const otpRow = otpResult.rows[0];
-
-    if (otpRow.code !== code) {
-      return res.status(400).json({ message: 'Wrong code. Try again.' });
-    }
-
-    await db.query('UPDATE otp_codes SET is_used = TRUE WHERE otp_id = $1', [otpRow.otp_id]);
-
-    await db.query('UPDATE users SET email_verified = TRUE WHERE user_id = $1', [userId]);
-
-    res.status(200).json({ message: 'Successful email verification.' });
+    delete req.session.pendingVerificationUserId;
+    return res.status(200).json({ message: 'Successful email verification.' });
   } catch (error) {
     console.log('OTP verification error:', error);
     res.status(500).json({ message: 'Error. Try again.' });
@@ -198,18 +242,26 @@ router.post('/verify-otp', async (req, res) => {
 // ============================================
 // ROUTE 3: RESEND OTP (Send a new code)
 // ============================================
-router.post('/resend-otp', async (req, res) => {
-  const { userId } = req.body;
+router.post('/resend-otp', resendOtpLimiter, async (req, res) => {
+  const userId = req.session.pendingVerificationUserId;
 
   if (!userId) {
-    return res.status(400).json({ message: 'Incomplete code' });
+    return res.status(401).json({ message: 'Registration verification session expired. Register again to continue.' });
   }
 
   try {
-    const userResult = await db.query('SELECT email FROM users WHERE user_id = $1', [userId]);
+    const userResult = await db.query('SELECT email, email_verified FROM users WHERE user_id = $1', [userId]);
 
     if (userResult.rows.length === 0) {
-      return res.status(404).json({ message: 'Account not found.' });
+      delete req.session.pendingVerificationUserId;
+      return res.status(401).json({ message: 'Registration verification session is no longer valid.' });
+    }
+    if (userResult.rows[0].email_verified) {
+      delete req.session.pendingVerificationUserId;
+      return res.status(400).json({ message: 'This email is already verified.' });
+    }
+    if (await recentVerificationCodeCount(userId) >= 5) {
+      return res.status(429).json({ message: 'Too many code requests. Try again later.' });
     }
 
     const userEmail = userResult.rows[0].email;
@@ -233,7 +285,7 @@ router.post('/resend-otp', async (req, res) => {
 // ============================================
 // ROUTE 4: LOGIN
 // ============================================
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
   const { email, password, staysignedin } = req.body;
   const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
 
@@ -273,6 +325,7 @@ router.post('/login', async (req, res) => {
       staff: '/StaffDashboard.html',
     };
 
+    await regenerateSession(req);
     req.session.userId = user.user_id;
     req.session.role = user.role;
 
@@ -390,7 +443,7 @@ router.put('/update-profile', async (req, res) => {
 // ============================================
 // ROUTE: REQUEST EMAIL CHANGE (sends a code to the NEW email)
 // ============================================
-router.post('/request-email-change', async (req, res) => {
+router.post('/request-email-change', emailChangeLimiter, async (req, res) => {
   if (!req.session.userId) {
     return res.status(401).json({ message: 'Not logged in.' });
   }
@@ -420,6 +473,10 @@ router.post('/request-email-change', async (req, res) => {
       return res.status(409).json({ message: 'This email is already in use by another account.' });
     }
 
+    if (await recentEmailChangeCodeCount(req.session.userId) >= 3) {
+      return res.status(429).json({ message: 'Too many code requests. Try again later.' });
+    }
+
     const code = generateOtpCode();
     await db.query(
       `INSERT INTO pending_email_changes (user_id, new_email, code, expires_at)
@@ -439,52 +496,59 @@ router.post('/request-email-change', async (req, res) => {
 // ============================================
 // ROUTE: CONFIRM EMAIL CHANGE (verifies the code, applies the change)
 // ============================================
-router.post('/confirm-email-change', async (req, res) => {
+router.post('/confirm-email-change', verifyEmailChangeLimiter, async (req, res) => {
   if (!req.session.userId) {
     return res.status(401).json({ message: 'Not logged in.' });
   }
 
-  const { code } = req.body;
+  const code = typeof req.body.code === 'string' ? req.body.code : '';
 
-  if (!code) {
+  if (!/^\d{6}$/.test(code)) {
     return res.status(400).json({ message: 'Enter the six digit code.' });
   }
 
   try {
-    const result = await db.query(
-      `SELECT change_id, new_email, code
-       FROM pending_email_changes
-       WHERE user_id = $1
-         AND is_used = FALSE
-         AND expires_at > NOW()
-       ORDER BY created_at DESC
-       LIMIT 1`,
-      [req.session.userId]
-    );
+    const outcome = await db.transaction(async (client) => {
+      const result = await client.query(`
+        SELECT change_id, new_email, code
+        FROM pending_email_changes
+        WHERE user_id = $1 AND is_used = FALSE
+          AND attempts < 5 AND expires_at > NOW()
+        ORDER BY created_at DESC
+        LIMIT 1
+        FOR UPDATE
+      `, [req.session.userId]);
+      if (result.rows.length === 0) return { status: 'invalid' };
 
-    if (result.rows.length === 0) {
-      return res.status(400).json({ message: 'Code expired or not found. Please request a new one.' });
-    }
+      const row = result.rows[0];
+      if (row.code !== code) {
+        await client.query(`
+          UPDATE pending_email_changes
+          SET attempts = attempts + 1, is_used = (attempts + 1 >= 5)
+          WHERE change_id = $1
+        `, [row.change_id]);
+        return { status: 'invalid' };
+      }
 
-    const row = result.rows[0];
+      const existing = await client.query(
+        'SELECT user_id FROM users WHERE LOWER(email) = $1 AND user_id != $2',
+        [row.new_email, req.session.userId]
+      );
+      if (existing.rows.length > 0) return { status: 'email_taken' };
 
-    if (row.code !== code) {
-      return res.status(400).json({ message: 'Wrong code. Try again.' });
-    }
+      await client.query('UPDATE users SET email = $1 WHERE user_id = $2', [row.new_email, req.session.userId]);
+      await client.query('UPDATE pending_email_changes SET is_used = TRUE WHERE change_id = $1', [row.change_id]);
+      return { status: 'updated', newEmail: row.new_email };
+    });
 
-    // Double-check the email wasn't taken by someone else in the meantime
-    const existing = await db.query(
-      'SELECT user_id FROM users WHERE LOWER(email) = $1 AND user_id != $2',
-      [row.new_email, req.session.userId]
-    );
-    if (existing.rows.length > 0) {
+    if (outcome.status === 'email_taken') {
       return res.status(409).json({ message: 'This email is already in use by another account.' });
     }
+    if (outcome.status !== 'updated') {
+      return res.status(400).json({ message: 'Invalid, expired, or locked verification code. Request a new one.' });
+    }
 
-    await db.query('UPDATE users SET email = $1 WHERE user_id = $2', [row.new_email, req.session.userId]);
-    await db.query('UPDATE pending_email_changes SET is_used = TRUE WHERE change_id = $1', [row.change_id]);
-
-    res.status(200).json({ message: 'Email address updated successfully.', newEmail: row.new_email });
+    return res.status(200).json({ message: 'Email address updated successfully.', newEmail: outcome.newEmail });
   } catch (error) {
     console.log('Confirm email change error:', error);
     res.status(500).json({ message: 'Error. Try again.' });
@@ -507,7 +571,7 @@ router.put('/change-password', async (req, res) => {
 
   if (!isValidPassword(newPassword)) {
     return res.status(400).json({
-      message: 'Password must be at least 8 characters, contain both letters and numbers, and must not include special characters.',
+      message: 'Password must be between 8 and 72 characters.',
     });
   }
 
@@ -543,7 +607,7 @@ router.put('/change-password', async (req, res) => {
 // ============================================
 // ROUTE 5: FORGOT PASSWORD (Send reset link)
 // ============================================
-router.post('/forgot-password', async (req, res) => {
+router.post('/forgot-password', forgotPasswordLimiter, async (req, res) => {
   const { email } = req.body;
   const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
 
@@ -551,41 +615,54 @@ router.post('/forgot-password', async (req, res) => {
     return res.status(400).json({ message: 'Email address is required.' });
   }
 
+  const genericResponse = { message: 'If an account exists for this email, a reset link will be sent.' };
   try {
     const userResult = await db.query('SELECT user_id, email FROM users WHERE LOWER(email) = $1', [normalizedEmail]);
-
-    if (userResult.rows.length === 0) {
-      return res.status(404).json({ message: 'Account does not exist.' });
-    }
-
     const user = userResult.rows[0];
+    res.status(200).json(genericResponse);
+    if (user) {
+      setImmediate(async () => {
+        try {
+      const recentTokens = await db.query(`
+        SELECT COUNT(*)::integer AS count
+        FROM password_reset_tokens
+        WHERE user_id = $1 AND created_at > NOW() - INTERVAL '1 hour'
+      `, [user.user_id]);
+      if (recentTokens.rows[0].count < 3) {
+        const rawToken = crypto.randomBytes(32).toString('hex');
+        const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+        const appBaseUrl = new URL(process.env.APP_BASE_URL);
+        if (process.env.NODE_ENV === 'production' && appBaseUrl.protocol !== 'https:') {
+          throw new Error('APP_BASE_URL must use HTTPS in production.');
+        }
 
-    const rawToken = crypto.randomBytes(32).toString('hex');
-    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+        await db.query(
+          `INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)
+           VALUES ($1, $2, NOW() + INTERVAL '30 minutes')`,
+          [user.user_id, tokenHash]
+        );
 
-    await db.query(
-      `INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)
-       VALUES ($1, $2, NOW() + INTERVAL '30 minutes')`,
-      [user.user_id, tokenHash]
-    );
-
-    const baseUrl = process.env.NODE_ENV === 'production'
-      ? 'https://skin-goddess-aesthetic-center-sf0r.onrender.com'
-      : 'http://localhost:3000';
-    const resetLink = `${baseUrl}/ResetPassword.html?token=${rawToken}`;
-    await sendPasswordResetEmail(user.email, resetLink);
-
-    res.status(200).json({ message: 'Reset link has been sent.' });
+        const resetUrl = new URL('/ResetPassword.html', appBaseUrl);
+        resetUrl.searchParams.set('token', rawToken);
+        sendPasswordResetEmail(user.email, resetUrl.toString())
+          .catch((error) => console.error('Could not send password reset email:', error.message));
+      }
+        } catch (error) {
+          console.error('Could not prepare password reset email:', error.message);
+        }
+      });
+    }
   } catch (error) {
-    console.log('Forgot password error:', error);
-    res.status(500).json({ message: 'Error. Try again.' });
+    console.error('Forgot password request failed:', error.message);
+    if (!res.headersSent) return res.status(200).json(genericResponse);
   }
+  return undefined;
 });
 
 // ============================================
 // ROUTE 6: RESET PASSWORD (Set a new password)
 // ============================================
-router.post('/reset-password', async (req, res) => {
+router.post('/reset-password', forgotPasswordLimiter, async (req, res) => {
   const { token, newPassword } = req.body;
 
   if (!token || !newPassword) {
@@ -594,7 +671,7 @@ router.post('/reset-password', async (req, res) => {
 
   if (!isValidPassword(newPassword)) {
     return res.status(400).json({
-      message: 'Password must be at least 8 characters, contain both letters and numbers, and must not include special characters.',
+      message: 'Password must be between 8 and 72 characters.',
     });
   }
 

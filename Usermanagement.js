@@ -62,6 +62,10 @@ async function fetchUsers() {
 }
 
 function rowHTML(u) {
+  const initials = escapeHtml(u.initials || '?');
+  const fullName = escapeHtml(u.fullName || '(no name)');
+  const email = escapeHtml(u.email || '');
+  const sexInitial = escapeHtml(u.sex ? u.sex.charAt(0).toUpperCase() : '');
   const statusCell = u.status === 'suspended'
     ? `<span class="um-status um-status--suspended">&bull; SUSPENDED</span>`
     : `<span class="um-status um-status--active">&bull; ACTIVE</span>`;
@@ -70,14 +74,14 @@ function rowHTML(u) {
     <tr data-id="${u.id}" class="${u.status === 'suspended' ? 'um-row--muted' : ''}">
       <td><input type="checkbox" class="um-row-check"></td>
       <td class="um-user-cell">
-        <span class="um-avatar um-avatar--sm ${u.status === 'suspended' ? 'um-avatar--muted' : ''}">${u.initials}</span>
+        <span class="um-avatar um-avatar--sm ${u.status === 'suspended' ? 'um-avatar--muted' : ''}">${initials}</span>
         <span class="um-user-cell__info">
-          <span class="um-user-cell__name">${u.fullName || '(no name)'}</span>
-          <span class="um-user-cell__meta">USR-${String(u.id).padStart(5, '0')}${u.sex ? ' &middot; ' + u.sex.charAt(0).toUpperCase() : ''}</span>
+          <span class="um-user-cell__name">${fullName}</span>
+          <span class="um-user-cell__meta">USR-${String(u.id).padStart(5, '0')}${sexInitial ? ' &middot; ' + sexInitial : ''}</span>
         </span>
       </td>
-      <td><span class="um-badge um-badge--${badgeClass(u.role)}">${u.roleLabel}</span></td>
-      <td>${u.email}</td>
+      <td><span class="um-badge um-badge--${badgeClass(u.role)}">${escapeHtml(u.roleLabel)}</span></td>
+      <td>${email}</td>
       <td>${formatDate(u.joined)}</td>
       <td class="um-visits"><span class="um-visits__count">—</span><span class="um-visits__label">not tracked yet</span></td>
       <td>—</td>
@@ -105,7 +109,7 @@ async function renderTable() {
     if (selectAll) selectAll.checked = false;
     renderPagination(totalPages);
   } catch (error) {
-    tableBody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:24px; color:#9b2626;">${error.message}</td></tr>`;
+    tableBody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:24px; color:#9b2626;">${escapeHtml(error.message)}</td></tr>`;
   }
 }
 
@@ -392,9 +396,8 @@ async function saveEdits() {
 
   if (passwordChangeEnabled) {
     const newPassword = newPasswordInput.value;
-    const passwordPattern = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
-    if (!passwordPattern.test(newPassword)) {
-      alert('Password must be at least 8 characters, contain both letters and numbers, and must not include special characters.');
+    if (newPassword.length < 8 || newPassword.length > 72) {
+      alert('Password must be between 8 and 72 characters.');
       return;
     }
     if (newPassword !== confirmPasswordInput.value) {

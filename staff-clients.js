@@ -56,6 +56,12 @@
         return `client-status--${String(status || "unknown").toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
     }
 
+    function escapeHtml(value) {
+        const element = document.createElement("span");
+        element.textContent = String(value ?? "");
+        return element.innerHTML;
+    }
+
     function setModalValue(id, value) {
         document.getElementById(id).textContent = value || "—";
     }
@@ -133,17 +139,20 @@
             pageAppointments.forEach((appointment) => {
                 const row = document.createElement("tr");
                 const status = String(appointment.status || "unknown").toLowerCase();
+                const clientName = escapeHtml(appointment.client || "Client");
+                const clientAvatar = escapeHtml(String(appointment.client || "Client").split(" ").map((part) => part[0] || "").slice(0, 2).join("").toUpperCase());
+                const appointmentId = escapeHtml(appointment.id || "—");
                 row.innerHTML = `
                     <td>
                         <div class="client-name-cell">
-                            <span class="client-avatar">${String(appointment.client || "Client").split(" ").map((part) => part[0] || "").slice(0, 2).join("").toUpperCase()}</span>
-                            <span><strong>${appointment.client || "Client"}</strong><small>Appointment #${appointment.id || "—"}</small></span>
+                            <span class="client-avatar">${clientAvatar}</span>
+                            <span><strong>${clientName}</strong><small>Appointment #${appointmentId}</small></span>
                         </div>
                     </td>
-                    <td>${appointment.service || "—"}</td>
+                    <td>${escapeHtml(appointment.service || "—")}</td>
                     <td></td>
                     <td><span class="client-status ${statusClass(status)}"><span></span>${statusLabels[status] || status.toUpperCase()}</span></td>
-                    <td><button class="client-action" type="button" data-appointment-id="${appointment.id || ""}">View</button><button class="client-action client-action--muted" type="button" disabled>Add Notes</button></td>
+                    <td><button class="client-action" type="button" data-appointment-id="${escapeHtml(appointment.id || "")}">View</button><button class="client-action client-action--muted" type="button" disabled>Add Notes</button></td>
                 `;
                 row.children[2].replaceWith(createAppointmentCell(appointment));
                 row.querySelector(".client-action").addEventListener("click", () => openClientModal(appointment));

@@ -34,6 +34,7 @@ pool.connect((error, client, releaseConnection) => {
 // buong Pool, ginagawa lang nating isang simpleng function na "query" —
 // mas malinis, at ito lang naman ang kailangan ng ibang files.
 module.exports = {
+  pool,
   query: (sql, values) => pool.query(sql, values),
   transaction: async (callback) => {
     const client = await pool.connect();

@@ -3,11 +3,19 @@ require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
 const path = require('path');
+const crypto = require('crypto');
+const PgSession = require('connect-pg-simple')(session);
 
 const db = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const publicDir = path.join(__dirname, 'public');
+const sessionSecret = process.env.SESSION_SECRET;
+
+if (!sessionSecret && process.env.NODE_ENV === 'production') {
+  throw new Error('SESSION_SECRET must be configured in production.');
+}
 
 app.set('trust proxy', 1);
 
@@ -15,14 +23,40 @@ app.use('/api/appointments/paymongo/webhook', express.raw({ type: 'application/j
 app.use(express.json());
 
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'change-this-secret-later',
+  store: new PgSession({ pool: db.pool, tableName: 'user_sessions', createTableIfMissing: true }),
+  secret: sessionSecret || crypto.randomBytes(32).toString('hex'),
   resave: false,
   saveUninitialized: false,
   cookie: {
     maxAge: 1000 * 60 * 60 * 24,
-    secure: 'auto'
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    sameSite: 'lax'
   }
 }));
+
+app.use((req, res, next) => {
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)
+    || req.path === '/api/appointments/paymongo/webhook') return next();
+
+  const origin = req.get('origin');
+  const referer = req.get('referer');
+  if (!origin && !referer) {
+    return res.status(403).json({ message: 'Request origin could not be verified.' });
+  }
+
+  try {
+    const sourceOrigin = new URL(origin || referer).origin;
+    const expectedOrigin = `${req.protocol}://${req.get('host')}`;
+    if (sourceOrigin !== expectedOrigin) {
+      return res.status(403).json({ message: 'Cross-site request rejected.' });
+    }
+  } catch (error) {
+    return res.status(403).json({ message: 'Request origin could not be verified.' });
+  }
+
+  return next();
+});
 
 function requireLogin(req, res, next) {
   if (!req.session.userId) {
@@ -109,17 +143,17 @@ protectedPages.forEach(({ path: page, roles }) => {
     page,
     requireRole(...roles),
     (req, res) => {
-      res.sendFile(path.join(__dirname, page));
+      res.sendFile(path.join(publicDir, page));
     }
   );
 });
 
 app.get('/', (req, res) => {
   if (req.session.userId) {
-    return res.sendFile(path.join(__dirname, 'index.html'));
+    return res.sendFile(path.join(publicDir, 'index.html'));
   }
 
-  res.sendFile(path.join(__dirname, 'LoginPage.html'));
+  res.sendFile(path.join(publicDir, 'LoginPage.html'));
 });
 
 app.get('/LoginPage.html', (req, res) => {
@@ -127,10 +161,8 @@ app.get('/LoginPage.html', (req, res) => {
     return res.redirect('/');
   }
 
-  res.sendFile(path.join(__dirname, 'LoginPage.html'));
+  res.sendFile(path.join(publicDir, 'LoginPage.html'));
 });
-
-app.use(express.static(path.join(__dirname, '')));
 
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/services', require('./routes/services'));
@@ -140,6 +172,8 @@ app.use('/api/inventory', require('./routes/inventory'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/inquiries', require('./routes/inquiries'));
+
+app.use(express.static(publicDir, { dotfiles: 'deny', index: false }));
 
 require('./utils/notificationJobs').startNotificationJobs();
 

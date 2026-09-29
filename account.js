@@ -232,8 +232,6 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // ---- Change password ----
-  const passwordPattern = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z0-9]{8,}$/;
-
   passwordForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     clearErrors(passwordForm);
@@ -253,8 +251,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!newPassword) {
       setFieldError(passwordForm, 'newPassword', 'New password is required.');
       hasError = true;
-    } else if (!passwordPattern.test(newPassword)) {
-      setFieldError(passwordForm, 'newPassword', 'Password must be at least 8 characters, contain both letters and numbers, and must not include special characters.');
+    } else if (newPassword.length < 8 || newPassword.length > 72) {
+      setFieldError(passwordForm, 'newPassword', 'Password must be between 8 and 72 characters.');
       hasError = true;
     }
 
