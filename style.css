@@ -4014,9 +4014,6 @@ a {
   display: flex;
   align-items: center;
   gap: 12px;
-.eyebrow-line{
-  display:flex;
-  align-items:center;
   font-family: var(--font-body);
   font-weight: 700;
   font-size: 12px;
