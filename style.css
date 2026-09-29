@@ -8947,3 +8947,39 @@ main.my-appointments-main .booking-intro {
   color: #1a1a1a;
   font-weight: 500;
 }
+
+/* ============================================
+   Admin — Content Management page (ContentManagement.html)
+   Append this block to the END of the shared style.css.
+   Reuses the existing um-* shell, header, tabs, table, and
+   apt-action buttons from AdminAppointment.html. New classes
+   are prefixed cm- so they can't collide with anything else.
+   ============================================ */
+
+.cm-card { background: #fff; border: 1px solid var(--um-border); border-radius: 6px; }
+.cm-card .um-tabs { padding: 0 20px; }
+
+.cm-panel { display: none; }
+.cm-panel--active { display: block; }
+
+.cm-status { display: inline-block; padding: 3px 10px; border-radius: 10px; font-size: 9px; font-weight: 600; letter-spacing: .03em; white-space: nowrap; }
+.cm-status--published { background: var(--um-status-active-bg); color: var(--um-status-active); }
+.cm-status--draft { background: #f0ede7; color: var(--text-muted); }
+.cm-status--pending { background: var(--um-role-doctor-bg); color: var(--um-role-doctor); }
+
+.cm-actions { display: flex; gap: 12px; }
+
+.cm-feedback { max-width: 260px; white-space: normal; color: var(--um-text-body); }
+
+/* ---------- Homepage Content (block list, not a table) ---------- */
+.cm-block-list { display: flex; flex-direction: column; }
+.cm-block-row { display: flex; align-items: center; gap: 16px; padding: 16px 20px; border-bottom: 1px solid #f0ede7; }
+.cm-block-row:last-child { border-bottom: none; }
+.cm-block-info { flex: 1; min-width: 0; }
+.cm-block-label { margin: 0; font-size: 12.5px; color: var(--text-dark); }
+.cm-block-detail { margin: 4px 0 0; font-size: 10.5px; color: var(--text-muted); }
+
+@media (max-width: 640px) {
+  .cm-block-row { flex-wrap: wrap; }
+  .cm-actions { width: 100%; justify-content: flex-end; }
+}
