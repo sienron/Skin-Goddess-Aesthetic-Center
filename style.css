@@ -2479,6 +2479,32 @@ hr {
   color: rgb(170, 170, 170);
 }
 
+.notification-item,
+.admin-notification-item {
+  width: 100%;
+  padding: 11px 14px;
+  border: 0;
+  border-bottom: 1px solid rgb(235, 235, 235);
+  background: #fff;
+  color: #39332e;
+  font: inherit;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  text-align: left;
+  cursor: pointer;
+}
+
+.notification-item:hover,
+.admin-notification-item:hover {
+  background: #f7f5f1;
+}
+
+.notification-item.unread,
+.admin-notification-item.unread {
+  border-left: 3px solid #b38a3d;
+  font-weight: 700;
+}
+
 @media (max-width: 480px) {
   .notification-wrap {
     position: static;
@@ -7558,10 +7584,11 @@ body.services {
 }
 
 .admin-notification-list {
-  padding: 20px 14px;
+  max-height: 320px;
+  overflow-y: auto;
   color: var(--um-text-faint);
   font-size: 11px;
-  text-align: center;
+  text-align: left;
 }
 
 .um-search {

@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require('../db');
 const { requireRole } = require('../middleware/auth');
 const { roleForCategory } = require('../utils/staffRoles');
+const { notifyUser, notifyUsers, notifyRoles } = require('../utils/notifications');
 const { createHmac, randomBytes, timingSafeEqual } = require('crypto');
 const { VALID_SLOTS, CLOSING_TIME, CLOSED_WEEKDAYS, MAX_ADVANCE_DAYS, MIN_BOOKING_LEAD_MINUTES, to24h, from24h, addMinutes, manilaNow, isSlotInPast, isSlotTooSoon } = require('../utils/slots');
 
@@ -122,12 +123,18 @@ function validRequestText(value, maxLength) {
 }
 
 async function markPastConfirmedAppointments() {
-  await db.query(`
+  const result = await db.query(`
     UPDATE appointments
     SET appointment_status = 'no_show'
     WHERE appointment_status = 'confirmed'
       AND appointment_date + appointment_end_time < (NOW() AT TIME ZONE 'Asia/Manila')
+    RETURNING user_id, appointment_id
   `);
+  await Promise.all(result.rows.map((row) => notifyUser(
+    row.user_id,
+    'appointment_status_changed',
+    `Appointment ${row.appointment_id} status changed to no show.`,
+  )));
 }
 
 router.get('/admin', requireRole('admin'), async (req, res) => {
@@ -581,10 +588,13 @@ router.post('/:id/cancel', requireRole('admin'), async (req, res) => {
 
   try {
     const result = await db.query(`
-      SELECT appointment_id, appointment_date::text AS appointment_date,
-             appointment_time::text AS appointment_time, appointment_status
-      FROM appointments
-      WHERE appointment_id = $1
+            SELECT a.appointment_id, a.user_id, a.aesthetician_id,
+              a.appointment_date::text AS appointment_date,
+              a.appointment_time::text AS appointment_time, a.appointment_status,
+              s.service_name
+            FROM appointments a
+            JOIN services s ON s.service_id = a.service_id
+            WHERE a.appointment_id = $1
     `, [appointmentId]);
     if (result.rows.length === 0) return res.status(404).json({ message: 'Appointment not found.' });
 
@@ -594,6 +604,9 @@ router.post('/:id/cancel', requireRole('admin'), async (req, res) => {
     if (minutesToAppointment <= 0) return res.status(400).json({ message: 'Appointments that have already started cannot be cancelled.' });
 
     await db.query(`UPDATE appointments SET appointment_status = 'cancelled' WHERE appointment_id = $1`, [appointmentId]);
+    const message = `Your ${appointment.service_name} appointment on ${appointment.appointment_date} at ${String(appointment.appointment_time).slice(0, 5)} was cancelled.`;
+    await notifyUsers([appointment.user_id, appointment.aesthetician_id].filter(Boolean), 'appointment_cancelled', message);
+    await notifyRoles(['admin'], 'appointment_cancelled', message, { excludeUserIds: [req.session.userId] });
     return res.json({ message: 'Appointment cancelled successfully.' });
   } catch (error) {
     console.error('Error cancelling appointment:', error);
@@ -629,6 +642,11 @@ router.post('/:id/cancellation-request', async (req, res) => {
           cancellation_reviewed_at = NULL
       WHERE appointment_id = $4
     `, [reason, description, req.session.userId, appointmentId]);
+    await notifyRoles(
+      ['admin'],
+      'aesthetician_cancellation_request',
+      `Aesthetician requested cancellation for appointment ${appointmentId}: ${reason}. ${description}`,
+    );
     return res.json({ message: 'Cancellation request sent to the admin.' });
   } catch (error) {
     console.error('Error creating cancellation request:', error);
@@ -646,9 +664,10 @@ router.post('/:id/cancellation-request/review', requireRole('admin'), async (req
 
   try {
     const result = await db.query(`
-      SELECT appointment_status, service_id, cancellation_request_status,
-             reschedule_request_status, reschedule_requested_date,
-             reschedule_requested_time, reschedule_requested_end_time
+                  SELECT appointment_status, service_id, user_id, aesthetician_id,
+                    cancellation_request_status, reschedule_request_status,
+                    reschedule_requested_date, reschedule_requested_time,
+                    reschedule_requested_end_time
       FROM appointments WHERE appointment_id = $1
     `, [appointmentId]);
     if (result.rows.length === 0) return res.status(404).json({ message: 'Appointment not found.' });
@@ -662,6 +681,7 @@ router.post('/:id/cancellation-request/review', requireRole('admin'), async (req
         SET appointment_date = reschedule_requested_date,
             appointment_time = reschedule_requested_time,
             appointment_end_time = reschedule_requested_end_time,
+          reminder_24h_sent = FALSE, reminder_3h_sent = FALSE,
             reschedule_request_status = 'approved', reschedule_reviewed_by = $1,
             reschedule_reviewed_at = NOW()
         WHERE appointment_id = $2
@@ -681,6 +701,19 @@ router.post('/:id/cancellation-request/review', requireRole('admin'), async (req
             cancellation_reviewed_by = $3, cancellation_reviewed_at = NOW()
         WHERE appointment_id = $4
       `, [nextStatus, decision === 'allow' ? 'approved' : 'rejected', req.session.userId, appointmentId]);
+    }
+    if (decision === 'allow' && requestType === 'cancellation') {
+      await notifyUsers(
+        [appointment.user_id, appointment.aesthetician_id].filter(Boolean),
+        'appointment_cancelled',
+        `Appointment ${appointmentId} was cancelled after admin review.`,
+      );
+    } else if (decision === 'allow' && requestType === 'reschedule') {
+      await notifyUsers(
+        [appointment.user_id, appointment.aesthetician_id].filter(Boolean),
+        'appointment_rescheduled',
+        `Appointment ${appointmentId} was rescheduled to ${appointment.reschedule_requested_date} at ${String(appointment.reschedule_requested_time).slice(0, 5)}.`,
+      );
     }
     const label = requestType === 'reschedule' ? 'Reschedule' : 'Cancellation';
     return res.json({ message: decision === 'allow' ? `${label} allowed.` : `${label} request rejected.` });
@@ -703,7 +736,17 @@ router.post('/:id/finish', async (req, res) => {
     if (result.rows.length === 0) return res.status(404).json({ message: 'Appointment not found.' });
     if (result.rows[0].appointment_date !== manilaNow().dateStr) return res.status(400).json({ message: 'An appointment can only be finished on its scheduled date.' });
     if (result.rows[0].appointment_status !== 'confirmed') return res.status(400).json({ message: 'Only confirmed appointments can be finished.' });
-    await db.query(`UPDATE appointments SET appointment_status = 'completed' WHERE appointment_id = $1`, [appointmentId]);
+    const updated = await db.query(`
+      UPDATE appointments
+      SET appointment_status = 'completed'
+      WHERE appointment_id = $1
+      RETURNING user_id, appointment_id
+    `, [appointmentId]);
+    await notifyUser(
+      updated.rows[0].user_id,
+      'appointment_status_changed',
+      `Appointment ${updated.rows[0].appointment_id} status changed to completed.`,
+    );
     return res.json({ message: 'Appointment marked as completed.' });
   } catch (error) {
     console.error('Error finishing appointment:', error);
@@ -727,7 +770,8 @@ router.post('/:id/reschedule', async (req, res) => {
   try {
     const result = await db.query(`
             SELECT a.appointment_id, a.user_id, a.aesthetician_id, a.service_id,
-              a.appointment_status, a.reschedule_request_status, s.duration_minutes
+              a.appointment_status, a.reschedule_request_status, s.duration_minutes,
+              s.service_name
       FROM appointments a
       JOIN services s ON s.service_id = a.service_id
       WHERE a.appointment_id = $1
@@ -784,9 +828,15 @@ router.post('/:id/reschedule', async (req, res) => {
 
     await db.query(`
       UPDATE appointments
-      SET appointment_date = $1, appointment_time = $2, appointment_end_time = $3
+        SET appointment_date = $1, appointment_time = $2, appointment_end_time = $3,
+          reminder_24h_sent = FALSE, reminder_3h_sent = FALSE
       WHERE appointment_id = $4
     `, [appointmentDate, appointmentTime, appointmentEndTime, appointmentId]);
+    await notifyUsers(
+      [appointment.user_id, appointment.aesthetician_id].filter((userId) => userId && userId !== req.session.userId),
+      'appointment_rescheduled',
+      `${appointment.service_name} was rescheduled to ${appointmentDate} at ${slotLabel}.`,
+    );
     return res.json({ message: 'Appointment rescheduled successfully.' });
   } catch (error) {
     if (error.code === '23P01' || error.code === '23505') {
@@ -974,7 +1024,7 @@ router.post('/paymongo/confirm', async (req, res) => {
       `, [referenceNumber, req.session.userId]);
       if (lockedPayment.rows.length === 0) throw new Error('Checkout session not found.');
       if (lockedPayment.rows[0].status === 'consumed' && lockedPayment.rows[0].appointment_id) {
-        return { appointment_id: lockedPayment.rows[0].appointment_id };
+        return { appointment_id: lockedPayment.rows[0].appointment_id, alreadyCreated: true };
       }
       if (lockedPayment.rows[0].status !== 'paid') {
         const error = new Error('Payment is still being verified.');
@@ -995,7 +1045,7 @@ router.post('/paymongo/confirm', async (req, res) => {
           const result = await client.query(`
             INSERT INTO appointments (user_id, service_id, booked_service_price, booked_reservation_fee, appointment_date, appointment_time, appointment_end_time, aesthetician_id, appointment_status, payment_status)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'confirmed', 'paid')
-            RETURNING appointment_id, appointment_status, payment_status
+            RETURNING appointment_id, appointment_status, payment_status, aesthetician_id
           `, [payment.user_id, payment.service_id, payment.service_price,
             Number(payment.amount_cents) / 100, payment.appointment_date,
             payment.appointment_time, payment.appointment_end_time, candidate.user_id]);
@@ -1005,7 +1055,7 @@ router.post('/paymongo/confirm', async (req, res) => {
             WHERE reference_number = $2
           `, [result.rows[0].appointment_id, referenceNumber]);
           await client.query('RELEASE SAVEPOINT appointment_candidate');
-          return result.rows[0];
+          return { ...result.rows[0], alreadyCreated: false };
         } catch (error) {
           if (error.code === '23P01' || error.code === '23505') {
             await client.query('ROLLBACK TO SAVEPOINT appointment_candidate');
@@ -1021,6 +1071,16 @@ router.post('/paymongo/confirm', async (req, res) => {
       throw error;
     });
 
+    if (!appointment.alreadyCreated) {
+      const message = `Your ${payment.service_name} appointment on ${payment.appointment_date} at ${String(payment.appointment_time).slice(0, 5)} is confirmed.`;
+      await notifyUser(payment.user_id, 'appointment_confirmed', message);
+      await notifyUser(
+        appointment.aesthetician_id,
+        'appointment_confirmed',
+        `New appointment: ${payment.service_name} on ${payment.appointment_date} at ${String(payment.appointment_time).slice(0, 5)}.`,
+      );
+    }
+
     return res.status(201).json({
       message: 'Appointment created successfully.',
       appointment: {
@@ -1034,8 +1094,12 @@ router.post('/paymongo/confirm', async (req, res) => {
     });
   } catch (error) {
     if (error.code === 'PAYMENT_NOT_PAID') return res.status(409).json({ pending: true, message: error.message });
-    if (error.code === 'SLOT_UNAVAILABLE') return res.status(409).json({ message: error.message });
-    if (error.code === '23P01' || error.code === '23505') return res.status(409).json({ message: 'That time slot was just taken. Contact support to arrange a refund.' });
+    if (error.code === 'SLOT_UNAVAILABLE' || error.code === '23P01' || error.code === '23505') {
+      const message = `Payment was received for checkout ${referenceNumber}, but no appointment slot could be secured. Contact support urgently to arrange a refund.`;
+      await notifyUser(req.session.userId, 'payment_slot_unavailable', message);
+      await notifyRoles(['admin'], 'payment_slot_unavailable', message);
+      return res.status(409).json({ message: error.message || 'That time slot was just taken. Contact support to arrange a refund.' });
+    }
     console.error('Error confirming paid appointment:', error.message);
     return res.status(500).json({ message: 'Could not confirm your paid appointment.' });
   }

@@ -1,6 +1,70 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const { notifyRoles } = require('../utils/notifications');
+const { LOW_STOCK_THRESHOLD, CRITICAL_STOCK_THRESHOLD } = require('../utils/inventoryThresholds');
+
+async function notifyStockTransition(previousStock, currentStock, productName) {
+    let type;
+    let severity;
+    if (previousStock > CRITICAL_STOCK_THRESHOLD && currentStock <= CRITICAL_STOCK_THRESHOLD) {
+        type = 'inventory_critical_stock';
+        severity = 'critical';
+    } else if (previousStock > LOW_STOCK_THRESHOLD && currentStock <= LOW_STOCK_THRESHOLD) {
+        type = 'inventory_low_stock';
+        severity = 'low';
+    }
+
+    if (type) {
+        await notifyRoles(
+            ['inventory_officer', 'admin'],
+            type,
+            `${severity === 'critical' ? 'URGENT: ' : ''}${productName} stock dropped to ${currentStock} units (${severity} stock alert).`,
+        );
+    }
+}
+
+async function updateInventoryProduct(productId, stock, details) {
+    return db.transaction(async (client) => {
+        const current = await client.query(`
+            SELECT stock_quantity
+            FROM inventory_products
+            WHERE product_id = $1
+            FOR UPDATE
+        `, [productId]);
+        if (current.rows.length === 0) return null;
+
+        const previousStock = Number(current.rows[0].stock_quantity);
+        const result = details
+            ? await client.query(`
+                UPDATE inventory_products
+                SET product_name = $1, category = $2, stock_quantity = $3,
+                        expiry_date = $4, updated_at = NOW()
+                WHERE product_id = $5
+                RETURNING product_id, product_name, category, stock_quantity, expiry_date
+            `, [details.product_name.trim(), details.category, stock, details.expiry_date || null, productId])
+            : await client.query(`
+                UPDATE inventory_products
+                SET stock_quantity = $1, updated_at = NOW()
+                WHERE product_id = $2
+                RETURNING product_id, product_name, category, stock_quantity, expiry_date
+            `, [stock, productId]);
+
+        if (stock !== previousStock) {
+            await client.query(`
+                INSERT INTO inventory_transactions
+                    (product_id, transaction_type, quantity, previous_stock, new_stock, created_at)
+                VALUES ($1, $2, $3, $4, $5, NOW())
+            `, [productId, stock > previousStock ? 'Restock' : 'Used in Service', Math.abs(stock - previousStock), previousStock, stock]);
+        }
+
+        return { product: result.rows[0], previousStock };
+    });
+}
+
+router.get('/thresholds', (req, res) => {
+    res.json({ lowStock: LOW_STOCK_THRESHOLD, criticalStock: CRITICAL_STOCK_THRESHOLD });
+});
 
 // GET all inventory products
 router.get('/', async (req, res) => {
@@ -134,101 +198,13 @@ router.put('/:id/stock', async (req, res) => {
         }
 
 
-        // Get the current stock first
-        const currentProduct = await db.query(`
-            SELECT
-                product_id,
-                stock_quantity
-            FROM inventory_products
-            WHERE product_id = $1
-        `, [productId]);
-
-
-        if (currentProduct.rows.length === 0) {
-
-            return res.status(404).json({
-                message: 'Product not found.'
-            });
-
+        const updated = await updateInventoryProduct(productId, stock);
+        if (!updated) {
+            return res.status(404).json({ message: 'Product not found.' });
         }
 
-
-        const previousStock =
-            currentProduct.rows[0].stock_quantity;
-        
-            const quantity =
-                Math.abs(stock - previousStock);
-
-            let transactionType;
-
-            if (stock > previousStock) {
-
-                transactionType = "Restock";
-
-            }
-            else if (stock < previousStock) {
-
-                transactionType = "Used in Service";
-
-            }
-            else {
-
-                transactionType = null;
-
-            }
-
-
-        // Calculate how much the stock changed
-   
-
-
-      
-
-
-        // Update inventory stock
-        const result = await db.query(`
-            UPDATE inventory_products
-            SET
-                stock_quantity = $1,
-                updated_at = NOW()
-            WHERE product_id = $2
-            RETURNING
-                product_id,
-                product_name,
-                category,
-                stock_quantity,
-                expiry_date
-        `, [stock, productId]);
-
-
-        // Create transaction record
-        // only when the stock actually changed
-        if (transactionType) {
-
-            await db.query(`
-                INSERT INTO inventory_transactions
-                    (
-                        product_id,
-                        transaction_type,
-                        quantity,
-                        previous_stock,
-                        new_stock,
-                        created_at
-                    )
-                VALUES
-                    ($1, $2, $3, $4, $5, NOW())
-            `, [
-                productId,
-                transactionType,
-                quantity,
-                previousStock,
-                stock
-            ]);
-
-        }
-
-
-        res.json(result.rows[0]);
+        await notifyStockTransition(updated.previousStock, stock, updated.product.product_name);
+        res.json(updated.product);
 
 
     } catch (error) {
@@ -282,114 +258,17 @@ router.put("/:id", async (req, res) => {
         }
 
 
-        // Get the current stock before updating
-        const currentProduct = await db.query(`
-            SELECT
-                product_id,
-                stock_quantity
-            FROM inventory_products
-            WHERE product_id = $1
-        `, [productId]);
-
-
-        if (currentProduct.rows.length === 0) {
-
-            return res.status(404).json({
-                message: "Product not found."
-            });
-
-        }
-
-
-        const previousStock =
-            currentProduct.rows[0].stock_quantity;
-
-
-        // Calculate the stock change
-        const quantity =
-            Math.abs(stock - previousStock);
-
-        let transactionType;
-
-        if (stock > previousStock) {
-
-            transactionType = "Restock";
-
-        }
-        else if (stock < previousStock) {
-
-            transactionType = "Used in Service";
-
-        }
-        else {
-
-            transactionType = null;
-
-        }
-
-
-        // Update the entire inventory product
-        const result = await db.query(`
-            UPDATE inventory_products
-            SET
-                product_name = $1,
-                category = $2,
-                stock_quantity = $3,
-                expiry_date = $4,
-                updated_at = NOW()
-            WHERE product_id = $5
-            RETURNING
-                product_id,
-                product_name,
-                category,
-                stock_quantity,
-                expiry_date
-        `, [
-            product_name.trim(),
+        const updated = await updateInventoryProduct(productId, stock, {
+            product_name,
             category,
-            stock,
-            expiry_date || null,
-            productId
-        ]);
-
-
-        if (result.rows.length === 0) {
-
-            return res.status(404).json({
-                message: "Product not found."
-            });
-
+            expiry_date
+        });
+        if (!updated) {
+            return res.status(404).json({ message: "Product not found." });
         }
 
-
-        // Create transaction record
-        // only when the stock actually changed
-        if (transactionType) {
-
-            await db.query(`
-                INSERT INTO inventory_transactions
-                    (
-                        product_id,
-                        transaction_type,
-                        quantity,
-                        previous_stock,
-                        new_stock,
-                        created_at
-                    )
-                VALUES
-                    ($1, $2, $3, $4, $5, NOW())
-            `, [
-                productId,
-                transactionType,
-                quantity,
-                previousStock,
-                stock
-            ]);
-
-        }
-
-
-        res.json(result.rows[0]);
+        await notifyStockTransition(updated.previousStock, stock, updated.product.product_name);
+        res.json(updated.product);
 
 
     } catch (error) {

@@ -84,11 +84,23 @@ const addStock =
 let productToDelete = null;
 
 let inventoryProducts = [];
+let inventoryThresholds = null;
 
 //getting Inventory data from Postgres after communicating with Express
 async function loadInventory(){
 
     try{
+
+        const thresholdsResponse = await fetch("/api/inventory/thresholds");
+        if(!thresholdsResponse.ok){
+            throw new Error("Failed to fetch inventory thresholds.");
+        }
+        inventoryThresholds = await thresholdsResponse.json();
+
+        const lowStockOption = stockFilter.querySelector('[value="low"]');
+        if(lowStockOption){
+            lowStockOption.textContent = `1–${inventoryThresholds.lowStock}`;
+        }
 
         const response =
             await fetch("/api/inventory");
@@ -182,13 +194,13 @@ function renderInventory(){
             let status;
             let statusClass;
             
-            if(product.stock_quantity <= 5){
+            if(product.stock_quantity <= inventoryThresholds.criticalStock){
             
                 status = "critical";
                 statusClass = "critical";
             
             }
-            else if(product.stock_quantity <= 20){
+            else if(product.stock_quantity <= inventoryThresholds.lowStock){
             
                 status = "low";
                 statusClass = "low-stock";
@@ -363,8 +375,8 @@ function filterInventory(){
                 matchesStock = stock === 0;
             }
 
-            else if(stockValue === "1-20"){
-                matchesStock = stock >= 1 && stock <= 20;
+            else if(stockValue === "low"){
+                matchesStock = stock >= 1 && stock <= inventoryThresholds.lowStock;
             }
 
             else if(stockValue === "21-40"){
@@ -1087,7 +1099,7 @@ confirmAddProduct.addEventListener("click", async () => {
         let newStatus;
 
 
-        if(updatedProduct.stock_quantity <= 5){
+        if(updatedProduct.stock_quantity <= inventoryThresholds.criticalStock){
 
             newStatus = "critical";
 
@@ -1100,7 +1112,7 @@ confirmAddProduct.addEventListener("click", async () => {
 
         }
 
-        else if(updatedProduct.stock_quantity <= 20){
+        else if(updatedProduct.stock_quantity <= inventoryThresholds.lowStock){
 
             newStatus = "low"; //previously low-stock but oriiginally low
 

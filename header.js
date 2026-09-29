@@ -131,20 +131,74 @@
 
     if (!notificationWrap || !notificationBtn || !notificationDropdown) return;
 
+    const notificationList = notificationDropdown.querySelector('.notification-list');
+    const notificationBadge = notificationBtn.querySelector('.badge');
+
+    async function loadNotifications() {
+        try {
+            const response = await fetch('/api/notifications');
+            if (!response.ok) return;
+            const data = await response.json();
+            const notifications = Array.isArray(data.notifications) ? data.notifications : [];
+
+            if (notificationBadge) {
+                notificationBadge.textContent = data.unreadCount ? String(data.unreadCount) : '';
+                notificationBadge.hidden = !data.unreadCount;
+            }
+            if (!notificationList) return;
+
+            notificationList.replaceChildren();
+            if (notifications.length === 0) {
+                notificationList.textContent = 'No notifications yet';
+                return;
+            }
+
+            notifications.forEach((notification) => {
+                const item = document.createElement('button');
+                item.type = 'button';
+                item.className = `notification-item${notification.is_read ? '' : ' unread'}`;
+                item.dataset.notificationId = notification.notification_id;
+                item.textContent = notification.message;
+                notificationList.append(item);
+            });
+        } catch (error) {
+            console.error('Could not load notifications:', error);
+        }
+    }
+
+    if (notificationList) {
+        notificationList.addEventListener('click', async (event) => {
+            const item = event.target.closest('[data-notification-id]');
+            if (!item || !item.classList.contains('unread')) return;
+            try {
+                await fetch(`/api/notifications/${encodeURIComponent(item.dataset.notificationId)}/read`, { method: 'PATCH' });
+                await loadNotifications();
+            } catch (error) {
+                console.error('Could not mark notification as read:', error);
+            }
+        });
+    }
+
+    loadNotifications();
+
     notificationBtn.addEventListener("click", (e) => {
         e.stopPropagation();
-        notificationDropdown.classList.toggle("show");
+        const isOpen = notificationDropdown.classList.toggle("show");
+        notificationBtn.setAttribute('aria-expanded', String(isOpen));
+        if (isOpen) loadNotifications();
     });
 
     document.addEventListener("click", (e) => {
         if (!notificationWrap.contains(e.target)) {
             notificationDropdown.classList.remove("show");
+            notificationBtn.setAttribute('aria-expanded', 'false');
         }
     });
 
     document.addEventListener("keydown", (e) => {
         if (e.key === "Escape") {
             notificationDropdown.classList.remove("show");
+            notificationBtn.setAttribute('aria-expanded', 'false');
         }
     });
 })();

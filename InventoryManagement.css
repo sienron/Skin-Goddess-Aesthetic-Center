@@ -221,10 +221,30 @@ button{
 }
 
 .admin-notification-list{
-    padding: 20px 14px;
+    max-height: 320px;
+    overflow-y: auto;
     color: var(--ink-soft);
     font-size: 11px;
-    text-align: center;
+    text-align: left;
+}
+
+.admin-notification-item{
+    width: 100%;
+    padding: 11px 14px;
+    border: 0;
+    border-bottom: 1px solid #E6E2DB;
+    background: var(--white);
+    color: var(--ink);
+    font: inherit;
+    font-size: 11px;
+    line-height: 1.45;
+    text-align: left;
+    cursor: pointer;
+}
+
+.admin-notification-item.unread{
+    border-left: 3px solid #B38A3D;
+    font-weight: 700;
 }
 
 .search-box input{
