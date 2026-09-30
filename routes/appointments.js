@@ -122,24 +122,8 @@ function validRequestText(value, maxLength) {
   return typeof value === 'string' && value.trim().length > 0 && value.length <= maxLength ? value.trim() : null;
 }
 
-async function markPastConfirmedAppointments() {
-  const result = await db.query(`
-    UPDATE appointments
-    SET appointment_status = 'no_show'
-    WHERE appointment_status = 'confirmed'
-      AND appointment_date + appointment_end_time < (NOW() AT TIME ZONE 'Asia/Manila')
-    RETURNING user_id, appointment_id
-  `);
-  await Promise.all(result.rows.map((row) => notifyUser(
-    row.user_id,
-    'appointment_status_changed',
-    `Appointment ${row.appointment_id} status changed to no show.`,
-  )));
-}
-
 router.get('/admin', requireRole('admin'), async (req, res) => {
   try {
-    await markPastConfirmedAppointments();
     const result = await db.query(`
       SELECT a.appointment_id,
              a.appointment_date::text AS date,
@@ -475,6 +459,44 @@ async function findAvailableAestheticians(queryClient, booking) {
   `, [booking.appointmentDate, booking.appointmentTime, booking.appointmentEndTime, staffRole]);
 }
 
+async function createAppointmentFromPaidCheckout(client, payment, referenceNumber) {
+  const candidates = await findAvailableAestheticians(client, {
+    appointmentDate: payment.appointment_date,
+    appointmentTime: payment.appointment_time,
+    appointmentEndTime: payment.appointment_end_time,
+    serviceId: payment.service_id,
+  });
+
+  for (const candidate of candidates.rows) {
+    await client.query('SAVEPOINT appointment_candidate');
+    try {
+      const result = await client.query(`
+        INSERT INTO appointments (user_id, service_id, booked_service_price, booked_reservation_fee, appointment_date, appointment_time, appointment_end_time, aesthetician_id, appointment_status, payment_status)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'confirmed', 'paid')
+        RETURNING appointment_id, appointment_status, payment_status, aesthetician_id
+      `, [payment.user_id, payment.service_id, payment.service_price,
+        Number(payment.amount_cents) / 100, payment.appointment_date,
+        payment.appointment_time, payment.appointment_end_time, candidate.user_id]);
+      await client.query(`
+        UPDATE paymongo_checkout_sessions
+        SET status = 'consumed', appointment_id = $1, updated_at = NOW()
+        WHERE reference_number = $2
+      `, [result.rows[0].appointment_id, referenceNumber]);
+      await client.query('RELEASE SAVEPOINT appointment_candidate');
+      return result.rows[0];
+    } catch (error) {
+      if (error.code === '23P01' || error.code === '23505') {
+        await client.query('ROLLBACK TO SAVEPOINT appointment_candidate');
+        await client.query('RELEASE SAVEPOINT appointment_candidate');
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  return null;
+}
+
 function validPaymentReference(value) {
   return typeof value === 'string' && /^SG[A-F0-9]{24}$/.test(value);
 }
@@ -484,7 +506,6 @@ router.get('/mine', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ message: 'You must be logged in.' });
 
   try {
-    await markPastConfirmedAppointments();
     const userResult = await db.query('SELECT role FROM users WHERE user_id = $1', [req.session.userId]);
     if (userResult.rows.length === 0) return res.status(401).json({ message: 'Your session is no longer valid. Please log in again.' });
 
@@ -739,9 +760,10 @@ router.post('/:id/finish', async (req, res) => {
     const updated = await db.query(`
       UPDATE appointments
       SET appointment_status = 'completed'
-      WHERE appointment_id = $1
+      WHERE appointment_id = $1 AND aesthetician_id = $2 AND appointment_status = 'confirmed'
       RETURNING user_id, appointment_id
-    `, [appointmentId]);
+    `, [appointmentId, req.session.userId]);
+    if (updated.rows.length === 0) return res.status(409).json({ message: 'This appointment is no longer confirmed.' });
     await notifyUser(
       updated.rows[0].user_id,
       'appointment_status_changed',
@@ -751,6 +773,35 @@ router.post('/:id/finish', async (req, res) => {
   } catch (error) {
     console.error('Error finishing appointment:', error);
     return res.status(500).json({ message: 'Could not finish appointment.' });
+  }
+});
+
+router.post('/:id/no-show', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ message: 'You must be logged in.' });
+  const appointmentId = validAppointmentId(req.params.id);
+  if (!appointmentId) return res.status(400).json({ message: 'Choose a valid appointment.' });
+  try {
+    const result = await db.query(`
+      UPDATE appointments
+      SET appointment_status = 'no_show'
+      WHERE appointment_id = $1 AND aesthetician_id = $2
+        AND appointment_status = 'confirmed'
+        AND appointment_date = (NOW() AT TIME ZONE 'Asia/Manila')::date
+        AND appointment_time <= (NOW() AT TIME ZONE 'Asia/Manila')::time
+      RETURNING user_id, appointment_id
+    `, [appointmentId, req.session.userId]);
+    if (result.rows.length === 0) {
+      return res.status(409).json({ message: 'Only a confirmed appointment that has started today can be marked as no show.' });
+    }
+    await notifyUser(
+      result.rows[0].user_id,
+      'appointment_status_changed',
+      `Appointment ${result.rows[0].appointment_id} status changed to no show.`,
+    );
+    return res.json({ message: 'Appointment marked as no show.' });
+  } catch (error) {
+    console.error('Error marking appointment no show:', error);
+    return res.status(500).json({ message: 'Could not mark appointment as no show.' });
   }
 });
 
@@ -1017,7 +1068,11 @@ router.post('/paymongo/confirm', async (req, res) => {
 
     const appointment = await db.transaction(async (client) => {
       const lockedPayment = await client.query(`
-        SELECT status, appointment_id
+        SELECT status, appointment_id, user_id, service_id, service_name, service_price,
+               appointment_date::text AS appointment_date,
+               appointment_time::text AS appointment_time,
+               appointment_end_time::text AS appointment_end_time,
+               amount_cents
         FROM paymongo_checkout_sessions
         WHERE reference_number = $1 AND user_id = $2
         FOR UPDATE
@@ -1032,43 +1087,13 @@ router.post('/paymongo/confirm', async (req, res) => {
         throw error;
       }
 
-      const candidates = await findAvailableAestheticians(client, {
-        appointmentDate: payment.appointment_date,
-        appointmentTime: payment.appointment_time,
-        appointmentEndTime: payment.appointment_end_time,
-        serviceId: payment.service_id,
-      });
-
-      for (const candidate of candidates.rows) {
-        await client.query('SAVEPOINT appointment_candidate');
-        try {
-          const result = await client.query(`
-            INSERT INTO appointments (user_id, service_id, booked_service_price, booked_reservation_fee, appointment_date, appointment_time, appointment_end_time, aesthetician_id, appointment_status, payment_status)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'confirmed', 'paid')
-            RETURNING appointment_id, appointment_status, payment_status, aesthetician_id
-          `, [payment.user_id, payment.service_id, payment.service_price,
-            Number(payment.amount_cents) / 100, payment.appointment_date,
-            payment.appointment_time, payment.appointment_end_time, candidate.user_id]);
-          await client.query(`
-            UPDATE paymongo_checkout_sessions
-            SET status = 'consumed', appointment_id = $1, updated_at = NOW()
-            WHERE reference_number = $2
-          `, [result.rows[0].appointment_id, referenceNumber]);
-          await client.query('RELEASE SAVEPOINT appointment_candidate');
-          return { ...result.rows[0], alreadyCreated: false };
-        } catch (error) {
-          if (error.code === '23P01' || error.code === '23505') {
-            await client.query('ROLLBACK TO SAVEPOINT appointment_candidate');
-            await client.query('RELEASE SAVEPOINT appointment_candidate');
-            continue;
-          }
-          throw error;
-        }
+      const created = await createAppointmentFromPaidCheckout(client, lockedPayment.rows[0], referenceNumber);
+      if (!created) {
+        const error = new Error('That time slot was just taken. Your payment was received, but no appointment was created. Contact support to arrange a refund.');
+        error.code = 'SLOT_UNAVAILABLE';
+        throw error;
       }
-
-      const error = new Error('That time slot was just taken. Your payment was received, but no appointment was created. Contact support to arrange a refund.');
-      error.code = 'SLOT_UNAVAILABLE';
-      throw error;
+      return { ...created, alreadyCreated: false };
     });
 
     if (!appointment.alreadyCreated) {
@@ -1139,19 +1164,64 @@ router.post('/paymongo/webhook', async (req, res) => {
   }
 
   try {
-    const result = await db.query(`
-      UPDATE paymongo_checkout_sessions
-      SET status = 'paid', updated_at = NOW()
-      WHERE reference_number = $1 AND checkout_session_id = $2 AND livemode = $3
-        AND amount_cents = $4 AND currency = 'PHP' AND status = 'pending'
-      RETURNING reference_number
-    `, [referenceNumber, session.id, config.isLive, sessionAmount]);
-    if (result.rows.length === 0) {
-      const existing = await db.query(`
-        SELECT status FROM paymongo_checkout_sessions
+    const outcome = await db.transaction(async (client) => {
+      const paymentResult = await client.query(`
+        SELECT reference_number, user_id, service_id, service_name, service_price,
+               appointment_date::text AS appointment_date,
+               appointment_time::text AS appointment_time,
+               appointment_end_time::text AS appointment_end_time,
+               amount_cents, status, appointment_id
+        FROM paymongo_checkout_sessions
         WHERE reference_number = $1 AND checkout_session_id = $2 AND livemode = $3
-      `, [referenceNumber, session.id, config.isLive]);
-      if (existing.rows.length === 0) console.warn('Ignoring unmatched PayMongo checkout event.');
+          AND amount_cents = $4 AND currency = 'PHP'
+        FOR UPDATE
+      `, [referenceNumber, session.id, config.isLive, sessionAmount]);
+      if (paymentResult.rows.length === 0) return { type: 'unmatched' };
+
+      const payment = paymentResult.rows[0];
+      if (payment.status === 'consumed') return { type: 'already-created' };
+      if (!['pending', 'paid'].includes(payment.status)) return { type: 'ignored' };
+      if (isSlotInPast(payment.appointment_date, String(payment.appointment_time).slice(0, 5))) {
+        if (payment.status === 'pending') {
+          await client.query(`
+            UPDATE paymongo_checkout_sessions
+            SET status = 'paid', updated_at = NOW()
+            WHERE reference_number = $1 AND status = 'pending'
+          `, [referenceNumber]);
+          return { type: 'late-payment', payment };
+        }
+        return { type: 'ignored' };
+      }
+
+      const appointment = await createAppointmentFromPaidCheckout(client, payment, referenceNumber);
+      if (appointment) return { type: 'created', payment, appointment };
+
+      await client.query(`
+        UPDATE paymongo_checkout_sessions
+        SET status = 'paid', updated_at = NOW()
+        WHERE reference_number = $1 AND status = 'pending'
+      `, [referenceNumber]);
+      return { type: 'slot-unavailable', payment };
+    });
+
+    if (outcome.type === 'unmatched') console.warn('Ignoring unmatched PayMongo checkout event.');
+    if (outcome.type === 'created') {
+      const { payment, appointment } = outcome;
+      const message = `Your ${payment.service_name} appointment on ${payment.appointment_date} at ${String(payment.appointment_time).slice(0, 5)} is confirmed.`;
+      await notifyUser(payment.user_id, 'appointment_confirmed', message);
+      await notifyUser(
+        appointment.aesthetician_id,
+        'appointment_confirmed',
+        `New appointment: ${payment.service_name} on ${payment.appointment_date} at ${String(payment.appointment_time).slice(0, 5)}.`,
+      );
+    } else if (outcome.type === 'slot-unavailable') {
+      const message = `Payment was received for checkout ${referenceNumber}, but no appointment slot could be secured. Contact support urgently to arrange a refund.`;
+      await notifyUser(outcome.payment.user_id, 'payment_slot_unavailable', message);
+      await notifyRoles(['admin'], 'payment_slot_unavailable', message);
+    } else if (outcome.type === 'late-payment') {
+      const message = `Payment was received for checkout ${referenceNumber} after the appointment start time. Contact support urgently to arrange a refund.`;
+      await notifyUser(outcome.payment.user_id, 'payment_slot_unavailable', message);
+      await notifyRoles(['admin'], 'payment_slot_unavailable', message);
     }
     return res.sendStatus(200);
   } catch (error) {

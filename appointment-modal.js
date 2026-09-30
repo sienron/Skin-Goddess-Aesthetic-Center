@@ -29,6 +29,7 @@ const apptModalClose = document.getElementById("apptModalClose");
 const apptModalCancelBtn = document.getElementById("apptModalCancelBtn");
 const apptModalRescheduleBtn = document.getElementById("apptModalRescheduleBtn");
 const apptModalFinishBtn = document.getElementById("apptModalFinishBtn");
+const apptModalNoShowBtn = document.getElementById("apptModalNoShowBtn");
 const apptRescheduleForm = document.getElementById("apptRescheduleForm");
 const apptCancellationForm = document.getElementById("apptCancellationForm");
 const apptActionMessage = document.getElementById("apptActionMessage");
@@ -132,11 +133,13 @@ function openApptModal(appt) {
     apptModalCancelBtn.dataset.apptId = normalizedAppt.id;
     apptModalRescheduleBtn.dataset.apptId = normalizedAppt.id;
     if (apptModalFinishBtn) apptModalFinishBtn.dataset.apptId = normalizedAppt.id;
+    if (apptModalNoShowBtn) apptModalNoShowBtn.dataset.apptId = normalizedAppt.id;
     const canManageAppointment = normalizedAppt.status === "confirmed";
     const manilaToday = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
     apptModalCancelBtn.disabled = !canManageAppointment || Boolean(normalizedAppt.cancellationRequestStatus);
     apptModalRescheduleBtn.disabled = !canManageAppointment || Boolean(normalizedAppt.rescheduleRequestStatus);
     if (apptModalFinishBtn) apptModalFinishBtn.disabled = !canManageAppointment || normalizedAppt.date !== manilaToday;
+    if (apptModalNoShowBtn) apptModalNoShowBtn.disabled = !canManageAppointment || normalizedAppt.date !== manilaToday;
     if (apptRescheduleForm) {
         apptRescheduleForm.hidden = true;
         apptRescheduleForm.elements.date.value = normalizedAppt.date || "";
@@ -216,6 +219,22 @@ if (apptModalOverlay) {
         } catch (error) {
             if (apptActionMessage) apptActionMessage.textContent = error.message;
             apptModalFinishBtn.disabled = false;
+        }
+    });
+
+    apptModalNoShowBtn?.addEventListener("click", async () => {
+        if (!window.confirm("Mark this client as no show?")) return;
+        apptModalNoShowBtn.disabled = true;
+        if (apptActionMessage) apptActionMessage.textContent = "Marking appointment as no show...";
+        try {
+            const response = await fetch(`/api/appointments/${apptModalNoShowBtn.dataset.apptId}/no-show`, { method: "POST" });
+            const data = await readApiResponse(response);
+            if (!response.ok) throw new Error(data.message || "Could not mark appointment as no show.");
+            closeApptModal();
+            if (typeof refreshAestheticianAppointments === "function") await refreshAestheticianAppointments();
+        } catch (error) {
+            if (apptActionMessage) apptActionMessage.textContent = error.message;
+            apptModalNoShowBtn.disabled = false;
         }
     });
 

@@ -11851,6 +11851,11 @@ body.services {
   color: #fff;
 }
 
+.modal-btn-no-show {
+  background: #9d3e3e;
+  color: #fff;
+}
+
 .cancellation-requests-modal {
   max-width: 620px;
 }
