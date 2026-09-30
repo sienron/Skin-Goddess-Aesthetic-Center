@@ -205,7 +205,7 @@ router.post('/', async (req, res) => {
       return res.status(409).json({ message: 'This email is already registered.' });
     }
 
-    const tempPassword = crypto.randomBytes(6).toString('hex'); // e.g. "a1b2c3d4e5f6"
+    const tempPassword = `${crypto.randomBytes(6).toString('hex')}!`;
     const passwordHash = await bcrypt.hash(tempPassword, 10);
 
     const insertResult = await db.query(
@@ -238,7 +238,7 @@ router.put('/:id', async (req, res) => {
 
   if (password !== undefined && !isValidPassword(password)) {
     return res.status(400).json({
-      message: 'Password must be between 8 and 72 characters.',
+      message: 'Password must be 8 to 72 characters and include at least one special character.',
     });
   }
 

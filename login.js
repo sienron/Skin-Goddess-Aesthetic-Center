@@ -93,6 +93,113 @@ document.addEventListener('DOMContentLoaded', () => {
     submitBtn.querySelector('.btn-label').textContent = isLoading ? 'SIGNING IN...' : 'SIGN IN';
   }
 
+  const loginMfaOverlay = document.getElementById('loginMfaOverlay');
+  const loginMfaForm = document.getElementById('loginMfaForm');
+  const loginMfaDigits = loginMfaOverlay.querySelectorAll('.otp-digit');
+  const loginMfaEmail = document.getElementById('loginMfaEmail');
+  const rememberLoginDevice = document.getElementById('rememberLoginDevice');
+  const loginMfaError = document.getElementById('loginMfaError');
+  const loginMfaMessage = document.getElementById('loginMfaMessage');
+  const loginMfaVerifyBtn = document.getElementById('loginMfaVerifyBtn');
+  const loginMfaResendLink = document.getElementById('loginMfaResendLink');
+
+  function openLoginMfa(email) {
+    loginMfaEmail.textContent = email;
+    loginMfaDigits.forEach((digit) => { digit.value = ''; });
+    rememberLoginDevice.checked = false;
+    loginMfaError.textContent = '';
+    loginMfaMessage.textContent = '';
+    loginMfaOverlay.hidden = false;
+    document.body.classList.add('modal-open');
+    loginMfaDigits[0].focus();
+  }
+
+  function closeLoginMfa() {
+    loginMfaOverlay.hidden = true;
+    document.body.classList.remove('modal-open');
+    loginMfaError.textContent = '';
+    loginMfaMessage.textContent = '';
+  }
+
+  document.getElementById('closeLoginMfa').addEventListener('click', closeLoginMfa);
+  document.getElementById('backToLoginMfa').addEventListener('click', (event) => {
+    event.preventDefault();
+    closeLoginMfa();
+  });
+  loginMfaOverlay.addEventListener('click', (event) => {
+    if (event.target === loginMfaOverlay) closeLoginMfa();
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !loginMfaOverlay.hidden) closeLoginMfa();
+  });
+
+  loginMfaDigits.forEach((digit, index) => {
+    digit.addEventListener('input', () => {
+      digit.value = digit.value.replace(/[^0-9]/g, '').slice(0, 1);
+      if (digit.value && index < loginMfaDigits.length - 1) loginMfaDigits[index + 1].focus();
+    });
+    digit.addEventListener('keydown', (event) => {
+      if (event.key === 'Backspace' && !digit.value && index > 0) loginMfaDigits[index - 1].focus();
+    });
+  });
+
+  loginMfaForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    loginMfaError.textContent = '';
+    loginMfaMessage.textContent = '';
+    const code = Array.from(loginMfaDigits).map((digit) => digit.value).join('');
+    if (!/^\d{6}$/.test(code)) {
+      loginMfaError.textContent = 'Enter all six digits.';
+      return;
+    }
+
+    loginMfaVerifyBtn.disabled = true;
+    loginMfaVerifyBtn.textContent = 'VERIFYING...';
+    try {
+      const response = await fetch('/api/auth/login/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, rememberDevice: rememberLoginDevice.checked }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        loginMfaError.textContent = data.message || 'Verification failed. Please try again.';
+        return;
+      }
+      window.location.href = data.redirectUrl || '/index.html';
+    } catch (error) {
+      loginMfaError.textContent = 'Something went wrong. Please try again.';
+      console.error('Login verification request failed:', error);
+    } finally {
+      loginMfaVerifyBtn.disabled = false;
+      loginMfaVerifyBtn.textContent = 'VERIFY CODE';
+    }
+  });
+
+  loginMfaResendLink.addEventListener('click', async (event) => {
+    event.preventDefault();
+    loginMfaError.textContent = '';
+    loginMfaMessage.textContent = '';
+    try {
+      const response = await fetch('/api/auth/login/resend-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        loginMfaError.textContent = data.message || 'Could not resend the code. Please try again.';
+        return;
+      }
+      loginMfaDigits.forEach((digit) => { digit.value = ''; });
+      loginMfaMessage.textContent = data.message || 'A new sign-in code has been sent.';
+      loginMfaDigits[0].focus();
+    } catch (error) {
+      loginMfaError.textContent = 'Something went wrong. Please try again.';
+      console.error('Login verification resend failed:', error);
+    }
+  });
+
   // ---- Submit handler (Sign In) ----
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -132,6 +239,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (!response.ok) {
         setFieldError('form', data.message || 'Invalid email or password.');
+        return;
+      }
+
+      if (data.requiresMfa) {
+        openLoginMfa(email);
         return;
       }
 

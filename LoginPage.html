@@ -123,7 +123,7 @@
           <div class="auth-form-row">
             <label class="checkbox-label">
               <input type="checkbox" id="staysignedin" name="staysignedin" />
-              <span>Stay Signed In</span>
+              <span>Stay signed in</span>
             </label>
             <a href="/forgot-password" class="link-gold" id="forgotPasswordLink">Forgot password?</a>
           </div>
@@ -252,6 +252,56 @@
       </button>
 
       <p class="modal-footnote">Reset link expires in 30 minutes. Check your spam folder if you don't see it.</p>
+    </div>
+  </div>
+
+  <div class="auth-modal-overlay" id="loginMfaOverlay" hidden>
+    <div class="modal-box otp-modal" role="dialog" aria-modal="true" aria-labelledby="loginMfaTitle">
+      <div class="modal-top-bar"></div>
+      <button type="button" class="auth-modal-close" id="closeLoginMfa" aria-label="Close verification">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6L6 18M6 6l12 12"/>
+        </svg>
+      </button>
+
+      <div class="modal-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.6">
+          <rect x="2" y="4" width="20" height="16" rx="2"/>
+          <path d="M2 6l10 7 10-7"/>
+        </svg>
+      </div>
+
+      <h2 class="modal-title" id="loginMfaTitle">Verify your sign-in</h2>
+      <p class="modal-subtitle">
+        We sent a 6-digit code to<br>
+        <span class="otp-email" id="loginMfaEmail"></span>
+      </p>
+
+      <form id="loginMfaForm" novalidate>
+        <div class="otp-inputs">
+          <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" aria-label="Digit 1">
+          <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" aria-label="Digit 2">
+          <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" aria-label="Digit 3">
+          <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" aria-label="Digit 4">
+          <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" aria-label="Digit 5">
+          <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" aria-label="Digit 6">
+        </div>
+        <label class="checkbox-label login-mfa-remember">
+          <input type="checkbox" id="rememberLoginDevice">
+          <span>Remember this device for 30 days</span>
+        </label>
+        <span class="field-error" id="loginMfaError" aria-live="assertive"></span>
+        <p class="otp-resend" id="loginMfaMessage" aria-live="polite"></p>
+        <button type="submit" class="auth-btn btn-gold btn-block" id="loginMfaVerifyBtn">VERIFY CODE</button>
+      </form>
+
+      <p class="otp-resend">Didn't receive it? <a href="#" class="link-gold" id="loginMfaResendLink">Resend code</a></p>
+      <div class="otp-divider-line"></div>
+      <a href="#" class="back-to-signin" id="backToLoginMfa">&larr; Back to Sign In</a>
+      <div class="otp-security-note">
+        <p>This code is valid for 5 minutes.</p>
+        <p>Never share this code with anyone.</p>
+      </div>
     </div>
   </div>
 

@@ -417,6 +417,10 @@ async function saveEdits() {
       alert('Password must be between 8 and 72 characters.');
       return;
     }
+    if (!/[^A-Za-z0-9\s]/.test(newPassword)) {
+      alert('Password must include at least one special character (such as !, @, or #).');
+      return;
+    }
     if (newPassword !== confirmPasswordInput.value) {
       alert('The new password and confirmation do not match.');
       return;

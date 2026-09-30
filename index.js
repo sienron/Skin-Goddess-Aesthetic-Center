@@ -12,9 +12,13 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const publicDir = path.join(__dirname, 'public');
 const sessionSecret = process.env.SESSION_SECRET;
+const STAY_SIGNED_IN_MAX_AGE = 1000 * 60 * 60 * 24 * 400;
 
 if (!sessionSecret && process.env.NODE_ENV === 'production') {
   throw new Error('SESSION_SECRET must be configured in production.');
+}
+if (!sessionSecret) {
+  console.warn('SESSION_SECRET is not configured. Sessions will be invalidated when the server restarts; add a stable value to .env.');
 }
 
 app.set('trust proxy', 1);
@@ -34,6 +38,13 @@ app.use(session({
     sameSite: 'lax'
   }
 }));
+
+app.use((req, res, next) => {
+  if (req.session?.staySignedIn) {
+    req.session.cookie.maxAge = STAY_SIGNED_IN_MAX_AGE;
+  }
+  next();
+});
 
 app.use((req, res, next) => {
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)

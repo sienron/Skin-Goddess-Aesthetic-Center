@@ -23,9 +23,23 @@ const registerLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 5, message:
 const verifyOtpLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, message: { message: 'Too many verification attempts. Try again later.' } });
 const resendOtpLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 3, message: { message: 'Too many code requests. Try again later.' } });
 const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, message: { message: 'Too many sign-in attempts. Try again later.' } });
+const loginOtpVerifyLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, message: { message: 'Too many verification attempts. Try again later.' } });
+const loginOtpResendLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 3, message: { message: 'Too many code requests. Try again later.' } });
 const forgotPasswordLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 5, message: { message: 'Too many reset requests. Try again later.' } });
 const emailChangeLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 3, message: { message: 'Too many code requests. Try again later.' } });
 const verifyEmailChangeLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, message: { message: 'Too many verification attempts. Try again later.' } });
+const REMEMBERED_DEVICE_COOKIE = 'sg_remembered_device';
+const REMEMBERED_DEVICE_MAX_AGE = 1000 * 60 * 60 * 24 * 30;
+const STAY_SIGNED_IN_MAX_AGE = 1000 * 60 * 60 * 24 * 400;
+const DASHBOARD_PER_ROLE = {
+  client: '/index.html',
+  admin: '/AdminDashboard.html',
+  aesthetician: '/StaffDashboard.html',
+  nail_tech: '/StaffDashboard.html',
+  inventory_officer: '/InventoryDashboard.html',
+  finance_officer: '/FinanceDashboard.html',
+  staff: '/StaffDashboard.html',
+};
 
 function regenerateSession(req) {
   return new Promise((resolve, reject) => {
@@ -33,11 +47,60 @@ function regenerateSession(req) {
   });
 }
 
+function getCookieValue(req, name) {
+  const prefix = `${name}=`;
+  const cookies = String(req.headers.cookie || '').split(';');
+  for (const item of cookies) {
+    const cookie = item.trim();
+    if (cookie.startsWith(prefix)) {
+      try {
+        return decodeURIComponent(cookie.slice(prefix.length));
+      } catch (error) {
+        return null;
+      }
+    }
+  }
+  return null;
+}
+
+function hashDeviceToken(token) {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
+
+function rememberedDeviceCookieOptions() {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+  };
+}
+
+async function establishAuthenticatedSession(req, user, staySignedIn) {
+  await regenerateSession(req);
+  req.session.userId = user.user_id;
+  req.session.role = user.role;
+  if (staySignedIn) {
+    req.session.staySignedIn = true;
+    req.session.cookie.maxAge = STAY_SIGNED_IN_MAX_AGE;
+  }
+}
+
 async function recentVerificationCodeCount(userId) {
   const result = await db.query(`
     SELECT COUNT(*)::integer AS count
     FROM otp_codes
     WHERE user_id = $1 AND purpose = 'email_verification'
+      AND created_at > NOW() - INTERVAL '1 hour'
+  `, [userId]);
+  return result.rows[0].count;
+}
+
+async function recentLoginOtpCount(userId) {
+  const result = await db.query(`
+    SELECT COUNT(*)::integer AS count
+    FROM otp_codes
+    WHERE user_id = $1 AND purpose = 'login_verification'
       AND created_at > NOW() - INTERVAL '1 hour'
   `, [userId]);
   return result.rows[0].count;
@@ -82,7 +145,7 @@ router.post('/register', registerLimiter, async (req, res) => {
 
   if (!isValidPassword(password)) {
     return res.status(400).json({
-      message: 'Password must be between 8 and 72 characters.',
+      message: 'Password must be 8 to 72 characters and include at least one special character.',
     });
   }
 
@@ -315,35 +378,197 @@ router.post('/login', loginLimiter, async (req, res) => {
       return res.status(403).json({ message: 'Verify email to login.' });
     }
 
-    const dashboardPerRole = {
-      client: '/index.html',
-      admin: '/AdminDashboard.html',
-      aesthetician: '/StaffDashboard.html',
-      nail_tech: '/StaffDashboard.html',
-      inventory_officer: '/InventoryDashboard.html',
-      finance_officer: '/FinanceDashboard.html',
-      staff: '/StaffDashboard.html',
-    };
+    const rememberedDeviceToken = getCookieValue(req, REMEMBERED_DEVICE_COOKIE);
+    if (rememberedDeviceToken && /^[a-f\d]{64}$/i.test(rememberedDeviceToken)) {
+      const tokenHash = hashDeviceToken(rememberedDeviceToken);
+      const trustedDeviceResult = await db.query(`
+        SELECT device_id
+        FROM trusted_login_devices
+        WHERE user_id = $1 AND token_hash = $2 AND expires_at > NOW()
+        LIMIT 1
+      `, [user.user_id, tokenHash]);
 
-    await regenerateSession(req);
-    req.session.userId = user.user_id;
-    req.session.role = user.role;
-
-    // "Stay Signed In" checked -> keep the cookie for 30 days.
-    // Unchecked -> fall back to the default 24-hour cookie set in index.js.
-    if (staysignedin) {
-      req.session.cookie.maxAge = 1000 * 60 * 60 * 24 * 30; // 30 days
+      if (trustedDeviceResult.rows.length > 0) {
+        await db.query(
+          'UPDATE trusted_login_devices SET last_used_at = NOW() WHERE device_id = $1',
+          [trustedDeviceResult.rows[0].device_id]
+        );
+        await establishAuthenticatedSession(req, user, Boolean(staysignedin));
+        return res.status(200).json({
+          message: 'Successful login.',
+          userId: user.user_id,
+          role: user.role,
+          redirectUrl: DASHBOARD_PER_ROLE[user.role] || '/dashboard',
+        });
+      }
+    }
+    if (rememberedDeviceToken) {
+      res.clearCookie(REMEMBERED_DEVICE_COOKIE, rememberedDeviceCookieOptions());
     }
 
+    if (await recentLoginOtpCount(user.user_id) >= 5) {
+      return res.status(429).json({ message: 'Too many sign-in codes requested. Try again later.' });
+    }
+
+    const code = generateOtpCode();
+    await db.query(
+      `INSERT INTO otp_codes (user_id, code, purpose, expires_at)
+       VALUES ($1, $2, 'login_verification', NOW() + INTERVAL '5 minutes')`,
+      [user.user_id, code]
+    );
+
+    try {
+      await sendOtpEmail(user.email, code);
+    } catch (emailError) {
+      console.log('Login verification email failed:', emailError);
+      await db.query(
+        `UPDATE otp_codes SET is_used = TRUE
+         WHERE user_id = $1 AND purpose = 'login_verification' AND is_used = FALSE`,
+        [user.user_id]
+      );
+      return res.status(502).json({ message: 'Could not send a sign-in code. Please try again.' });
+    }
+
+    await regenerateSession(req);
+    req.session.pendingLoginUserId = user.user_id;
+    req.session.pendingLoginStaySignedIn = Boolean(staysignedin);
+
     res.status(200).json({
-      message: 'Successful login.',
-      userId: user.user_id,
-      role: user.role,
-      redirectUrl: dashboardPerRole[user.role] || '/dashboard',
+      message: 'A sign-in verification code has been sent to your email.',
+      requiresMfa: true,
     });
   } catch (error) {
     console.log('Login error:', error);
     res.status(500).json({ message: 'Error. Try again.' });
+  }
+});
+
+router.post('/login/verify-otp', loginOtpVerifyLimiter, async (req, res) => {
+  const userId = req.session.pendingLoginUserId;
+  const code = typeof req.body.code === 'string' ? req.body.code : '';
+
+  if (!userId || !/^\d{6}$/.test(code)) {
+    return res.status(400).json({ message: 'Enter the six-digit sign-in code.' });
+  }
+
+  try {
+    const outcome = await db.transaction(async (client) => {
+      const otpResult = await client.query(`
+        SELECT otp_id, code
+        FROM otp_codes
+        WHERE user_id = $1 AND purpose = 'login_verification'
+          AND is_used = FALSE AND expires_at > NOW() AND attempts < 5
+        ORDER BY created_at DESC
+        LIMIT 1
+        FOR UPDATE
+      `, [userId]);
+      if (otpResult.rows.length === 0) return 'invalid';
+
+      const otp = otpResult.rows[0];
+      if (otp.code !== code) {
+        await client.query(`
+          UPDATE otp_codes
+          SET attempts = attempts + 1,
+              is_used = (attempts + 1 >= 5)
+          WHERE otp_id = $1
+        `, [otp.otp_id]);
+        return 'invalid';
+      }
+
+      await client.query('UPDATE otp_codes SET is_used = TRUE WHERE otp_id = $1', [otp.otp_id]);
+      return 'verified';
+    });
+
+    if (outcome !== 'verified') {
+      return res.status(400).json({ message: 'Invalid, expired, or locked sign-in code.' });
+    }
+
+    const userResult = await db.query(
+      'SELECT user_id, role, status, email_verified FROM users WHERE user_id = $1',
+      [userId]
+    );
+    const user = userResult.rows[0];
+    if (!user || user.status === 'suspended' || !user.email_verified) {
+      delete req.session.pendingLoginUserId;
+      delete req.session.pendingLoginStaySignedIn;
+      return res.status(403).json({ message: 'This account cannot sign in. Contact the clinic for help.' });
+    }
+
+    const staySignedIn = req.session.pendingLoginStaySignedIn === true;
+    let newDeviceToken = null;
+
+    if (req.body.rememberDevice === true) {
+      newDeviceToken = crypto.randomBytes(32).toString('hex');
+      await db.query(
+        `INSERT INTO trusted_login_devices (user_id, token_hash, expires_at)
+         VALUES ($1, $2, NOW() + INTERVAL '30 days')`,
+        [user.user_id, hashDeviceToken(newDeviceToken)]
+      );
+    }
+    await establishAuthenticatedSession(req, user, staySignedIn);
+    if (newDeviceToken) {
+      res.cookie(REMEMBERED_DEVICE_COOKIE, newDeviceToken, {
+        ...rememberedDeviceCookieOptions(),
+        maxAge: REMEMBERED_DEVICE_MAX_AGE,
+      });
+    }
+
+    return res.status(200).json({
+      message: 'Successful login.',
+      userId: user.user_id,
+      role: user.role,
+      redirectUrl: DASHBOARD_PER_ROLE[user.role] || '/dashboard',
+    });
+  } catch (error) {
+    console.log('Login verification error:', error);
+    return res.status(500).json({ message: 'Error. Try again.' });
+  }
+});
+
+router.post('/login/resend-otp', loginOtpResendLimiter, async (req, res) => {
+  const userId = req.session.pendingLoginUserId;
+  if (!userId) {
+    return res.status(401).json({ message: 'Your sign-in verification session expired. Sign in again.' });
+  }
+
+  try {
+    const userResult = await db.query(
+      'SELECT email, status, email_verified FROM users WHERE user_id = $1',
+      [userId]
+    );
+    const user = userResult.rows[0];
+    if (!user || user.status === 'suspended' || !user.email_verified) {
+      delete req.session.pendingLoginUserId;
+      delete req.session.pendingLoginStaySignedIn;
+      return res.status(403).json({ message: 'This account cannot sign in. Contact the clinic for help.' });
+    }
+    if (await recentLoginOtpCount(userId) >= 5) {
+      return res.status(429).json({ message: 'Too many sign-in codes requested. Try again later.' });
+    }
+
+    const code = generateOtpCode();
+    await db.query(
+      `INSERT INTO otp_codes (user_id, code, purpose, expires_at)
+       VALUES ($1, $2, 'login_verification', NOW() + INTERVAL '5 minutes')`,
+      [userId, code]
+    );
+
+    try {
+      await sendOtpEmail(user.email, code);
+    } catch (emailError) {
+      console.log('Login verification email resend failed:', emailError);
+      await db.query(
+        `UPDATE otp_codes SET is_used = TRUE
+         WHERE user_id = $1 AND purpose = 'login_verification' AND is_used = FALSE`,
+        [userId]
+      );
+      return res.status(502).json({ message: 'Could not resend the sign-in code. Please try again.' });
+    }
+
+    return res.status(200).json({ message: 'A new sign-in code has been sent.' });
+  } catch (error) {
+    console.log('Login verification resend error:', error);
+    return res.status(500).json({ message: 'Error. Try again.' });
   }
 });
 
@@ -571,7 +796,7 @@ router.put('/change-password', async (req, res) => {
 
   if (!isValidPassword(newPassword)) {
     return res.status(400).json({
-      message: 'Password must be between 8 and 72 characters.',
+      message: 'Password must be 8 to 72 characters and include at least one special character.',
     });
   }
 
@@ -671,7 +896,7 @@ router.post('/reset-password', forgotPasswordLimiter, async (req, res) => {
 
   if (!isValidPassword(newPassword)) {
     return res.status(400).json({
-      message: 'Password must be between 8 and 72 characters.',
+      message: 'Password must be 8 to 72 characters and include at least one special character.',
     });
   }
 

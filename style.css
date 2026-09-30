@@ -6149,6 +6149,12 @@ main.page {
   margin: 4px 0 20px;
 }
 
+.login-mfa-remember {
+  justify-content: center;
+  margin-bottom: 16px;
+  font-size: 12px;
+}
+
 .otp-digit {
   width: 48px;
   height: 56px;

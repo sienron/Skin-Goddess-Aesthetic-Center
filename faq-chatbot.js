@@ -1,5 +1,20 @@
-document.addEventListener('DOMContentLoaded', () => {
-  const launcher = document.getElementById('faqChatLauncher');
+document.addEventListener('DOMContentLoaded', async () => {
+  let launcher = document.getElementById('faqChatLauncher');
+
+  if (!launcher) {
+    const mount = document.querySelector('[data-faq-chatbot-mount]');
+    if (!mount) return;
+
+    try {
+      const response = await fetch('/faq-chatbot-widget.html');
+      if (!response.ok) return;
+      mount.innerHTML = await response.text();
+      launcher = document.getElementById('faqChatLauncher');
+    } catch (error) {
+      return;
+    }
+  }
+
   const panel = document.getElementById('faqChatPanel');
   const closeButton = document.getElementById('faqChatClose');
   const form = document.getElementById('faqChatForm');
@@ -10,12 +25,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const answers = [
     {
-      keywords: ['appointment', 'book', 'booking', 'schedule', 'reserve'],
-      answer: 'You can book an appointment online from the Book Now button. Choose a service and an available time to get started.'
+      keywords: ['reschedule', 'rescheduling', 'change appointment', 'change my booking', 'move my appointment'],
+      answer: 'To reschedule, contact the clinic at +63 945 611 9436 or info@skingoddess.ph with your appointment details and preferred new time.'
     },
     {
-      keywords: ['hour', 'hours', 'open', 'close', 'time', 'saturday', 'sunday'],
-      answer: 'The clinic is open Monday to Saturday, 9:00 AM to 6:00 PM.'
+      keywords: ['cancel', 'cancellation', 'cancel appointment', 'cancel booking'],
+      answer: 'Please contact the clinic at +63 945 611 9436 or info@skingoddess.ph to request a cancellation at least 24 hours in advance.'
+    },
+    {
+      keywords: ['reservation fee', 'down payment', 'downpayment', 'deposit', 'reserve fee'],
+      answer: 'The reservation fee depends on the service you choose. You can see the exact fee on the booking page and checkout before paying; payment is used to reserve your selected slot.'
+    },
+    {
+      keywords: ['available appointment slots', 'available time slots', 'available slots', 'availability', 'slot', 'slots'],
+      answer: 'Available times update on the booking page. Select a service and date under Book Now to see the current open slots.'
+    },
+    {
+      keywords: ['book an appointment', 'how to book', 'book appointment', 'booking', 'appointment', 'book', 'reserve'],
+      answer: 'Choose Book Now, select a service and available date and time, then enter your details and complete checkout to reserve your appointment.'
+    },
+    {
+      keywords: ['clinic schedule', 'operating hours', 'business hours', 'schedule', 'hours', 'open', 'close', 'saturday', 'sunday'],
+      answer: 'The clinic is open Monday to Saturday, 9:00 AM to 6:00 PM, and closed on Sundays.'
+    },
+    {
+      keywords: ['service', 'services', 'treatment', 'treatments', 'facial', 'laser', 'skin', 'whitening', 'anti-aging', 'nail', 'lash', 'eyelash', 'ipl'],
+      answer: 'We offer facial and skin treatments, laser and IPL services, anti-aging treatments, nail and lash services, and more. Visit Services to browse the available treatments.'
+    },
+    {
+      keywords: ['price', 'prices', 'cost', 'how much', 'service fee', 'treatment fee'],
+      answer: 'Prices vary by treatment and service option. Visit Services to review listed prices, or choose a service on the booking page to see its price and reservation fee.'
     },
     {
       keywords: ['where', 'location', 'address', 'directions', 'cavite', 'imus'],
@@ -23,23 +62,19 @@ document.addEventListener('DOMContentLoaded', () => {
     },
     {
       keywords: ['contact', 'phone', 'call', 'email', 'reach'],
-      answer: 'Call us at +63 945 611 9436 or email info@skingoddess.ph. Our hours are Monday to Saturday, 9:00 AM to 6:00 PM.'
+      answer: 'Call us at +63 945 611 9436 or email info@skingoddess.ph. We are open Monday to Saturday, 9:00 AM to 6:00 PM.'
     },
     {
-      keywords: ['service', 'treatment', 'facial', 'laser', 'skin', 'whitening', 'anti-aging', 'nail', 'lash'],
-      answer: 'We offer facials, skin brightening, anti-aging treatments, laser services, nail and lash services, and more. Visit Services to explore the treatments.'
+      keywords: ['before treatment', 'prepare', 'preparation', 'before appointment', 'what to do before'],
+      answer: 'Preparation depends on the treatment. Arrive with clean skin when possible, share any allergies or relevant medications with your provider, and follow any treatment-specific instructions from the clinic.'
     },
     {
-      keywords: ['price', 'cost', 'how much', 'fee', 'payment', 'pay'],
-      answer: 'Treatment prices vary by service. Please check the Services page for starting prices, or contact us at +63 945 611 9436 for details.'
-    },
-    {
-      keywords: ['cancel', 'cancellation', 'reschedule', 'change appointment'],
-      answer: 'For help changing or cancelling a booking, please contact the clinic at +63 945 611 9436 or info@skingoddess.ph.'
+      keywords: ['aftercare', 'after care', 'after treatment', 'recovery', 'what to do after'],
+      answer: 'Aftercare depends on your treatment. Follow your provider’s instructions, use gentle care, protect treated skin from the sun, and contact the clinic if you have a concerning reaction.'
     },
     {
       keywords: ['login', 'log in', 'sign in', 'password', 'account', 'forgot'],
-      answer: 'If you cannot sign in, use Forgot password? on this page to request a reset link. Check your spam folder if it does not arrive.'
+      answer: 'To reset your password, open the sign-in page and choose Forgot password? to request a reset link. Check your spam folder if it does not arrive.'
     }
   ];
 
@@ -52,17 +87,18 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function findAnswer(question) {
-    const normalized = question.toLowerCase().replace(/[^a-z0-9\s-]/g, ' ');
+    const normalized = question.toLowerCase().replace(/[^a-z0-9\s]/g, ' ');
     const words = new Set(normalized.split(/\s+/).filter(Boolean));
     let bestMatch = null;
     let bestScore = 0;
 
     answers.forEach((item) => {
-      const score = item.keywords.reduce((total, keyword) => {
+      const score = item.keywords.reduce((best, keyword) => {
         const phrase = keyword.toLowerCase();
-        return total + (phrase.includes(' ')
-          ? (normalized.includes(phrase) ? 2 : 0)
-          : (words.has(phrase) ? 1 : 0));
+        const matchScore = phrase.includes(' ')
+          ? (normalized.includes(phrase) ? phrase.split(' ').length : 0)
+          : (words.has(phrase) ? 1 : 0);
+        return Math.max(best, matchScore);
       }, 0);
 
       if (score > bestScore) {

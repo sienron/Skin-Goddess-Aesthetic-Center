@@ -111,6 +111,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (password.length < 8 || password.length > 72) {
       setFieldError('password', 'Password must be between 8 and 72 characters.');
       hasError = true;
+    } else if (!/[^A-Za-z0-9\s]/.test(password)) {
+      setFieldError('password', 'Password must include at least one special character (such as !, @, or #).');
+      hasError = true;
     }
 
     if (password !== confirmPassword) {
