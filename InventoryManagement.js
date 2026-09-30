@@ -15,6 +15,13 @@ const inventoryBody = document.getElementById("inventoryBody");
 
 const totalProducts = document.getElementById("totalProducts");
 const restockedToday = document.getElementById("restockedToday");
+const deductedToday = document.getElementById("deductedToday");
+
+const lowStockCount = document.getElementById("lowStockCount");
+const lowStockToday = document.getElementById("lowStockToday");
+
+const criticalStockCount = document.getElementById("criticalStockCount");
+const criticalStockToday = document.getElementById("criticalStockToday");
 
 const deleteModal = document.getElementById("deleteModal");
 const deleteProductName = document.getElementById("deleteProductName");
@@ -87,7 +94,9 @@ let inventoryProducts = [];
 let inventoryThresholds = null;
 
 //getting Inventory data from Postgres after communicating with Express
+
 async function loadInventory(){
+    console.log("NEW INVENTORY JS IS RUNNING");
 
     try{
 
@@ -120,10 +129,19 @@ async function loadInventory(){
             inventoryProducts
         );
 
-        totalProducts.textContent = inventoryProducts.length;
+        const totalStock = inventoryProducts.reduce(
+            (total, product) => total + Number(product.stock_quantity),
+            0
+        );
+        
+        console.log("TOTAL STOCK:", totalStock);
+
+        totalProducts.textContent = totalStock;
+        
+        renderInventory();
 
 //added
-renderInventory();
+
     }
 
     catch(error){
@@ -174,6 +192,112 @@ async function loadRestockedToday(){
 
     }
 
+}
+
+async function loadDeductedToday() {
+    try {
+        const response = await fetch("/api/inventory/deducted-today");
+
+        if (!response.ok) {
+            throw new Error("Failed to fetch deducted units.");
+        }
+
+        const data = await response.json();
+
+        deductedToday.textContent =
+            `↓ ${data.total_deducted} unit${data.total_deducted === 1 ? "" : "s"} deducted today`;
+
+    } catch (error) {
+        console.error("Error loading deducted units:", error);
+    }
+}
+
+async function loadLowStockToday() {
+    try {
+        const response = await fetch("/api/inventory/low-stock-today");
+
+        if (!response.ok) {
+            throw new Error("Failed to fetch today's low-stock count.");
+        }
+
+        const data = await response.json();
+
+        lowStockToday.textContent =
+            `↑ ${data.new_low_stock} new today`;
+
+    } catch (error) {
+        console.error("Error loading today's low-stock count:", error);
+    }
+}
+
+async function loadLowStockCount() {
+    try {
+        const response = await fetch("/api/inventory");
+
+        if (!response.ok) {
+            throw new Error("Failed to fetch inventory.");
+        }
+
+        const products = await response.json();
+
+        const lowStockProducts = products.filter(product => {
+            const stock = Number(product.stock_quantity);
+
+            return (
+                stock > inventoryThresholds.criticalStock &&
+                stock <= inventoryThresholds.lowStock
+            );
+        });
+
+        lowStockCount.textContent = lowStockProducts.length;
+
+    } catch (error) {
+        console.error("Error loading low-stock count:", error);
+    }
+}
+
+async function loadCriticalStockCount() {
+    try {
+        const response = await fetch("/api/inventory");
+
+        if (!response.ok) {
+            throw new Error("Failed to fetch inventory.");
+        }
+
+        const products = await response.json();
+
+        const criticalStockProducts = products.filter(product => {
+            const stock = Number(product.stock_quantity);
+
+            return stock <= inventoryThresholds.criticalStock;
+        });
+
+        criticalStockCount.textContent = criticalStockProducts.length;
+
+    } catch (error) {
+        console.error("Error loading critical-stock count:", error);
+    }
+}
+
+async function loadCriticalStockToday() {
+    try {
+        const response = await fetch("/api/inventory/critical-stock-today");
+
+        if (!response.ok) {
+            throw new Error("Failed to fetch today's critical-stock count.");
+        }
+
+        const data = await response.json();
+
+        criticalStockToday.textContent =
+            `↑ ${data.new_critical_stock} new today`;
+
+    } catch (error) {
+        console.error(
+            "Error loading today's critical-stock count:",
+            error
+        );
+    }
 }
 
 //translate JSON to JS table row
@@ -1018,6 +1142,8 @@ confirmAddProduct.addEventListener("click", async () => {
         // Reload today's restocked total
         await loadRestockedToday();
 
+        await loadDeductedToday();
+
     } catch(error){
 
         console.error(
@@ -1030,6 +1156,14 @@ confirmAddProduct.addEventListener("click", async () => {
         );
 
     }
+
+    await loadInventory();
+    await loadRestockedToday();
+    await loadDeductedToday();
+    await loadLowStockToday();
+    await loadLowStockCount();
+    await loadCriticalStockToday();
+    await loadCriticalStockCount();
 
 });
 
@@ -1142,11 +1276,14 @@ confirmAddProduct.addEventListener("click", async () => {
         row.dataset.status =
             newStatus;
 
-        await loadRestockedToday();
-
-        filterInventory();
-
-
+            await loadRestockedToday();
+            await loadDeductedToday();
+            await loadLowStockToday();
+            await loadLowStockCount();
+            await loadInventory();
+            filterInventory();
+            await loadCriticalStockToday();
+            await loadCriticalStockCount();
     } catch(error){
 
         console.error(
@@ -1178,3 +1315,8 @@ confirmAddProduct.addEventListener("click", async () => {
 
 loadInventory();
 loadRestockedToday();
+loadDeductedToday();    
+loadLowStockToday();
+loadLowStockCount();
+loadCriticalStockCount();
+loadCriticalStockToday();

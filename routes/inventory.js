@@ -125,6 +125,97 @@ router.get('/restocked-today', async (req, res) => {
 
 });
 
+// GET total units deducted today
+router.get('/deducted-today', async (req, res) => {
+    try {
+        const result = await db.query(`
+            SELECT
+                COALESCE(SUM(quantity), 0) AS total_deducted
+            FROM inventory_transactions
+            WHERE transaction_type = 'Used in Service'
+            AND created_at::date = CURRENT_DATE
+        `);
+
+        res.json({
+            total_deducted:
+                Number(result.rows[0].total_deducted)
+        });
+
+    } catch (error) {
+        console.error(
+            'Error fetching today\'s deducted units:',
+            error
+        );
+
+        res.status(500).json({
+            message: 'Failed to fetch today\'s deducted units.'
+        });
+    }
+});
+
+// GET number of products that became low stock today
+router.get('/low-stock-today', async (req, res) => {
+    try {
+        const result = await db.query(`
+            SELECT COUNT(*) AS new_low_stock
+            FROM inventory_transactions
+            WHERE created_at::date = CURRENT_DATE
+            AND new_stock > $1
+            AND new_stock <= $2
+            AND (
+                previous_stock > $2
+                OR previous_stock <= $1
+            )
+        `, [
+            CRITICAL_STOCK_THRESHOLD,
+            LOW_STOCK_THRESHOLD
+        ]);
+
+        res.json({
+            new_low_stock: Number(result.rows[0].new_low_stock)
+        });
+
+    } catch (error) {
+        console.error(
+            'Error fetching today\'s new low-stock products:',
+            error
+        );
+
+        res.status(500).json({
+            message: 'Failed to fetch today\'s new low-stock products.'
+        });
+    }
+});
+
+// GET number of products that became critical stock today
+router.get('/critical-stock-today', async (req, res) => {
+    try {
+        const result = await db.query(`
+            SELECT COUNT(*) AS new_critical_stock
+            FROM inventory_transactions
+            WHERE created_at::date = CURRENT_DATE
+            AND new_stock <= $1
+            AND previous_stock > $1
+        `, [CRITICAL_STOCK_THRESHOLD]);
+
+        res.json({
+            new_critical_stock:
+                Number(result.rows[0].new_critical_stock)
+        });
+
+    } catch (error) {
+        console.error(
+            'Error fetching today\'s new critical-stock products:',
+            error
+        );
+
+        res.status(500).json({
+            message:
+                'Failed to fetch today\'s new critical-stock products.'
+        });
+    }
+});
+
 // POST for adding a new inventory product
 router.post('/', async (req, res) => {
     try {
