@@ -7450,6 +7450,24 @@ body.services {
   font-weight: 500;
 }
 
+.um-sidebar-actions {
+  display: grid;
+  gap: 8px;
+  padding: 0 16px 14px;
+}
+
+.um-sidebar-actions .um-header__actions-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  width: 100%;
+}
+
+.um-sidebar-actions .um-btn {
+  width: 100%;
+  text-align: center;
+}
+
 .um-sidebar__account {
   margin-top: auto;
   display: flex;
@@ -10193,6 +10211,10 @@ body.services {
     gap: 8px;
   }
 
+  .admin-notification-wrap {
+    align-self: flex-end;
+  }
+
   #adminDashboardMain>.um-header .um-header__actions {
     width: calc(100% - 14px);
     margin: 0 14px 0 0;
@@ -10201,6 +10223,18 @@ body.services {
   #userManagementMain>.um-header .um-header__actions {
     width: 100%;
     margin: 0;
+  }
+
+  .um-sidebar {
+    overflow-y: auto;
+  }
+
+  .um-sidebar-actions {
+    margin-top: auto;
+  }
+
+  .um-sidebar__account {
+    margin-top: 0;
   }
 
   .um-search input {
@@ -10231,6 +10265,11 @@ body.services {
   #userManagementMain>.um-header .um-search {
     width: min(260px, calc(100vw - 120px));
     margin-inline: auto;
+  }
+
+  #userManagementMain #umSearchControl {
+    width: 100%;
+    margin: 0 0 10px;
   }
 
   #userManagementMain .um-tabs {

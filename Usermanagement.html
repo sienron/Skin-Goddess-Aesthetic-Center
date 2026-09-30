@@ -36,6 +36,7 @@
       <a href="Usermanagement.html" class="um-nav-link um-nav-link--active">User Management</a>
       <a href="ContentManagement.html" class="um-nav-link">Content Management</a>
     </nav>
+      <div class="um-sidebar-actions" id="umSidebarActions"></div>
 
     <div class="um-sidebar__account">
       <div class="um-avatar">A</div>
@@ -64,10 +65,10 @@
             <div class="admin-notification-list">No notifications yet</div>
           </div>
         </div>
-        <div class="um-search">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" id="umSearchInput" placeholder="Search users...">
-        </div>
+          <div class="um-search" id="umSearchControl">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="umSearchInput" placeholder="Search users...">
+          </div>
         <!-- um-header__actions-row wraps the button group so it can wrap onto its own line on narrow screens -->
         <div class="um-header__actions-row">
 
@@ -110,6 +111,7 @@
       <button class="um-tab" data-role="inventory_officer" type="button">INVENTORY PROCUREMENT</button>
       <button class="um-tab" data-role="SUSPENDED" type="button">SUSPENDED</button>
     </nav>
+    <div id="umTableSearchSlot"></div>
 
     <section class="um-table-wrap">
       <table class="um-table">
