@@ -8749,6 +8749,7 @@ body.services {
     flex-direction: column;
     align-items: center;
     gap: 12px;
+    width: min(100%, 420px);
   }
 
   .notes-panel {
@@ -12153,7 +12154,7 @@ main.my-appointments-main .booking-intro {
 }
 
 /* ---------- Details modal ---------- */
-.appt-modal {
+.my-appt-details-overlay {
   position: fixed;
   inset: 0;
   z-index: 1000;
@@ -12164,7 +12165,7 @@ main.my-appointments-main .booking-intro {
   background: rgba(0, 0, 0, 0.45);
 }
 
-.appt-modal[hidden] {
+.my-appt-details-overlay[hidden] {
   display: none;
 }
 
