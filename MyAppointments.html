@@ -1,37 +1,72 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>My Appointments - Skin Goddess Aesthetic Center</title>
   <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
   <header class="public-header">
-    <div class="logo-container"><a href="index.html"><img id="logo" src="images/logo_horizontal.jpg" alt="Skin Goddess Aesthetic Center logo"></a></div>
-    <nav class="public-nav"><ul class="public-nav-links"><li><a href="index.html">Home</a></li><li><a href="ServicesPage.html">Services</a></li><li><a href="AboutUsPage.html">About</a></li><li><a href="ContactUsPage.html">Contact</a></li></ul></nav>
-    <button type="button" class="hamburger-btn" id="hamburgerBtn" aria-label="Open menu" aria-expanded="false" aria-controls="mobileNavDrawer"><img src="icons/hamburger.svg" alt="" class="hamburger-icon"></button>
+    <div class="logo-container"><a href="index.html"><img id="logo" src="images/logo_horizontal.jpg"
+          alt="Skin Goddess Aesthetic Center logo"></a></div>
+    <nav class="public-nav">
+      <ul class="public-nav-links">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="ServicesPage.html">Services</a></li>
+        <li><a href="AboutUsPage.html">About</a></li>
+        <li><a href="ContactUsPage.html">Contact</a></li>
+      </ul>
+    </nav>
+    <button type="button" class="hamburger-btn" id="hamburgerBtn" aria-label="Open menu" aria-expanded="false"
+      aria-controls="mobileNavDrawer"><img src="icons/hamburger.svg" alt="" class="hamburger-icon"></button>
     <div class="public-header-actions">
       <button class="book-now-btn" type="button" onclick="window.location.href='UserAppointment.html'">BOOK NOW</button>
       <div class="public-divider"></div>
       <div class="header-profile-wrap" id="profileWrap">
-        <button type="button" class="profile-row" id="profileBtn" aria-haspopup="true" aria-expanded="false"><div class="profile-avatar">AR</div><div class="profile-info"><span class="profile-name">Anna Reyes</span></div></button>
-        <div class="profile-dropdown" id="profileDropdown"><a href="UserAccount.html" class="profile-dropdown-item">My Account</a><a href="MyAppointments.html" class="profile-dropdown-item">My Appointments</a><div class="profile-dropdown-divider"></div><button type="button" class="profile-dropdown-item profile-dropdown-item--signout" id="signOutBtn">Sign out</button></div>
+        <button type="button" class="profile-row" id="profileBtn" aria-haspopup="true" aria-expanded="false">
+          <div class="profile-avatar">AR</div>
+          <div class="profile-info"><span class="profile-name">Anna Reyes</span></div>
+        </button>
+        <div class="profile-dropdown" id="profileDropdown"><a href="UserAccount.html" class="profile-dropdown-item">My
+            Account</a><a href="MyAppointments.html" class="profile-dropdown-item">My Appointments</a>
+          <div class="profile-dropdown-divider"></div><button type="button"
+            class="profile-dropdown-item profile-dropdown-item--signout" id="signOutBtn">Sign out</button>
+        </div>
       </div>
     </div>
   </header>
 
   <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
-  <aside class="mobile-nav-drawer" id="mobileNavDrawer" aria-hidden="true" inert><div class="mobile-nav-top"><img src="images/logo_horizontal.jpg" alt="Skin Goddess Aesthetic Center logo" class="mobile-nav-logo"><button type="button" class="mobile-nav-close" id="mobileNavClose" aria-label="Close menu">&times;</button></div><ul class="mobile-nav-links"><li><a href="index.html">Home</a></li><li><a href="ServicesPage.html">Services</a></li><li><a href="AboutUsPage.html">About</a></li><li><a href="ContactUsPage.html">Contact</a></li></ul></aside>
+  <aside class="mobile-nav-drawer" id="mobileNavDrawer" aria-hidden="true" inert>
+    <div class="mobile-nav-top"><img src="images/logo_horizontal.jpg" alt="Skin Goddess Aesthetic Center logo"
+        class="mobile-nav-logo"><button type="button" class="mobile-nav-close" id="mobileNavClose"
+        aria-label="Close menu">&times;</button></div>
+    <ul class="mobile-nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="ServicesPage.html">Services</a></li>
+      <li><a href="AboutUsPage.html">About</a></li>
+      <li><a href="ContactUsPage.html">Contact</a></li>
+    </ul>
+  </aside>
 
   <main class="my-appointments-main" id="myAppointmentsPage">
-    <div class="booking-intro"><span class="booking-eyebrow">-- YOUR VISITS</span><h1>My <span>Appointments</span></h1><p>Review your upcoming visits and appointment history.</p></div>
+    <div class="booking-intro"><span class="booking-eyebrow">-- YOUR VISITS</span>
+      <h1>My <span>Appointments</span></h1>
+      <p>Review your upcoming visits and appointment history.</p>
+    </div>
     <p class="appointments-message" id="appointmentsMessage" role="status" aria-live="polite"></p>
 
     <section class="client-calendar" id="clientCalendar" aria-label="Appointment calendar">
       <div class="cal-toolbar">
         <div class="cal-toolbar-left">
-          <svg class="cal-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></svg>
+          <svg class="cal-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
+            stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="4.5" width="18" height="16" rx="2" />
+            <path d="M3 9.5h18M8 2.5v4M16 2.5v4" />
+          </svg>
           <h2 class="cal-title" id="calTitle"></h2>
           <button type="button" class="cal-nav-btn" id="calPrev" aria-label="Previous">&larr;</button>
           <button type="button" class="cal-nav-btn" id="calNext" aria-label="Next">&rarr;</button>
@@ -43,9 +78,18 @@
       </div>
 
       <div class="cal-scroll">
-        <div class="cal-inner">
+        <div class="cal-inner" id="calMonthView">
           <div class="cal-weekdays" id="calWeekdays"></div>
           <div class="cal-grid" id="calGrid"></div>
+        </div>
+        <div class="week-view" id="calWeekView">
+          <div class="week-header" id="calWeekHeader">
+            <div class="week-time-label"></div>
+          </div>
+          <div class="week-body">
+            <div class="week-time-column" id="calWeekTimeColumn"></div>
+            <div class="week-days-grid" id="calWeekDaysGrid"></div>
+          </div>
         </div>
       </div>
     </section>
@@ -64,4 +108,5 @@
   <script src="my-appointments.js"></script>
   <script src="faq-chatbot.js"></script>
 </body>
+
 </html>

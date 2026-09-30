@@ -41,11 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
     { name: 'Rica Lozano', role: 'Front Desk / Client Care', specialty: '—', status: 'draft' }
   ];
 
-  const TESTIMONIALS = [
-    { client: 'Anna Reyes', service: 'Hydrating Facial', rating: 5, feedback: 'Super gentle and my skin felt amazing after!', status: 'published' },
-    { client: 'Claire Mendoza', service: 'Skin Whitening', rating: 5, feedback: 'Noticed a difference after just 2 sessions.', status: 'published' },
-    { client: 'James Torres', service: 'Anti-Aging Therapy', rating: 4, feedback: 'Great service, a bit pricey but worth it.', status: 'pending' }
-  ];
+  const TESTIMONIALS_STATE = { items: [] };
 
   // ---------- helpers ----------
 
@@ -140,24 +136,67 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderTestimonials() {
     const tbody = document.getElementById('cmTestimonialsBody');
     tbody.textContent = '';
-    TESTIMONIALS.forEach((r) => {
+    if (TESTIMONIALS_STATE.items.length === 0) {
       const tr = el('tr');
-      tr.appendChild(el('td', '', r.client));
-      tr.appendChild(el('td', '', r.service));
+      const td = el('td', 'cm-feedback', 'No ratings yet.');
+      td.colSpan = 6;
+      tr.appendChild(td);
+      tbody.appendChild(tr);
+      return;
+    }
+    TESTIMONIALS_STATE.items.forEach((r) => {
+      const tr = el('tr');
+      tr.appendChild(el('td', '', r.client_name || 'Client'));
+      tr.appendChild(el('td', '', r.service_name));
       tr.appendChild(el('td', '', '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating)));
-      tr.appendChild(el('td', 'cm-feedback', r.feedback));
+      tr.appendChild(el('td', 'cm-feedback', r.comment || '—'));
       const statusTd = el('td');
-      statusTd.appendChild(statusBadge(r.status));
+      statusTd.appendChild(statusBadge(r.is_public ? 'published' : 'pending'));
       tr.appendChild(statusTd);
-      tr.appendChild(actionCell('testimonials', r.client, r.status === 'published' ? 'Unpublish' : 'Approve'));
+      tr.appendChild(testimonialActionCell(r));
       tbody.appendChild(tr);
     });
+  }
+
+  function testimonialActionCell(rating) {
+    const td = el('td');
+    const wrap = el('div', 'cm-actions');
+    const toggleBtn = el('button', 'apt-action', rating.is_public ? 'Hide' : 'Approve');
+    toggleBtn.type = 'button';
+    toggleBtn.addEventListener('click', async () => {
+      toggleBtn.disabled = true;
+      try {
+        const response = await fetch(`/api/ratings/${rating.rating_id}/public`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ isPublic: !rating.is_public })
+        });
+        if (!response.ok) throw new Error('Could not update testimonial.');
+        await loadTestimonials();
+      } catch (error) {
+        toggleBtn.disabled = false;
+      }
+    });
+    wrap.appendChild(toggleBtn);
+    td.appendChild(wrap);
+    return td;
+  }
+
+  async function loadTestimonials() {
+    try {
+      const response = await fetch('/api/ratings/admin');
+      if (!response.ok) throw new Error('Could not load testimonials.');
+      TESTIMONIALS_STATE.items = await response.json();
+    } catch (error) {
+      TESTIMONIALS_STATE.items = [];
+    }
+    renderTestimonials();
   }
 
   renderServices();
   renderHomepage();
   renderTeam();
-  renderTestimonials();
+  loadTestimonials();
 
   // ---------- tab switching ----------
 

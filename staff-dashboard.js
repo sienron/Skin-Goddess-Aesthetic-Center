@@ -161,26 +161,6 @@
         });
     }
 
-    function renderRating() {
-        const data = { average: 4.9, totalReviews: 42, breakdown: { 5: 36, 4: 5, 3: 1, 2: 0, 1: 0 } };
-        document.getElementById("dashboardRatingAverage").textContent = data.average.toFixed(1);
-        document.getElementById("dashboardRatingCount").textContent = `from ${data.totalReviews} client reviews`;
-        const stars = document.getElementById("dashboardRatingStars");
-        for (let index = 0; index < 5; index += 1) {
-            const star = document.createElement("span");
-            star.className = index < Math.round(data.average) ? "rating-star filled" : "rating-star";
-            star.textContent = "★";
-            stars.appendChild(star);
-        }
-        const breakdown = document.getElementById("dashboardRatingBreakdown");
-        for (let star = 5; star >= 1; star -= 1) {
-            const row = document.createElement("div");
-            row.className = "rating-breakdown-row";
-            row.innerHTML = `<span class="rating-breakdown-label">${star} ★</span><span class="rating-breakdown-track"><span class="rating-breakdown-fill" style="width: ${(data.breakdown[star] / data.totalReviews) * 100}%"></span></span><span class="rating-breakdown-count">${data.breakdown[star]}</span>`;
-            breakdown.appendChild(row);
-        }
-    }
-
     async function loadDashboard() {
         try {
             const response = await fetch("/api/appointments/mine");
@@ -262,6 +242,5 @@
             renderClientPage();
         });
     });
-    renderRating();
     loadDashboard();
 })();

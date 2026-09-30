@@ -12049,6 +12049,26 @@ main.my-appointments-main .booking-intro {
   min-width: 760px;
 }
 
+#calWeekView.week-view {
+  display: none;
+  min-width: 760px;
+}
+
+#calWeekView .week-day-col {
+  padding-bottom: 4px;
+}
+
+#calWeekView .week-date-num.is-today {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  border: 1.5px solid #c9a84a;
+  border-radius: 50%;
+  color: #1a1a1a;
+}
+
 .cal-weekdays {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -12159,6 +12179,40 @@ main.my-appointments-main .booking-intro {
   text-decoration: line-through;
 }
 
+#calWeekView .appt-chip-week {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  font: inherit;
+  color: #4a2a2a;
+  background: #f7e8e8;
+  border-left: 3px solid #c0454a;
+  transition: filter 0.15s;
+}
+
+#calWeekView .appt-chip-week:hover {
+  filter: brightness(0.96);
+}
+
+#calWeekView .appt-chip-week .cal-chip-time {
+  font-size: 10px;
+}
+
+#calWeekView .appt-chip-week.is-past {
+  opacity: 0.6;
+}
+
+#calWeekView .appt-chip-week.is-cancelled {
+  background: #efefef;
+  border-left-color: #a5a5a5;
+  color: #8a8a8a;
+}
+
+#calWeekView .appt-chip-week.is-cancelled .cal-chip-name {
+  text-decoration: line-through;
+}
+
 /* ---------- Details modal ---------- */
 .my-appt-details-overlay {
   position: fixed;
@@ -12222,6 +12276,86 @@ main.my-appointments-main .booking-intro {
 
 .appt-detail-label {
   color: #8a8a8a;
+}
+
+.appt-rating-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.appt-rating-heading {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.appt-rating-stars {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.appt-rating-star {
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: 22px;
+  line-height: 1;
+  color: #e0ddd5;
+  cursor: pointer;
+}
+
+.appt-rating-stars--readonly .appt-rating-star {
+  cursor: default;
+}
+
+.appt-rating-star.is-filled {
+  color: #C9A84C;
+}
+
+.appt-rating-comment {
+  width: 100%;
+  min-height: 64px;
+  padding: 8px 10px;
+  border: 1px solid #e0ddd5;
+  border-radius: 8px;
+  font-family: "Raleway", sans-serif;
+  font-size: 13px;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.appt-rating-readonly-comment {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: #555;
+}
+
+.appt-rating-error {
+  min-height: 16px;
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: #c0392b;
+}
+
+.appt-rating-submit {
+  margin-top: 10px;
+  padding: 8px 18px;
+  border: none;
+  border-radius: 8px;
+  background: #C9A84C;
+  color: #fff;
+  font-family: "Raleway", sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.appt-rating-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .appt-detail-value {

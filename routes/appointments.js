@@ -1,10 +1,13 @@
 const express = require('express');
 const router = express.Router();
+const { rateLimit } = require('express-rate-limit');
 const db = require('../db');
 const { requireRole } = require('../middleware/auth');
 const { roleForCategory } = require('../utils/staffRoles');
 const { notifyUser, notifyUsers, notifyRoles } = require('../utils/notifications');
 const { createHmac, randomBytes, timingSafeEqual } = require('crypto');
+const RATING_WINDOW_DAYS = 14;
+const ratingLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, message: { message: 'Too many rating attempts. Try again later.' } });
 const { VALID_SLOTS, CLOSING_TIME, CLOSED_WEEKDAYS, MAX_ADVANCE_DAYS, MIN_BOOKING_LEAD_MINUTES, to24h, from24h, addMinutes, manilaNow, isSlotInPast, isSlotTooSoon } = require('../utils/slots');
 
 function getPayMongoConfig() {
@@ -120,6 +123,17 @@ function validNoteText(value) {
 
 function validRequestText(value, maxLength) {
   return typeof value === 'string' && value.trim().length > 0 && value.length <= maxLength ? value.trim() : null;
+}
+
+function validRatingValue(value) {
+  return Number.isInteger(value) && value >= 1 && value <= 5 ? value : null;
+}
+
+// Returns { ok: false } when the comment is malformed, otherwise { ok: true, value } (value may be null).
+function validRatingComment(value) {
+  if (value === undefined || value === null) return { ok: true, value: null };
+  if (typeof value !== 'string' || value.length > 1000) return { ok: false };
+  return { ok: true, value: value.trim() || null };
 }
 
 router.get('/admin', requireRole('admin'), async (req, res) => {
@@ -558,11 +572,14 @@ router.get('/mine', async (req, res) => {
                COALESCE(CONCAT(aesthetician.first_name, ' ', aesthetician.last_name), 'Aesthetician') AS aesthetician,
                c.contact_number AS contact,
                NULL::text AS remarks,
-               a.appointment_id AS apptNumber
+               a.appointment_id AS apptNumber,
+               ar.rating AS my_rating,
+               ar.comment AS my_rating_comment
         FROM appointments a
         JOIN services s ON s.service_id = a.service_id
         JOIN users c ON c.user_id = a.user_id
         JOIN users aesthetician ON aesthetician.user_id = a.aesthetician_id
+        LEFT JOIN appointment_ratings ar ON ar.appointment_id = a.appointment_id
         WHERE a.user_id = $1
         ORDER BY a.appointment_date ASC, a.appointment_time ASC
       `;
@@ -579,6 +596,9 @@ router.get('/mine', async (req, res) => {
       service: row.service,
       client: row.client,
       aesthetician: row.aesthetician,
+      hasRating: row.my_rating != null,
+      myRating: row.my_rating,
+      myRatingComment: row.my_rating_comment,
       fee: row.fee,
       depositAmount: row.deposit_amount,
       clientId: row.client_id,
@@ -769,10 +789,73 @@ router.post('/:id/finish', async (req, res) => {
       'appointment_status_changed',
       `Appointment ${updated.rows[0].appointment_id} status changed to completed.`,
     );
+    await notifyUser(
+      updated.rows[0].user_id,
+      'rating_request',
+      'How was your visit? Tap to rate it.',
+      { email: false },
+    );
     return res.json({ message: 'Appointment marked as completed.' });
   } catch (error) {
     console.error('Error finishing appointment:', error);
     return res.status(500).json({ message: 'Could not finish appointment.' });
+  }
+});
+
+router.post('/:id/rating', ratingLimiter, async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ message: 'You must be logged in.' });
+  const appointmentId = validAppointmentId(req.params.id);
+  if (!appointmentId) return res.status(400).json({ message: 'Choose a valid appointment.' });
+
+  const body = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
+  const rating = validRatingValue(body.rating);
+  const commentResult = validRatingComment(body.comment);
+  if (!rating) return res.status(400).json({ message: 'Choose a rating between 1 and 5.' });
+  if (!commentResult.ok) return res.status(400).json({ message: 'Comment must be 1000 characters or fewer.' });
+
+  try {
+    const result = await db.query(`
+      SELECT appointment_id, user_id, aesthetician_id, service_id, appointment_status
+      FROM appointments
+      WHERE appointment_id = $1 AND user_id = $2
+    `, [appointmentId, req.session.userId]);
+    if (result.rows.length === 0) return res.status(404).json({ message: 'Appointment not found.' });
+
+    const appointment = result.rows[0];
+    if (appointment.appointment_status !== 'completed') {
+      return res.status(400).json({ message: 'Only completed appointments can be rated.' });
+    }
+    if (!appointment.aesthetician_id) {
+      return res.status(400).json({ message: 'This appointment has no assigned staff member to rate.' });
+    }
+
+    const withinWindow = await db.query(`
+      SELECT appointment_date::text AS appointment_date
+      FROM appointments WHERE appointment_id = $1
+    `, [appointmentId]);
+    const daysSinceCompletion = Math.floor(
+      (Date.parse(manilaNow().dateStr) - Date.parse(withinWindow.rows[0].appointment_date)) / (24 * 60 * 60 * 1000),
+    );
+    if (daysSinceCompletion > RATING_WINDOW_DAYS) {
+      return res.status(400).json({ message: `Ratings can only be submitted within ${RATING_WINDOW_DAYS} days of your visit.` });
+    }
+
+    const inserted = await db.query(`
+      INSERT INTO appointment_ratings (appointment_id, client_id, staff_id, service_id, rating, comment)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING rating_id, rating, comment, created_at
+    `, [appointmentId, req.session.userId, appointment.aesthetician_id, appointment.service_id, rating, commentResult.value]);
+
+    await notifyUser(
+      appointment.aesthetician_id,
+      'rating_received',
+      `You received a new ${rating}★ rating.`,
+    );
+    return res.status(201).json({ message: 'Thanks for your feedback!', rating: inserted.rows[0] });
+  } catch (error) {
+    if (error.code === '23505') return res.status(409).json({ message: 'You already rated this appointment.' });
+    console.error('Error submitting rating:', error);
+    return res.status(500).json({ message: 'Could not submit your rating.' });
   }
 });
 
