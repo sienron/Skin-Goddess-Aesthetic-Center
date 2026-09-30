@@ -49,6 +49,76 @@ function checkoutReturnUrl(baseUrl, outcome, referenceNumber) {
   return url.toString();
 }
 
+async function refundPayMongoPayment({ paymentId, amountCents, reason, config }) {
+  if (!paymentId) return { ok: false, message: 'No PayMongo payment is on file for this checkout.' };
+  try {
+    const response = await fetch('https://api.paymongo.com/v1/refunds', {
+      method: 'POST',
+      headers: {
+        Authorization: `Basic ${Buffer.from(`${config.secretKey}:`).toString('base64')}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ data: { attributes: { amount: amountCents, payment_id: paymentId, reason, notes: 'Skin Goddess automatic refund' } } })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) return { ok: false, message: data?.errors?.[0]?.detail || 'PayMongo refund request failed.' };
+    return { ok: true, refundId: data?.data?.id };
+  } catch (error) {
+    return { ok: false, message: error.message };
+  }
+}
+
+// Refunds a checkout session still sitting at status 'paid' with no appointment created
+// (e.g. lost the race for a slot, or the payment arrived after the appointment started).
+async function attemptCheckoutRefund(referenceNumber, amountCents, paymentId, reason) {
+  const config = getPayMongoConfig();
+  if (!config) return { refunded: false };
+  const refund = await refundPayMongoPayment({ paymentId, amountCents, reason, config });
+  if (!refund.ok) {
+    console.error('PayMongo refund failed for checkout', referenceNumber, refund.message);
+    return { refunded: false };
+  }
+  await db.query(`
+    UPDATE paymongo_checkout_sessions
+    SET status = 'refunded', refunded_at = NOW(), updated_at = NOW()
+    WHERE reference_number = $1 AND status = 'paid'
+  `, [referenceNumber]);
+  return { refunded: true };
+}
+
+// Refunds the reservation fee for an already-confirmed appointment being cancelled.
+async function refundAppointmentDeposit(appointmentId) {
+  const config = getPayMongoConfig();
+  if (!config) return { refunded: false };
+
+  const sessionResult = await db.query(`
+    SELECT reference_number, payment_id, amount_cents
+    FROM paymongo_checkout_sessions
+    WHERE appointment_id = $1 AND status = 'consumed' AND payment_id IS NOT NULL
+  `, [appointmentId]);
+  if (sessionResult.rows.length === 0) return { refunded: false };
+  const session = sessionResult.rows[0];
+
+  const refund = await refundPayMongoPayment({
+    paymentId: session.payment_id,
+    amountCents: session.amount_cents,
+    reason: 'requested_by_customer',
+    config
+  });
+  if (!refund.ok) {
+    console.error('PayMongo refund failed for appointment', appointmentId, refund.message);
+    return { refunded: false };
+  }
+
+  await db.query(`
+    UPDATE paymongo_checkout_sessions
+    SET status = 'refunded', refunded_at = NOW(), updated_at = NOW()
+    WHERE reference_number = $1
+  `, [session.reference_number]);
+  await db.query(`UPDATE appointments SET payment_status = 'refunded' WHERE appointment_id = $1`, [appointmentId]);
+  return { refunded: true };
+}
+
 function isLeapYear(year) {
   return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
 }
@@ -473,7 +543,7 @@ async function findAvailableAestheticians(queryClient, booking) {
   `, [booking.appointmentDate, booking.appointmentTime, booking.appointmentEndTime, staffRole]);
 }
 
-async function createAppointmentFromPaidCheckout(client, payment, referenceNumber) {
+async function createAppointmentFromPaidCheckout(client, payment, referenceNumber, paymentId = null) {
   const candidates = await findAvailableAestheticians(client, {
     appointmentDate: payment.appointment_date,
     appointmentTime: payment.appointment_time,
@@ -493,9 +563,9 @@ async function createAppointmentFromPaidCheckout(client, payment, referenceNumbe
         payment.appointment_time, payment.appointment_end_time, candidate.user_id]);
       await client.query(`
         UPDATE paymongo_checkout_sessions
-        SET status = 'consumed', appointment_id = $1, updated_at = NOW()
+        SET status = 'consumed', appointment_id = $1, payment_id = COALESCE($3, payment_id), updated_at = NOW()
         WHERE reference_number = $2
-      `, [result.rows[0].appointment_id, referenceNumber]);
+      `, [result.rows[0].appointment_id, referenceNumber, paymentId]);
       await client.query('RELEASE SAVEPOINT appointment_candidate');
       return result.rows[0];
     } catch (error) {
@@ -631,7 +701,7 @@ router.post('/:id/cancel', requireRole('admin'), async (req, res) => {
     const result = await db.query(`
             SELECT a.appointment_id, a.user_id, a.aesthetician_id,
               a.appointment_date::text AS appointment_date,
-              a.appointment_time::text AS appointment_time, a.appointment_status,
+              a.appointment_time::text AS appointment_time, a.appointment_status, a.payment_status,
               s.service_name
             FROM appointments a
             JOIN services s ON s.service_id = a.service_id
@@ -645,10 +715,20 @@ router.post('/:id/cancel', requireRole('admin'), async (req, res) => {
     if (minutesToAppointment <= 0) return res.status(400).json({ message: 'Appointments that have already started cannot be cancelled.' });
 
     await db.query(`UPDATE appointments SET appointment_status = 'cancelled' WHERE appointment_id = $1`, [appointmentId]);
-    const message = `Your ${appointment.service_name} appointment on ${appointment.appointment_date} at ${String(appointment.appointment_time).slice(0, 5)} was cancelled.`;
+
+    // Cancellations made at least 24 hours ahead qualify for an automatic refund, per the Terms.
+    let refundMessage = '';
+    if (appointment.payment_status === 'paid' && minutesToAppointment >= 24 * 60) {
+      const refundOutcome = await refundAppointmentDeposit(appointmentId);
+      refundMessage = refundOutcome.refunded
+        ? ' The reservation fee was automatically refunded.'
+        : ' The reservation fee could not be refunded automatically; process it manually.';
+    }
+
+    const message = `Your ${appointment.service_name} appointment on ${appointment.appointment_date} at ${String(appointment.appointment_time).slice(0, 5)} was cancelled.${refundMessage}`;
     await notifyUsers([appointment.user_id, appointment.aesthetician_id].filter(Boolean), 'appointment_cancelled', message);
     await notifyRoles(['admin'], 'appointment_cancelled', message, { excludeUserIds: [req.session.userId] });
-    return res.json({ message: 'Appointment cancelled successfully.' });
+    return res.json({ message: `Appointment cancelled successfully.${refundMessage}` });
   } catch (error) {
     console.error('Error cancelling appointment:', error);
     return res.status(500).json({ message: 'Could not cancel appointment.' });
@@ -705,7 +785,7 @@ router.post('/:id/cancellation-request/review', requireRole('admin'), async (req
 
   try {
     const result = await db.query(`
-                  SELECT appointment_status, service_id, user_id, aesthetician_id,
+                  SELECT appointment_status, service_id, user_id, aesthetician_id, payment_status,
                     cancellation_request_status, reschedule_request_status,
                     reschedule_requested_date, reschedule_requested_time,
                     reschedule_requested_end_time
@@ -744,6 +824,10 @@ router.post('/:id/cancellation-request/review', requireRole('admin'), async (req
       `, [nextStatus, decision === 'allow' ? 'approved' : 'rejected', req.session.userId, appointmentId]);
     }
     if (decision === 'allow' && requestType === 'cancellation') {
+      // The aesthetician initiated this cancellation, so the client is refunded regardless of the 24-hour window.
+      if (appointment.payment_status === 'paid') {
+        await refundAppointmentDeposit(appointmentId);
+      }
       await notifyUsers(
         [appointment.user_id, appointment.aesthetician_id].filter(Boolean),
         'appointment_cancelled',
@@ -1122,17 +1206,18 @@ router.post('/paymongo/confirm', async (req, res) => {
   const referenceNumber = body.referenceNumber;
   if (!validPaymentReference(referenceNumber)) return res.status(400).json({ message: 'Choose a valid checkout reference.' });
 
+  let payment;
   try {
     const paymentResult = await db.query(`
       SELECT reference_number, user_id, service_id, appointment_date::text AS appointment_date,
               appointment_time::text AS appointment_time, appointment_end_time::text AS appointment_end_time,
               service_name, service_price, amount_cents, currency, status,
-             checkout_session_id, appointment_id, livemode
+             checkout_session_id, appointment_id, livemode, payment_id
       FROM paymongo_checkout_sessions
       WHERE reference_number = $1 AND user_id = $2
     `, [referenceNumber, req.session.userId]);
     if (paymentResult.rows.length === 0) return res.status(404).json({ message: 'Checkout session not found.' });
-    const payment = paymentResult.rows[0];
+    payment = paymentResult.rows[0];
 
     if (payment.status === 'consumed' && payment.appointment_id) {
       return res.json({ message: 'Appointment already created.', appointment: { appointment_id: payment.appointment_id } });
@@ -1203,10 +1288,15 @@ router.post('/paymongo/confirm', async (req, res) => {
   } catch (error) {
     if (error.code === 'PAYMENT_NOT_PAID') return res.status(409).json({ pending: true, message: error.message });
     if (error.code === 'SLOT_UNAVAILABLE' || error.code === '23P01' || error.code === '23505') {
-      const message = `Payment was received for checkout ${referenceNumber}, but no appointment slot could be secured. Contact support urgently to arrange a refund.`;
+      const refundOutcome = payment
+        ? await attemptCheckoutRefund(referenceNumber, payment.amount_cents, payment.payment_id, 'duplicate')
+        : { refunded: false };
+      const message = refundOutcome.refunded
+        ? 'That time slot was just taken by another booking. Your payment has been automatically refunded.'
+        : `Payment was received for checkout ${referenceNumber}, but no appointment slot could be secured. Contact support urgently to arrange a refund.`;
       await notifyUser(req.session.userId, 'payment_slot_unavailable', message);
       await notifyRoles(['admin'], 'payment_slot_unavailable', message);
-      return res.status(409).json({ message: error.message || 'That time slot was just taken. Contact support to arrange a refund.' });
+      return res.status(409).json({ message });
     }
     console.error('Error confirming paid appointment:', error.message);
     return res.status(500).json({ message: 'Could not confirm your paid appointment.' });
@@ -1268,22 +1358,22 @@ router.post('/paymongo/webhook', async (req, res) => {
         if (payment.status === 'pending') {
           await client.query(`
             UPDATE paymongo_checkout_sessions
-            SET status = 'paid', updated_at = NOW()
+            SET status = 'paid', payment_id = $2, updated_at = NOW()
             WHERE reference_number = $1 AND status = 'pending'
-          `, [referenceNumber]);
+          `, [referenceNumber, paidPayment.id]);
           return { type: 'late-payment', payment };
         }
         return { type: 'ignored' };
       }
 
-      const appointment = await createAppointmentFromPaidCheckout(client, payment, referenceNumber);
+      const appointment = await createAppointmentFromPaidCheckout(client, payment, referenceNumber, paidPayment.id);
       if (appointment) return { type: 'created', payment, appointment };
 
       await client.query(`
         UPDATE paymongo_checkout_sessions
-        SET status = 'paid', updated_at = NOW()
+        SET status = 'paid', payment_id = $2, updated_at = NOW()
         WHERE reference_number = $1 AND status = 'pending'
-      `, [referenceNumber]);
+      `, [referenceNumber, paidPayment.id]);
       return { type: 'slot-unavailable', payment };
     });
 
@@ -1298,11 +1388,17 @@ router.post('/paymongo/webhook', async (req, res) => {
         `New appointment: ${payment.service_name} on ${payment.appointment_date} at ${String(payment.appointment_time).slice(0, 5)}.`,
       );
     } else if (outcome.type === 'slot-unavailable') {
-      const message = `Payment was received for checkout ${referenceNumber}, but no appointment slot could be secured. Contact support urgently to arrange a refund.`;
+      const refundOutcome = await attemptCheckoutRefund(referenceNumber, outcome.payment.amount_cents, paidPayment.id, 'duplicate');
+      const message = refundOutcome.refunded
+        ? `Payment for checkout ${referenceNumber} was automatically refunded because the time slot was already booked.`
+        : `Payment was received for checkout ${referenceNumber}, but no appointment slot could be secured. Contact support urgently to arrange a refund.`;
       await notifyUser(outcome.payment.user_id, 'payment_slot_unavailable', message);
       await notifyRoles(['admin'], 'payment_slot_unavailable', message);
     } else if (outcome.type === 'late-payment') {
-      const message = `Payment was received for checkout ${referenceNumber} after the appointment start time. Contact support urgently to arrange a refund.`;
+      const refundOutcome = await attemptCheckoutRefund(referenceNumber, outcome.payment.amount_cents, paidPayment.id, 'others');
+      const message = refundOutcome.refunded
+        ? `Payment for checkout ${referenceNumber} was automatically refunded because it arrived after the appointment start time.`
+        : `Payment was received for checkout ${referenceNumber} after the appointment start time. Contact support urgently to arrange a refund.`;
       await notifyUser(outcome.payment.user_id, 'payment_slot_unavailable', message);
       await notifyRoles(['admin'], 'payment_slot_unavailable', message);
     }

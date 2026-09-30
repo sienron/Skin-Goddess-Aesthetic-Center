@@ -1,10 +1,8 @@
-// setup-db.js
-// Superseded by migrations/000-init-schema.js, which npm run migrate now runs
-// automatically. Kept here only for reference; no longer needed on fresh deploys.
-
+// Base schema: users, otp_codes, password_reset_tokens, services, appointments.
+// Supersedes archives/setup-db.js so a fresh database can be built by `npm run migrate` alone.
 const db = require('../db');
 
-async function setupTables() {
+async function migrate() {
   try {
     await db.query(`
       CREATE TABLE IF NOT EXISTS users (
@@ -27,7 +25,6 @@ async function setupTables() {
         created_at TIMESTAMP DEFAULT NOW()
       );
     `);
-    console.log('Users table created successfully.');
 
     await db.query(`
       CREATE TABLE IF NOT EXISTS otp_codes (
@@ -40,7 +37,6 @@ async function setupTables() {
         created_at TIMESTAMP DEFAULT NOW()
       );
     `);
-    console.log('OTP Codes table created successfully.');
 
     await db.query(`
       CREATE TABLE IF NOT EXISTS password_reset_tokens (
@@ -52,14 +48,13 @@ async function setupTables() {
         created_at TIMESTAMP DEFAULT NOW()
       );
     `);
-    console.log('Password reset tokens table created successfully.');
 
     await db.query(`
       CREATE TABLE IF NOT EXISTS services (
         service_id SERIAL PRIMARY KEY,
         service_name VARCHAR(255) NOT NULL UNIQUE,
         description TEXT,
-        duration_minutes INTEGER NOT NULL CONSTRAINT services_duration_minutes_positive CHECK (duration_minutes > 0), -- duration in minutes
+        duration_minutes INTEGER NOT NULL CONSTRAINT services_duration_minutes_positive CHECK (duration_minutes > 0),
         service_price DECIMAL(8, 2) NOT NULL CONSTRAINT services_service_price_positive CHECK (service_price > 0),
         reservation_fee DECIMAL(8, 2) NOT NULL CONSTRAINT services_reservation_fee_positive CHECK (reservation_fee > 0),
         is_active BOOLEAN DEFAULT TRUE,
@@ -67,37 +62,26 @@ async function setupTables() {
         updated_at TIMESTAMP DEFAULT NOW()
       );
     `);
-    console.log('Services table created successfully.');
 
-    // Add the same rules when the services table already exists.
     await db.query(`
       DO $$
       BEGIN
         IF NOT EXISTS (
-          SELECT 1 FROM pg_constraint
-          WHERE conname = 'services_duration_minutes_positive'
+          SELECT 1 FROM pg_constraint WHERE conname = 'services_duration_minutes_positive'
         ) THEN
-          ALTER TABLE services
-            ADD CONSTRAINT services_duration_minutes_positive
-            CHECK (duration_minutes > 0);
+          ALTER TABLE services ADD CONSTRAINT services_duration_minutes_positive CHECK (duration_minutes > 0);
         END IF;
 
         IF NOT EXISTS (
-          SELECT 1 FROM pg_constraint
-          WHERE conname = 'services_service_price_positive'
+          SELECT 1 FROM pg_constraint WHERE conname = 'services_service_price_positive'
         ) THEN
-          ALTER TABLE services
-            ADD CONSTRAINT services_service_price_positive
-            CHECK (service_price > 0);
+          ALTER TABLE services ADD CONSTRAINT services_service_price_positive CHECK (service_price > 0);
         END IF;
 
         IF NOT EXISTS (
-          SELECT 1 FROM pg_constraint
-          WHERE conname = 'services_reservation_fee_positive'
+          SELECT 1 FROM pg_constraint WHERE conname = 'services_reservation_fee_positive'
         ) THEN
-          ALTER TABLE services
-            ADD CONSTRAINT services_reservation_fee_positive
-            CHECK (reservation_fee > 0);
+          ALTER TABLE services ADD CONSTRAINT services_reservation_fee_positive CHECK (reservation_fee > 0);
         END IF;
       END $$;
     `);
@@ -117,14 +101,12 @@ async function setupTables() {
         updated_at TIMESTAMP DEFAULT NOW()
       );
     `);
-    console.log('Appointments table created successfully.');
 
-
-    console.log("Tapos na! Puwede mo nang i-delete ang setup-db.js na 'to.");
+    console.log('Base schema migration completed successfully.');
   } catch (error) {
-    console.log('May error sa setup:', error);
+    console.error('Base schema migration failed:', error.message);
+    process.exitCode = 1;
   }
-  process.exit();
 }
 
-setupTables();
+migrate().finally(() => process.exit());
