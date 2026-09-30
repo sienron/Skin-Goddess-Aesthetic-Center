@@ -2479,6 +2479,19 @@ hr {
   color: rgb(170, 170, 170);
 }
 
+.notification-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-height: 90px;
+  padding: 14px;
+  font-family: "Raleway", sans-serif;
+  font-size: 0.75rem;
+  color: rgb(170, 170, 170);
+  text-align: center;
+}
+
 .notification-item,
 .admin-notification-item {
   width: 100%;
@@ -7610,6 +7623,15 @@ body.services {
   color: var(--um-text-faint);
   font-size: 11px;
   text-align: left;
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-notification-list .notification-empty {
+  min-height: 64px;
+  padding: 12px;
+  font-size: 11px;
+  text-align: center;
 }
 
 .um-search {

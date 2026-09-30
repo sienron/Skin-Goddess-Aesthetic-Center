@@ -5,15 +5,21 @@
     if (!button || !dropdown || !wrap) return;
     const list = dropdown.querySelector('.admin-notification-list');
 
+    function showEmptyState(message) {
+        if (!list) return;
+        const empty = document.createElement('div');
+        empty.className = 'notification-empty';
+        empty.textContent = message;
+        list.replaceChildren(empty);
+    }
+
     async function loadNotifications() {
         try {
             const response = await fetch('/api/notifications');
             if (!response.ok) {
-                if (list) {
-                    list.textContent = response.status === 401
-                        ? 'Sign in to view notifications'
-                        : 'Notifications could not be loaded';
-                }
+                showEmptyState(response.status === 401
+                    ? 'Sign in to view notifications'
+                    : 'Notifications could not be loaded');
                 return;
             }
             const data = await response.json();
@@ -21,12 +27,12 @@
             button.title = `${data.unreadCount || 0} unread notifications`;
             if (!list) return;
 
-            list.replaceChildren();
             if (notifications.length === 0) {
-                list.textContent = 'No notifications yet';
+                showEmptyState('No notifications yet');
                 return;
             }
 
+            list.replaceChildren();
             notifications.forEach((notification) => {
                 const item = document.createElement('button');
                 item.type = 'button';
@@ -37,7 +43,7 @@
             });
         } catch (error) {
             console.error('Could not load notifications:', error);
-            if (list) list.textContent = 'Notifications could not be loaded';
+            showEmptyState('Notifications could not be loaded');
         }
     }
 
