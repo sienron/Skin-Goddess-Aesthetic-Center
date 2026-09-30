@@ -102,6 +102,32 @@ document.addEventListener('DOMContentLoaded', () => {
   const loginMfaMessage = document.getElementById('loginMfaMessage');
   const loginMfaVerifyBtn = document.getElementById('loginMfaVerifyBtn');
   const loginMfaResendLink = document.getElementById('loginMfaResendLink');
+  const loginMfaTimerValue = document.getElementById('loginMfaTimerValue');
+  let loginMfaSecondsLeft = 0;
+  let loginMfaCountdownInterval = null;
+
+  function updateLoginMfaTimer() {
+    const minutes = Math.floor(loginMfaSecondsLeft / 60).toString().padStart(2, '0');
+    const seconds = (loginMfaSecondsLeft % 60).toString().padStart(2, '0');
+    loginMfaTimerValue.textContent = `${minutes}:${seconds}`;
+  }
+
+  function startLoginMfaCountdown() {
+    loginMfaSecondsLeft = 5 * 60;
+    clearInterval(loginMfaCountdownInterval);
+    updateLoginMfaTimer();
+    loginMfaCountdownInterval = setInterval(() => {
+      loginMfaSecondsLeft -= 1;
+      updateLoginMfaTimer();
+      if (loginMfaSecondsLeft <= 0) {
+        clearInterval(loginMfaCountdownInterval);
+      }
+    }, 1000);
+  }
+
+  function stopLoginMfaCountdown() {
+    clearInterval(loginMfaCountdownInterval);
+  }
 
   function openLoginMfa(email) {
     loginMfaEmail.textContent = email;
@@ -111,6 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loginMfaMessage.textContent = '';
     loginMfaOverlay.hidden = false;
     document.body.classList.add('modal-open');
+    startLoginMfaCountdown();
     loginMfaDigits[0].focus();
   }
 
@@ -119,6 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.classList.remove('modal-open');
     loginMfaError.textContent = '';
     loginMfaMessage.textContent = '';
+    stopLoginMfaCountdown();
   }
 
   document.getElementById('closeLoginMfa').addEventListener('click', closeLoginMfa);
@@ -193,6 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       loginMfaDigits.forEach((digit) => { digit.value = ''; });
       loginMfaMessage.textContent = data.message || 'A new sign-in code has been sent.';
+      startLoginMfaCountdown();
       loginMfaDigits[0].focus();
     } catch (error) {
       loginMfaError.textContent = 'Something went wrong. Please try again.';
