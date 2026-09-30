@@ -306,6 +306,7 @@ function populateModal(u) {
 
   setField('umPiFullName', u.fullName);
   setField('umPiDob', formatDate(u.dob));
+  setField('umPiRole', u.roleLabel);
   setField('umPiSex', u.sex);
   setField('umPiCivilStatus', u.civilStatus);
   setField('umPiContact', u.contact);
@@ -353,7 +354,7 @@ function renderAllergyTags(allergies) {
 
 // ---- edit mode (only fields the users table actually has) ----
 const EDITABLE_TEXT_FIELDS = ['umPiFullName', 'umPiContact', 'umPiEmail', 'umPiAddress', 'umPiDob'];
-const EDITABLE_SELECT_FIELDS = ['umPiSex', 'umPiCivilStatus'];
+const EDITABLE_SELECT_FIELDS = ['umPiSex', 'umPiCivilStatus', 'umPiRole'];
 
 function enterEditMode() {
   EDITABLE_TEXT_FIELDS.forEach((id) => {
@@ -365,9 +366,22 @@ function enterEditMode() {
 
   EDITABLE_SELECT_FIELDS.forEach((id) => {
     const el = document.getElementById(id);
-    const options = id === 'umPiSex' ? ['Female', 'Male', 'Other'] : ['Single', 'Married', 'Widowed', 'Separated'];
+    const options = {
+      umPiSex: [['Female', 'Female'], ['Male', 'Male'], ['Other', 'Other']],
+      umPiCivilStatus: [['Single', 'Single'], ['Married', 'Married'], ['Widowed', 'Widowed'], ['Separated', 'Separated']],
+      umPiRole: [
+        ['client', 'Client'],
+        ['aesthetician', 'Aesthetician'],
+        ['nail_tech', 'Nail Tech'],
+        ['admin', 'Admin'],
+        ['finance_officer', 'Finance Officer'],
+        ['inventory_officer', 'Inventory Procurement Officer'],
+        ['staff', 'Staff'],
+      ],
+    }[id];
     const current = el.textContent;
-    const opts = options.map((o) => `<option value="${o}" ${o === current ? 'selected' : ''}>${o}</option>`).join('');
+    const currentValue = id === 'umPiRole' ? editingUserCache.role : current;
+    const opts = options.map(([value, label]) => `<option value="${value}" ${value === currentValue ? 'selected' : ''}>${label}</option>`).join('');
     el.innerHTML = `<select class="um-edit-input">${opts}</select>`;
   });
 
@@ -407,6 +421,7 @@ async function saveEdits() {
     email: document.querySelector('#umPiEmail input').value.trim(),
     address: document.querySelector('#umPiAddress input').value.trim(),
     dob: document.querySelector('#umPiDob input').value || null,
+    role: document.querySelector('#umPiRole select').value,
     sex: document.querySelector('#umPiSex select').value,
     civilStatus: document.querySelector('#umPiCivilStatus select').value,
   };

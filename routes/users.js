@@ -233,8 +233,12 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   const {
     fullName, email, dob, sex, civilStatus, contact, address,
-    skinType, concern, allergies, conditions, password,
+    skinType, concern, allergies, conditions, password, role,
   } = req.body;
+
+  if (role !== undefined && (typeof role !== 'string' || !Object.hasOwn(ROLE_BADGE, role))) {
+    return res.status(400).json({ message: 'Invalid user role.' });
+  }
 
   if (password !== undefined && !isValidPassword(password)) {
     return res.status(400).json({
@@ -247,6 +251,24 @@ router.put('/:id', async (req, res) => {
   const lastName = rest.join(' ') || '';
 
   try {
+    if (role !== undefined && SINGLE_ACTIVE_STAFF_ROLES.includes(role)) {
+      const target = await db.query('SELECT status FROM users WHERE user_id = $1', [req.params.id]);
+      if (target.rows.length === 0) {
+        return res.status(404).json({ message: 'User not found.' });
+      }
+      if (target.rows[0].status === 'active') {
+        const activeStaffMember = await db.query(
+          `SELECT user_id FROM users
+           WHERE role = $1 AND status = 'active' AND email_verified = TRUE AND user_id <> $2
+           LIMIT 1`,
+          [role, req.params.id]
+        );
+        if (activeStaffMember.rows.length > 0) {
+          return res.status(409).json({ message: `Only one active ${ROLE_BADGE[role]} can be assigned appointments.` });
+        }
+      }
+    }
+
     const passwordHash = password === undefined ? null : await bcrypt.hash(password, 10);
     const result = await db.query(
       `UPDATE users SET
@@ -261,8 +283,9 @@ router.put('/:id', async (req, res) => {
          allergies = COALESCE($9, allergies),
          medical_conditions = COALESCE($10, medical_conditions),
          password_hash = COALESCE($11, password_hash),
+         role = COALESCE($12, role),
          updated_at = NOW()
-       WHERE user_id = $12
+       WHERE user_id = $13
        RETURNING user_id, first_name, last_name, email, role, status, gender,
                  date_of_birth, civil_status, contact_number, home_address,
                  allergies, medical_conditions, email_verified, created_at, updated_at`,
@@ -278,6 +301,7 @@ router.put('/:id', async (req, res) => {
         Array.isArray(allergies) ? allergies.join(', ') : (allergies || null),
         conditions || null,
         passwordHash,
+        role || null,
         req.params.id,
       ]
     );
