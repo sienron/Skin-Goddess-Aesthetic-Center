@@ -194,8 +194,13 @@ router.get('/critical-stock-today', async (req, res) => {
             SELECT COUNT(*) AS new_critical_stock
             FROM inventory_transactions
             WHERE created_at::date = CURRENT_DATE
+            AND new_stock > 0
             AND new_stock <= $1
-            AND previous_stock > $1
+            AND (
+                previous_stock > $1
+                OR previous_stock = 0
+            )
+            AND transaction_type != 'Adjustment'
         `, [CRITICAL_STOCK_THRESHOLD]);
 
         res.json({
@@ -212,6 +217,37 @@ router.get('/critical-stock-today', async (req, res) => {
         res.status(500).json({
             message:
                 'Failed to fetch today\'s new critical-stock products.'
+        });
+    }
+});
+
+router.get('/out-of-stock-today', async (req, res) => {
+    try {
+        const result = await db.query(`
+            SELECT COUNT(*) AS new_out_of_stock
+            FROM inventory_transactions
+            WHERE created_at::date = CURRENT_DATE
+            AND new_stock = 0
+            AND (
+                previous_stock > 0
+                OR transaction_type = 'Adjustment'
+            )
+        `);
+
+        res.json({
+            new_out_of_stock:
+                Number(result.rows[0].new_out_of_stock)
+        });
+
+    } catch (error) {
+        console.error(
+            "Error fetching today's new out-of-stock count:",
+            error
+        );
+
+        res.status(500).json({
+            message:
+                "Failed to fetch today's new out-of-stock count."
         });
     }
 });
@@ -257,7 +293,19 @@ router.post('/', async (req, res) => {
             stock,
             expiry_date || null
         ]);
-
+        
+        // Record the initial stock as an adjustment
+        if (stock >= 0) {
+            await db.query(`
+                INSERT INTO inventory_transactions
+                    (product_id, transaction_type, quantity, previous_stock, new_stock, created_at)
+                VALUES ($1, 'Adjustment', $2, 0, $2, NOW())
+            `, [
+                result.rows[0].product_id,
+                stock
+            ]);
+        }
+        
         res.status(201).json(result.rows[0]);
 
     } catch (error) {
@@ -378,6 +426,46 @@ router.put("/:id", async (req, res) => {
 
     }
 
+});
+
+// DELETE an inventory product
+router.delete('/:id', async (req, res) => {
+    try {
+        const productId = Number(req.params.id);
+
+        if (!Number.isInteger(productId)) {
+            return res.status(400).json({
+                message: 'Invalid product ID.'
+            });
+        }
+
+        const result = await db.query(`
+            DELETE FROM inventory_products
+            WHERE product_id = $1
+            RETURNING product_id, product_name
+        `, [productId]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                message: 'Product not found.'
+            });
+        }
+
+        res.json({
+            message: 'Product deleted successfully.',
+            product: result.rows[0]
+        });
+
+    } catch (error) {
+        console.error(
+            'Error deleting inventory product:',
+            error
+        );
+
+        res.status(500).json({
+            message: 'Failed to delete inventory product.'
+        });
+    }
 });
 
 module.exports = router;

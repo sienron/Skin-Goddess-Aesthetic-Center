@@ -44,7 +44,7 @@
     box-sizing: border-box;
 }
 
-body{
+body.InventoryManagement{
     font-family: var(--font-body);
     color: var(--ink);
     background: #FAF9F6;
@@ -369,6 +369,16 @@ button{
     color: #A63C3C;
 }
 
+.clickable-summary {
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.clickable-summary:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.12);
+}
+
 
 /* =========================================================
    FILTER BAR
@@ -666,6 +676,15 @@ button{
 
 .status.in-stock span{
     background: #188329;
+}
+
+.status.out-of-stock {
+    color: #666666;
+    background: #F1F1F1;
+}
+
+.status.out-of-stock span {
+    background: #777777;
 }
 
 .status.low-stock{

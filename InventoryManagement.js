@@ -20,13 +20,26 @@ const deductedToday = document.getElementById("deductedToday");
 const lowStockCount = document.getElementById("lowStockCount");
 const lowStockToday = document.getElementById("lowStockToday");
 
+const totalProductsCard = document.getElementById("totalProductsCard");
+const lowStockCard = document.getElementById("lowStockCard");
+const criticalStockCard = document.getElementById("criticalStockCard");
+const outOfStockCard = document.getElementById("outOfStockCard");
+const expiringSoonCard = document.getElementById("expiringSoonCard");
+
 const criticalStockCount = document.getElementById("criticalStockCount");
 const criticalStockToday = document.getElementById("criticalStockToday");
+
+const outOfStockCount = document.getElementById("outOfStockCount");
+const outOfStockToday = document.getElementById("outOfStockToday");
+
+const expiringSoonCount = document.getElementById("expiringSoonCount");
 
 const deleteModal = document.getElementById("deleteModal");
 const deleteProductName = document.getElementById("deleteProductName");
 const cancelDelete = document.getElementById("cancelDelete");
 const confirmDelete = document.getElementById("confirmDelete");
+
+
 
 
 const editModal =
@@ -269,7 +282,10 @@ async function loadCriticalStockCount() {
         const criticalStockProducts = products.filter(product => {
             const stock = Number(product.stock_quantity);
 
-            return stock <= inventoryThresholds.criticalStock;
+            return (
+                stock > 0 &&
+                stock <= inventoryThresholds.criticalStock
+            );
         });
 
         criticalStockCount.textContent = criticalStockProducts.length;
@@ -278,6 +294,8 @@ async function loadCriticalStockCount() {
         console.error("Error loading critical-stock count:", error);
     }
 }
+
+
 
 async function loadCriticalStockToday() {
     try {
@@ -300,6 +318,99 @@ async function loadCriticalStockToday() {
     }
 }
 
+async function loadOutOfStockCount() {
+    try {
+        const response = await fetch("/api/inventory");
+
+        if (!response.ok) {
+            throw new Error("Failed to fetch inventory.");
+        }
+
+        const products = await response.json();
+
+        const outOfStockProducts = products.filter(product => {
+            return Number(product.stock_quantity) === 0;
+        });
+
+        outOfStockCount.textContent = outOfStockProducts.length;
+
+    } catch (error) {
+        console.error("Error loading out-of-stock count:", error);
+    }
+}
+
+async function loadOutOfStockToday() {
+    try {
+        const response = await fetch("/api/inventory/out-of-stock-today");
+
+        if (!response.ok) {
+            throw new Error("Failed to fetch today's out-of-stock count.");
+        }
+
+        const data = await response.json();
+
+        outOfStockToday.textContent =
+            `↑ ${data.new_out_of_stock} new today`;
+
+    } catch (error) {
+        console.error(
+            "Error loading today's out-of-stock count:",
+            error
+        );
+    }
+}
+
+async function loadExpiringSoonCount() {
+    try {
+        const response = await fetch("/api/inventory");
+
+        if (!response.ok) {
+            throw new Error("Failed to fetch inventory.");
+        }
+
+        const products = await response.json();
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const thirtyDaysFromNow = new Date(today);
+        thirtyDaysFromNow.setDate(
+            thirtyDaysFromNow.getDate() + 30
+        );
+
+        const expiringProducts = products.filter(product => {
+
+            if (!product.expiry_date) {
+                return false;
+            }
+
+            const [year, month, day] =
+                product.expiry_date.split("-").map(Number);
+
+            const expiryDate =
+                new Date(year, month - 1, day);
+
+            expiryDate.setHours(0, 0, 0, 0);
+
+            return (
+                expiryDate >= today &&
+                expiryDate <= thirtyDaysFromNow
+            );
+        });
+
+        expiringSoonCount.textContent =
+            expiringProducts.length;
+
+    } catch (error) {
+
+        console.error(
+            "Error loading expiring-soon count:",
+            error
+        );
+
+    }
+}
+
 //translate JSON to JS table row
 function renderInventory(){
 
@@ -318,7 +429,13 @@ function renderInventory(){
             let status;
             let statusClass;
             
-            if(product.stock_quantity <= inventoryThresholds.criticalStock){
+            if(product.stock_quantity === 0){
+            
+                status = "out-of-stock";
+                statusClass = "out-of-stock";
+            
+            }
+            else if(product.stock_quantity <= inventoryThresholds.criticalStock){
             
                 status = "critical";
                 statusClass = "critical";
@@ -389,11 +506,13 @@ function renderInventory(){
                 <div class="status ${statusClass}">
                     <span></span>
                     ${
-                        status === "critical"
-                            ? "CRITICAL"
-                            : status === "low"
-                                ? "LOW STOCK"
-                                : "IN STOCK"
+                        status === "out-of-stock"
+                            ? "OUT OF STOCK"
+                            : status === "critical"
+                                ? "CRITICAL"
+                                : status === "low"
+                                    ? "LOW STOCK"
+                                    : "IN STOCK"
                     }
                 </div>
             </td>
@@ -500,7 +619,9 @@ function filterInventory(){
             }
 
             else if(stockValue === "low"){
-                matchesStock = stock >= 1 && stock <= inventoryThresholds.lowStock;
+                matchesStock =
+                    stock > inventoryThresholds.criticalStock &&
+                    stock <= inventoryThresholds.lowStock;
             }
 
             else if(stockValue === "21-40"){
@@ -613,6 +734,119 @@ function filterInventory(){
 
 }
 
+lowStockCard.addEventListener("click", () => {
+
+    // Clear existing filters
+    searchInput.value = "";
+    categoryFilter.value = "all";
+    stockFilter.value = "all";
+    expiryFilter.value = "all";
+
+    // Show only low-stock products
+    statusFilter.value = "low";
+
+    filterInventory();
+
+    // Focus on the inventory table
+    document
+        .querySelector(".inventory-table-container")
+        .scrollIntoView({
+            behavior: "smooth",
+            block: "start"
+        });
+
+});
+
+criticalStockCard.addEventListener("click", () => {
+
+    // Clear existing filters
+    searchInput.value = "";
+    categoryFilter.value = "all";
+    stockFilter.value = "all";
+    expiryFilter.value = "all";
+
+    // Show only critical-stock products
+    statusFilter.value = "critical";
+
+    filterInventory();
+
+    // Focus on the inventory table
+    document
+        .querySelector(".inventory-table-container")
+        .scrollIntoView({
+            behavior: "smooth",
+            block: "start"
+        });
+
+});
+
+outOfStockCard.addEventListener("click", () => {
+
+    // Clear existing filters
+    searchInput.value = "";
+    categoryFilter.value = "all";
+    stockFilter.value = "all";
+    expiryFilter.value = "all";
+
+    // Show only out-of-stock products
+    statusFilter.value = "out-of-stock";
+
+    filterInventory();
+
+    // Focus on the inventory table
+    document
+        .querySelector(".inventory-table-container")
+        .scrollIntoView({
+            behavior: "smooth",
+            block: "start"
+        });
+
+});
+
+expiringSoonCard.addEventListener("click", () => {
+
+    // Clear existing filters
+    searchInput.value = "";
+    categoryFilter.value = "all";
+    stockFilter.value = "all";
+    statusFilter.value = "all";
+
+    // Show products expiring within 30 days
+    expiryFilter.value = "30";
+
+    filterInventory();
+
+    // Focus on the inventory table
+    document
+        .querySelector(".inventory-table-container")
+        .scrollIntoView({
+            behavior: "smooth",
+            block: "start"
+        });
+
+});
+
+totalProductsCard.addEventListener("click", () => {
+
+    // Clear all filters
+    searchInput.value = "";
+    categoryFilter.value = "all";
+    stockFilter.value = "all";
+    expiryFilter.value = "all";
+    statusFilter.value = "all";
+
+    // Show all products
+    filterInventory();
+
+    // Focus on the inventory table
+    document
+        .querySelector(".inventory-table-container")
+        .scrollIntoView({
+            behavior: "smooth",
+            block: "start"
+        });
+
+});
 
 /* =========================================================
    FILTER EVENT LISTENERS
@@ -849,6 +1083,13 @@ confirmDelete.addEventListener("click", async () => {
         productToDelete = null;
 
         await loadInventory();
+        await loadRestockedToday();
+        await loadDeductedToday();
+        await loadLowStockToday();
+        await loadLowStockCount();
+        await loadCriticalStockToday();
+        await loadCriticalStockCount();
+        await loadExpiringSoonCount();
 
     } catch(error){
 
@@ -1026,6 +1267,15 @@ confirmAddProduct.addEventListener("click", async () => {
         addProductModal.classList.remove("show");
 
         await loadInventory();
+        await loadRestockedToday();
+        await loadDeductedToday();
+        await loadLowStockToday();
+        await loadLowStockCount();
+        await loadCriticalStockToday();
+        await loadCriticalStockCount();
+        await loadOutOfStockCount();
+        await loadOutOfStockToday();
+        await loadExpiringSoonCount();
 
     } catch(error) {
 
@@ -1164,6 +1414,9 @@ confirmAddProduct.addEventListener("click", async () => {
     await loadLowStockCount();
     await loadCriticalStockToday();
     await loadCriticalStockCount();
+    await loadOutOfStockCount();
+    await loadOutOfStockToday();
+    await loadExpiringSoonCount();  
 
 });
 
@@ -1224,52 +1477,66 @@ confirmAddProduct.addEventListener("click", async () => {
         statusElement.classList.remove(
             "in-stock",
             "low-stock",
-            "critical"
+            "critical",
+            "out-of-stock"
         );
 
 
         /* Determine new status */
 
+
         let newStatus;
 
-
-        if(updatedProduct.stock_quantity <= inventoryThresholds.criticalStock){
-
+        if(updatedProduct.stock_quantity === 0){
+        
+            newStatus = "out-of-stock";
+        
+            statusElement.classList.add(
+                "out-of-stock"
+            );
+        
+            statusElement.innerHTML =
+                "<span></span> OUT OF STOCK";
+        
+        }
+        
+        else if(updatedProduct.stock_quantity <= inventoryThresholds.criticalStock){
+        
             newStatus = "critical";
-
+        
             statusElement.classList.add(
                 "critical"
             );
-
+        
             statusElement.innerHTML =
                 "<span></span> CRITICAL";
-
+        
         }
-
+        
         else if(updatedProduct.stock_quantity <= inventoryThresholds.lowStock){
-
-            newStatus = "low"; //previously low-stock but oriiginally low
-
+        
+            newStatus = "low";
+        
             statusElement.classList.add(
                 "low-stock"
             );
-
+        
             statusElement.innerHTML =
                 "<span></span> LOW STOCK";
-
+        
         }
-
+        
         else{
-
+        
             newStatus = "in-stock";
-
+        
             statusElement.classList.add(
                 "in-stock"
             );
-
+        
             statusElement.innerHTML =
                 "<span></span> IN STOCK";
-
+        
         }
 
 
@@ -1284,6 +1551,8 @@ confirmAddProduct.addEventListener("click", async () => {
             filterInventory();
             await loadCriticalStockToday();
             await loadCriticalStockCount();
+            await loadOutOfStockToday();
+            await loadOutOfStockCount();
     } catch(error){
 
         console.error(
@@ -1320,3 +1589,6 @@ loadLowStockToday();
 loadLowStockCount();
 loadCriticalStockCount();
 loadCriticalStockToday();
+loadOutOfStockCount();
+loadOutOfStockToday();
+loadExpiringSoonCount();

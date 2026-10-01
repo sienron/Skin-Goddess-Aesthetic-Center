@@ -14,7 +14,7 @@
     <link rel="stylesheet" href="InventoryManagement.css">
 </head>
 
-<body>
+<body class="InventoryManagement">
 
     
 
@@ -39,24 +39,14 @@
                     Dashboard
                 </a>
     
-                <a href="Appointments.html" class="inv-nav-link">
-                    Appointments
-                </a>
+               
     
-                <a href="Inventory.html" class="inv-nav-link inv-nav-link--active">
+                <a href="InventoryManagement.html" class="inv-nav-link inv-nav-link--active">
                     Inventory
                 </a>
     
                 <a href="Reports.html" class="inv-nav-link">
                     Reports
-                </a>
-    
-                <a href="Usermanagement.html" class="inv-nav-link">
-                    User Management
-                </a>
-    
-                <a href="ContentManagement.html" class="inv-nav-link">
-                    Content Management
                 </a>
     
             </nav>
@@ -141,7 +131,7 @@
         <!-- ================= SUMMARY CARDS ================= -->
         <section class="summary-cards">
 
-            <div class="summary-card">
+            <div class="summary-card clickable-summary" id="totalProductsCard">
                 <div class="summary-label">TOTAL PRODUCTS</div>
                 <div class="summary-value" id="totalProducts">247</div>
                 <div class="summary-info positive" id="restockedToday">
@@ -152,7 +142,7 @@
                 </div>
             </div>
 
-            <div class="summary-card">
+            <div class="summary-card clickable-summary" id="lowStockCard">
                 <div class="summary-label">LOW STOCK ITEMS</div>
                 <div class="summary-value" id="lowStockCount">18</div>
                 <div class="summary-info warning" id="lowStockToday" >
@@ -160,7 +150,7 @@
                 </div>
             </div>
 
-            <div class="summary-card">
+            <div class="summary-card clickable-summary" id="criticalStockCard">
                 <div class="summary-label">CRITICAL STOCK ITEMS</div>
                 <div class="summary-value" id="criticalStockCount"></div>
                 <div class="summary-info positive" id="criticalStockToday">
@@ -168,21 +158,23 @@
                 </div>
             </div>
 
-            <div class="summary-card">
-                <div class="summary-label">EXPIRING SOON</div>
-                <div class="summary-value">5</div>
-                <div class="summary-info danger">
-                    Within 60 days
+            <div class="summary-card clickable-summary" id="outOfStockCard">
+                <div class="summary-label">OUT OF STOCK ITEMS</div>
+                <div class="summary-value" id="outOfStockCount">0</div>
+                <div class="summary-info positive" id="outOfStockToday">
+                    ↑ 0 new today
                 </div>
             </div>
 
-            <div class="summary-card">
-                <div class="summary-label">TOTAL CATEGORIES</div>
-                <div class="summary-value">7</div>
-                <div class="summary-info positive">
-                    All categories tracked
+            <div class="summary-card clickable-summary" id="expiringSoonCard">
+                <div class="summary-label">EXPIRING SOON</div>
+                <div class="summary-value" id="expiringSoonCount">0</div>
+                <div class="summary-info danger">
+                    Within 30 days
                 </div>
             </div>
+
+         
 
 
 
@@ -284,9 +276,11 @@
                                         
                                         <select id="statusFilter">
                                             <option value="all">ALL STATUS</option>
+                                            <option value="out-of-stock">Out of Stock</option>
                                             <option value="critical">Critical</option>
                                             <option value="low">Low Stock</option>
                                             <option value="in-stock">In Stock</option>
+                                            
                                         </select>
                                     </div>
                                 </th>
