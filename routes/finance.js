@@ -112,7 +112,7 @@ async function reportData(from, to) {
       SELECT s.category, p.amount FROM appointments a JOIN services s ON s.service_id = a.service_id JOIN payments p ON p.appointment_id = a.appointment_id
       WHERE a.appointment_status = 'no_show' AND p.payment_type = 'reservation' AND p.status = 'posted' AND $3::boolean AND a.appointment_date BETWEEN $1::date AND $2::date
     ) revenue GROUP BY category ORDER BY amount DESC`, [from, to, NO_SHOW_DEPOSIT_IS_INCOME]),
-    db.query(`SELECT CASE WHEN a.appointment_status = 'no_show' THEN 'forfeited' WHEN p.status = 'refunded' THEN 'refunded' ELSE 'paid' END AS status, COUNT(*)::int AS count, SUM(p.amount)::float8 AS amount FROM payments p LEFT JOIN appointments a ON a.appointment_id = p.appointment_id WHERE p.payment_type = 'reservation' AND (p.created_at AT TIME ZONE 'Asia/Manila')::date BETWEEN $1::date AND $2::date GROUP BY 1 ORDER BY 1`, [from, to]),
+    db.query(`SELECT CASE WHEN p.status = 'refunded' THEN 'refunded' WHEN a.appointment_status = 'no_show' THEN 'forfeited' ELSE 'paid' END AS status, COUNT(*)::int AS count, SUM(p.amount)::float8 AS amount FROM payments p LEFT JOIN appointments a ON a.appointment_id = p.appointment_id WHERE p.payment_type = 'reservation' AND (p.created_at AT TIME ZONE 'Asia/Manila')::date BETWEEN $1::date AND $2::date GROUP BY 1 ORDER BY 1`, [from, to]),
     db.query(`SELECT service, SUM(amount)::float8 AS amount, COUNT(*)::int AS count FROM (
       SELECT s.service_name AS service, a.booked_service_price::numeric AS amount FROM appointments a JOIN services s ON s.service_id = a.service_id
       WHERE a.appointment_status = 'completed' AND a.appointment_date BETWEEN $1::date AND $2::date

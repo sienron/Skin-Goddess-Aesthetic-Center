@@ -1,8 +1,8 @@
 (function () {
   const common = window.FinanceCommon;
   if (!common) return;
-  const refs = Object.fromEntries(['reportPeriodLabel', 'reportFrom', 'reportTo', 'reportMessage', 'reportSales', 'reportCollected', 'reportExpenses', 'reportNet', 'reportOutstanding', 'dailyCashRows', 'dailyCashEmpty'].map((id) => [id, document.getElementById(id)]));
-  const state = { from: common.monthStart(), to: common.manilaToday(), data: null, monthly: [] };
+  const refs = Object.fromEntries(['reportPeriodLabel', 'reportFrom', 'reportTo', 'reportMessage', 'reportSales', 'reportCollected', 'reportExpenses', 'reportNet', 'reportDepositsReceived', 'reportDepositsReceivedCount', 'reportRefunds', 'reportRefundsCount', 'reportForfeited', 'reportForfeitedCount', 'dailyCashRows', 'dailyCashEmpty'].map((id) => [id, document.getElementById(id)]));
+  const state = { from: common.monthStart(), to: common.manilaToday(), data: null, monthly: [], methods: [] };
   const colors = ['#C9A84C', '#228B46', '#4388E8', '#929292', '#8a6e2f', '#B93C3C'];
 
   function addCell(row, value) {
@@ -33,18 +33,30 @@
     refs.reportPeriodLabel.textContent = `${state.from} to ${state.to}`;
     const monthCount = (Number(state.to.slice(0, 4)) - Number(state.from.slice(0, 4))) * 12 + Number(state.to.slice(5, 7)) - Number(state.from.slice(5, 7)) + 1;
     const range = common.rangeParams(state.from, state.to);
-    const [report, monthly] = await Promise.all([
+    const [report, monthly, methods] = await Promise.all([
       common.fetchJson(`/api/finance/report?${range}`),
       common.fetchJson(`/api/finance/monthly?${common.rangeParams(state.from, state.to, { months: Math.min(Math.max(monthCount, 1), 24) })}`),
+      common.fetchJson(`/api/finance/by-method?${range}`),
     ]);
     state.data = report;
     state.monthly = monthly;
+    state.methods = methods;
     const income = report.income_statement;
     refs.reportSales.textContent = peso(income.sales);
     refs.reportCollected.textContent = peso(income.collected);
     refs.reportExpenses.textContent = peso(income.expenses);
     refs.reportNet.textContent = peso(income.net_income);
-    refs.reportOutstanding.textContent = peso(income.outstanding_balance);
+
+    const depositByStatus = new Map(report.deposits.map((item) => [item.status, item]));
+    const received = ['paid', 'forfeited'].map((status) => depositByStatus.get(status)).filter(Boolean);
+    const refunded = depositByStatus.get('refunded') || { count: 0, amount: 0 };
+    const forfeited = depositByStatus.get('forfeited') || { count: 0, amount: 0 };
+    refs.reportDepositsReceived.textContent = peso(received.reduce((sum, item) => sum + Number(item.amount), 0));
+    refs.reportDepositsReceivedCount.textContent = `${received.reduce((sum, item) => sum + Number(item.count), 0)} payments`;
+    refs.reportRefunds.textContent = peso(refunded.amount);
+    refs.reportRefundsCount.textContent = `${refunded.count} payments`;
+    refs.reportForfeited.textContent = peso(forfeited.amount);
+    refs.reportForfeitedCount.textContent = `${forfeited.count} payments`;
 
     common.renderChart('reportSalesExpensesChart', {
       type: 'bar', data: { labels: monthly.map((row) => row.month), datasets: [{ label: 'Sales', data: monthly.map((row) => Number(row.sales)), backgroundColor: '#C9A84C' }, { label: 'Expenses', data: monthly.map((row) => Number(row.expenses)), backgroundColor: '#B93C3C' }] },
@@ -61,6 +73,10 @@
     common.renderChart('reportDepositsChart', {
       type: 'doughnut', data: { labels: report.deposits.map((row) => row.status), datasets: [{ data: report.deposits.map((row) => Number(row.amount)), backgroundColor: ['#228B46', '#B93C3C', '#929292'], borderColor: '#fff', borderWidth: 1 }] },
       options: { plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: (item) => `${item.label}: ${peso(item.raw)}` } } } },
+    });
+    common.renderChart('reportMethodsChart', {
+      type: 'bar', data: { labels: methods.map((row) => row.method), datasets: [{ label: 'Collected', data: methods.map((row) => Number(row.amount)), backgroundColor: '#C9A84C', borderRadius: 3 }] },
+      options: { indexAxis: 'y', plugins: { legend: { display: false }, tooltip: { callbacks: { label: (item) => peso(item.raw) } } } },
     });
     common.renderChart('reportTopServicesChart', {
       type: 'bar', data: { labels: report.top_services.map((row) => row.service), datasets: [{ label: 'Sales', data: report.top_services.map((row) => Number(row.amount)), backgroundColor: '#C9A84C', borderRadius: 3 }] },
@@ -98,6 +114,7 @@
       window.location.href = `/api/finance/export.csv?${common.rangeParams(state.from, state.to, { section })}`;
       return;
     }
+    if (section === 'payment-methods') downloadCsv('finance-payment-methods.csv', ['Method', 'Payment count', 'Collected (PHP)'], state.methods.map((row) => [row.method, row.count, peso(row.amount)]));
     if (section === 'sales-expenses') downloadCsv('finance-sales-vs-expenses.csv', ['Month', 'Sales (PHP)', 'Expenses (PHP)'], state.monthly.map((row) => [row.month, peso(row.sales), peso(row.expenses)]));
     if (section === 'collections') downloadCsv('finance-collections-trend.csv', ['Date', 'Collected (PHP)'], report.daily_cash.map((row) => [row.date, peso(row.collected)]));
     if (section === 'service-categories') downloadCsv('finance-service-categories.csv', ['Category', 'Sales (PHP)'], report.service_categories.map((row) => [row.category, peso(row.amount)]));
