@@ -8,7 +8,28 @@ document.addEventListener('DOMContentLoaded', () => {
   const accountName = account?.querySelector('.um-sidebar__account-name');
   const accountRole = account?.querySelector('.um-sidebar__account-role');
   const accountAvatar = account?.querySelector('.um-avatar');
+  const profileBtn = document.getElementById('adminProfileBtn');
+  const profileMenu = document.getElementById('adminProfileMenu');
   const logoutBtn = document.getElementById('adminLogoutBtn');
+
+  function closeProfileMenu() {
+    profileMenu?.classList.remove('show');
+    profileBtn?.setAttribute('aria-expanded', 'false');
+  }
+
+  profileBtn?.addEventListener('click', (event) => {
+    event.stopPropagation();
+    const isOpen = profileMenu?.classList.toggle('show') || false;
+    profileBtn.setAttribute('aria-expanded', String(isOpen));
+  });
+
+  document.addEventListener('click', (event) => {
+    if (account && !account.contains(event.target)) closeProfileMenu();
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeProfileMenu();
+  });
 
   fetch('/api/auth/me')
     .then((response) => {

@@ -40,12 +40,16 @@
       </nav>
 
       <div class="um-sidebar__account">
-        <div class="um-avatar">A</div>
-        <div class="um-sidebar__account-details">
-          <p class="um-sidebar__account-name">Admin User</p>
-          <p class="um-sidebar__account-role">Owner</p>
+        <button class="um-sidebar__profile" id="adminProfileBtn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="adminProfileMenu">
+          <span class="um-avatar">A</span>
+          <span class="um-sidebar__account-details">
+            <span class="um-sidebar__account-name">Admin User</span>
+            <span class="um-sidebar__account-role">Owner</span>
+          </span>
+        </button>
+        <div class="um-sidebar__account-menu" id="adminProfileMenu" role="menu">
+          <button class="um-sidebar__logout" id="adminLogoutBtn" type="button" role="menuitem">Log out</button>
         </div>
-        <button class="um-sidebar__logout" id="adminLogoutBtn" type="button">Log out</button>
       </div>
     </aside>
 
