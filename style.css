@@ -13387,14 +13387,23 @@ textarea.cm-editor__input {
 }
 
 .fin-tabs {
+  align-self: start;
+  align-content: start;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: 42px;
   gap: 8px;
   border: 0;
 }
 
 .fin-tab {
-  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  height: 42px;
   border: 1px solid #ded8cc;
   border-radius: 4px;
   background: #fff;
@@ -13411,6 +13420,7 @@ textarea.cm-editor__input {
   background: #f7f3e8;
   color: #5d471e;
   box-shadow: inset 0 -2px #c9a84c;
+  transform: none;
 }
 
 .fin-period-controls {
@@ -13439,9 +13449,11 @@ textarea.cm-editor__input {
 @media (max-width: 520px) {
   .fin-tabs {
     gap: 5px;
+    grid-auto-rows: 48px;
   }
 
   .fin-tab {
+    height: 48px;
     padding: 7px 5px;
     font-size: 0.68rem;
   }
