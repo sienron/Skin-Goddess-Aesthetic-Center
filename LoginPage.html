@@ -286,6 +286,7 @@
           <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" aria-label="Digit 5">
           <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" aria-label="Digit 6">
         </div>
+        <p class="otp-timer">Code expires in <span class="otp-timer-value" id="loginMfaTimerValue">05:00</span></p>
         <label class="checkbox-label login-mfa-remember">
           <input type="checkbox" id="rememberLoginDevice">
           <span>Remember this device for 30 days</span>
@@ -299,7 +300,7 @@
       <div class="otp-divider-line"></div>
       <a href="#" class="back-to-signin" id="backToLoginMfa">&larr; Back to Sign In</a>
       <div class="otp-security-note">
-        <p>Code expires in <span class="otp-timer-value" id="loginMfaTimerValue">05:00</span></p>
+        <p>This code is valid for 5 minutes.</p>
         <p>Never share this code with anyone.</p>
       </div>
     </div>

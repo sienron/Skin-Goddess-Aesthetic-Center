@@ -20,6 +20,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const form = document.getElementById('faqChatForm');
   const input = document.getElementById('faqChatInput');
   const messages = document.getElementById('faqChatMessages');
+  const chatHistoryKey = 'sg_faq_chat_history';
+  const maxChatHistoryMessages = 100;
 
   if (!launcher || !panel || !closeButton || !form || !input || !messages) return;
 
@@ -78,13 +80,55 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   ];
 
-  function appendMessage(text, sender) {
+  function createMessage(text, sender) {
     const message = document.createElement('p');
     message.className = `faq-chat-message faq-chat-message--${sender}`;
     message.textContent = text;
-    messages.append(message);
+    return message;
+  }
+
+  function saveChatHistory() {
+    const history = Array.from(messages.querySelectorAll('.faq-chat-message'))
+      .map((message) => ({
+        text: message.textContent || '',
+        sender: message.classList.contains('faq-chat-message--user') ? 'user' : 'bot',
+      }))
+      .slice(-maxChatHistoryMessages);
+
+    try {
+      sessionStorage.setItem(chatHistoryKey, JSON.stringify(history));
+    } catch (error) {
+      console.warn('Could not save chatbot history:', error);
+    }
+  }
+
+  function restoreChatHistory() {
+    let history;
+    try {
+      history = JSON.parse(sessionStorage.getItem(chatHistoryKey) || '[]');
+    } catch (error) {
+      return;
+    }
+
+    if (!Array.isArray(history)) return;
+    const validMessages = history
+      .filter((message) => message && typeof message.text === 'string' && ['user', 'bot'].includes(message.sender))
+      .slice(-maxChatHistoryMessages);
+    if (!validMessages.length) return;
+
+    messages.replaceChildren();
+    validMessages.forEach(({ text, sender }) => messages.append(createMessage(text, sender)));
     messages.scrollTop = messages.scrollHeight;
   }
+
+  function appendMessage(text, sender) {
+    const message = createMessage(text, sender);
+    messages.append(message);
+    messages.scrollTop = messages.scrollHeight;
+    saveChatHistory();
+  }
+
+  restoreChatHistory();
 
   function findAnswer(question) {
     const normalized = question.toLowerCase().replace(/[^a-z0-9\s]/g, ' ');
