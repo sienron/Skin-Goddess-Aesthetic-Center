@@ -90,7 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
       info.appendChild(el('p', 'cm-block-detail', b.title));
       if (b.body) info.appendChild(el('p', 'cm-block-detail', b.body));
       row.appendChild(info);
-      row.appendChild(statusBadge(b.is_published ? 'published' : 'draft'));
+      row.appendChild(statusBadge(b.isPublished ? 'published' : 'draft'));
       const actions = el('div', 'cm-actions');
       const editBtn = el('button', 'apt-action apt-action--view', 'Edit');
       editBtn.type = 'button';
@@ -98,7 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
       editBtn.dataset.action = 'edit';
       editBtn.dataset.id = b.key;
       actions.appendChild(editBtn);
-      actions.appendChild(actionButton(b.is_published ? 'Unpublish' : 'Publish', 'homepage', 'toggle', b.key));
+      actions.appendChild(actionButton(b.isPublished ? 'Unpublish' : 'Publish', 'homepage', 'toggle', b.key));
       row.appendChild(actions);
       list.appendChild(row);
     });
@@ -237,6 +237,16 @@ document.addEventListener('DOMContentLoaded', () => {
     editorFields.appendChild(fieldLabel);
   }
 
+  function addEditorCheckbox(name, label, checked) {
+    const fieldLabel = el('label', 'cm-editor__checkbox');
+    const field = el('input');
+    field.type = 'checkbox';
+    field.name = name;
+    field.checked = Boolean(checked);
+    fieldLabel.append(field, document.createTextNode(label));
+    editorFields.appendChild(fieldLabel);
+  }
+
   function openEditor(section, item) {
     editing = { section, id: item?.service_id || item?.id || item?.key || null };
     editorFields.textContent = '';
@@ -259,8 +269,9 @@ document.addEventListener('DOMContentLoaded', () => {
       addEditorField('photoUrl', 'Photo path (inside images/)', item?.photoUrl || 'images/SkinGoddessReceptionImg.jpg', { required: true, maxLength: 500 });
       addEditorField('sortOrder', 'Display order', item?.sortOrder ?? TEAM.length, { type: 'number', required: true, min: 0, step: '1' });
     } else if (section === 'homepage') {
-      addEditorField('title', 'Title', item.title, { required: true, maxLength: 500 });
+      addEditorField('title', 'Title', item.title, { required: true, maxLength: 500, multiline: item.key === 'hero' });
       addEditorField('body', 'Supporting text', item.body, { multiline: true, maxLength: 2000 });
+      addEditorCheckbox('isPublished', 'Published on the public site', item.isPublished);
       if (item.key === 'services_strip') {
         (item.payload?.items || []).forEach((stripItem, index) => {
           addEditorField(`stripTitle${index}`, `Service card ${index + 1} title`, stripItem.title, { required: true, maxLength: 160 });
@@ -317,7 +328,7 @@ document.addEventListener('DOMContentLoaded', () => {
       payload = {
         title: values.title,
         body: values.body,
-        isPublished: block.is_published,
+        isPublished: values.isPublished === 'on',
         ...(stripItems ? { payload: { items: stripItems } } : {}),
       };
     }
@@ -349,7 +360,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const item = HOMEPAGE_BLOCKS.find((block) => block.key === id);
       await apiRequest(`/api/content/admin/homepage/${id}`, {
         method: 'PUT',
-        body: JSON.stringify({ title: item.title, body: item.body, payload: item.payload, isPublished: !item.is_published }),
+        body: JSON.stringify({ title: item.title, body: item.body, payload: item.payload, isPublished: !item.isPublished }),
       });
     } else {
       const item = TESTIMONIALS_STATE.items.find((rating) => String(rating.rating_id) === String(id));
