@@ -9803,6 +9803,18 @@ body.services {
   font-weight: 600;
 }
 
+#userManagementMain .um-tabs {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+
+#userManagementMain .um-tabs .um-tab {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
 /* Table */
 .um-table-wrap {
   background: #fff;
