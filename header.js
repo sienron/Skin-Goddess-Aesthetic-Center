@@ -75,6 +75,13 @@
             const roleLabel = formatRoleLabel(data.role);
             fillProfile(profileBtn, fullName, initials, roleLabel);
             fillProfile(mobileProfile, fullName, initials, roleLabel);
+            if (String(data.role || '').toLowerCase() === 'admin' && profileDropdown) {
+                const dashboardLink = document.createElement('a');
+                dashboardLink.href = '/AdminDashboard.html';
+                dashboardLink.className = 'profile-dropdown-item';
+                dashboardLink.textContent = 'Dashboard';
+                profileDropdown.prepend(dashboardLink);
+            }
         })
         .catch(() => {
             showSignInButton(false);

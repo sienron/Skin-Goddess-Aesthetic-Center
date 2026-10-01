@@ -4,6 +4,40 @@
 // wire them up once the backend endpoints exist.
 
 document.addEventListener('DOMContentLoaded', () => {
+  const account = document.querySelector('.um-sidebar__account');
+  const accountName = account?.querySelector('.um-sidebar__account-name');
+  const accountRole = account?.querySelector('.um-sidebar__account-role');
+  const accountAvatar = account?.querySelector('.um-avatar');
+  const logoutBtn = document.getElementById('adminLogoutBtn');
+
+  fetch('/api/auth/me')
+    .then((response) => {
+      if (!response.ok) throw new Error('Could not load the current account');
+      return response.json();
+    })
+    .then((data) => {
+      const fullName = `${data.firstName || ''} ${data.lastName || ''}`.trim();
+      if (accountName && fullName) accountName.textContent = fullName;
+      if (accountRole && data.role) {
+        accountRole.textContent = String(data.role)
+          .split('_')
+          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ');
+      }
+      if (accountAvatar) {
+        accountAvatar.textContent = `${data.firstName?.[0] || ''}${data.lastName?.[0] || ''}`.toUpperCase();
+      }
+    })
+    .catch((error) => console.error('Could not load admin account:', error));
+
+  logoutBtn?.addEventListener('click', () => {
+    fetch('/api/auth/logout', { method: 'POST' })
+      .catch(() => {})
+      .finally(() => {
+        window.location.href = '/LoginPage.html';
+      });
+  });
+
   const sidebar = document.getElementById('umSidebar');
   const toggleBtn = document.getElementById('umSidebarToggle');
   const overlay = document.getElementById('umSidebarOverlay');
