@@ -62,9 +62,9 @@
       type: 'bar', data: { labels: monthly.map((row) => row.month), datasets: [{ label: 'Sales', data: monthly.map((row) => Number(row.sales)), backgroundColor: '#C9A84C' }, { label: 'Expenses', data: monthly.map((row) => Number(row.expenses)), backgroundColor: '#B93C3C' }] },
       options: { plugins: { tooltip: { callbacks: { label: (item) => `${item.dataset.label}: ${peso(item.raw)}` } } } },
     });
-    common.renderChart('reportCollectionsChart', {
-      type: 'line', data: { labels: report.daily_cash.map((row) => row.date), datasets: [{ label: 'Collected', data: report.daily_cash.map((row) => Number(row.collected)), borderColor: '#228B46', backgroundColor: 'rgba(34,139,70,.12)', fill: true, tension: 0.22, pointRadius: 2 }] },
-      options: { plugins: { legend: { display: false }, tooltip: { callbacks: { label: (item) => peso(item.raw) } } } },
+    common.renderChart('reportOnlineReservationsChart', {
+      type: 'line', data: { labels: report.online_reservations.map((row) => row.date), datasets: [{ label: 'Online reservations', data: report.online_reservations.map((row) => Number(row.count)), borderColor: '#228B46', backgroundColor: 'rgba(34,139,70,.12)', fill: true, tension: 0.22, pointRadius: 2 }] },
+      options: { scales: { y: { ticks: { precision: 0 } } }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (item) => `${item.raw} online reservation${Number(item.raw) === 1 ? '' : 's'}` } } } },
     });
     common.renderChart('reportServiceCategoryChart', {
       type: 'pie', data: { labels: report.service_categories.map((row) => row.category), datasets: [{ data: report.service_categories.map((row) => Number(row.amount)), backgroundColor: colors, borderWidth: 1, borderColor: '#fff' }] },
@@ -115,6 +115,7 @@
       return;
     }
     if (section === 'payment-methods') downloadCsv('finance-payment-methods.csv', ['Method', 'Payment count', 'Collected (PHP)'], state.methods.map((row) => [common.paymentMethodLabel(row.method), row.count, peso(row.amount)]));
+    if (section === 'online-reservations') downloadCsv('finance-online-reservations.csv', ['Payment date', 'Online reservations'], report.online_reservations.map((row) => [row.date, row.count]));
     if (section === 'sales-expenses') downloadCsv('finance-sales-vs-expenses.csv', ['Month', 'Sales (PHP)', 'Expenses (PHP)'], state.monthly.map((row) => [row.month, peso(row.sales), peso(row.expenses)]));
     if (section === 'collections') downloadCsv('finance-collections-trend.csv', ['Date', 'Collected (PHP)'], report.daily_cash.map((row) => [row.date, peso(row.collected)]));
     if (section === 'service-categories') downloadCsv('finance-service-categories.csv', ['Category', 'Sales (PHP)'], report.service_categories.map((row) => [row.category, peso(row.amount)]));

@@ -10,7 +10,7 @@
 
   function paymentMethodLabel(method) {
     const labels = {
-      paymongo: 'PayMongo (other)',
+      paymongo: 'Unspecified (legacy)',
       cash: 'Cash',
       gcash: 'GCash',
       maya: 'Maya',

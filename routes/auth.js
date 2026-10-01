@@ -378,6 +378,19 @@ router.post('/login', loginLimiter, async (req, res) => {
       return res.status(403).json({ message: 'Verify email to login.' });
     }
 
+    const localDevMfaBypass = process.env.NODE_ENV !== 'production'
+      && user.dev_access_all === true
+      && user.mfa_enabled === false;
+    if (localDevMfaBypass) {
+      await establishAuthenticatedSession(req, user, Boolean(staysignedin));
+      return res.status(200).json({
+        message: 'Successful local development login.',
+        userId: user.user_id,
+        role: user.role,
+        redirectUrl: DASHBOARD_PER_ROLE[user.role] || '/dashboard',
+      });
+    }
+
     const rememberedDeviceToken = getCookieValue(req, REMEMBERED_DEVICE_COOKIE);
     if (rememberedDeviceToken && /^[a-f\d]{64}$/i.test(rememberedDeviceToken)) {
       const tokenHash = hashDeviceToken(rememberedDeviceToken);

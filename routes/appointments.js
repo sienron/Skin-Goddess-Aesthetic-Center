@@ -1154,7 +1154,7 @@ router.post('/paymongo/checkout-session', async (req, res) => {
       return res.status(503).json({ message: 'APP_BASE_URL must use HTTPS for live checkout.' });
     }
 
-    const configuredMethods = (process.env.PAYMONGO_PAYMENT_METHODS || 'card,gcash,paymaya,qrph')
+    const configuredMethods = (process.env.PAYMONGO_PAYMENT_METHODS || 'card,gcash,paymaya')
       .split(',').map((method) => method.trim()).filter(Boolean);
     if (configuredMethods.length === 0 || configuredMethods.some((method) => !/^[a-z0-9_]+$/.test(method))) {
       return res.status(503).json({ message: 'Configure valid PayMongo payment methods.' });

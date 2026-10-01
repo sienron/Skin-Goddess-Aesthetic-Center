@@ -6,7 +6,10 @@ if (process.env.NODE_ENV === 'production') {
 const db = require('../db');
 
 const categories = ['Inventory & Supplies', 'Salaries & Commissions', 'Rent', 'Utilities', 'Marketing', 'Equipment Maintenance', 'Other'];
-const methods = ['paymongo', 'cash', 'gcash', 'maya', 'card'];
+const methods = ['gcash', 'maya', 'card'];
+const APPOINTMENT_COUNT = 12;
+const PRODUCT_SALE_COUNT = 6;
+const EXPENSE_COUNT = 14;
 
 function dateOffset(daysAgo) {
   const date = new Date();
@@ -29,21 +32,23 @@ async function clearDemo() {
 }
 
 async function seedDemo() {
-  const clientResult = await db.query(`SELECT user_id FROM users WHERE role = 'client' ORDER BY user_id LIMIT 1`);
+  const clientResult = await db.query(`SELECT user_id FROM users WHERE role = 'client' ORDER BY user_id`);
   const servicesResult = await db.query(`SELECT service_id, service_price, reservation_fee, duration_minutes FROM services WHERE is_active = TRUE ORDER BY service_id`);
   if (!clientResult.rows.length || !servicesResult.rows.length) {
     throw new Error('At least one client account and one active service are required to seed finance demo data.');
   }
-  const clientId = clientResult.rows[0].user_id;
+  const clients = clientResult.rows;
   const services = servicesResult.rows;
   const userResult = await db.query(`SELECT user_id FROM users WHERE role = 'admin' ORDER BY user_id LIMIT 1`);
   const recordedBy = userResult.rows[0]?.user_id || null;
 
   await db.transaction(async (client) => {
-    for (let index = 0; index < 60; index += 1) {
-      const date = dateOffset(59 - index);
-      const service = services[index % services.length];
-      const isNoShow = index % 12 === 0;
+    for (let index = 0; index < APPOINTMENT_COUNT; index += 1) {
+      const daysAgo = 59 - Math.round(index * 58 / (APPOINTMENT_COUNT - 1));
+      const date = dateOffset(daysAgo);
+      const service = services[(index * 5) % services.length];
+      const clientId = clients[index % clients.length].user_id;
+      const isNoShow = index % 5 === 4;
       const price = Number(service.service_price);
       const deposit = Number(service.reservation_fee);
       const endMinutes = 10 * 60 + 15 + Number(service.duration_minutes);
@@ -62,24 +67,24 @@ async function seedDemo() {
         VALUES ($1, 'reservation', $2, $3, $4, 'DEMO', $5, ($6::date::timestamp + INTERVAL '12 hours'))
         ON CONFLICT (appointment_id) WHERE payment_type = 'reservation' AND appointment_id IS NOT NULL DO NOTHING
       `, [appointment.rows[0].appointment_id, deposit, methods[index % methods.length], `DEMO-DEP-${String(index + 1).padStart(4, '0')}`, recordedBy, date]);
-      if (!isNoShow && index % 3 !== 0) {
+      if (!isNoShow && index % 4 !== 0) {
         const balance = Math.max(0.01, Math.round((price - deposit) * 100) / 100);
         await client.query(`INSERT INTO payments (appointment_id, payment_type, amount, method, reference_no, note, recorded_by, created_at) VALUES ($1, 'balance', $2, $3, $4, 'DEMO', $5, ($6::date::timestamp + INTERVAL '13 hours'))`, [appointment.rows[0].appointment_id, balance, methods[(index + 1) % methods.length], `DEMO-BAL-${String(index + 1).padStart(4, '0')}`, recordedBy, date]);
       }
     }
 
-    for (let index = 0; index < 12; index += 1) {
-      const date = dateOffset(index * 5);
+    for (let index = 0; index < PRODUCT_SALE_COUNT; index += 1) {
+      const date = dateOffset(2 + index * 10);
       await client.query(`INSERT INTO payments (payment_type, amount, method, reference_no, note, recorded_by, created_at) VALUES ('product_sale', $1, $2, $3, 'DEMO', $4, ($5::date::timestamp + INTERVAL '14 hours'))`, [250 + (index * 85), methods[index % methods.length], `DEMO-PROD-${String(index + 1).padStart(4, '0')}`, recordedBy, date]);
     }
 
-    for (let index = 0; index < 25; index += 1) {
-      const date = dateOffset((index * 2) % 60);
+    for (let index = 0; index < EXPENSE_COUNT; index += 1) {
+      const date = dateOffset(1 + (index * 4) % 58);
       const category = categories[index % categories.length];
       await client.query(`INSERT INTO expenses (expense_date, category, description, amount, supplier, reference_no, recorded_by) VALUES ($1::date, $2, $3, $4, $5, $6, $7)`, [date, category, `DEMO: ${category} purchase ${index + 1}`, 350 + (index * 137.5), `Demo Supplier ${index % 5 + 1}`, `DEMO-EXP-${String(index + 1).padStart(4, '0')}`, recordedBy]);
     }
   });
-  console.log('Inserted 60 demo appointments, 72 demo payments, and 25 expenses across the last 60 days.');
+  console.log(`Inserted ${APPOINTMENT_COUNT} demo appointments, ${PRODUCT_SALE_COUNT} product sales, and ${EXPENSE_COUNT} expenses across the last 60 days.`);
 }
 
 async function main() {

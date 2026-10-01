@@ -10,7 +10,7 @@ For local or other non-production environments, set `NODE_ENV` to a value other 
 
 1. In the Render service's Environment settings, set `NODE_ENV=production` and `APP_BASE_URL=https://<your-service>.onrender.com` using the actual Render hostname.
 2. Add `PAYMONGO_LIVE_SECRET_KEY` with your live secret key and `PAYMONGO_LIVE_WEBHOOK_SECRET` with the signing secret from the live webhook endpoint. You may keep an existing `PAYMONGO_SK` variable for the live secret, but the webhook secret must use `PAYMONGO_LIVE_WEBHOOK_SECRET`.
-3. Set `PAYMONGO_PAYMENT_METHODS` to payment methods enabled for your PayMongo account, for example `card,gcash,paymaya,qrph`. PayMongo reports Maya as `paymaya` in the checkout payment source.
+3. Set `PAYMONGO_PAYMENT_METHODS` to payment methods enabled for your PayMongo account, for example `card,gcash,paymaya`. PayMongo reports Maya as `paymaya` in the checkout payment source.
 4. In the PayMongo live-mode Dashboard, add the webhook URL `https://<your-service>.onrender.com/api/appointments/paymongo/webhook` and select **Checkout Session → `checkout_session.payment.paid`**. Copy its signing secret into Render.
 5. Deploy the app and run `npm run migrate` against the production database once before accepting bookings.
 

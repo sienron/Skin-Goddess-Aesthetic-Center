@@ -93,7 +93,7 @@ async function outstandingBalance() {
 }
 
 async function reportData(from, to) {
-  const [sales, collected, expenses, daily, categoryRows, deposits, services, expenseCategories] = await Promise.all([
+  const [sales, collected, expenses, daily, onlineReservations, categoryRows, deposits, services, expenseCategories] = await Promise.all([
     db.query(`SELECT COALESCE(SUM(amount), 0)::float8 AS amount FROM (${salesUnion}) sale_rows`, [from, to, NO_SHOW_DEPOSIT_IS_INCOME]),
     db.query(`SELECT COALESCE(SUM(amount), 0)::float8 AS amount FROM payments WHERE status = 'posted' AND (created_at AT TIME ZONE 'Asia/Manila')::date BETWEEN $1::date AND $2::date`, [from, to]),
     db.query(`SELECT COALESCE(SUM(amount), 0)::float8 AS amount FROM expenses WHERE voided_at IS NULL AND expense_date BETWEEN $1::date AND $2::date`, [from, to]),
@@ -104,6 +104,14 @@ async function reportData(from, to) {
         FROM payments WHERE status = 'posted' AND (created_at AT TIME ZONE 'Asia/Manila')::date BETWEEN $1::date AND $2::date GROUP BY 1) c ON c.date = day::date
       LEFT JOIN (SELECT expense_date AS date, SUM(amount) AS total FROM expenses WHERE voided_at IS NULL AND expense_date BETWEEN $1::date AND $2::date GROUP BY 1) e ON e.date = day::date
       ORDER BY day
+    `, [from, to]),
+    db.query(`
+      SELECT day::date::text AS date, COUNT(p.payment_id)::int AS count
+      FROM generate_series($1::date, $2::date, '1 day') day
+      LEFT JOIN payments p ON (p.created_at AT TIME ZONE 'Asia/Manila')::date = day::date
+        AND p.payment_type = 'reservation' AND p.status = 'posted'
+        AND p.method IN ('gcash', 'maya', 'card')
+      GROUP BY day ORDER BY day
     `, [from, to]),
     db.query(`SELECT category, SUM(amount)::float8 AS amount FROM (
       SELECT s.category, a.booked_service_price::numeric AS amount FROM appointments a JOIN services s ON s.service_id = a.service_id
@@ -132,6 +140,7 @@ async function reportData(from, to) {
     from, to,
     income_statement: { sales: totalSales, collected: totalCollected, expenses: totalExpenses, net_income: totalCollected - totalExpenses, outstanding_balance: await outstandingBalance() },
     daily_cash: daily.rows.map((row) => ({ ...row, collected: Number(row.collected), expenses: Number(row.expenses) })),
+    online_reservations: onlineReservations.rows.map((row) => ({ ...row, count: Number(row.count) })),
     service_categories: topCategories,
     deposits: deposits.rows.map((row) => ({ ...row, count: Number(row.count), amount: Number(row.amount) })),
     top_services: services.rows.map((row) => ({ ...row, amount: Number(row.amount), count: Number(row.count) })),

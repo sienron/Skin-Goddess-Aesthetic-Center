@@ -13728,6 +13728,20 @@ textarea.cm-editor__input {
   padding: 8px 9px;
 }
 
+.fin-daily-cash-scroll {
+  max-height: 272px;
+  overflow-x: auto;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.fin-daily-cash-scroll .fin-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #fff;
+}
+
 @media (max-width: 760px) {
   .fin-report-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
