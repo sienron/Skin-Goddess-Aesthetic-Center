@@ -38,7 +38,7 @@
             <li><a href="FinanceDashboard.html">Dashboard</a></li>
             <li><a href="FinancesTransactions.html">Sales &amp; Transactions</a></li>
             <li><a href="FinanceExpenses.html">Expenses</a></li>
-            <li><a href="FinanceReports.html">Report</a></li>
+            <li><a href="FinanceReports.html">Reports</a></li>
         </ul>
     </aside>
     <main>
@@ -56,7 +56,7 @@
                     <li class="nav-item"><img src="icons/circle.svg" alt="" class="nav-bullet"><a
                             href="FinanceExpenses.html">Expenses</a></li>
                     <li class="nav-item"><img src="icons/circle.svg" alt="" class="nav-bullet"><a
-                            href="FinanceReports.html">Report</a></li>
+                            href="FinanceReports.html">Reports</a></li>
                 </ul>
             </nav>
             <div class="profile-wrap">
@@ -76,20 +76,23 @@
                 </div>
             </div>
         </section>
-        <section class="main-content staff-page-content">
-            <div class="staff-table-card">
-                <div class="staff-table-toolbar">
-                    <h2>Transactions</h2>
-                    <div class="search staff-toolbar-search" id="searchWrap"><img src="icons/magnifying-glass.svg" alt="" class="search-svg"><input type="text" id="searchInput" placeholder="Search transactions..." autocomplete="off"></div>
-                    <span>0 records</span>
-                </div>
-                <div class="staff-empty-state"><strong>No transactions recorded</strong>
-                    <p>Completed sales and payments will appear in this table.</p>
-                </div>
-            </div>
+        <section class="main-content staff-page-content fin-page-flow">
+            <div class="fin-tabs" role="tablist" aria-label="Transaction views"><button type="button" class="fin-tab is-active" data-tab="transactions" role="tab" aria-selected="true">All transactions</button><button type="button" class="fin-tab" data-tab="receivables" role="tab" aria-selected="false">Receivables</button><button type="button" class="fin-tab" data-tab="deposits" role="tab" aria-selected="false">Reservation deposits</button></div>
+            <div class="fin-filters"><label>From<input id="transactionFrom" type="date"></label><label>To<input id="transactionTo" type="date"></label><label id="typeFilterWrap">Payment type<select id="transactionType"><option value="">All types</option><option value="reservation">Reservation</option><option value="balance">Balance</option><option value="product_sale">Product sale</option></select></label><label id="methodFilterWrap">Payment method<select id="transactionMethod"><option value="">All methods</option><option value="paymongo">PayMongo</option><option value="cash">Cash</option><option value="gcash">GCash</option><option value="card">Card</option></select></label><label class="fin-search-field" id="transactionSearchWrap">Client search<input id="transactionSearch" type="search" placeholder="Name, service, reference"></label></div>
+            <section class="staff-table-card fin-chart-section" id="methodChartSection"><div class="fin-section-heading"><h2>Collections by payment method</h2><span id="transactionPeriodLabel"></span></div><div class="fin-chart-frame fin-chart-frame--donut"><canvas id="methodChart" aria-label="Collections by payment method" role="img"></canvas></div></section>
+            <section class="staff-table-card" id="transactionsPanel"><div class="staff-table-toolbar"><h2>Transactions</h2><span id="transactionCount">0 records</span></div><div class="fin-table-scroll"><table class="fin-table"><thead><tr><th>Date</th><th>Client</th><th>Type</th><th>Service / reference</th><th>Method</th><th>Amount</th><th>Status</th></tr></thead><tbody id="transactionRows"></tbody></table></div><div class="staff-empty-state" id="transactionEmpty"><strong>No data for this period</strong><p>Payments will appear here when recorded.</p></div><div class="fin-pagination"><button class="fin-button" id="transactionPrev" type="button">Previous</button><span id="transactionPageLabel">Page 1</span><button class="fin-button" id="transactionNext" type="button">Next</button></div></section>
+            <section class="staff-table-card" id="receivablesPanel" hidden><div class="staff-table-toolbar"><h2>Outstanding balances</h2><span id="receivableCount">0 appointments</span></div><div class="fin-table-scroll"><table class="fin-table"><thead><tr><th>Appointment date</th><th>Client</th><th>Service</th><th>Service price</th><th>Outstanding</th><th>Action</th></tr></thead><tbody id="receivableRows"></tbody></table></div><div class="staff-empty-state" id="receivableEmpty"><strong>No outstanding balances</strong><p>Fully paid completed appointments disappear from this list.</p></div></section>
+            <section class="staff-table-card" id="depositsPanel" hidden><div class="staff-table-toolbar"><h2>Reservation deposits</h2><span id="depositCount">0 deposits</span></div><div class="fin-table-scroll"><table class="fin-table"><thead><tr><th>Payment date</th><th>Client</th><th>Appointment date</th><th>Amount</th><th>Method</th><th>Status</th><th>Action</th></tr></thead><tbody id="depositRows"></tbody></table></div><div class="staff-empty-state" id="depositEmpty"><strong>No reservation deposits</strong><p>Deposits will appear here for the selected dates.</p></div></section>
+            <p class="fin-page-message" id="transactionMessage" role="status"></p>
+            <div class="fin-modal-overlay" id="recordPaymentModal" hidden><section class="fin-modal fin-modal--compact" role="dialog" aria-modal="true" aria-labelledby="recordPaymentTitle"><button class="fin-modal-close" type="button" data-close-payment aria-label="Close">&times;</button><h2 id="recordPaymentTitle">Record payment</h2><p class="fin-modal-copy" id="paymentBalanceText"></p><form id="recordPaymentForm" class="fin-form"><input id="balanceAppointmentId" type="hidden"><label>Amount (PHP)<input id="balanceAmount" type="number" min="0.01" step="0.01" required></label><label>Method<select id="balanceMethod" required><option value="">Choose method</option><option value="cash">Cash</option><option value="gcash">GCash</option><option value="card">Card</option><option value="paymongo">PayMongo</option></select></label><label>Reference number<input id="balanceReference" maxlength="100"></label><label>Note<textarea id="balanceNote" rows="3" maxlength="2000"></textarea></label><p class="fin-form-message" id="paymentFormMessage" role="alert"></p><div class="fin-modal-actions"><button class="fin-button" type="button" data-close-payment>Cancel</button><button class="fin-button fin-button-primary" type="submit">Record payment</button></div></form></section></div>
+            <div class="fin-modal-overlay" id="refundModal" hidden><section class="fin-modal fin-modal--compact" role="dialog" aria-modal="true" aria-labelledby="refundModalTitle"><button class="fin-modal-close" type="button" data-close-refund aria-label="Close">&times;</button><h2 id="refundModalTitle">Mark as refunded</h2><form id="refundForm" class="fin-form"><input id="refundPaymentId" type="hidden"><label>Refund note<textarea id="refundNote" rows="4" maxlength="2000" required></textarea></label><p class="fin-form-message" id="refundFormMessage" role="alert"></p><div class="fin-modal-actions"><button class="fin-button" type="button" data-close-refund>Cancel</button><button class="fin-button fin-button-danger" type="submit">Mark refunded</button></div></form></section></div>
+            <div class="fin-modal-overlay" id="paymentDetailsModal" hidden><section class="fin-modal" role="dialog" aria-modal="true" aria-labelledby="paymentDetailsTitle"><button class="fin-modal-close" type="button" data-close-details aria-label="Close">&times;</button><h2 id="paymentDetailsTitle">Payment details</h2><dl class="fin-detail-grid" id="paymentDetails"></dl><h3>Payment history</h3><div class="fin-table-scroll"><table class="fin-table"><thead><tr><th>Date</th><th>Type</th><th>Method</th><th>Amount</th><th>Status</th></tr></thead><tbody id="paymentHistoryRows"></tbody></table></div></section></div>
         </section>
     </main>
     <script src="header.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <script src="finance-common.js"></script>
+    <script src="finance-transactions.js"></script>
 </body>
 
 </html>

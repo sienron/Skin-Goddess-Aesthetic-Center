@@ -185,6 +185,7 @@ app.use('/api/inventory', require('./routes/inventory'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/inquiries', require('./routes/inquiries'));
+app.use('/api/finance', require('./routes/finance'));
 
 app.use(express.static(publicDir, { dotfiles: 'deny', index: false }));
 

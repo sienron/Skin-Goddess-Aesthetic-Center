@@ -12891,3 +12891,593 @@ textarea.cm-editor__input {
     justify-content: flex-end;
   }
 }
+
+/* Finance module */
+.fin-page-flow {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+
+.fin-page-toolbar,
+.fin-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.fin-page-toolbar h1,
+.fin-section-heading h2 {
+  margin: 0;
+  color: #201c18;
+  font-family: "Playfair Display", serif;
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.fin-page-toolbar p,
+.fin-section-heading span {
+  margin: 4px 0 0;
+  color: #756c62;
+  font: 0.75rem "Raleway", sans-serif;
+}
+
+.fin-button {
+  min-height: 38px;
+  border: 1px solid #d8d1c4;
+  border-radius: 5px;
+  background: #fff;
+  color: #332f29;
+  padding: 8px 13px;
+  font: 600 0.75rem "Raleway", sans-serif;
+  cursor: pointer;
+}
+
+.fin-button:hover {
+  border-color: #8a6e2f;
+}
+
+.fin-button-primary {
+  border-color: #8a6e2f;
+  background: #8a6e2f;
+  color: #fff;
+}
+
+.fin-button-danger {
+  border-color: #b93c3c;
+  background: #b93c3c;
+  color: #fff;
+}
+
+.fin-filters {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 14px 0;
+  border-top: 1px solid #e7ddc9;
+  border-bottom: 1px solid #e7ddc9;
+}
+
+.fin-filters label,
+.fin-form label {
+  display: grid;
+  gap: 5px;
+  min-width: 145px;
+  color: #756c62;
+  font: 600 0.68rem "Raleway", sans-serif;
+}
+
+.fin-filters input,
+.fin-filters select,
+.fin-form input,
+.fin-form select,
+.fin-form textarea {
+  width: 100%;
+  min-height: 38px;
+  box-sizing: border-box;
+  border: 1px solid #d8d1c4;
+  border-radius: 4px;
+  background: #fff;
+  color: #201c18;
+  padding: 8px 9px;
+  font: 0.78rem "Raleway", sans-serif;
+}
+
+.fin-search-field {
+  flex: 1;
+}
+
+.fin-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.fin-summary-grid--single {
+  grid-template-columns: minmax(180px, 1fr);
+}
+
+.fin-summary-grid--dashboard {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.fin-alert-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.fin-alert-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 40px;
+  border: 1px solid #e7ddc9;
+  border-radius: 5px;
+  background: #fff;
+  padding: 0 12px;
+  color: #332f29;
+  text-decoration: none;
+  font: 600 0.72rem "Raleway", sans-serif;
+}
+
+.fin-alert-chip strong {
+  color: #b93c3c;
+  font-size: 0.85rem;
+}
+
+.fin-summary-grid article {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 14px 16px;
+  border-left: 3px solid #c9a84c;
+  background: #fff;
+}
+
+.fin-summary-grid article span,
+.fin-summary-grid article small {
+  color: #756c62;
+  font: 0.7rem "Raleway", sans-serif;
+}
+
+.fin-summary-grid article strong {
+  overflow-wrap: anywhere;
+  color: #201c18;
+  font: 600 1.25rem "Playfair Display", serif;
+}
+
+.fin-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.fin-chart-section {
+  min-width: 0;
+  padding: 16px;
+}
+
+.fin-section-heading {
+  margin-bottom: 10px;
+}
+
+.fin-chart-frame {
+  position: relative;
+  width: 100%;
+  height: 270px;
+  min-width: 0;
+}
+
+.fin-chart-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #756c62;
+  font: 0.8rem "Raleway", sans-serif;
+}
+
+.fin-chart-empty[hidden] {
+  display: none;
+}
+
+.fin-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.fin-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  font: 0.75rem "Raleway", sans-serif;
+}
+
+.fin-table th,
+.fin-table td {
+  padding: 11px 12px;
+  border-bottom: 1px solid #eee9df;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.fin-table th {
+  color: #756c62;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.fin-table td {
+  color: #332f29;
+}
+
+.fin-table tr.fin-row-voided td {
+  color: #8b8580;
+  text-decoration: line-through;
+}
+
+.fin-table .fin-row-actions {
+  display: flex;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.fin-table .fin-row-actions .fin-button {
+  min-height: 30px;
+  padding: 5px 8px;
+}
+
+.fin-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 12px;
+  color: #756c62;
+  font: 0.72rem "Raleway", sans-serif;
+}
+
+.fin-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(26, 23, 20, .5);
+}
+
+.fin-modal-overlay[hidden] {
+  display: none;
+}
+
+.fin-modal {
+  position: relative;
+  width: min(560px, 100%);
+  max-height: min(90vh, 760px);
+  overflow-y: auto;
+  border-top: 4px solid #c9a84c;
+  border-radius: 6px;
+  background: #fff;
+  padding: 24px;
+}
+
+.fin-modal--compact {
+  width: min(420px, 100%);
+}
+
+.fin-modal h2 {
+  margin: 0 32px 18px 0;
+  color: #201c18;
+  font: 600 1.2rem "Playfair Display", serif;
+}
+
+.fin-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  background: transparent;
+  color: #554f47;
+  font-size: 1.4rem;
+  cursor: pointer;
+}
+
+.fin-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 13px;
+}
+
+.fin-form label:nth-of-type(3),
+.fin-form label:has(textarea),
+.fin-form-message,
+.fin-modal-actions {
+  grid-column: 1 / -1;
+}
+
+.fin-form-message,
+.fin-page-message {
+  min-height: 1em;
+  margin: 0;
+  color: #b93c3c;
+  font: 0.75rem "Raleway", sans-serif;
+}
+
+.fin-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.fin-page-message {
+  color: #4388e8;
+}
+
+@media (max-width: 760px) {
+  .fin-chart-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .fin-summary-grid,
+  .fin-summary-grid--dashboard {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .fin-page-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .fin-filters label {
+    flex: 1 1 140px;
+  }
+
+  .fin-filters .fin-search-field {
+    flex-basis: 100%;
+  }
+
+  .fin-form {
+    grid-template-columns: 1fr;
+  }
+
+  .fin-form label,
+  .fin-form-message,
+  .fin-modal-actions {
+    grid-column: 1;
+  }
+
+  .fin-chart-frame {
+    height: 240px;
+  }
+}
+
+@media (max-width: 360px) {
+  .fin-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .fin-modal {
+    padding: 18px;
+  }
+}
+
+.fin-page-flow [hidden] {
+  display: none !important;
+}
+
+.fin-period-controls {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid #e7ddc9;
+  border-bottom: 1px solid #e7ddc9;
+}
+
+.fin-period-controls>label {
+  display: grid;
+  gap: 5px;
+  min-width: 145px;
+  color: #756c62;
+  font: 600 0.68rem "Raleway", sans-serif;
+}
+
+.fin-period-controls input {
+  box-sizing: border-box;
+  min-height: 38px;
+  border: 1px solid #d8d1c4;
+  border-radius: 4px;
+  padding: 8px;
+  font: 0.78rem "Raleway", sans-serif;
+}
+
+.fin-segmented {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-right: auto;
+}
+
+.fin-segmented button {
+  min-height: 36px;
+  border: 1px solid #d8d1c4;
+  border-radius: 4px;
+  background: #fff;
+  color: #554f47;
+  padding: 7px 11px;
+  font: 600 0.7rem "Raleway", sans-serif;
+  cursor: pointer;
+}
+
+.fin-segmented button.is-active {
+  border-color: #8a6e2f;
+  background: #8a6e2f;
+  color: #fff;
+}
+
+.fin-report-section {
+  break-inside: avoid;
+}
+
+.fin-summary-grid--report {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.fin-summary-grid--report article {
+  border-left: 0;
+  border-top: 2px solid #c9a84c;
+  padding: 12px;
+}
+
+@media (max-width: 760px) {
+  .fin-summary-grid--report {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media print {
+
+  .fin-printable .staff-header,
+  .fin-printable .staff-sidebar,
+  .fin-printable .mobile-nav-drawer,
+  .fin-printable .mobile-nav-overlay,
+  .fin-printable .fin-button,
+  .fin-printable .fin-period-controls,
+  .fin-printable .profile-wrap,
+  .fin-printable .actions {
+    display: none !important;
+  }
+
+  .fin-printable .staff-page-content,
+  .fin-printable .main-content {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .fin-printable .fin-page-flow {
+    gap: 12px;
+  }
+
+  .fin-printable .fin-report-section {
+    page-break-inside: avoid;
+    border: 1px solid #ddd;
+  }
+
+  .fin-printable .fin-chart-frame {
+    height: 220px;
+  }
+
+  body.fin-printable {
+    background: #fff !important;
+  }
+}
+
+.fin-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  border: 0;
+}
+
+.fin-tab {
+  min-height: 42px;
+  border: 1px solid #ded8cc;
+  border-radius: 4px;
+  background: #fff;
+  color: #756c62;
+  padding: 8px 12px;
+  font: 600 0.75rem/1.25 "Raleway", sans-serif;
+  text-align: center;
+  white-space: normal;
+  cursor: pointer;
+}
+
+.fin-tab.is-active {
+  border-color: #8a6e2f;
+  background: #f7f3e8;
+  color: #5d471e;
+  box-shadow: inset 0 -2px #c9a84c;
+}
+
+.fin-period-controls {
+  align-items: center;
+}
+
+.fin-period-label {
+  color: #756c62;
+  font: 600 0.72rem "Raleway", sans-serif;
+  white-space: nowrap;
+}
+
+.fin-daily-cash {
+  padding: 16px;
+}
+
+.fin-daily-cash .fin-section-heading {
+  padding-bottom: 12px;
+  border-bottom: 1px solid #eee9df;
+}
+
+.fin-daily-cash .fin-table {
+  min-width: 520px;
+}
+
+@media (max-width: 520px) {
+  .fin-tabs {
+    gap: 5px;
+  }
+
+  .fin-tab {
+    padding: 7px 5px;
+    font-size: 0.68rem;
+  }
+
+  .fin-period-controls {
+    align-items: stretch;
+  }
+
+  .fin-period-controls .fin-segmented {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    flex: 1 1 100%;
+  }
+
+  .fin-period-controls>label {
+    flex: 1 1 130px;
+    min-width: 0;
+  }
+
+  .fin-period-label {
+    flex-basis: 100%;
+  }
+
+  .fin-daily-cash .fin-section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .fin-daily-cash .fin-section-heading h2 {
+    font-size: 1.1rem;
+    white-space: nowrap;
+  }
+
+  .fin-daily-cash .fin-section-heading .fin-button {
+    align-self: flex-end;
+    white-space: nowrap;
+  }
+}

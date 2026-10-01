@@ -38,7 +38,7 @@
             <li><a href="FinanceDashboard.html">Dashboard</a></li>
             <li><a href="FinancesTransactions.html">Sales &amp; Transactions</a></li>
             <li><a href="FinanceExpenses.html">Expenses</a></li>
-            <li><a href="FinanceReports.html">Report</a></li>
+            <li><a href="FinanceReports.html">Reports</a></li>
         </ul>
     </aside>
     <main>
@@ -56,7 +56,7 @@
                     <li class="nav-item active"><img src="icons/circle.svg" alt="" class="nav-bullet"><a
                             href="FinanceExpenses.html">Expenses</a></li>
                     <li class="nav-item"><img src="icons/circle.svg" alt="" class="nav-bullet"><a
-                            href="FinanceReports.html">Report</a></li>
+                            href="FinanceReports.html">Reports</a></li>
                 </ul>
             </nav>
             <div class="profile-wrap">
@@ -76,20 +76,25 @@
                 </div>
             </div>
         </section>
-        <section class="main-content staff-page-content">
-            <div class="staff-table-card">
-                <div class="staff-table-toolbar">
-                    <h2>Expense records</h2>
-                    <div class="search staff-toolbar-search" id="searchWrap"><img src="icons/magnifying-glass.svg" alt="" class="search-svg"><input type="text" id="searchInput" placeholder="Search expenses..." autocomplete="off"></div>
-                    <span>0 records</span>
-                </div>
-                <div class="staff-empty-state"><strong>No expenses recorded</strong>
-                    <p>New operating costs will appear in this table.</p>
-                </div>
+        <section class="main-content staff-page-content fin-page-flow">
+            <div class="fin-filters">
+                <label>From<input id="expenseFrom" type="date"></label>
+                <label>To<input id="expenseTo" type="date"></label>
+                <label>Category<select id="expenseCategory"><option value="">All categories</option><option>Inventory &amp; Supplies</option><option>Salaries &amp; Commissions</option><option>Rent</option><option>Utilities</option><option>Marketing</option><option>Equipment Maintenance</option><option>Other</option></select></label>
+                <label class="fin-search-field">Search<input id="expenseSearch" type="search" placeholder="Description, supplier, reference"></label>
             </div>
+            <div class="fin-summary-grid fin-summary-grid--single"><article><span>Monthly expense total</span><strong id="expenseTotal">PHP 0.00</strong><small>Active expenses only</small></article></div>
+            <section class="staff-table-card fin-chart-section"><div class="fin-section-heading"><h2>Expenses by category</h2><span id="expensePeriodLabel"></span></div><div class="fin-chart-frame"><canvas id="expenseCategoryChart" aria-label="Expenses by category" role="img"></canvas></div></section>
+            <section class="staff-table-card"><div class="staff-table-toolbar"><h2>Expense records</h2><span id="expenseCount">0 records</span><button class="fin-button fin-button-primary" id="addExpenseBtn" type="button">Add expense</button></div><div class="fin-table-scroll"><table class="fin-table"><thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Supplier</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead><tbody id="expenseRows"></tbody></table></div><div class="staff-empty-state" id="expenseEmpty"><strong>No data for this period</strong><p>Expenses will appear here when recorded.</p></div><div class="fin-pagination"><button class="fin-button" id="expensePrev" type="button">Previous</button><span id="expensePageLabel">Page 1</span><button class="fin-button" id="expenseNext" type="button">Next</button></div></section>
+            <div class="fin-modal-overlay" id="expenseModal" hidden><section class="fin-modal" role="dialog" aria-modal="true" aria-labelledby="expenseModalTitle"><button class="fin-modal-close" type="button" data-close-expense aria-label="Close">&times;</button><h2 id="expenseModalTitle">Add expense</h2><form id="expenseForm" class="fin-form"><input type="hidden" id="expenseId"><label>Date<input id="expenseDate" name="expense_date" type="date" required></label><label>Category<select id="expenseCategoryInput" name="category" required><option value="">Choose category</option><option>Inventory &amp; Supplies</option><option>Salaries &amp; Commissions</option><option>Rent</option><option>Utilities</option><option>Marketing</option><option>Equipment Maintenance</option><option>Other</option></select></label><label>Description<input id="expenseDescription" name="description" maxlength="5000" required></label><label>Amount (PHP)<input id="expenseAmount" name="amount" type="number" min="0.01" step="0.01" required></label><label>Supplier<input id="expenseSupplier" name="supplier" maxlength="150"></label><label>Reference number<input id="expenseReference" name="reference_no" maxlength="100"></label><p class="fin-form-message" id="expenseFormMessage" role="alert"></p><div class="fin-modal-actions"><button class="fin-button" type="button" data-close-expense>Cancel</button><button class="fin-button fin-button-primary" type="submit">Save expense</button></div></form></section></div>
+            <div class="fin-modal-overlay" id="voidModal" hidden><section class="fin-modal fin-modal--compact" role="dialog" aria-modal="true" aria-labelledby="voidModalTitle"><button class="fin-modal-close" type="button" data-close-void aria-label="Close">&times;</button><h2 id="voidModalTitle">Void expense</h2><form id="voidForm" class="fin-form"><input type="hidden" id="voidExpenseId"><label>Reason<textarea id="voidReason" rows="4" maxlength="2000" required></textarea></label><p class="fin-form-message" id="voidFormMessage" role="alert"></p><div class="fin-modal-actions"><button class="fin-button" type="button" data-close-void>Cancel</button><button class="fin-button fin-button-danger" type="submit">Void expense</button></div></form></section></div>
+            <p class="fin-page-message" id="expensePageMessage" role="status"></p>
         </section>
     </main>
     <script src="header.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <script src="finance-common.js"></script>
+    <script src="finance-expenses.js"></script>
 </body>
 
 </html>

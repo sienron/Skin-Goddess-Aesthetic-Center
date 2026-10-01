@@ -562,6 +562,13 @@ async function createAppointmentFromPaidCheckout(client, payment, referenceNumbe
         Number(payment.amount_cents) / 100, payment.appointment_date,
         payment.appointment_time, payment.appointment_end_time, candidate.user_id]);
       await client.query(`
+        INSERT INTO payments (appointment_id, payment_type, amount, method, reference_no, note)
+        VALUES ($1, 'reservation', $2, 'paymongo', $3, 'PayMongo reservation deposit')
+        ON CONFLICT (appointment_id)
+          WHERE payment_type = 'reservation' AND appointment_id IS NOT NULL
+        DO NOTHING
+      `, [result.rows[0].appointment_id, Number(payment.amount_cents) / 100, referenceNumber]);
+      await client.query(`
         UPDATE paymongo_checkout_sessions
         SET status = 'consumed', appointment_id = $1, payment_id = COALESCE($3, payment_id), updated_at = NOW()
         WHERE reference_number = $2
