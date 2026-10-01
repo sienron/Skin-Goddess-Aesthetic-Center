@@ -133,20 +133,20 @@
 
             <div class="summary-card clickable-summary" id="totalProductsCard">
                 <div class="summary-label">TOTAL PRODUCTS</div>
-                <div class="summary-value" id="totalProducts">247</div>
+                <div class="summary-value" id="totalProducts"></div>
                 <div class="summary-info positive" id="restockedToday">
-                    ↑ 0 restocked today
+                    ↑  restocked today
                 </div>
                 <div class="summary-info positive" id="deductedToday">
-                    ↓ 0 units deducted today
+                    ↓  units deducted today
                 </div>
             </div>
 
             <div class="summary-card clickable-summary" id="lowStockCard">
                 <div class="summary-label">LOW STOCK ITEMS</div>
-                <div class="summary-value" id="lowStockCount">18</div>
+                <div class="summary-value" id="lowStockCount"></div>
                 <div class="summary-info warning" id="lowStockToday" >
-                    ↑ 2 new today
+                    ↑ new today
                 </div>
             </div>
 
@@ -154,21 +154,21 @@
                 <div class="summary-label">CRITICAL STOCK ITEMS</div>
                 <div class="summary-value" id="criticalStockCount"></div>
                 <div class="summary-info positive" id="criticalStockToday">
-                    ↑ 0 new today
+                    ↑ new today
                 </div>
             </div>
 
             <div class="summary-card clickable-summary" id="outOfStockCard">
                 <div class="summary-label">OUT OF STOCK ITEMS</div>
-                <div class="summary-value" id="outOfStockCount">0</div>
+                <div class="summary-value" id="outOfStockCount"></div>
                 <div class="summary-info positive" id="outOfStockToday">
-                    ↑ 0 new today
+                    ↑ new today
                 </div>
             </div>
 
             <div class="summary-card clickable-summary" id="expiringSoonCard">
                 <div class="summary-label">EXPIRING SOON</div>
-                <div class="summary-value" id="expiringSoonCount">0</div>
+                <div class="summary-value" id="expiringSoonCount"></div>
                 <div class="summary-info danger">
                     Within 30 days
                 </div>
@@ -290,282 +290,6 @@
                         </thead>
 
                         <tbody id="inventoryBody">
-
-                            <!-- PRODUCT 1 -->
-                            <tr
-                                data-category="retail"
-                                data-stock="48"
-                                data-expiry="2026-12-15"
-                                data-status="in-stock"
-                            >
-                                <td >    <!--cell-->
-                                    <div class="product-name"> <!--content sa loob ng cell-->
-                                        Vitamin C Brightening Serum
-                                    </div>
-                                </td>
-
-                                <td>Skincare Products</td>
-
-                                <td class="stock-value">    <!--CHANGES-->
-                                    <span class="stock-number">48</span> units
-                                </td>
-
-                                <td>Dec 2026</td>
-
-                                <td> <!--CHANGES-->
-                                    <span class="status in-stock">
-                                        <span></span>
-                                        IN STOCK
-                                    </span>
-                                </td>
-
-                                <td>
-                                    <div class="action-buttons">
-                                        <button class="action-btn increase" title="Add stock">
-                                            +
-                                        </button>
-
-                                        <button class="action-btn decrease" title="Remove stock">
-                                            −
-                                        </button>
-
-                                        <button class="action-btn delete" title="Delete product">
-                                            ×
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-
-
-                            <!-- PRODUCT 2 -->
-                            <tr
-                                data-category="retail"
-                                data-stock="12"
-                                data-expiry="2026-03-15"
-                                data-status="low"
-                            >
-                                <td>
-                                    <div class="product-name">
-                                        Hyaluronic Acid Moisturizer
-                                    </div>
-                                </td>
-
-                                <td>Skincare Products</td>
-
-                                <td class="stock-value">
-                                    <span class="stock-number">12</span> units
-                                </td>
-
-                                <td>Mar 2026</td>
-
-                                <td>
-                                    <span class="status low-stock">
-                                        <span></span>
-                                        LOW STOCK
-                                    </span>
-                                </td>
-
-                                <td>
-                                    <div class="action-buttons">
-                                        <button class="action-btn increase">+</button>
-                                        <button class="action-btn decrease">−</button>
-                                        <button class="action-btn delete">×</button>
-                                    </div>
-                                </td>
-                            </tr>
-
-
-                            <!-- PRODUCT 3 -->
-                            <tr
-                                data-category="cleansers"
-                                data-stock="3"
-                                data-expiry="2025-08-15"
-                                data-status="critical"
-                            >
-                                <td>
-                                    <div class="product-name">
-                                        Salicylic Acid Cleanser
-                                    </div>
-                                </td>
-
-                                <td>Soaps & Cleansers</td>
-
-                                <td class="stock-value critical-stock">
-                                    <span class="stock-number">3</span> units
-                                </td>
-
-                                <td class="critical-text">
-                                    Aug 2025
-                                </td>
-
-                                <td>
-                                    <span class="status critical">
-                                        <span></span>
-                                        CRITICAL
-                                    </span>
-                                </td>
-
-                                <td>
-                                    <div class="action-buttons">
-                                        <button class="action-btn increase">+</button>
-                                        <button class="action-btn decrease">−</button>
-                                        <button class="action-btn delete">×</button>
-                                    </div>
-                                </td>
-                            </tr>
-
-
-                            <!-- PRODUCT 4 -->
-                            <tr
-                                data-category="professional"
-                                data-stock="29"
-                                data-expiry="2027-01-15"
-                                data-status="in-stock"
-                            >
-                                <td>
-                                    <div class="product-name">
-                                        Retinol Night Cream
-                                    </div>
-                                </td>
-
-                                <td>Professional Use</td>
-
-                                <td class="stock-value">
-                                    <span class="stock-number">29</span> units
-                                </td>
-
-                                <td>Jan 2027</td>
-
-                                <td>
-                                    <span class="status in-stock">
-                                        <span></span>
-                                        IN STOCK
-                                    </span>
-                                </td>
-
-                                <td>
-                                    <div class="action-buttons">
-                                        <button class="action-btn increase">+</button>
-                                        <button class="action-btn decrease">−</button>
-                                        <button class="action-btn delete">×</button>
-                                    </div>
-                                </td>
-                            </tr>
-
-
-                            <!-- PRODUCT 5 -->
-                            <tr
-                                data-category="retail"
-                                data-stock="8"
-                                data-expiry="2026-06-15"
-                                data-status="low"
-                            >
-                                <td>
-                                    <div class="product-name">
-                                        SPF 50 Sunscreen
-                                    </div>
-                                </td>
-
-                                <td>Skincare Products</td>
-
-                                <td class="stock-value">
-                                    <span class="stock-number">8</span> units
-                                </td>
-
-                                <td>Jun 2026</td>
-
-                                <td>
-                                    <span class="status low-stock">
-                                        <span></span>
-                                        LOW STOCK
-                                    </span>
-                                </td>
-
-                                <td>
-                                    <div class="action-buttons">
-                                        <button class="action-btn increase">+</button>
-                                        <button class="action-btn decrease">−</button>
-                                        <button class="action-btn delete">×</button>
-                                    </div>
-                                </td>
-                            </tr>
-
-
-                            <!-- PRODUCT 6 -->
-                            <tr
-                                data-category="retail"
-                                data-stock="34"
-                                data-expiry="2026-10-15"
-                                data-status="in-stock"
-                            >
-                                <td>
-                                    <div class="product-name">
-                                        Niacinamide Toner
-                                    </div>
-                                </td>
-
-                                <td>Skincare Products</td>
-
-                                <td class="stock-value">
-                                    <span class="stock-number">34</span> units
-                                </td>
-
-                                <td>Oct 2026</td>
-
-                                <td>
-                                    <span class="status in-stock">
-                                        <span></span>
-                                        IN STOCK
-                                    </span>
-                                </td>
-
-                                <td>
-                                    <div class="action-buttons">
-                                        <button class="action-btn increase">+</button>
-                                        <button class="action-btn decrease">−</button>
-                                        <button class="action-btn delete">×</button>
-                                    </div>
-                                </td>
-                            </tr>
-
-
-                            <!-- PRODUCT 7 -->
-                            <tr
-                                data-category="professional"
-                                data-stock="6"
-                                data-expiry="2025-07-15"
-                                data-status="low"
-                            >
-                                <td>
-                                    <div class="product-name">
-                                        AHA BHA Exfoliant
-                                    </div>
-                                </td>
-
-                                <td>Professional Use</td>
-
-                                <td class="stock-value">
-                                    <span class="stock-number">6</span> units
-                                </td>
-
-                                <td>Jul 2025</td>
-
-                                <td>
-                                    <span class="status low-stock">
-                                        <span></span>
-                                        LOW STOCK
-                                    </span>
-                                </td>
-
-                                <td>
-                                    <div class="action-buttons">
-                                        <button class="action-btn increase">+</button>
-                                        <button class="action-btn decrease">−</button>
-                                        <button class="action-btn delete">×</button>
-                                    </div>
-                                </td>
-                            </tr>
-
                         </tbody>
 
                     </table>
