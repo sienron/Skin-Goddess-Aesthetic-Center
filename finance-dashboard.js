@@ -50,7 +50,7 @@
     });
 
     const activity = [
-      ...transactionData.rows.map((item) => ({ date: item.payment_date, label: `${item.payment_type.replace('_', ' ')} payment`, group: item.method, amount: Number(item.amount), status: item.status })),
+      ...transactionData.rows.map((item) => ({ date: item.payment_date, label: `${item.payment_type.replace('_', ' ')} payment`, group: common.paymentMethodLabel(item.method), amount: Number(item.amount), status: item.status })),
       ...expenseData.rows.map((item) => ({ date: item.expense_date, label: item.description, group: item.category, amount: -Number(item.amount), status: item.voided_at ? 'voided' : 'active' })),
     ].sort((left, right) => right.date.localeCompare(left.date)).slice(0, 10);
     refs.dashboardRecentRows.replaceChildren();

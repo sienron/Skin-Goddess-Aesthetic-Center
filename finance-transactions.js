@@ -31,7 +31,7 @@
       cell(row, payment.client);
       cell(row, payment.payment_type.replace('_', ' '));
       cell(row, payment.service || payment.reference_no || '-');
-      cell(row, payment.method);
+      cell(row, common.paymentMethodLabel(payment.method));
       cell(row, common.formatPeso(payment.amount));
       cell(row, payment.status);
       refs.transactionRows.append(row);
@@ -55,7 +55,7 @@
     refs.transactionPeriodLabel.textContent = `${state.from} to ${state.to}`;
     common.renderChart('methodChart', {
       type: 'doughnut',
-      data: { labels: chartRows.map((row) => row.method), datasets: [{ data: chartRows.map((row) => Number(row.amount)), backgroundColor: ['#C9A84C', '#228B46', '#4388E8', '#929292', '#8a6e2f'], borderWidth: 1, borderColor: '#fff' }] },
+      data: { labels: chartRows.map((row) => common.paymentMethodLabel(row.method)), datasets: [{ data: chartRows.map((row) => Number(row.amount)), backgroundColor: ['#C9A84C', '#228B46', '#4388E8', '#929292', '#8a6e2f'], borderWidth: 1, borderColor: '#fff' }] },
       options: { plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: (item) => `${item.label}: ${common.formatPeso(item.raw)}` } } } },
     });
   }
@@ -83,7 +83,7 @@
     refs.depositRows.replaceChildren();
     state.deposits.forEach((deposit) => {
       const row = element('tr'); row.dataset.paymentId = deposit.payment_id; row.tabIndex = 0;
-      cell(row, deposit.payment_date); cell(row, deposit.client); cell(row, deposit.appointment_date); cell(row, common.formatPeso(deposit.amount)); cell(row, deposit.method); cell(row, deposit.deposit_status);
+      cell(row, deposit.payment_date); cell(row, deposit.client); cell(row, deposit.appointment_date); cell(row, common.formatPeso(deposit.amount)); cell(row, common.paymentMethodLabel(deposit.method)); cell(row, deposit.deposit_status);
       const action = element('td');
       if (deposit.deposit_status === 'paid') {
         const button = element('button', 'Mark as refunded', 'fin-button fin-button-danger');
@@ -114,7 +114,7 @@
     const details = [
       ['Client', data.payment.client], ['Service', data.payment.service || 'Product sale'],
       ['Appointment date', data.payment.appointment_date || '-'], ['Payment date', data.payment.payment_date],
-      ['Amount', common.formatPeso(data.payment.amount)], ['Method', data.payment.method],
+      ['Amount', common.formatPeso(data.payment.amount)], ['Method', common.paymentMethodLabel(data.payment.method)],
       ['Type', data.payment.payment_type], ['Status', data.payment.status],
       ['Reference', data.payment.reference_no || '-'], ['Note', data.payment.note || '-'],
     ];
@@ -125,7 +125,7 @@
     });
     refs.paymentHistoryRows.replaceChildren();
     data.history.forEach((record) => {
-      const row = element('tr'); cell(row, record.payment_date); cell(row, record.payment_type); cell(row, record.method); cell(row, common.formatPeso(record.amount)); cell(row, record.status); refs.paymentHistoryRows.append(row);
+      const row = element('tr'); cell(row, record.payment_date); cell(row, record.payment_type); cell(row, common.paymentMethodLabel(record.method)); cell(row, common.formatPeso(record.amount)); cell(row, record.status); refs.paymentHistoryRows.append(row);
     });
     modalOpen(refs.paymentDetailsModal);
   }

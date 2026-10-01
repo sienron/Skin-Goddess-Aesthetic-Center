@@ -5,7 +5,7 @@ const { DEPOSIT_DEDUCTED_FROM_PRICE, NO_SHOW_DEPOSIT_IS_INCOME } = require('../u
 
 const router = express.Router();
 const PAYMENT_TYPES = ['reservation', 'balance', 'product_sale'];
-const METHODS = ['paymongo', 'cash', 'gcash', 'card'];
+const METHODS = ['paymongo', 'cash', 'gcash', 'maya', 'card'];
 const EXPENSE_CATEGORIES = ['Inventory & Supplies', 'Salaries & Commissions', 'Rent', 'Utilities', 'Marketing', 'Equipment Maintenance', 'Other'];
 router.use(requireRole('finance_officer', 'admin'));
 

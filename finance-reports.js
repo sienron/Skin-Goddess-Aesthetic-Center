@@ -75,7 +75,7 @@
       options: { plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: (item) => `${item.label}: ${peso(item.raw)}` } } } },
     });
     common.renderChart('reportMethodsChart', {
-      type: 'bar', data: { labels: methods.map((row) => row.method), datasets: [{ label: 'Collected', data: methods.map((row) => Number(row.amount)), backgroundColor: '#C9A84C', borderRadius: 3 }] },
+      type: 'bar', data: { labels: methods.map((row) => common.paymentMethodLabel(row.method)), datasets: [{ label: 'Collected', data: methods.map((row) => Number(row.amount)), backgroundColor: '#C9A84C', borderRadius: 3 }] },
       options: { indexAxis: 'y', plugins: { legend: { display: false }, tooltip: { callbacks: { label: (item) => peso(item.raw) } } } },
     });
     common.renderChart('reportTopServicesChart', {
@@ -114,7 +114,7 @@
       window.location.href = `/api/finance/export.csv?${common.rangeParams(state.from, state.to, { section })}`;
       return;
     }
-    if (section === 'payment-methods') downloadCsv('finance-payment-methods.csv', ['Method', 'Payment count', 'Collected (PHP)'], state.methods.map((row) => [row.method, row.count, peso(row.amount)]));
+    if (section === 'payment-methods') downloadCsv('finance-payment-methods.csv', ['Method', 'Payment count', 'Collected (PHP)'], state.methods.map((row) => [common.paymentMethodLabel(row.method), row.count, peso(row.amount)]));
     if (section === 'sales-expenses') downloadCsv('finance-sales-vs-expenses.csv', ['Month', 'Sales (PHP)', 'Expenses (PHP)'], state.monthly.map((row) => [row.month, peso(row.sales), peso(row.expenses)]));
     if (section === 'collections') downloadCsv('finance-collections-trend.csv', ['Date', 'Collected (PHP)'], report.daily_cash.map((row) => [row.date, peso(row.collected)]));
     if (section === 'service-categories') downloadCsv('finance-service-categories.csv', ['Category', 'Sales (PHP)'], report.service_categories.map((row) => [row.category, peso(row.amount)]));

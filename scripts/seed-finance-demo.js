@@ -6,7 +6,7 @@ if (process.env.NODE_ENV === 'production') {
 const db = require('../db');
 
 const categories = ['Inventory & Supplies', 'Salaries & Commissions', 'Rent', 'Utilities', 'Marketing', 'Equipment Maintenance', 'Other'];
-const methods = ['paymongo', 'cash', 'gcash', 'card'];
+const methods = ['paymongo', 'cash', 'gcash', 'maya', 'card'];
 
 function dateOffset(daysAgo) {
   const date = new Date();

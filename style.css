@@ -13499,8 +13499,25 @@ textarea.cm-editor__input {
 }
 
 .fin-report-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: end;
   padding: 8px 0;
   border-top: 0;
+}
+
+.fin-report-controls .fin-segmented {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.fin-report-controls > label {
+  width: 100%;
+  min-width: 0;
+}
+
+.fin-report-controls input {
+  width: 100%;
 }
 
 .fin-report-section {

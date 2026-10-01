@@ -49,6 +49,14 @@ function checkoutReturnUrl(baseUrl, outcome, referenceNumber) {
   return url.toString();
 }
 
+function financeMethodForPayMongo(paymentAttributes) {
+  const sourceType = String(paymentAttributes?.source?.type || '').toLowerCase();
+  if (sourceType === 'gcash') return 'gcash';
+  if (sourceType === 'paymaya' || sourceType === 'maya') return 'maya';
+  if (sourceType === 'card') return 'card';
+  return 'paymongo';
+}
+
 async function refundPayMongoPayment({ paymentId, amountCents, reason, config }) {
   if (!paymentId) return { ok: false, message: 'No PayMongo payment is on file for this checkout.' };
   try {
@@ -543,7 +551,9 @@ async function findAvailableAestheticians(queryClient, booking) {
   `, [booking.appointmentDate, booking.appointmentTime, booking.appointmentEndTime, staffRole]);
 }
 
-async function createAppointmentFromPaidCheckout(client, payment, referenceNumber, paymentId = null) {
+async function createAppointmentFromPaidCheckout(client, payment, referenceNumber, paymentId = null, paymentMethod = null) {
+  const requestedMethod = paymentMethod || payment.payment_method;
+  const recordedMethod = ['paymongo', 'gcash', 'maya', 'card'].includes(requestedMethod) ? requestedMethod : 'paymongo';
   const candidates = await findAvailableAestheticians(client, {
     appointmentDate: payment.appointment_date,
     appointmentTime: payment.appointment_time,
@@ -563,16 +573,17 @@ async function createAppointmentFromPaidCheckout(client, payment, referenceNumbe
         payment.appointment_time, payment.appointment_end_time, candidate.user_id]);
       await client.query(`
         INSERT INTO payments (appointment_id, payment_type, amount, method, reference_no, note)
-        VALUES ($1, 'reservation', $2, 'paymongo', $3, 'PayMongo reservation deposit')
+        VALUES ($1, 'reservation', $2, $3, $4, 'PayMongo reservation deposit')
         ON CONFLICT (appointment_id)
           WHERE payment_type = 'reservation' AND appointment_id IS NOT NULL
         DO NOTHING
-      `, [result.rows[0].appointment_id, Number(payment.amount_cents) / 100, referenceNumber]);
+      `, [result.rows[0].appointment_id, Number(payment.amount_cents) / 100, recordedMethod, referenceNumber]);
       await client.query(`
         UPDATE paymongo_checkout_sessions
-        SET status = 'consumed', appointment_id = $1, payment_id = COALESCE($3, payment_id), updated_at = NOW()
+        SET status = 'consumed', appointment_id = $1, payment_id = COALESCE($3, payment_id),
+            payment_method = $4, updated_at = NOW()
         WHERE reference_number = $2
-      `, [result.rows[0].appointment_id, referenceNumber, paymentId]);
+      `, [result.rows[0].appointment_id, referenceNumber, paymentId, recordedMethod]);
       await client.query('RELEASE SAVEPOINT appointment_candidate');
       return result.rows[0];
     } catch (error) {
@@ -1143,7 +1154,7 @@ router.post('/paymongo/checkout-session', async (req, res) => {
       return res.status(503).json({ message: 'APP_BASE_URL must use HTTPS for live checkout.' });
     }
 
-    const configuredMethods = (process.env.PAYMONGO_PAYMENT_METHODS || 'card,gcash,qrph')
+    const configuredMethods = (process.env.PAYMONGO_PAYMENT_METHODS || 'card,gcash,paymaya,qrph')
       .split(',').map((method) => method.trim()).filter(Boolean);
     if (configuredMethods.length === 0 || configuredMethods.some((method) => !/^[a-z0-9_]+$/.test(method))) {
       return res.status(503).json({ message: 'Configure valid PayMongo payment methods.' });
@@ -1287,7 +1298,7 @@ router.post('/paymongo/confirm', async (req, res) => {
                appointment_date::text AS appointment_date,
                appointment_time::text AS appointment_time,
                appointment_end_time::text AS appointment_end_time,
-               amount_cents
+               amount_cents, payment_id, payment_method
         FROM paymongo_checkout_sessions
         WHERE reference_number = $1 AND user_id = $2
         FOR UPDATE
@@ -1302,7 +1313,7 @@ router.post('/paymongo/confirm', async (req, res) => {
         throw error;
       }
 
-      const created = await createAppointmentFromPaidCheckout(client, lockedPayment.rows[0], referenceNumber);
+      const created = await createAppointmentFromPaidCheckout(client, lockedPayment.rows[0], referenceNumber, lockedPayment.rows[0].payment_id, lockedPayment.rows[0].payment_method);
       if (!created) {
         const error = new Error('That time slot was just taken. Your payment was received, but no appointment was created. Contact support to arrange a refund.');
         error.code = 'SLOT_UNAVAILABLE';
@@ -1382,6 +1393,7 @@ router.post('/paymongo/webhook', async (req, res) => {
     || Number(paymentAttributes.amount) !== sessionAmount || !Number.isSafeInteger(sessionAmount)) {
     return res.status(400).json({ message: 'Checkout payment details are incomplete.' });
   }
+  const paymentMethod = financeMethodForPayMongo(paymentAttributes);
 
   try {
     const outcome = await db.transaction(async (client) => {
@@ -1390,7 +1402,7 @@ router.post('/paymongo/webhook', async (req, res) => {
                appointment_date::text AS appointment_date,
                appointment_time::text AS appointment_time,
                appointment_end_time::text AS appointment_end_time,
-               amount_cents, status, appointment_id
+               amount_cents, status, appointment_id, payment_method
         FROM paymongo_checkout_sessions
         WHERE reference_number = $1 AND checkout_session_id = $2 AND livemode = $3
           AND amount_cents = $4 AND currency = 'PHP'
@@ -1399,28 +1411,44 @@ router.post('/paymongo/webhook', async (req, res) => {
       if (paymentResult.rows.length === 0) return { type: 'unmatched' };
 
       const payment = paymentResult.rows[0];
-      if (payment.status === 'consumed') return { type: 'already-created' };
+      if (payment.status === 'consumed') {
+        await client.query(`
+          UPDATE paymongo_checkout_sessions
+          SET payment_id = COALESCE(payment_id, $2), payment_method = $3, updated_at = NOW()
+          WHERE reference_number = $1
+        `, [referenceNumber, paidPayment.id, paymentMethod]);
+        await client.query(`
+          UPDATE payments SET method = $1
+          WHERE appointment_id = $2 AND payment_type = 'reservation'
+        `, [paymentMethod, payment.appointment_id]);
+        return { type: 'already-created' };
+      }
       if (!['pending', 'paid'].includes(payment.status)) return { type: 'ignored' };
+      await client.query(`
+        UPDATE paymongo_checkout_sessions
+        SET payment_id = COALESCE(payment_id, $2), payment_method = $3, updated_at = NOW()
+        WHERE reference_number = $1
+      `, [referenceNumber, paidPayment.id, paymentMethod]);
       if (isSlotInPast(payment.appointment_date, String(payment.appointment_time).slice(0, 5))) {
         if (payment.status === 'pending') {
           await client.query(`
             UPDATE paymongo_checkout_sessions
-            SET status = 'paid', payment_id = $2, updated_at = NOW()
+            SET status = 'paid', payment_id = $2, payment_method = $3, updated_at = NOW()
             WHERE reference_number = $1 AND status = 'pending'
-          `, [referenceNumber, paidPayment.id]);
+          `, [referenceNumber, paidPayment.id, paymentMethod]);
           return { type: 'late-payment', payment };
         }
         return { type: 'ignored' };
       }
 
-      const appointment = await createAppointmentFromPaidCheckout(client, payment, referenceNumber, paidPayment.id);
+      const appointment = await createAppointmentFromPaidCheckout(client, payment, referenceNumber, paidPayment.id, paymentMethod);
       if (appointment) return { type: 'created', payment, appointment };
 
       await client.query(`
         UPDATE paymongo_checkout_sessions
-        SET status = 'paid', payment_id = $2, updated_at = NOW()
+        SET status = 'paid', payment_id = $2, payment_method = $3, updated_at = NOW()
         WHERE reference_number = $1 AND status = 'pending'
-      `, [referenceNumber, paidPayment.id]);
+      `, [referenceNumber, paidPayment.id, paymentMethod]);
       return { type: 'slot-unavailable', payment };
     });
 

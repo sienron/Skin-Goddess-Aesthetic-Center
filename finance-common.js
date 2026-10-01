@@ -8,6 +8,17 @@
     }).format(Number.isFinite(amount) ? amount : 0);
   }
 
+  function paymentMethodLabel(method) {
+    const labels = {
+      paymongo: 'PayMongo (other)',
+      cash: 'Cash',
+      gcash: 'GCash',
+      maya: 'Maya',
+      card: 'Credit/debit card',
+    };
+    return labels[String(method || '').toLowerCase()] || String(method || 'Unknown');
+  }
+
   function manilaToday() {
     return new Intl.DateTimeFormat('en-CA', {
       timeZone: 'Asia/Manila', year: 'numeric', month: '2-digit', day: '2-digit',
@@ -88,6 +99,7 @@
 
   window.FinanceCommon = Object.freeze({
     formatPeso,
+    paymentMethodLabel,
     manilaToday,
     monthStart,
     lastMonthRange,
