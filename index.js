@@ -143,10 +143,10 @@ const protectedPages = [
 
   { path: '/InventoryManagement.html', roles: ['inventory_officer', 'admin'] },
   { path: '/InventoryDashboard.html', roles: ['inventory_officer'] },
-  { path: '/FinanceDashboard.html', roles: ['finance_officer'] },
-  { path: '/FinanceExpenses.html', roles: ['finance_officer'] },
-  { path: '/FinanceReports.html', roles: ['finance_officer'] },
-  { path: '/FinancesTransactions.html', roles: ['finance_officer'] }
+  { path: '/FinanceDashboard.html', roles: ['finance_officer', 'admin'] },
+  { path: '/FinanceExpenses.html', roles: ['finance_officer', 'admin'] },
+  { path: '/FinanceReports.html', roles: ['finance_officer', 'admin'] },
+  { path: '/FinancesTransactions.html', roles: ['finance_officer', 'admin'] }
 ];
 
 protectedPages.forEach(({ path: page, roles }) => {
