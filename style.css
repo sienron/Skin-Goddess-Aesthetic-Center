@@ -9804,7 +9804,9 @@ body.services {
 }
 
 #userManagementMain .um-tabs {
+  flex: 0 0 auto;
   flex-wrap: nowrap;
+  min-height: 38px;
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: thin;
