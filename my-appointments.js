@@ -9,17 +9,15 @@
   const weekBtn = document.getElementById('calWeekBtn');
   const monthBtn = document.getElementById('calMonthBtn');
   const message = document.getElementById('appointmentsMessage');
-  const modal = document.getElementById('apptModal');
-  const modalBody = document.getElementById('apptModalBody');
-  const modalClose = document.getElementById('apptModalClose');
   const monthView = document.getElementById('calMonthView');
   const weekView = document.getElementById('calWeekView');
   const weekHeader = document.getElementById('calWeekHeader');
   const weekTimeColumn = document.getElementById('calWeekTimeColumn');
   const weekDaysGrid = document.getElementById('calWeekDaysGrid');
+  const ratingContainer = document.getElementById('apptModalRatingContainer');
 
   if (!grid || !weekdaysEl || !titleEl || !prevBtn || !nextBtn || !weekBtn || !monthBtn ||
-      !message || !modal || !modalBody || !modalClose || !monthView || !weekView ||
+      !message || !monthView || !weekView ||
       !weekHeader || !weekTimeColumn || !weekDaysGrid) return;
 
   const DAY_NAMES = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
@@ -69,19 +67,6 @@
   let cursor = parseKey(manilaTodayKey());
 
   // ---- Modal ----
-  function detailRow(label, value) {
-    const row = document.createElement('div');
-    row.className = 'appt-detail-row';
-    const l = document.createElement('span');
-    l.className = 'appt-detail-label';
-    l.textContent = label;
-    const v = document.createElement('span');
-    v.className = 'appt-detail-value';
-    v.textContent = value;
-    row.append(l, v);
-    return row;
-  }
-
   function buildRatingStars(onSelect) {
     const starsRow = document.createElement('div');
     starsRow.className = 'appt-rating-stars';
@@ -162,7 +147,8 @@
       errorEl.textContent = '';
       submitBtn.disabled = true;
       try {
-        const response = await fetch(`/api/appointments/${appointment.appointment_id}/rating`, {
+        const apptId = appointment.appointment_id || appointment.id;
+        const response = await fetch(`/api/appointments/${apptId}/rating`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ rating: selectedRating, comment: commentBox.value.trim() || undefined }),
@@ -183,44 +169,24 @@
     return wrap;
   }
 
-  function openModal(appointment) {
-    lastFocused = document.activeElement;
-    const dateKey = String(appointment.appointment_date).slice(0, 10);
-    const prettyDate = parseKey(dateKey).toLocaleDateString('en-US', {
-      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
-    });
-    const statusLabel = String(appointment.appointment_status || '').replace(/_/g, ' ').toUpperCase();
-    const paymentLabel = String(appointment.payment_status || '').replace(/_/g, ' ').toUpperCase();
-
-    modalBody.replaceChildren(
-      detailRow('Service', appointment.service_name),
-      detailRow('Date', prettyDate),
-      detailRow('Time', `${formatTime(appointment.appointment_time)} – ${formatTime(appointment.appointment_end_time)}`),
-      detailRow('Status', statusLabel),
-      detailRow('Payment', paymentLabel),
-      detailRow('Reservation fee', `₱${Number(appointment.booked_reservation_fee).toLocaleString('en-US')}`)
-    );
-
-    if (appointment.appointment_status === 'completed') {
-      modalBody.appendChild(buildRatingSection(appointment));
+  function renderRatingSection(appointment) {
+    if (!ratingContainer) return;
+    const isCompleted = (appointment.status === 'completed' || appointment.appointment_status === 'completed');
+    if (isCompleted) {
+      ratingContainer.hidden = false;
+      ratingContainer.replaceChildren(buildRatingSection(appointment));
+    } else {
+      ratingContainer.hidden = true;
+      ratingContainer.replaceChildren();
     }
-
-    modal.hidden = false;
-    modalClose.focus();
   }
 
-  function closeModal() {
-    modal.hidden = true;
-    if (lastFocused && typeof lastFocused.focus === 'function') lastFocused.focus();
+  function openModal(appointment) {
+    if (typeof openApptModal === 'function') {
+      openApptModal(appointment);
+      renderRatingSection(appointment);
+    }
   }
-
-  modalClose.addEventListener('click', closeModal);
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) closeModal();
-  });
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !modal.hidden) closeModal();
-  });
 
   // ---- Calendar rendering ----
   function buildChip(appointment, todayKey) {
@@ -422,5 +388,7 @@
   }
 
   render(); // show the empty calendar right away
+  window.refreshClientAppointments = loadAppointments;
+  window.addEventListener('appointmentUpdated', () => { loadAppointments(); });
   loadAppointments();
 })();

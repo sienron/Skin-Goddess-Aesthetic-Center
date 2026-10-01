@@ -1,14 +1,10 @@
 /* ===== Shared Appointment Detail Modal =====
    Include this file on ANY page that has the appointment modal markup
-   (Admin, Staff, and Aesthetician appointment pages). It exposes two
+   (Admin, Staff, Aesthetician, and Client appointment pages). It exposes two
    global functions other page-specific files can call:
 
      openApptModal(appt)   — pass an appointment object, opens + populates the modal
      closeApptModal()      — closes it
-
-   Depends on formatTime() being defined elsewhere on the page (currently
-   in appointments-staff.js). If a future page includes this modal
-   without that calendar file, copy formatTime() into its own script too.
 
    All DOM lookups are guarded — if the modal markup isn't on the page,
    openApptModal()/closeApptModal() simply do nothing instead of throwing.
@@ -21,6 +17,14 @@ const STATUS_LABELS = {
     "cancelled": "CANCELLED",
     no_show: "NO SHOW"
 };
+
+function formatTime(time24) {
+    if (!time24) return "—";
+    const [h, m] = String(time24).split(":").map(Number);
+    const period = h >= 12 ? "PM" : "AM";
+    const hour12 = h % 12 === 0 ? 12 : h % 12;
+    return m === 0 ? `${hour12}${period}` : `${hour12}:${String(m).padStart(2, "0")}${period}`;
+}
 
 const apptModalOverlay = document.getElementById("apptModalOverlay");
 const apptModal = document.getElementById("apptModal");
@@ -64,6 +68,7 @@ function normalizeAppt(appt) {
     appointment.aesthetician = appointment.aesthetician ?? appointment.aesthetician_name ?? "Aesthetician";
     appointment.fee = appointment.fee ?? appointment.booked_service_price ?? appointment.service_price;
     appointment.depositAmount = appointment.depositAmount ?? appointment.deposit_amount ?? appointment.booked_reservation_fee ?? appointment.reservation_fee;
+    appointment.depositPaid = appointment.depositPaid ?? (appointment.payment_status === "paid");
     appointment.contact = appointment.contact ?? appointment.contact_number ?? "—";
     appointment.remarks = appointment.remarks ?? appointment.notes ?? "No notes yet.";
     appointment.cancellationRequestStatus = appointment.cancellationRequestStatus ?? appointment.cancellation_request_status;
@@ -130,20 +135,35 @@ function openApptModal(appt) {
     document.getElementById("apptModalDeposit").textContent = depositText;
     document.getElementById("apptModalContact").textContent = normalizedAppt.contact || "—";
 
-    apptModalCancelBtn.dataset.apptId = normalizedAppt.id;
-    apptModalRescheduleBtn.dataset.apptId = normalizedAppt.id;
-    if (apptModalFinishBtn) apptModalFinishBtn.dataset.apptId = normalizedAppt.id;
-    if (apptModalNoShowBtn) apptModalNoShowBtn.dataset.apptId = normalizedAppt.id;
     const canManageAppointment = normalizedAppt.status === "confirmed";
     const manilaToday = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
-    apptModalCancelBtn.disabled = !canManageAppointment || Boolean(normalizedAppt.cancellationRequestStatus);
-    apptModalRescheduleBtn.disabled = !canManageAppointment || Boolean(normalizedAppt.rescheduleRequestStatus);
-    if (apptModalFinishBtn) apptModalFinishBtn.disabled = !canManageAppointment || normalizedAppt.date !== manilaToday;
-    if (apptModalNoShowBtn) apptModalNoShowBtn.disabled = !canManageAppointment || normalizedAppt.date !== manilaToday;
+
+    if (apptModalCancelBtn) {
+        apptModalCancelBtn.dataset.apptId = normalizedAppt.id;
+        apptModalCancelBtn.disabled = !canManageAppointment || Boolean(normalizedAppt.cancellationRequestStatus);
+    }
+    if (apptModalRescheduleBtn) {
+        apptModalRescheduleBtn.dataset.apptId = normalizedAppt.id;
+        apptModalRescheduleBtn.disabled = !canManageAppointment || Boolean(normalizedAppt.rescheduleRequestStatus);
+    }
+    if (apptModalFinishBtn) {
+        apptModalFinishBtn.dataset.apptId = normalizedAppt.id;
+        apptModalFinishBtn.disabled = !canManageAppointment || normalizedAppt.date !== manilaToday;
+    }
+    if (apptModalNoShowBtn) {
+        apptModalNoShowBtn.dataset.apptId = normalizedAppt.id;
+        apptModalNoShowBtn.disabled = !canManageAppointment || normalizedAppt.date !== manilaToday;
+    }
+
     if (apptRescheduleForm) {
         apptRescheduleForm.hidden = true;
-        apptRescheduleForm.elements.date.value = normalizedAppt.date || "";
-        apptRescheduleForm.elements.time.value = (normalizedAppt.start || "").slice(0, 5);
+        if (apptRescheduleForm.elements.date) {
+            apptRescheduleForm.elements.date.value = normalizedAppt.date || "";
+            apptRescheduleForm.elements.date.min = manilaToday;
+        }
+        if (apptRescheduleForm.elements.time) {
+            apptRescheduleForm.elements.time.value = (normalizedAppt.start || "").slice(0, 5);
+        }
         if (apptRescheduleForm.elements.reason) apptRescheduleForm.elements.reason.value = "";
         if (apptRescheduleForm.elements.description) apptRescheduleForm.elements.description.value = "";
     }
@@ -151,7 +171,15 @@ function openApptModal(appt) {
         apptCancellationForm.hidden = true;
         apptCancellationForm.reset();
     }
-    if (apptActionMessage) apptActionMessage.textContent = "";
+    if (apptActionMessage) {
+        if (normalizedAppt.cancellationRequestStatus === "pending") {
+            apptActionMessage.textContent = "A cancellation request is pending admin review.";
+        } else if (normalizedAppt.rescheduleRequestStatus === "pending") {
+            apptActionMessage.textContent = "A reschedule request is pending admin review.";
+        } else {
+            apptActionMessage.textContent = "";
+        }
+    }
 
     apptModalOverlay.classList.add("show");
     document.body.style.overflow = "hidden";
@@ -163,8 +191,11 @@ function closeApptModal() {
     document.body.style.overflow = "";
 }
 
+window.openApptModal = openApptModal;
+window.closeApptModal = closeApptModal;
+
 if (apptModalOverlay) {
-    apptModalClose.addEventListener("click", closeApptModal);
+    apptModalClose?.addEventListener("click", closeApptModal);
 
     apptModalOverlay.addEventListener("click", (e) => {
         if (e.target === apptModalOverlay) closeApptModal();
@@ -176,7 +207,7 @@ if (apptModalOverlay) {
         }
     });
 
-    apptModalCancelBtn.addEventListener("click", () => {
+    apptModalCancelBtn?.addEventListener("click", () => {
         if (!apptCancellationForm) return;
         apptCancellationForm.hidden = !apptCancellationForm.hidden;
         if (apptRescheduleForm) apptRescheduleForm.hidden = true;
@@ -201,6 +232,8 @@ if (apptModalOverlay) {
             if (!response.ok) throw new Error(data.message || "Could not send cancellation request.");
             closeApptModal();
             if (typeof refreshAestheticianAppointments === "function") await refreshAestheticianAppointments();
+            if (typeof refreshClientAppointments === "function") await refreshClientAppointments();
+            window.dispatchEvent(new CustomEvent("appointmentUpdated", { detail: { id: apptModalCancelBtn.dataset.apptId } }));
         } catch (error) {
             if (apptActionMessage) apptActionMessage.textContent = error.message;
             submitButton.disabled = false;
@@ -216,6 +249,8 @@ if (apptModalOverlay) {
             if (!response.ok) throw new Error(data.message || "Could not finish appointment.");
             closeApptModal();
             if (typeof refreshAestheticianAppointments === "function") await refreshAestheticianAppointments();
+            if (typeof refreshClientAppointments === "function") await refreshClientAppointments();
+            window.dispatchEvent(new CustomEvent("appointmentUpdated", { detail: { id: apptModalFinishBtn.dataset.apptId } }));
         } catch (error) {
             if (apptActionMessage) apptActionMessage.textContent = error.message;
             apptModalFinishBtn.disabled = false;
@@ -232,13 +267,15 @@ if (apptModalOverlay) {
             if (!response.ok) throw new Error(data.message || "Could not mark appointment as no show.");
             closeApptModal();
             if (typeof refreshAestheticianAppointments === "function") await refreshAestheticianAppointments();
+            if (typeof refreshClientAppointments === "function") await refreshClientAppointments();
+            window.dispatchEvent(new CustomEvent("appointmentUpdated", { detail: { id: apptModalNoShowBtn.dataset.apptId } }));
         } catch (error) {
             if (apptActionMessage) apptActionMessage.textContent = error.message;
             apptModalNoShowBtn.disabled = false;
         }
     });
 
-    apptModalRescheduleBtn.addEventListener("click", () => {
+    apptModalRescheduleBtn?.addEventListener("click", () => {
         if (!apptRescheduleForm) return;
         apptRescheduleForm.hidden = !apptRescheduleForm.hidden;
         if (apptCancellationForm) apptCancellationForm.hidden = true;
@@ -265,6 +302,8 @@ if (apptModalOverlay) {
             if (!response.ok) throw new Error(data.message || "Could not reschedule appointment.");
             closeApptModal();
             if (typeof refreshAestheticianAppointments === "function") await refreshAestheticianAppointments();
+            if (typeof refreshClientAppointments === "function") await refreshClientAppointments();
+            window.dispatchEvent(new CustomEvent("appointmentUpdated", { detail: { id: apptModalRescheduleBtn.dataset.apptId } }));
         } catch (error) {
             if (apptActionMessage) apptActionMessage.textContent = error.message;
             submitButton.disabled = false;

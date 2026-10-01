@@ -638,6 +638,14 @@ router.get('/mine', async (req, res) => {
                s.service_name AS service,
                a.booked_service_price AS fee,
                a.booked_reservation_fee AS deposit_amount,
+               a.cancellation_request_status,
+               a.cancellation_reason,
+               a.cancellation_description,
+               a.reschedule_request_status,
+               a.reschedule_requested_date::text AS reschedule_requested_date,
+               a.reschedule_requested_time::text AS reschedule_requested_time,
+               a.reschedule_reason,
+               a.reschedule_description,
                COALESCE(CONCAT(c.first_name, ' ', c.last_name), 'Client') AS client,
                COALESCE(CONCAT(aesthetician.first_name, ' ', aesthetician.last_name), 'Aesthetician') AS aesthetician,
                c.contact_number AS contact,
@@ -682,7 +690,15 @@ router.get('/mine', async (req, res) => {
       appointment_status: row.status,
       service_name: row.service,
       booked_service_price: row.fee,
-      booked_reservation_fee: row.deposit_amount
+      booked_reservation_fee: row.deposit_amount,
+      cancellationRequestStatus: row.cancellation_request_status,
+      cancellationReason: row.cancellation_reason,
+      cancellationDescription: row.cancellation_description,
+      rescheduleRequestStatus: row.reschedule_request_status,
+      rescheduleRequestedDate: row.reschedule_requested_date,
+      rescheduleRequestedTime: row.reschedule_requested_time,
+      rescheduleReason: row.reschedule_reason,
+      rescheduleDescription: row.reschedule_description
     }));
 
     return res.json(appointments);
@@ -746,12 +762,14 @@ router.post('/:id/cancellation-request', async (req, res) => {
 
   try {
     const result = await db.query(`
-      SELECT appointment_id, aesthetician_id, appointment_status, cancellation_request_status
+      SELECT appointment_id, aesthetician_id, user_id, appointment_status, cancellation_request_status
       FROM appointments WHERE appointment_id = $1
     `, [appointmentId]);
     if (result.rows.length === 0) return res.status(404).json({ message: 'Appointment not found.' });
     const appointment = result.rows[0];
-    if (appointment.aesthetician_id !== req.session.userId) return res.status(403).json({ message: 'Only the assigned aesthetician can request cancellation.' });
+    const isAssignedAesthetician = appointment.aesthetician_id === req.session.userId;
+    const isClient = appointment.user_id === req.session.userId;
+    if (!isAssignedAesthetician && !isClient) return res.status(403).json({ message: 'Only the assigned aesthetician or client can request cancellation.' });
     if (appointment.appointment_status !== 'confirmed') return res.status(400).json({ message: 'Only confirmed appointments can be cancelled.' });
     if (appointment.cancellation_request_status) return res.status(409).json({ message: 'A cancellation request has already been submitted for this appointment.' });
 
@@ -763,11 +781,19 @@ router.post('/:id/cancellation-request', async (req, res) => {
           cancellation_reviewed_at = NULL
       WHERE appointment_id = $4
     `, [reason, description, req.session.userId, appointmentId]);
+    const requestorRole = isClient ? 'Client' : 'Aesthetician';
     await notifyRoles(
       ['admin'],
-      'aesthetician_cancellation_request',
-      `Aesthetician requested cancellation for appointment ${appointmentId}: ${reason}. ${description}`,
+      'cancellation_request',
+      `${requestorRole} requested cancellation for appointment ${appointmentId}: ${reason}. ${description}`,
     );
+    if (isClient && appointment.aesthetician_id) {
+      await notifyUsers(
+        [appointment.aesthetician_id],
+        'cancellation_request',
+        `Client requested cancellation for appointment ${appointmentId}: ${reason}.`,
+      );
+    }
     return res.json({ message: 'Cancellation request sent to the admin.' });
   } catch (error) {
     console.error('Error creating cancellation request:', error);
@@ -1002,18 +1028,19 @@ router.post('/:id/reschedule', async (req, res) => {
     const isAdmin = userResult.rows[0].role === 'admin';
     const isAssignedAesthetician = ['aesthetician', 'nail_tech'].includes(userResult.rows[0].role)
       && appointment.aesthetician_id === req.session.userId;
-    if (!isAdmin && !isAssignedAesthetician) {
-      return res.status(403).json({ message: 'Only an admin or the assigned aesthetician can reschedule this appointment.' });
+    const isClient = appointment.user_id === req.session.userId;
+    if (!isAdmin && !isAssignedAesthetician && !isClient) {
+      return res.status(403).json({ message: 'Only an admin, the assigned aesthetician, or client can reschedule this appointment.' });
     }
     if (appointment.appointment_status !== 'confirmed') {
       return res.status(400).json({ message: 'Only confirmed appointments can be rescheduled.' });
     }
     const reason = validRequestText(body.reason, 255);
     const description = validRequestText(body.description, 2000);
-    if (isAssignedAesthetician && appointment.reschedule_request_status) {
+    if ((isAssignedAesthetician || isClient) && appointment.reschedule_request_status) {
       return res.status(409).json({ message: 'A reschedule request has already been submitted for this appointment.' });
     }
-    if (isAssignedAesthetician && (!reason || !description)) {
+    if ((isAssignedAesthetician || isClient) && (!reason || !description)) {
       return res.status(400).json({ message: 'Reason and description are required for a reschedule request.' });
     }
 
@@ -1031,7 +1058,7 @@ router.post('/:id/reschedule', async (req, res) => {
       return res.status(400).json({ message: 'This service does not fit within operating hours at the selected time.' });
     }
 
-    if (isAssignedAesthetician) {
+    if (isAssignedAesthetician || isClient) {
       await db.query(`
         UPDATE appointments
         SET reschedule_request_status = 'pending', reschedule_requested_date = $1,
@@ -1041,6 +1068,19 @@ router.post('/:id/reschedule', async (req, res) => {
             reschedule_reviewed_by = NULL, reschedule_reviewed_at = NULL
         WHERE appointment_id = $7
       `, [appointmentDate, appointmentTime, appointmentEndTime, reason, description, req.session.userId, appointmentId]);
+      const requestorRole = isClient ? 'Client' : 'Aesthetician';
+      await notifyRoles(
+        ['admin'],
+        'reschedule_request',
+        `${requestorRole} requested reschedule for appointment ${appointmentId} to ${appointmentDate} at ${slotLabel}: ${reason}.`,
+      );
+      if (isClient && appointment.aesthetician_id) {
+        await notifyUsers(
+          [appointment.aesthetician_id],
+          'reschedule_request',
+          `Client requested reschedule for appointment ${appointmentId} to ${appointmentDate} at ${slotLabel}.`,
+        );
+      }
       return res.json({ message: 'Reschedule request sent to the admin.' });
     }
 

@@ -94,17 +94,105 @@
       </div>
     </section>
 
-    <div class="my-appt-details-overlay" id="apptModal" hidden>
-      <div class="appt-modal-card" role="dialog" aria-modal="true" aria-labelledby="apptModalTitle">
-        <button type="button" class="appt-modal-close" id="apptModalClose" aria-label="Close">&times;</button>
-        <h3 id="apptModalTitle">Appointment Details</h3>
-        <div id="apptModalBody"></div>
+    <!-- Appointment Detail Modal -->
+    <div class="modal-overlay" id="apptModalOverlay">
+      <div class="appt-modal-wrap" id="apptModalWrap">
+        <div class="appt-modal" id="apptModal">
+          <div class="appt-modal-topbar" id="apptModalTopbar"></div>
+
+          <button class="modal-close" id="apptModalClose" aria-label="Close">&times;</button>
+
+          <div class="appt-modal-header">
+            <div class="appt-modal-avatar" id="apptModalAvatar"></div>
+            <div class="appt-modal-heading">
+              <h3 id="apptModalName"></h3>
+              <p id="apptModalSubtitle"></p>
+              <span class="appt-status-badge" id="apptModalStatus"></span>
+            </div>
+          </div>
+
+          <hr>
+
+          <div class="appt-modal-grid">
+            <div class="appt-field">
+              <span class="appt-field-label">DATE</span>
+              <span class="appt-field-value" id="apptModalDate"></span>
+            </div>
+            <div class="appt-field">
+              <span class="appt-field-label">TIME</span>
+              <span class="appt-field-value" id="apptModalTime"></span>
+            </div>
+
+            <div class="appt-field">
+              <span class="appt-field-label">AESTHETICIAN</span>
+              <span class="appt-field-value" id="apptModalAesthetician"></span>
+            </div>
+            <div class="appt-field">
+              <span class="appt-field-label">DURATION</span>
+              <span class="appt-field-value" id="apptModalDuration"></span>
+            </div>
+
+            <div class="appt-field">
+              <span class="appt-field-label">SERVICE</span>
+              <span class="appt-field-value" id="apptModalService"></span>
+            </div>
+            <div class="appt-field">
+              <span class="appt-field-label">SERVICE FEE</span>
+              <span class="appt-field-value" id="apptModalFee"></span>
+            </div>
+
+            <div class="appt-field">
+              <span class="appt-field-label">RESERVATION DEPOSIT</span>
+              <span class="appt-field-value" id="apptModalDeposit"></span>
+            </div>
+            <div class="appt-field">
+              <span class="appt-field-label">CONTACT</span>
+              <span class="appt-field-value" id="apptModalContact"></span>
+            </div>
+          </div>
+
+          <div class="appt-modal-rating-container" id="apptModalRatingContainer" hidden></div>
+
+          <p class="appt-action-message" id="apptActionMessage" role="status" aria-live="polite"></p>
+          <form class="appt-reschedule-form" id="apptRescheduleForm" hidden>
+            <label for="apptRescheduleDate">New date</label>
+            <input type="date" name="date" id="apptRescheduleDate" required>
+            <label for="apptRescheduleTime">New time</label>
+            <select name="time" id="apptRescheduleTime" required>
+              <option value="09:00">9:00 AM</option>
+              <option value="10:00">10:00 AM</option>
+              <option value="11:00">11:00 AM</option>
+              <option value="13:00">1:00 PM</option>
+              <option value="14:00">2:00 PM</option>
+              <option value="15:00">3:00 PM</option>
+              <option value="16:00">4:00 PM</option>
+            </select>
+            <label for="apptRescheduleReason">Reason</label>
+            <input type="text" name="reason" id="apptRescheduleReason" maxlength="255" required>
+            <label for="apptRescheduleDescription">Description</label>
+            <textarea name="description" id="apptRescheduleDescription" maxlength="2000" rows="4" required></textarea>
+            <button class="modal-btn modal-btn-reschedule" type="submit">Save new time</button>
+          </form>
+          <form class="appt-cancellation-form" id="apptCancellationForm" hidden>
+            <label for="apptCancellationReason">Reason</label>
+            <input type="text" name="reason" id="apptCancellationReason" maxlength="255" required>
+            <label for="apptCancellationDescription">Description</label>
+            <textarea name="description" id="apptCancellationDescription" maxlength="2000" rows="4" required></textarea>
+            <button class="modal-btn modal-btn-cancel" type="submit">Send cancellation request</button>
+          </form>
+
+          <div class="appt-modal-actions">
+            <button class="modal-btn modal-btn-cancel" id="apptModalCancelBtn">Cancel</button>
+            <button class="modal-btn modal-btn-reschedule" id="apptModalRescheduleBtn">Reschedule</button>
+          </div>
+        </div>
       </div>
     </div>
   </main>
 
   <div data-faq-chatbot-mount></div>
   <script src="header.js"></script>
+  <script src="appointment-modal.js"></script>
   <script src="my-appointments.js"></script>
   <script src="faq-chatbot.js"></script>
 </body>

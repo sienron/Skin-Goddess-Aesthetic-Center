@@ -12541,6 +12541,14 @@ main.my-appointments-main .booking-intro {
   color: #8a8a8a;
 }
 
+.appt-modal-rating-container {
+  padding: 0 24px 16px;
+}
+
+.appt-modal-rating-container[hidden] {
+  display: none;
+}
+
 .appt-rating-section {
   margin-top: 16px;
   padding-top: 16px;
