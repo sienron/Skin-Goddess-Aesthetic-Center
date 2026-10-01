@@ -143,6 +143,22 @@
     </div>
   </div>
 
+  <p class="cm-notice" id="cmNotice" role="status" aria-live="polite" hidden></p>
+  <dialog class="cm-editor" id="cmEditorDialog" aria-labelledby="cmEditorTitle">
+    <form class="cm-editor__form" id="cmEditorForm">
+      <header class="cm-editor__header">
+        <h2 id="cmEditorTitle">Edit content</h2>
+        <button class="cm-editor__close" id="cmEditorClose" type="button" aria-label="Close editor">&times;</button>
+      </header>
+      <div class="cm-editor__fields" id="cmEditorFields"></div>
+      <p class="cm-editor__error" id="cmEditorError" role="alert" hidden></p>
+      <footer class="cm-editor__footer">
+        <button class="um-btn um-btn--ghost" id="cmEditorCancel" type="button">Cancel</button>
+        <button class="um-btn um-btn--primary" type="submit">Save changes</button>
+      </footer>
+    </form>
+  </dialog>
+
   <script src="admin-dashboard.js"></script>
   <script src="AdminContentManagement.js"></script>
 </body>

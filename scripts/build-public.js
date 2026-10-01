@@ -25,6 +25,7 @@ const browserScripts = [
   'my-appointments.js',
   'rating-widget.js',
   'registration.js',
+  'public-content.js',
   'reset-password.js',
   'staff-clients.js',
   'staff-dashboard.js',
