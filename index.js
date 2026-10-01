@@ -179,6 +179,7 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/services', require('./routes/services'));
 app.use('/api/appointments', require('./routes/appointments'));
 app.use('/api/ratings', require('./routes/ratings'));
+app.use('/api/content', require('./routes/content'));
 app.use('/api/availability', require('./routes/availability'));
 app.use('/api/inventory', require('./routes/inventory'));
 app.use('/api/notifications', require('./routes/notifications'));
