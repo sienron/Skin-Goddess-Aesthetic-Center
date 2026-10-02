@@ -116,4 +116,48 @@ async function sendInquiryReply(toEmail, firstName, reply) {
   }
 }
 
-module.exports = { sendOtpEmail, sendPasswordResetEmail, sendInquiryReply };
+async function sendInquiryNotification(inquiry) {
+  const recipient = process.env.INQUIRY_NOTIFICATION_EMAIL || process.env.EMAIL_USER;
+  if (!recipient) {
+    throw new Error('INQUIRY_NOTIFICATION_EMAIL or EMAIL_USER must be configured.');
+  }
+
+  const safeName = escapeHtml(`${inquiry.firstName} ${inquiry.lastName}`);
+  const safeEmail = escapeHtml(inquiry.email);
+  const safePhone = escapeHtml(inquiry.phone || 'Not provided');
+  const safeType = escapeHtml(inquiry.subject);
+  const safeMessage = escapeHtml(inquiry.message).replace(/\r?\n/g, '<br>');
+  const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'api-key': process.env.BREVO_API_KEY,
+    },
+    body: JSON.stringify({
+      sender: {
+        name: 'Skin Goddess Aesthetic Center',
+        email: process.env.EMAIL_USER,
+      },
+      to: [{ email: recipient }],
+      replyTo: { email: inquiry.email, name: `${inquiry.firstName} ${inquiry.lastName}` },
+      subject: `New ${inquiry.subject} inquiry from ${inquiry.firstName} ${inquiry.lastName}`,
+      htmlContent: `
+        <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto; color: #1A1714;">
+          <h2 style="color: #C9A84C;">New customer inquiry</h2>
+          <p><strong>From:</strong> ${safeName} &lt;<a href="mailto:${safeEmail}">${safeEmail}</a>&gt;</p>
+          <p><strong>Phone:</strong> ${safePhone}</p>
+          <p><strong>Type:</strong> ${safeType}</p>
+          <p><strong>Message:</strong></p>
+          <p>${safeMessage}</p>
+        </div>
+      `,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`The inquiry notification was not sent: ${errorText}`);
+  }
+}
+
+module.exports = { sendOtpEmail, sendPasswordResetEmail, sendInquiryReply, sendInquiryNotification };

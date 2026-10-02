@@ -1,7 +1,7 @@
 const express = require('express');
 const db = require('../db');
 const { requireRole } = require('../middleware/auth');
-const { sendInquiryReply } = require('../utils/mailer');
+const { sendInquiryReply, sendInquiryNotification } = require('../utils/mailer');
 
 const router = express.Router();
 const INQUIRY_TYPES = new Set(['booking', 'services', 'feedback', 'other']);
@@ -45,6 +45,12 @@ router.post('/', async (req, res) => {
        RETURNING inquiry_id`,
       [inquiry.firstName, inquiry.lastName, inquiry.email, inquiry.phone || null, inquiry.subject, inquiry.message]
     );
+
+    try {
+      await sendInquiryNotification(inquiry);
+    } catch (error) {
+      console.error('Inquiry saved, but notification email failed:', error.message);
+    }
 
     res.status(201).json({ message: 'Your inquiry has been sent.', inquiryId: result.rows[0].inquiry_id });
   } catch (error) {
