@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Transaction Log</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="InventoryManagement.css">
+</head>
+<body class="InventoryManagement">
+    <aside class="inv-sidebar" id="invSidebar">
+        <a href="Dashboard.html" class="inv-sidebar__logo">
+            <div class="logo-container">
+                <img src="images/logo_horizontal.jpg" alt="Skin Goddess Aesthetic Center logo">
+            </div>
+        </a>
+
+        <p class="inv-sidebar__label">MAIN MENU</p>
+
+        <nav class="inv-sidebar__nav">
+            <a href="Dashboard.html" class="inv-nav-link">Dashboard</a>
+            <a href="InventoryManagement.html" class="inv-nav-link">Inventory</a>
+            <a href="InventoryTransactions.html" class="inv-nav-link inv-nav-link--active" aria-current="page">Stock Transaction Log</a>
+            <a href="Reports.html" class="inv-nav-link">Reports</a>
+        </nav>
+
+        <div class="inv-sidebar__account">
+            <div class="inv-avatar">A</div>
+            <div>
+                <p class="inv-sidebar__account-name">Admin User</p>
+                <p class="inv-sidebar__account-role">Owner</p>
+            </div>
+        </div>
+    </aside>
+
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+    <header class="inventory-header">
+        <div class="header-left">
+            <button class="sidebar-toggle" id="sidebarToggle" type="button" aria-label="Open menu">☰</button>
+            <div class="header-title">
+                <h1>Stock Transaction Log</h1>
+                <p>All stock movements recorded here</p>
+            </div>
+        </div>
+
+        <div class="header-actions">
+            <div class="admin-notification-wrap">
+                <button class="admin-notification-btn" id="adminNotificationBtn" type="button" aria-label="View notifications" aria-haspopup="true" aria-expanded="false" aria-controls="adminNotificationDropdown">
+                    <img src="icons/notification-bell.svg" alt="">
+                </button>
+                <div class="admin-notification-dropdown" id="adminNotificationDropdown">
+                    <strong>Notifications</strong>
+                    <div class="admin-notification-list">No notifications yet</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="inventory-page">
+        <section class="transaction-section">
+            <div class="transaction-header">
+                <div>
+                    <h2>Stock Transaction Log</h2>
+                    <p>All stock movements recorded here</p>
+                </div>
+                <div class="transaction-filters">
+                    <select id="transactionPeriodFilter" aria-label="Filter transactions by date">
+                        <option value="all">All Time</option>
+                        <option value="today">Today</option>
+                        <option value="week">This Week</option>
+                        <option value="month">This Month</option>
+                    </select>
+                    <select id="transactionTypeFilter" aria-label="Filter transactions by type">
+                        <option value="all">All Types</option>
+                        <option value="Restock">Restock</option>
+                        <option value="Used in Service" disabled>Used in Service</option>
+                        <option value="Adjustment">Adjustment</option>
+                        <option value="Expired">Expired</option>
+                        <option value="Deleted">Deleted</option>
+                    </select>
+                    <button class="btn btn-export" id="exportTransactions" type="button" disabled>Export</button>
+                </div>
+            </div>
+
+            <div class="transaction-table-wrapper">
+                <table class="transaction-table">
+                    <thead>
+                        <tr>
+                            <th>DATE &amp; TIME</th>
+                            <th>PRODUCT</th>
+                            <th>ACTION</th>
+                            <th>QTY CHANGE</th>
+                            <th>STOCK AFTER</th>
+                            <th>PERFORMED BY</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactionBody">
+                        <tr><td colspan="6">Loading transaction history...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="table-footer" id="transactionFooter">Loading transaction history...</div>
+        </section>
+    </main>
+
+    <script src="InventoryTransactions.js"></script>
+    <script src="admin-notifications.js"></script>
+</body>
+</html>

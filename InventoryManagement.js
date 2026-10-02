@@ -12,6 +12,18 @@ const statusFilter = document.getElementById("statusFilter");
 const clearFilters = document.getElementById("clearFilters");
 
 const inventoryBody = document.getElementById("inventoryBody");
+const categoryStock = document.getElementById("categoryStock");
+const lowStockAlerts = document.getElementById("lowStockAlerts");
+
+const inventoryCategories = [
+    { name: "Medical/Injection Supplies", label: "Medical Supplies" },
+    { name: "Disposables & Clinic Consumables", label: "Consumables" },
+    { name: "Facial/Treatment Prep Products", label: "Treatment Prep" },
+    { name: "Facial Treatment Products (Professional Use)", label: "Professional" },
+    { name: "Skincare Products (Retail / Aftercare)", label: "Retail" },
+    { name: "Soaps & Cleansers", label: "Cleansers" },
+    { name: "Tools/Equipment/Misc.", label: "Equipment" }
+];
 
 const totalProducts = document.getElementById("totalProducts");
 const restockedToday = document.getElementById("restockedToday");
@@ -99,6 +111,25 @@ const addCategory =
 
 const addStock =
     document.getElementById("addStock");
+
+function getEarliestExpirationDate(){
+    const earliestDate = new Date();
+    earliestDate.setDate(earliestDate.getDate() + 1);
+
+    const year = earliestDate.getFullYear();
+    const month = String(earliestDate.getMonth() + 1).padStart(2, "0");
+    const day = String(earliestDate.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+}
+
+function setExpirationDateMinimum(){
+    const minimumDate = getEarliestExpirationDate();
+    addExpiryDate.min = minimumDate;
+    editExpiryDate.min = minimumDate;
+}
+
+setExpirationDateMinimum();
 
 
 let productToDelete = null;
@@ -544,6 +575,97 @@ function renderInventory(){
 
     });
 
+    renderInventorySidebar();
+
+}
+
+function renderInventorySidebar(){
+    categoryStock.replaceChildren();
+
+    inventoryCategories.forEach(category => {
+        const products = inventoryProducts.filter(
+            product => product.category === category.name
+        );
+        const availableProducts = products.filter(
+            product => Number(product.stock_quantity) > 0
+        ).length;
+        const percentage = products.length
+            ? Math.round((availableProducts / products.length) * 100)
+            : 0;
+
+        const row = document.createElement("div");
+        row.className = "category-row";
+
+        const label = document.createElement("span");
+        label.textContent = category.label;
+
+        const progress = document.createElement("div");
+        progress.className = "progress";
+        progress.setAttribute("role", "progressbar");
+        progress.setAttribute(
+            "aria-label",
+            `${category.label}: ${percentage}% of products available`
+        );
+        progress.setAttribute("aria-valuemin", "0");
+        progress.setAttribute("aria-valuemax", "100");
+        progress.setAttribute("aria-valuenow", String(percentage));
+
+        const fill = document.createElement("div");
+        fill.style.width = `${percentage}%`;
+        progress.appendChild(fill);
+
+        const value = document.createElement("strong");
+        value.textContent = `${percentage}%`;
+
+        row.append(label, progress, value);
+        categoryStock.appendChild(row);
+    });
+
+    const alerts = inventoryProducts
+        .map(product => {
+            const stock = Number(product.stock_quantity);
+            if (stock <= 0 || stock > inventoryThresholds.lowStock) return null;
+
+            return {
+                product,
+                stock,
+                critical: stock <= inventoryThresholds.criticalStock,
+                since: Date.parse(product.stock_status_since || "") || 0
+            };
+        })
+        .filter(Boolean)
+        .sort((first, second) => second.since - first.since);
+
+    lowStockAlerts.replaceChildren();
+
+    if (!alerts.length) {
+        const emptyState = document.createElement("p");
+        emptyState.className = "empty-stock-alerts";
+        emptyState.textContent = "No low-stock products";
+        lowStockAlerts.appendChild(emptyState);
+        return;
+    }
+
+    alerts.forEach(({ product, stock, critical }) => {
+        const item = document.createElement("div");
+        item.className = `alert-item${critical ? " critical-alert" : ""}`;
+
+        const details = document.createElement("div");
+        const name = document.createElement("strong");
+        name.textContent = product.product_name;
+        const stockDetails = document.createElement("small");
+        const expiry = product.expiry_date
+            ? ` · Expires ${new Date(`${product.expiry_date}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
+            : " · No expiration";
+        stockDetails.textContent = `${stock} unit${stock === 1 ? "" : "s"}${expiry}`;
+        details.append(name, stockDetails);
+
+        const badge = document.createElement("span");
+        badge.textContent = critical ? "CRIT" : "LOW";
+
+        item.append(details, badge);
+        lowStockAlerts.appendChild(item);
+    });
 }
 
 /* =========================================================
@@ -948,6 +1070,7 @@ if(button.classList.contains("edit")){
 
     if(!product) return;
 
+    setExpirationDateMinimum();
 
     /* Product Name */
 
@@ -1152,6 +1275,8 @@ cancelEdit.addEventListener("click", () => {
 //Add Product event listeners =========================================
 
 addProductButton.addEventListener("click", () => {
+
+    setExpirationDateMinimum();
 
     addProductName.value = "";
 

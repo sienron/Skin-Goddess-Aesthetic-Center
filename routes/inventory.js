@@ -27,7 +27,7 @@ async function notifyStockTransition(previousStock, currentStock, productName) {
     }
 }
 
-async function updateInventoryProduct(productId, stock, details) {
+async function updateInventoryProduct(productId, stock, details, userId) {
     return db.transaction(async (client) => {
         const current = await client.query(`
             SELECT stock_quantity
@@ -56,9 +56,9 @@ async function updateInventoryProduct(productId, stock, details) {
         if (stock !== previousStock) {
             await client.query(`
                 INSERT INTO inventory_transactions
-                    (product_id, transaction_type, quantity, previous_stock, new_stock, created_at)
-                VALUES ($1, $2, $3, $4, $5, NOW())
-            `, [productId, stock > previousStock ? 'Restock' : 'Used in Service', Math.abs(stock - previousStock), previousStock, stock]);
+                    (product_id, product_name, transaction_type, quantity, previous_stock, new_stock, created_by, created_at)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+            `, [productId, result.rows[0].product_name, stock > previousStock ? 'Restock' : 'Used in Service', Math.abs(stock - previousStock), previousStock, stock, userId]);
         }
 
         return { product: result.rows[0], previousStock };
@@ -74,14 +74,45 @@ router.get('/', async (req, res) => {
   try {
     const result = await db.query(`
       SELECT
-        product_id,
-        product_name,
-        category,
-        stock_quantity,
-        expiry_date::text AS expiry_date
-      FROM inventory_products
-      ORDER BY product_id ASC
-    `);
+                product.product_id,
+                product.product_name,
+                product.category,
+                product.stock_quantity,
+                product.expiry_date::text AS expiry_date,
+                COALESCE(
+                    (
+                        SELECT MAX(stock_change.created_at)
+                        FROM inventory_transactions stock_change
+                        WHERE stock_change.product_id = product.product_id
+                            AND (
+                                (
+                                    product.stock_quantity > $1
+                                    AND product.stock_quantity <= $2
+                                    AND stock_change.new_stock > $1
+                                    AND stock_change.new_stock <= $2
+                                    AND (
+                                        stock_change.previous_stock <= $1
+                                        OR stock_change.previous_stock > $2
+                                    )
+                                )
+                                OR (
+                                    product.stock_quantity > 0
+                                    AND product.stock_quantity <= $1
+                                    AND stock_change.new_stock > 0
+                                    AND stock_change.new_stock <= $1
+                                    AND (
+                                        stock_change.previous_stock = 0
+                                        OR stock_change.previous_stock > $1
+                                    )
+                                )
+                            )
+                    ),
+                    product.updated_at,
+                    product.created_at
+                ) AS stock_status_since
+            FROM inventory_products product
+            ORDER BY product.product_id ASC
+        `, [CRITICAL_STOCK_THRESHOLD, LOW_STOCK_THRESHOLD]);
 
     res.json(result.rows);
   } catch (error) {
@@ -90,6 +121,39 @@ router.get('/', async (req, res) => {
       message: 'Failed to fetch inventory products.'
     });
   }
+});
+
+router.get('/transactions', async (req, res) => {
+    try {
+        const result = await db.query(`
+            SELECT
+                stock_transaction.transaction_id,
+                stock_transaction.transaction_type,
+                stock_transaction.quantity,
+                stock_transaction.previous_stock,
+                stock_transaction.new_stock,
+                stock_transaction.created_at,
+                COALESCE(stock_transaction.product_name, product.product_name) AS product_name,
+                COALESCE(
+                    NULLIF(CONCAT_WS(' ', actor.first_name, actor.last_name), ''),
+                    actor.email,
+                    'Unknown'
+                ) AS performed_by
+            FROM inventory_transactions stock_transaction
+            LEFT JOIN inventory_products product
+                ON product.product_id = stock_transaction.product_id
+            LEFT JOIN users actor
+                ON actor.user_id = stock_transaction.created_by
+            ORDER BY stock_transaction.created_at DESC, stock_transaction.transaction_id DESC
+        `);
+
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error fetching inventory transactions:', error);
+        res.status(500).json({
+            message: 'Failed to fetch inventory transactions.'
+        });
+    }
 });
 
 // GET total units restocked today
@@ -298,11 +362,13 @@ router.post('/', async (req, res) => {
         if (stock >= 0) {
             await db.query(`
                 INSERT INTO inventory_transactions
-                    (product_id, transaction_type, quantity, previous_stock, new_stock, created_at)
-                VALUES ($1, 'Adjustment', $2, 0, $2, NOW())
+                    (product_id, product_name, transaction_type, quantity, previous_stock, new_stock, created_by, created_at)
+                    VALUES ($1, $4, 'Adjustment', $2, 0, $2, $3, NOW())
             `, [
                 result.rows[0].product_id,
-                stock
+                stock,
+                    req.session.userId,
+                    result.rows[0].product_name
             ]);
         }
         
@@ -340,7 +406,7 @@ router.put('/:id/stock', async (req, res) => {
         }
 
 
-        const updated = await updateInventoryProduct(productId, stock);
+        const updated = await updateInventoryProduct(productId, stock, null, req.session.userId);
         if (!updated) {
             return res.status(404).json({ message: 'Product not found.' });
         }
@@ -404,7 +470,7 @@ router.put("/:id", async (req, res) => {
             product_name,
             category,
             expiry_date
-        });
+        }, req.session.userId);
         if (!updated) {
             return res.status(404).json({ message: "Product not found." });
         }
@@ -439,13 +505,34 @@ router.delete('/:id', async (req, res) => {
             });
         }
 
-        const result = await db.query(`
-            DELETE FROM inventory_products
-            WHERE product_id = $1
-            RETURNING product_id, product_name
-        `, [productId]);
+        const deletedProduct = await db.transaction(async (client) => {
+            const current = await client.query(`
+                SELECT product_id, product_name, stock_quantity
+                FROM inventory_products
+                WHERE product_id = $1
+                FOR UPDATE
+            `, [productId]);
+            if (current.rows.length === 0) return null;
 
-        if (result.rows.length === 0) {
+            const product = current.rows[0];
+            await client.query(`
+                INSERT INTO inventory_transactions
+                    (product_id, product_name, transaction_type, quantity, previous_stock, new_stock, created_by, created_at)
+                VALUES ($1, $2, 'Deleted', $3, $3, 0, $4, NOW())
+            `, [productId, product.product_name, product.stock_quantity, req.session.userId]);
+
+            await client.query(`
+                DELETE FROM inventory_products
+                WHERE product_id = $1
+            `, [productId]);
+
+            return {
+                product_id: product.product_id,
+                product_name: product.product_name
+            };
+        });
+
+        if (!deletedProduct) {
             return res.status(404).json({
                 message: 'Product not found.'
             });
@@ -453,7 +540,7 @@ router.delete('/:id', async (req, res) => {
 
         res.json({
             message: 'Product deleted successfully.',
-            product: result.rows[0]
+            product: deletedProduct
         });
 
     } catch (error) {

@@ -920,6 +920,16 @@ button{
     background: #F7E5E5;
 }
 
+.low-stock-alerts{
+    max-height: 310px;
+    overflow-y: auto;
+}
+
+.empty-stock-alerts{
+    color: var(--ink-soft);
+    font-size: 11px;
+}
+
 
 /* =========================================================
    TRANSACTION LOG
@@ -1035,6 +1045,21 @@ button{
 .transaction.disposed{
     color: #A34242;
     background: #FBEDED;
+}
+
+.transaction.deleted{
+    color: #A34242;
+    background: #FBEDED;
+}
+
+.transaction-quantity-increase{
+    color: #317A3B !important;
+    font-weight: 500;
+}
+
+.transaction-quantity-decrease{
+    color: #A34242 !important;
+    font-weight: 500;
 }
 
 .table-footer{
@@ -1719,6 +1744,31 @@ button{
     color: var(--ink);
 
     outline: none;
+}
+
+.edit-form-group select {
+    appearance: none;
+    padding-right: 34px;
+    background-image:
+        linear-gradient(45deg, transparent 50%, #756C62 50%),
+        linear-gradient(135deg, #756C62 50%, transparent 50%);
+    background-position:
+        calc(100% - 16px) 17px,
+        calc(100% - 11px) 17px;
+    background-size: 5px 5px;
+    background-repeat: no-repeat;
+}
+
+.edit-form-group input[type="date"] {
+    padding-right: 5px;
+}
+
+.edit-form-group input[type="date"]::-webkit-calendar-picker-indicator {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    padding: 0;
+    cursor: pointer;
 }
 
 .edit-form-group input:focus,

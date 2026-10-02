@@ -44,6 +44,10 @@
                 <a href="InventoryManagement.html" class="inv-nav-link inv-nav-link--active">
                     Inventory
                 </a>
+
+                <a href="InventoryTransactions.html" class="inv-nav-link">
+                    Stock Transaction Log
+                </a>
     
                 <a href="Reports.html" class="inv-nav-link">
                     Reports
@@ -307,65 +311,7 @@
 
                     <h3>STOCK BY CATEGORY</h3>
 
-                    <div class="category-stock">
-
-                        <div class="category-row">
-                            <span>Medical Supplies</span>
-                            <div class="progress">
-                                <div style="width:82%"></div>
-                            </div>
-                            <strong>82%</strong> <!--auto bold ng text-->
-                        </div>  
-
-                        <div class="category-row">
-                            <span>Consumables</span>
-                            <div class="progress">
-                                <div style="width:65%"></div>
-                            </div>
-                            <strong>65%</strong>
-                        </div>
-
-                        <div class="category-row">
-                            <span>Treatment Prep</span>
-                            <div class="progress">
-                                <div style="width:91%"></div>
-                            </div>
-                            <strong>91%</strong>
-                        </div>
-
-                        <div class="category-row">
-                            <span>Professional</span>
-                            <div class="progress">
-                                <div style="width:24%"></div>
-                            </div>
-                            <strong>24%</strong>
-                        </div>
-
-                        <div class="category-row">
-                            <span>Retail</span>
-                            <div class="progress">
-                                <div style="width:44%"></div>
-                            </div>
-                            <strong>44%</strong>
-                        </div>
-
-                        <div class="category-row">
-                            <span>Cleansers</span>
-                            <div class="progress">
-                                <div style="width:74%"></div>
-                            </div>
-                            <strong>74%</strong>
-                        </div>
-
-                        <div class="category-row">
-                            <span>Equipment</span>
-                            <div class="progress">
-                                <div style="width:85%"></div>
-                            </div>
-                                <strong>85%</strong>
-                        </div>
-
-                    </div>
+                    <div class="category-stock" id="categoryStock"></div>
 
                 </div>
 
@@ -375,44 +321,7 @@
 
                     <h3>LOW STOCK ALERTS</h3>
 
-                    <div class="alert-item critical-alert">
-                        <div>
-                            <strong>Salicylic Acid Cleanser</strong>
-                            <small>3 units · Expires Aug 2025</small>
-                        </div>
-
-                        <span>CRIT</span>
-                    </div>
-
-
-                    <div class="alert-item">
-                        <div>
-                            <strong>Hyaluronic Acid Moisturizer</strong>
-                            <small>12 units · Mar 2026</small>
-                        </div>
-
-                        <span>LOW</span>
-                    </div>
-
-
-                    <div class="alert-item">
-                        <div>
-                            <strong>SPF 50 Sunscreen</strong>
-                            <small>8 units · Jun 2026</small>
-                        </div>
-
-                        <span>LOW</span>
-                    </div>
-
-
-                    <div class="alert-item">
-                        <div>
-                            <strong>AHA BHA Exfoliant</strong>
-                            <small>6 units · Jul 2025</small>
-                        </div>
-
-                        <span>LOW</span>
-                    </div>
+                    <div class="low-stock-alerts" id="lowStockAlerts"></div>
 
                 </div>
 
@@ -420,107 +329,6 @@
 
         </section>
 
-
-        <!-- ================= TRANSACTION LOG ================= -->
-        <section class="transaction-section">
-
-            <div class="transaction-header">
-
-                <div>
-                    <h2>Stock Transaction Log</h2>
-                    <p>All stock movements recorded here</p>
-                </div>
-
-                <div class="transaction-filters">
-
-                    <select>
-                        <option>All Time</option>
-                        <option>Today</option>
-                        <option>This Week</option>
-                        <option>This Month</option>
-                    </select>
-
-                    <select>
-                        <option>Filter</option>
-                        <option>Restock</option>
-                        <option>Used in Service</option>
-                        <option>Adjustment</option>
-                        <option>Disposed / Expired</option>
-                    </select>
-
-                    <button class="btn btn-export">
-                        Export
-                    </button>
-
-                </div>
-
-            </div>
-
-
-            <div class="transaction-table-wrapper">
-
-                <table class="transaction-table">
-
-                    <thead>
-                        <tr>
-                            <th>DATE & TIME</th>
-                            <th>PRODUCT</th>
-                            <th>ACTION</th>
-                            <th>QTY CHANGE</th>
-                            <th>STOCK AFTER</th>
-                            <th>PERFORMED BY</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-
-                        <tr>
-                            <td>Apr 18, 2026<br><small>09:15 AM</small></td>
-                            <td>Vitamin C Brightening Serum</td>
-                            <td><span class="transaction restock">● Restock</span></td>
-                            <td class="positive">+24 units</td>
-                            <td>48 units</td>
-                            <td>Admin User</td>
-                        </tr>
-
-                        <tr>
-                            <td>Apr 18, 2026<br><small>10:32 AM</small></td>
-                            <td>TCA Peel Solution 20%</td>
-                            <td><span class="transaction used">● Used in Service</span></td>
-                            <td>−1 unit</td>
-                            <td>3 units</td>
-                            <td>Sofia Reyes</td>
-                        </tr>
-
-                        <tr>
-                            <td>Apr 17, 2026<br><small>03:45 PM</small></td>
-                            <td>Hyaluronic Acid Moisturizer</td>
-                            <td><span class="transaction adjustment">● Adjustment</span></td>
-                            <td>−2 units</td>
-                            <td>12 units</td>
-                            <td>Admin User</td>
-                        </tr>
-
-                        <tr>
-                            <td>Apr 17, 2026<br><small>11:00 AM</small></td>
-                            <td>AHA BHA Exfoliant</td>
-                            <td><span class="transaction disposed">● Disposed</span></td>
-                            <td class="critical-text">−4 units</td>
-                            <td>6 units</td>
-                            <td>Admin User</td>
-                        </tr>
-
-                    </tbody>
-
-                </table>
-
-            </div>
-
-            <div class="table-footer">
-                Showing 4 of 142 log entries
-            </div>
-
-        </section>
 
     </main>
         <!-- Delete Confirmation Modal -->

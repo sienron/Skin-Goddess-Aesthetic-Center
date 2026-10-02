@@ -26,6 +26,7 @@ const browserScripts = [
   'homepage-treatments-carousel.js',
   'inquiries-admin.js',
   'InventoryManagement.js',
+  'InventoryTransactions.js',
   'login.js',
   'my-appointments.js',
   'rating-widget.js',
