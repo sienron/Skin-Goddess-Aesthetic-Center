@@ -981,17 +981,23 @@ button{
 }
 
 .transaction-table-wrapper{
-    overflow-x: auto;
+    max-height: min(65vh, 620px);
+    overflow: auto;
+    overscroll-behavior: contain;
 }
 
 .transaction-table{
     width: 100%;
     min-width: 750px;
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
     
 }
 
 .transaction-table th{
+    position: sticky;
+    top: 0;
+    z-index: 1;
     background: #FAF8F4;
 
     color: #918A80;

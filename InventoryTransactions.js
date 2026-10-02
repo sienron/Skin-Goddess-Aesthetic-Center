@@ -21,10 +21,11 @@ function getPeriodStart(period){
 function getFilteredTransactions(){
     const period = transactionPeriodFilter.value;
     const type = transactionTypeFilter.value;
+    const transactionType = type === "deduct-stock" ? "Used in Service" : type;
     const periodStart = period === "all" ? null : getPeriodStart(period);
 
     return transactions.filter(transaction => {
-        if (type !== "all" && transaction.transaction_type !== type) return false;
+        if (transactionType !== "all" && transaction.transaction_type !== transactionType) return false;
         if (!periodStart) return true;
 
         const date = new Date(transaction.created_at);
