@@ -15,10 +15,14 @@
   const weekTimeColumn = document.getElementById('calWeekTimeColumn');
   const weekDaysGrid = document.getElementById('calWeekDaysGrid');
   const ratingContainer = document.getElementById('apptModalRatingContainer');
+    const upcomingList = document.getElementById('upcomingAppointments');
+    const upcomingCount = document.getElementById('upcomingAppointmentsCount');
+    const historyList = document.getElementById('appointmentHistory');
+    const historyCount = document.getElementById('appointmentHistoryCount');
 
   if (!grid || !weekdaysEl || !titleEl || !prevBtn || !nextBtn || !weekBtn || !monthBtn ||
       !message || !monthView || !weekView ||
-      !weekHeader || !weekTimeColumn || !weekDaysGrid) return;
+      !weekHeader || !weekTimeColumn || !weekDaysGrid || !upcomingList || !historyList) return;
 
   const DAY_NAMES = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
   const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
@@ -186,6 +190,87 @@
       openApptModal(appointment);
       renderRatingSection(appointment);
     }
+  }
+
+  function formatAppointmentDate(dateKey) {
+    const date = parseKey(dateKey);
+    return date.toLocaleDateString('en-PH', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  function statusLabel(appointment) {
+    if (appointment.cancellationRequestStatus === 'pending') return 'Cancellation requested';
+    if (appointment.rescheduleRequestStatus === 'pending') return 'Reschedule requested';
+    const labels = { confirmed: 'Confirmed', pending: 'Pending', cancelled: 'Cancelled', completed: 'Completed', no_show: 'No show' };
+    const status = String(appointment.status || appointment.appointment_status || '').toLowerCase().replace(/-/g, '_');
+    return labels[status] || (status ? status.replace(/_/g, ' ') : 'Status unavailable');
+  }
+
+  function renderAppointmentList(container, appointments, emptyMessage) {
+    container.replaceChildren();
+    if (!appointments.length) {
+      const empty = document.createElement('p');
+      empty.className = 'client-appointment-empty';
+      empty.textContent = emptyMessage;
+      container.appendChild(empty);
+      return;
+    }
+
+    appointments.forEach((appointment) => {
+      const dateKey = String(appointment.appointment_date || appointment.date).slice(0, 10);
+      const card = document.createElement('article');
+      card.className = 'client-appointment-card';
+
+      const details = document.createElement('div');
+      details.className = 'client-appointment-details';
+      const service = document.createElement('h3');
+      service.textContent = appointment.service_name || appointment.service || 'Appointment';
+      const when = document.createElement('p');
+      when.textContent = `${formatAppointmentDate(dateKey)} · ${formatTime(appointment.appointment_time || appointment.start)}`;
+      const staff = document.createElement('p');
+      staff.textContent = `With ${appointment.aesthetician || 'Aesthetician'}`;
+      details.append(service, when, staff);
+
+      const status = document.createElement('span');
+      const rawStatus = String(appointment.status || appointment.appointment_status || 'unknown').toLowerCase().replace(/_/g, '-');
+      status.className = `client-appointment-status status-${rawStatus}`;
+      status.textContent = statusLabel(appointment);
+
+      const viewButton = document.createElement('button');
+      viewButton.type = 'button';
+      viewButton.className = 'client-appointment-view';
+      viewButton.textContent = 'View details';
+      viewButton.addEventListener('click', () => openModal(appointment));
+      card.append(details, status, viewButton);
+      container.appendChild(card);
+    });
+  }
+
+  function renderAppointmentLists(appointments) {
+    const todayKey = manilaTodayKey();
+    const upcomingStatuses = new Set(['confirmed', 'pending']);
+    const upcoming = [];
+    const history = [];
+
+    appointments.forEach((appointment) => {
+      const dateKey = String(appointment.appointment_date || appointment.date).slice(0, 10);
+      const status = String(appointment.status || appointment.appointment_status || '').toLowerCase().replace(/-/g, '_');
+      if (upcomingStatuses.has(status) && dateKey >= todayKey) upcoming.push(appointment);
+      else history.push(appointment);
+    });
+
+    upcoming.sort((a, b) => {
+      const dateOrder = String(a.appointment_date || a.date).localeCompare(String(b.appointment_date || b.date));
+      return dateOrder || String(a.appointment_time || a.start).localeCompare(String(b.appointment_time || b.start));
+    });
+    history.sort((a, b) => {
+      const dateOrder = String(b.appointment_date || b.date).localeCompare(String(a.appointment_date || a.date));
+      return dateOrder || String(b.appointment_time || b.start).localeCompare(String(a.appointment_time || a.start));
+    });
+
+    if (upcomingCount) upcomingCount.textContent = String(upcoming.length);
+    if (historyCount) historyCount.textContent = String(history.length);
+    renderAppointmentList(upcomingList, upcoming, 'No upcoming appointments. Book a visit to see it here.');
+    renderAppointmentList(historyList, history, 'Past and cancelled appointments will appear here.');
   }
 
   // ---- Calendar rendering ----
@@ -368,6 +453,7 @@
       const response = await fetch('/api/appointments/mine');
       if (!response.ok) throw new Error('Could not load your appointments.');
       const appointments = await response.json();
+      renderAppointmentLists(appointments);
 
       appointmentsByDate = {};
       appointments.forEach((appointment) => {

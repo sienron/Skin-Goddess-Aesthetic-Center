@@ -59,6 +59,23 @@
     </div>
     <p class="appointments-message" id="appointmentsMessage" role="status" aria-live="polite"></p>
 
+    <div class="client-appointment-lists">
+      <section class="client-appointment-section" aria-labelledby="upcomingAppointmentsTitle">
+        <div class="client-appointment-section-heading">
+          <h2 id="upcomingAppointmentsTitle">Upcoming appointments</h2>
+          <span class="client-appointment-count" id="upcomingAppointmentsCount">0</span>
+        </div>
+        <div class="client-appointment-list" id="upcomingAppointments" aria-live="polite"></div>
+      </section>
+      <section class="client-appointment-section" aria-labelledby="appointmentHistoryTitle">
+        <div class="client-appointment-section-heading">
+          <h2 id="appointmentHistoryTitle">Appointment history</h2>
+          <span class="client-appointment-count" id="appointmentHistoryCount">0</span>
+        </div>
+        <div class="client-appointment-list" id="appointmentHistory" aria-live="polite"></div>
+      </section>
+    </div>
+
     <section class="client-calendar" id="clientCalendar" aria-label="Appointment calendar">
       <div class="cal-toolbar">
         <div class="cal-toolbar-left">

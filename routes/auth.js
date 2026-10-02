@@ -379,7 +379,6 @@ router.post('/login', loginLimiter, async (req, res) => {
     }
 
     const localDevMfaBypass = process.env.NODE_ENV !== 'production'
-      && user.dev_access_all === true
       && user.mfa_enabled === false;
     if (localDevMfaBypass) {
       await establishAuthenticatedSession(req, user, Boolean(staysignedin));
