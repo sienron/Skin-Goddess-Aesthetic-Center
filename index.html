@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -13,10 +13,16 @@
 
     <header class="public-header">
 
-        <div class="logo-container">
-          <a href="index.html"><img id="logo" src="images/logo_horizontal.jpg" alt="Skin Goddess Aesthetic Center logo"></a>
+        <div class="header-left">
+          <div class="logo-container glass-pill">
+            <a href="index.html"><img id="logo" src="images/logo_horizontal-removebg.png" alt="Skin Goddess Aesthetic Center logo"></a>
+          </div>
+          <button type="button" class="theme-toggle glass-pill" id="themeToggle" aria-label="Toggle light/dark mode">
+            <img src="icons/light-mode.svg" alt="" class="theme-toggle-icon">
+          </button>
         </div>
 
+        <div class="header-pill glass-pill">
         <nav class="public-nav">
             <ul class="public-nav-links">
                 <li><a href="index.html" class="active">Home</a></li>
@@ -25,10 +31,6 @@
                 <li><a href="ContactUsPage.html">Contact</a></li>
             </ul>
         </nav>
-
-        <button type="button" class="hamburger-btn" id="hamburgerBtn" aria-label="Open menu" aria-expanded="false" aria-controls="mobileNavDrawer">
-            <img src="icons/hamburger.svg" alt="" class="hamburger-icon">
-        </button>
 
         <div class="public-header-actions">
 
@@ -47,8 +49,6 @@
 
             <button class="book-now-btn" type="button" onclick="window.location.href='UserAppointment.html'">BOOK NOW</button>
 
-            <div class="public-divider"></div>
-
             <div class="header-profile-wrap" id="profileWrap">
               <button type="button" class="profile-row" id="profileBtn" aria-haspopup="true" aria-expanded="false">
                   <div class="profile-avatar">AR</div>
@@ -66,6 +66,11 @@
           </div>
 
         </div>
+        </div>
+
+        <button type="button" class="hamburger-btn" id="hamburgerBtn" aria-label="Open menu" aria-expanded="false" aria-controls="mobileNavDrawer">
+            <img src="icons/hamburger.svg" alt="" class="hamburger-icon">
+        </button>
 
     </header>
 
@@ -98,74 +103,37 @@
 
 <section class="hero">
   <div class="hero-visual">
-    <img src="images/SkinGoddessReceptionImg.jpg" alt="Skin Goddess Aesthetic Center reception area" class="hero-photo-img">
-    <div class="hero-fade"></div>
+    <img src="images/GSAP%20Hero.png" alt="" class="hero-photo-img">
   </div>
 
   <div class="hero-copy">
-    <div class="eyebrow">EXPERT CARE. GLOWING RESULTS.</div>
+    <a href="UserAppointment.html" class="hero-book-btn">Book appointment</a>
+    <p class="eyebrow">EXPERT CARE. GLOWING RESULTS.</p>
     <h1 class="headline">Healthy Skin.<br>Confident You.</h1>
     <p class="lede">Trusted skincare and aesthetic treatments, tailored to you at Skin-Goddess Aesthetic Center.</p>
+  </div>
 
-    <div class="cta-row">
-      <a href="UserAppointment.html" class="btn btn-primary">Book appointment</a>
-      <a href="#services" class="btn btn-outline">View services</a>
+      <div class="hero-step hero-step--certified" aria-hidden="false"><div class="hero-step-inner">
+        <h2>Certified Specialists</h2>
+        <p>Every treatment is<br>performed by fully licensed<br>professionals dedicated to<br>your results</p>
+      </div></div>
+      <div class="hero-step hero-step--personalized"><div class="hero-step-inner">
+        <h2>Personalized Plans</h2>
+        <p>Your skin is unique. Every<br>treatment plan is built around<br>your specific skin types, goals,<br>and concerns</p>
+      </div></div>
+      <div class="hero-step hero-step--premium"><div class="hero-step-inner">
+        <h2>Premium Products</h2>
+        <p>We use only dermatologist<br>approved, medical-grade<br>products and technologies in<br>every session</p>
+      </div></div>
+      <div class="hero-step hero-step--support"><div class="hero-step-inner">
+        <h2>Ongoing Support</h2>
+        <p>Skin doesn't stop after your<br>session. We provide<br>aftercare guidance and<br>follow-up consultations</p>
+      </div></div>
+  <div class="hero-reveal">
+    <div class="hero-reveal-inner">
+      <div class="eyebrow-line"><span class="dash"></span> OUR TREATMENTS</div>
+      <h2 class="treatments-heading">Tailored Care for <span class="accent">Every Skin Story</span></h2>
     </div>
-
-    <div class="features">
-      <div class="feature">
-        <div class="feature-icon">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z"/></svg>
-        </div>
-        <p>Advanced technology</p>
-      </div>
-      <div class="feature">
-        <div class="feature-icon">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20V2z"/><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
-        </div>
-        <p>Personalized care</p>
-      </div>
-      <div class="feature">
-        <div class="feature-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
-        </div>
-        <p>Safe and effective</p>
-      </div>
-      <div class="feature">
-        <div class="feature-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.2" fill="currentColor" stroke="none"/></svg>
-        </div>
-        <p>Trusted by 1000+ clients</p>
-      </div>
-    </div>
-  </div>
-
-</section>
-
-<section class="services-strip" id="services">
-  <div class="strip-col">
-    <h3>Facial Treatments</h3>
-    <p>Deep cleansing and hydrating facials for every skin type.</p>
-  </div>
-  <div class="strip-col">
-    <h3>Skin Whitening</h3>
-    <p>Science-backed brightening for a luminous, even complexion.</p>
-  </div>
-  <div class="strip-col">
-    <h3>Anti-Aging</h3>
-    <p>Advanced collagen-boosting and wrinkle-reduction therapies.</p>
-  </div>
-  <div class="strip-col">
-    <h3>Laser Therapy</h3>
-    <p>Precision laser for pigmentation, acne scars and resurfacing.</p>
-  </div>
-</section>
-
-<section class="treatments">
-  <div class="treatments-intro">
-    <div class="eyebrow-line"><span class="dash"></span> OUR TREATMENTS</div>
-    <h2 class="treatments-heading">Tailored Care for <span class="accent">Every Skin Story</span></h2>
-  </div>
 
   <div class="treatments-carousel-wrap">
 
@@ -483,6 +451,26 @@
     </button>
 
   </div>
+  </div>
+</section>
+
+<section class="services-strip" id="services">
+  <div class="strip-col">
+    <h3>Facial Treatments</h3>
+    <p>Deep cleansing and hydrating facials for every skin type.</p>
+  </div>
+  <div class="strip-col">
+    <h3>Skin Whitening</h3>
+    <p>Science-backed brightening for a luminous, even complexion.</p>
+  </div>
+  <div class="strip-col">
+    <h3>Anti-Aging</h3>
+    <p>Advanced collagen-boosting and wrinkle-reduction therapies.</p>
+  </div>
+  <div class="strip-col">
+    <h3>Laser Therapy</h3>
+    <p>Precision laser for pigmentation, acne scars and resurfacing.</p>
+  </div>
 </section>
 
 <section class="all-treatments">
@@ -719,6 +707,115 @@
   </button>
 </section>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.15.0/gsap.min.js" integrity="sha512-oJ8QbaQThQoJZ7oEv+29jfPM6CcP+zUxh3PKJs1vyOhx0UraUrE7PQgeItu3dOuCJyrzWpoYMsVjkkPEBzbUqw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script>
+  (() => {
+    const hero = document.querySelector(".homepage .hero");
+    if (hero && window.gsap && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      const intro = window.gsap.timeline({ defaults: { ease: "power3.out" } });
+      intro
+        .from(hero.querySelector(".hero-photo-img"), { autoAlpha: 0, scale: 1.05, duration: 1.2 })
+        .from(hero.querySelector(".hero-book-btn"), { autoAlpha: 0, duration: 0.6 }, "-=0.65")
+        .from(hero.querySelectorAll(".hero-copy > *:not(.hero-book-btn)"), { autoAlpha: 0, y: 20, duration: 0.65, stagger: 0.12 }, "-=0.35");
+    }
+  })();
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.15.0/ScrollTrigger.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script>
+  (() => {
+    const hero = document.querySelector(".homepage .hero");
+    if (!hero || !window.gsap || !window.ScrollTrigger) return;
+    const gsap = window.gsap;
+    gsap.registerPlugin(window.ScrollTrigger);
+
+    const mm = gsap.matchMedia();
+    mm.add("(min-width: 701px) and (prefers-reduced-motion: no-preference)", () => {
+      hero.classList.add("hero-scrolly");
+      const visual = hero.querySelector(".hero-visual");
+      const copy = hero.querySelector(".hero-copy");
+      const W = () => hero.clientWidth;
+      const H = () => hero.clientHeight;
+      const q = (name) => hero.querySelector(".hero-step--" + name);
+
+      // focus: point on the photo (0-1), at: where it lands on screen (0-1), text: where the text centres
+      const stops = [
+        { el: q("certified"), scale: 3, focus: [0.455, 0.40], at: [0.88, 0.42], text: [0.27, 0.50] },
+        { el: q("personalized"), scale: 3, focus: [0.52, 0.22], at: [0.88, 0.74], text: [0.38, 0.22] },
+        { el: q("premium"), scale: 3, focus: [0.50, 0.25], at: [0.10, 0.72], text: [0.60, 0.22] },
+        { el: q("support"), scale: 3, focus: [0.52, 0.40], at: [0.06, 0.36], text: [0.70, 0.42] },
+      ];
+      const zoomTo = (s) => ({
+        scale: s.scale,
+        x: () => s.at[0] * W() - s.focus[0] * s.scale * visual.offsetWidth,
+        y: () => s.at[1] * H() - visual.offsetTop - s.focus[1] * s.scale * visual.offsetHeight,
+      });
+
+      gsap.set(visual, { transformOrigin: "0 0" });
+      const tl = gsap.timeline({
+        defaults: { ease: "power2.inOut" },
+        scrollTrigger: {
+          trigger: hero,
+          start: "top top",
+          end: () => "+=" + H() * 10,
+          pin: true,
+          scrub: 1,
+          anticipatePin: 1,
+          invalidateOnRefresh: true,
+        },
+      });
+
+      const k = 2.3;
+      const place = (s) => {
+        const r = s.el.getBoundingClientRect();
+        const h = hero.getBoundingClientRect();
+        return {
+          x: s.text[0] * W() - (r.left - h.left + r.width / 2),
+          y: s.text[1] * H() - (r.top - h.top + r.height / 2),
+        };
+      };
+      stops.forEach((s) => gsap.set(s.el, { autoAlpha: 0, scale: k, transformOrigin: "50% 50%", ...place(s) }));
+
+      tl.to(copy, { autoAlpha: 0, y: -40, duration: 0.6, ease: "power2.out" }, 0);
+      stops.forEach((s, i) => {
+        const t = 0.4 + i * 2;
+        tl.to(visual, { ...zoomTo(s), duration: 1.2 }, t)
+          .to(s.el, { autoAlpha: 1, duration: 0.5, ease: "power1.out" }, t + 0.8)
+          .to(s.el, { autoAlpha: 0, duration: 0.4, ease: "power1.in" }, t + 1.7);
+      });
+      const end = 0.4 + stops.length * 2;
+      tl.to(visual, { scale: 1, x: 0, y: 0, duration: 1.4 }, end);
+      stops.forEach((s) => tl.set(s.el, { x: 0, y: 0, scale: 1 }, end + 1.4).to(s.el, { autoAlpha: 1, duration: 0.6, ease: "power1.out" }, end + 1.4));
+      tl.to({}, { duration: 1 }); // hold on the final view
+
+      // Gold circle grows from the chat launcher corner and wipes the hero
+      const reveal = hero.querySelector(".hero-reveal");
+      const revealInner = hero.querySelector(".hero-reveal-inner");
+      const wipe = { r: 0 };
+      const paintWipe = () => {
+        const cx = W() - 51, cy = H() - 57;
+        reveal.style.clipPath = wipe.r <= 0 ? "circle(0px at " + cx + "px " + cy + "px)" : "circle(" + wipe.r + "px at " + cx + "px " + cy + "px)";
+      };
+      paintWipe();
+      const carouselWrap = hero.querySelector(".treatments-carousel-wrap");
+      gsap.set(revealInner, { xPercent: -130, autoAlpha: 0 });
+      gsap.set(carouselWrap, { xPercent: -105, autoAlpha: 0 });
+      tl.to(wipe, { r: () => Math.hypot(W(), H()), duration: 1.6, ease: "power2.in", onUpdate: paintWipe })
+        .set([visual, copy, ...stops.map((s) => s.el)], { autoAlpha: 0 })
+        .to(revealInner, { xPercent: 0, autoAlpha: 1, duration: 1.2, ease: "power3.out" }, ">-0.1")
+        .to(carouselWrap, { xPercent: 0, autoAlpha: 1, duration: 1.6, ease: "power3.out" }, ">0.1")
+        .to({}, { duration: 1.5 });
+
+      hero.querySelectorAll(".hero-step-inner").forEach((el, i) => {
+        gsap.to(el, { y: i % 2 ? 7 : -7, duration: 2.4 + i * 0.3, ease: "sine.inOut", yoyo: true, repeat: -1 });
+      });
+
+      return () => {
+        hero.classList.remove("hero-scrolly");
+        hero.querySelector(".hero-reveal").style.clipPath = "";
+      };
+    });
+  })();
+</script>
 <script src="header.js"></script>
 <script src="homepage-treatments-carousel.js"></script>
 <script src="homepage-testimonials.js"></script>

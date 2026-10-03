@@ -1,4 +1,4 @@
-/* ===== FONTS & GLOBAL RESET ===== */
+﻿/* ===== FONTS & GLOBAL RESET ===== */
 :root {
   /* ===== Design tokens ===== */
   --cream: #FBF3E7;
@@ -14110,4 +14110,509 @@ textarea.cm-editor__input {
 .category-card[id],
 .featured-treatment[id] {
   scroll-margin-top: 110px;
+}
+
+/* ===== GLASSMORPHISM HEADER (homepage) ===== */
+
+body.homepage .public-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 16px 30px;
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  z-index: 100;
+}
+
+body.homepage .glass-pill {
+  background: rgba(255, 255, 255, 0.28);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border: none;
+  box-shadow: 0 8px 28px rgba(31, 38, 60, 0.12);
+  border-radius: 999px;
+}
+
+body.homepage .header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+body.homepage .header-left .logo-container {
+  width: auto;
+  height: 48px;
+  margin: 0;
+  padding: 0 16px;
+  box-sizing: border-box;
+  background: #fff;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+body.homepage .header-left .logo-container a {
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+body.homepage .header-left #logo {
+  height: 28px;
+  width: auto;
+  display: block;
+  border-radius: 6px;
+}
+
+body.homepage .theme-toggle {
+  width: 38px;
+  height: 38px;
+  box-sizing: border-box;
+  background: #fff;
+  border: none;
+  border-radius: 50%;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+body.homepage .theme-toggle:hover {
+  background-color: rgb(201, 168, 76);
+}
+
+body.homepage .theme-toggle-icon {
+  width: 14px;
+  height: 14px;
+}
+
+body.homepage .header-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px 6px 10px;
+  margin-left: auto;
+}
+
+body.homepage .public-nav {
+  margin: 0;
+  gap: 0;
+  flex-wrap: nowrap;
+}
+
+body.homepage .public-nav-links {
+  gap: 4px;
+}
+
+body.homepage .public-nav-links li a {
+  display: block;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 999px;
+  color: rgb(40, 44, 52);
+  font-size: 0.85rem;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+body.homepage .public-nav-links {
+  position: relative;
+}
+
+body.homepage .public-nav-links li {
+  position: relative;
+  z-index: 1;
+}
+
+body.homepage .public-nav-links li a:hover {
+  background: none;
+  border: none;
+}
+
+body.homepage .public-nav-links li a.active {
+  background: #fff;
+  color: #C9A84C;
+  border: none;
+}
+
+body.homepage .nav-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.5);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+}
+
+body.homepage .public-header-actions {
+  gap: 10px;
+}
+
+body.homepage .book-now-btn {
+  border-radius: 999px;
+  padding: 11px 22px;
+}
+
+body.homepage .hero {
+  min-height: max(620px, 100vh);
+  min-height: max(620px, 100svh);
+}
+
+@media (max-width: 768px) {
+  body.homepage .public-header {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  body.homepage .header-pill {
+    padding: 4px 8px;
+    margin-left: auto;
+  }
+
+  body.homepage .header-left .logo-container {
+    height: 40px;
+    padding: 0 12px;
+  }
+
+  body.homepage .header-left #logo {
+    height: 22px;
+  }
+
+  body.homepage .theme-toggle {
+    width: 34px;
+    height: 34px;
+  }
+
+  body.homepage .hamburger-btn {
+    order: 0;
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  body.homepage .book-now-btn {
+    padding: 8px 12px;
+  }
+}
+
+/* ===== GSAP homepage hero refresh ===== */
+body.homepage .hero {
+  display: block;
+  position: relative;
+  min-height: max(620px, 100vh);
+  min-height: max(620px, 100svh);
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--cream);
+}
+
+body.homepage .hero-visual {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  width: auto;
+  height: auto;
+  pointer-events: none;
+}
+
+body.homepage .hero-photo-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+
+body.homepage .hero-copy {
+  position: absolute;
+  z-index: 1;
+  top: 42%;
+  left: clamp(24px, 2.5vw, 40px);
+  display: flex;
+  flex-direction: column;
+  width: min(360px, calc(100% - 48px));
+  min-height: 0;
+  padding: 0;
+  transform: none;
+}
+
+body.homepage .hero-copy .eyebrow {
+  margin: 0 0 14px;
+  color: var(--gold-dark);
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .13em;
+}
+
+body.homepage .hero-copy .headline {
+  margin: 0 0 16px;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 3.1vw, 2.45rem);
+  font-weight: 700;
+  line-height: 1.12;
+  letter-spacing: -.01em;
+}
+
+body.homepage .hero-copy .lede {
+  max-width: 320px;
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+body.homepage .hero-book-btn {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  justify-content: center;
+  margin: 0 0 16px;
+  padding: 16px 30px;
+  border-radius: 10px;
+  background: var(--espresso);
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 700;
+  transition: transform .2s ease, background .2s ease;
+}
+
+body.homepage .hero-book-btn:hover {
+  background: var(--espresso-dark);
+  transform: translateY(-2px);
+}
+
+@media (min-width: 701px) {
+  body.homepage .hero-copy {
+    top: 36%;
+    left: 2.4vw;
+    width: 30vw;
+  }
+
+  body.homepage .hero-copy .eyebrow {
+    font-size: max(10px, 0.78vw);
+    margin-bottom: 0.9vw;
+  }
+
+  body.homepage .hero-copy .headline {
+    font-size: max(2rem, 3.4vw);
+    margin-bottom: 1vw;
+  }
+
+  body.homepage .hero-copy .lede {
+    max-width: 29vw;
+    font-size: max(12px, 0.98vw);
+  }
+
+  body.homepage .hero-book-btn {
+    padding: max(16px, 1.05vw) max(30px, 2vw);
+    font-size: max(14px, 1vw);
+    margin-bottom: 1.1vw;
+  }
+
+  body.homepage .faq-chat {
+    right: 20px;
+    bottom: 26px;
+  }
+
+  body.homepage .faq-chat-launcher {
+    width: 62px;
+    height: 62px;
+  }
+}
+
+body.homepage .hero-step {
+  display: none;
+}
+
+@media (min-width: 701px) {
+  body.homepage .hero.hero-scrolly {
+    height: 100vh;
+    height: 100svh;
+  }
+
+  body.homepage .hero.hero-scrolly .hero-step {
+    position: absolute;
+    z-index: 2;
+    display: block;
+    width: 21vw;
+    will-change: transform, opacity;
+  }
+
+  body.homepage .hero-step h2 {
+    margin: 0 0 0.25vw;
+    color: var(--gold-dark, #c9a84c);
+    font-family: var(--font-display);
+    font-size: max(15px, 1.35vw);
+    font-weight: 700;
+    line-height: 1.15;
+  }
+
+  body.homepage .hero-step p {
+    margin: 0;
+    color: var(--ink);
+    font-size: max(12px, 1vw);
+    line-height: 1.45;
+  }
+
+  body.homepage .hero-step--personalized { left: 15vw; top: 16%; }
+  body.homepage .hero-step--premium { right: 14.5vw; top: 15%; text-align: right; }
+  body.homepage .hero-step--certified { left: 11vw; top: 58%; }
+  body.homepage .hero-step--support { right: 10vw; top: 58%; text-align: right; }
+}
+
+@media (min-width: 701px) and (max-width: 1440px) {
+  body.homepage .hero-step--personalized { left: 10vw; }
+}
+
+@media (min-width: 701px) and (max-width: 900px) {
+  body.homepage .hero-visual {
+    top: auto;
+    bottom: 0;
+    aspect-ratio: 16 / 9;
+  }
+
+  body.homepage .hero.hero-scrolly .hero-step--personalized,
+  body.homepage .hero.hero-scrolly .hero-step--certified { left: 3vw; }
+
+  body.homepage .hero.hero-scrolly .hero-step--premium,
+  body.homepage .hero.hero-scrolly .hero-step--support { right: 3vw; }
+
+  body.homepage .hero-step--personalized,
+  body.homepage .hero-step--premium { top: 17%; }
+
+  body.homepage .hero-step--certified,
+  body.homepage .hero-step--support { top: 56%; }
+}
+
+@media (max-width: 768px) {
+  body.homepage .public-header {
+    justify-content: flex-start;
+    gap: 8px;
+  }
+
+  body.homepage .hamburger-btn {
+    order: -1;
+    width: 40px;
+    height: 40px;
+  }
+
+  body.homepage .header-left {
+    order: 0;
+    gap: 8px;
+  }
+
+  body.homepage .header-pill {
+    order: 1;
+    margin-left: auto;
+    gap: 6px;
+  }
+
+  body.homepage .public-header-actions .profile-info {
+    display: none;
+  }
+}
+
+body.homepage .hero-reveal {
+  display: none;
+}
+
+@media (min-width: 701px) {
+  body.homepage .hero.hero-scrolly .hero-reveal {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    display: block;
+    overflow: hidden;
+    background: #C9A84C;
+    clip-path: circle(0px at 100% 100%);
+  }
+
+  body.homepage .hero-reveal-inner {
+    padding: max(120px, 17vh) 5vw 0;
+  }
+
+  body.homepage .hero-reveal .eyebrow-line {
+    color: #8a6d1f;
+    margin-bottom: 1.4vw;
+  }
+
+  body.homepage .hero-reveal .eyebrow-line .dash {
+    background: #8a6d1f;
+  }
+
+  body.homepage .hero-reveal .treatments-heading {
+    margin: 0;
+    font-size: max(1.9rem, 3.4vw);
+    color: var(--ink);
+  }
+
+  body.homepage .hero-reveal .treatments-heading .accent {
+    color: #fff;
+  }
+}
+
+@media (min-width: 701px) {
+  body.homepage .hero-reveal .treatments-carousel-wrap {
+    margin-top: max(24px, 3.2vh);
+    will-change: transform;
+  }
+
+  body.homepage .hero-reveal .treatments-carousel {
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  body.homepage .hero-reveal .treatments-track {
+    gap: 24px;
+  }
+
+  body.homepage .hero-reveal .treatment-card {
+    flex-basis: clamp(240px, 21vw, 320px);
+    width: clamp(240px, 21vw, 320px);
+    height: clamp(320px, calc(100vh - 340px), 500px);
+  }
+
+  body.homepage .hero-reveal .carousel-nav {
+    top: 38%;
+  }
+
+  body.homepage .hero-reveal .carousel-nav--prev { left: 38px; }
+  body.homepage .hero-reveal .carousel-nav--next { right: 38px; }
+}
+
+@media (max-width: 700px) {
+  body.homepage .hero {
+    min-height: max(760px, 100vh);
+    min-height: max(760px, 100svh);
+  }
+
+  body.homepage .hero-visual {
+    height: 58%;
+  }
+
+  body.homepage .hero-photo-img {
+    object-position: center top;
+  }
+
+  body.homepage .hero-copy {
+    top: auto;
+    bottom: 112px;
+    left: 24px;
+    width: calc(100% - 48px);
+    transform: none;
+  }
+
+  body.homepage .hero-copy .headline {
+    font-size: clamp(2rem, 7vw, 2.45rem);
+  }
+
 }
