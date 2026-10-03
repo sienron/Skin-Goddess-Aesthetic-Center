@@ -60,7 +60,9 @@ async function apiRequest(url, options = {}) {
 
   if (!res.ok) {
     const message = (data && data.message) || `Request failed (${res.status})`;
-    throw new Error(message);
+    const error = new Error(message);
+    error.status = res.status;
+    throw error;
   }
   return data;
 }
@@ -103,9 +105,11 @@ function rowHTML(u) {
       <td class="um-visits"><span class="um-visits__count">—</span><span class="um-visits__label">not tracked yet</span></td>
       <td>—</td>
       <td>${statusCell}</td>
-      <td class="um-actions">
-        <a href="#" class="um-action um-action--view" data-action="view" data-id="${u.id}">View</a>
-        <a href="#" class="um-action um-action--danger" data-action="delete" data-id="${u.id}">Del</a>
+      <td>
+        <div class="um-actions">
+          <a href="#" class="um-action um-action--view" data-action="view" data-id="${u.id}">View</a>
+          <a href="#" class="um-action um-action--danger" data-action="delete" data-id="${u.id}">Del</a>
+        </div>
       </td>
     </tr>`;
 }
@@ -258,6 +262,12 @@ const modalSaveBtn = document.getElementById('umModalSaveBtn');
 const modalCancelBtn = document.getElementById('umModalCancelBtn');
 const modalSuspendBtn = document.getElementById('umModalSuspendBtn');
 const modalDeleteBtn = document.getElementById('umModalDeleteBtn');
+const deleteDialog = document.getElementById('umDeleteDialog');
+const deleteDescription = document.getElementById('umDeleteDescription');
+const deleteStatus = document.getElementById('umDeleteStatus');
+const deleteCancelBtn = document.getElementById('umDeleteCancel');
+const deleteConfirmBtn = document.getElementById('umDeleteConfirm');
+let deleteTarget = null;
 const passwordChangeSection = document.getElementById('umPasswordChangeSection');
 const changePasswordBtn = document.getElementById('umChangePassword');
 const passwordFields = document.getElementById('umPasswordFields');
@@ -497,17 +507,50 @@ if (modalSuspendBtn) {
 }
 
 if (modalDeleteBtn) {
-  modalDeleteBtn.addEventListener('click', async () => {
-    if (!confirm(`Delete ${editingUserCache.fullName}? This cannot be undone.`)) return;
-    try {
-      await apiRequest(`/api/users/${editingUserId}`, { method: 'DELETE' });
-      closeModal();
-      renderAll();
-    } catch (error) {
-      alert(error.message);
-    }
-  });
+  modalDeleteBtn.addEventListener('click', () => openDeleteDialog(editingUserId, editingUserCache.fullName));
 }
+
+function openDeleteDialog(id, name) {
+  deleteTarget = { id, name };
+  deleteDescription.textContent = `Delete ${name || 'this user'}? We will check for appointments before removing the account. Accounts with appointments cannot be deleted.`;
+  deleteStatus.hidden = true;
+  deleteStatus.textContent = '';
+  deleteConfirmBtn.disabled = false;
+  deleteConfirmBtn.textContent = 'Delete account';
+  deleteDialog.showModal();
+}
+
+deleteCancelBtn.addEventListener('click', () => deleteDialog.close());
+deleteDialog.addEventListener('click', (event) => {
+  if (event.target === deleteDialog) deleteDialog.close();
+});
+deleteDialog.addEventListener('close', () => { deleteTarget = null; });
+
+deleteConfirmBtn.addEventListener('click', async () => {
+  if (!deleteTarget) return;
+  const target = deleteTarget;
+  deleteConfirmBtn.disabled = true;
+  deleteCancelBtn.disabled = true;
+  deleteConfirmBtn.textContent = 'Checking and deleting...';
+
+  try {
+    await apiRequest(`/api/users/${target.id}`, { method: 'DELETE' });
+    deleteDialog.close();
+    if (String(editingUserId) === String(target.id)) closeModal();
+    renderAll();
+  } catch (error) {
+    deleteStatus.textContent = error.message;
+    deleteStatus.hidden = false;
+    deleteConfirmBtn.textContent = error.status === 409 ? 'Cannot delete account' : 'Try again';
+    deleteConfirmBtn.disabled = error.status === 409;
+  } finally {
+    deleteCancelBtn.disabled = false;
+    if (deleteDialog.open && deleteConfirmBtn.textContent === 'Checking and deleting...') {
+      deleteConfirmBtn.textContent = 'Delete account';
+      deleteConfirmBtn.disabled = false;
+    }
+  }
+});
 
 document.getElementById('umModalClose').addEventListener('click', closeModal);
 modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) closeModal(); });
@@ -531,13 +574,7 @@ tableBody.addEventListener('click', async (e) => {
   } else if (action === 'delete') {
     const row = link.closest('tr');
     const name = row.querySelector('.um-user-cell__name').textContent;
-    if (!confirm(`Delete ${name}? This cannot be undone.`)) return;
-    try {
-      await apiRequest(`/api/users/${id}`, { method: 'DELETE' });
-      renderAll();
-    } catch (error) {
-      alert(error.message);
-    }
+    openDeleteDialog(id, name);
   }
 });
 

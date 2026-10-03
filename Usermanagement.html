@@ -297,6 +297,17 @@
   </div>
 </div>
 
+<dialog class="um-delete-dialog" id="umDeleteDialog" aria-labelledby="umDeleteTitle" aria-describedby="umDeleteDescription">
+  <div class="um-delete-dialog__mark" aria-hidden="true">!</div>
+  <h2 id="umDeleteTitle">Delete user account?</h2>
+  <p id="umDeleteDescription"></p>
+  <p class="um-delete-dialog__status" id="umDeleteStatus" role="status" aria-live="polite" hidden></p>
+  <div class="um-delete-dialog__actions">
+    <button class="um-btn um-btn--ghost" id="umDeleteCancel" type="button">Cancel</button>
+    <button class="um-btn um-delete-dialog__confirm" id="umDeleteConfirm" type="button">Delete account</button>
+  </div>
+</dialog>
+
 <script src="admin-dashboard.js"></script>
 <script src="Usermanagement.js"></script>
 <script src="admin-notifications.js"></script>

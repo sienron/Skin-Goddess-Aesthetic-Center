@@ -367,23 +367,68 @@ router.patch('/:id/status', async (req, res) => {
 // DELETE /api/users/:id — permanently remove a user
 // ============================================
 router.delete('/:id', async (req, res) => {
+  const userId = Number(req.params.id);
+  if (!Number.isSafeInteger(userId) || userId < 1) {
+    return res.status(400).json({ message: 'Choose a valid user.' });
+  }
+
   // Guard rail: don't let an admin delete their own currently-logged-in account
-  if (String(req.session.userId) === String(req.params.id)) {
+  if (String(req.session.userId) === String(userId)) {
     return res.status(400).json({ message: 'You cannot delete your own account while logged in.' });
   }
 
   try {
-    const result = await db.query('DELETE FROM users WHERE user_id = $1 RETURNING user_id', [req.params.id]);
+    const result = await db.transaction(async (client) => {
+      const target = await client.query('SELECT user_id FROM users WHERE user_id = $1 FOR UPDATE', [userId]);
+      if (target.rows.length === 0) return { outcome: 'missing' };
 
-    if (result.rows.length === 0) {
+      const appointments = await client.query(
+        `SELECT 1 FROM appointments WHERE user_id = $1 OR aesthetician_id = $1
+         UNION ALL
+         SELECT 1 FROM treatment_notes WHERE author_id = $1
+         UNION ALL
+         SELECT 1 FROM appointment_ratings WHERE client_id = $1 OR staff_id = $1
+         LIMIT 1`,
+        [userId]
+      );
+      if (appointments.rows.length > 0) return { outcome: 'has-appointments' };
+
+      await client.query('DELETE FROM otp_codes WHERE user_id = $1', [userId]);
+      await client.query('DELETE FROM paymongo_checkout_sessions WHERE user_id = $1', [userId]);
+      await client.query('UPDATE payments SET recorded_by = NULL WHERE recorded_by = $1', [userId]);
+      await client.query(
+        `UPDATE expenses
+         SET recorded_by = NULLIF(recorded_by, $1), voided_by = NULLIF(voided_by, $1)
+         WHERE recorded_by = $1 OR voided_by = $1`,
+        [userId]
+      );
+      await client.query(
+        `UPDATE appointments
+         SET cancellation_requested_by = NULLIF(cancellation_requested_by, $1),
+             cancellation_reviewed_by = NULLIF(cancellation_reviewed_by, $1),
+             reschedule_requested_by = NULLIF(reschedule_requested_by, $1),
+             reschedule_reviewed_by = NULLIF(reschedule_reviewed_by, $1)
+         WHERE cancellation_requested_by = $1 OR cancellation_reviewed_by = $1
+            OR reschedule_requested_by = $1 OR reschedule_reviewed_by = $1`,
+        [userId]
+      );
+
+      await client.query('DELETE FROM users WHERE user_id = $1', [userId]);
+      return { outcome: 'deleted' };
+    });
+
+    if (result.outcome === 'missing') {
       return res.status(404).json({ message: 'User not found.' });
+    }
+    if (result.outcome === 'has-appointments') {
+      return res.status(409).json({ message: 'This user has appointments and cannot be deleted. Suspend the account instead.' });
     }
 
     res.status(200).json({ message: 'User deleted.' });
   } catch (error) {
     if (error.code === '23503') {
       return res.status(409).json({
-        message: 'This user has linked appointments or records and cannot be deleted. Suspend the account instead.',
+        message: 'This account is linked to records that must be retained and cannot be deleted.',
       });
     }
     console.error('Delete user error:', error);
