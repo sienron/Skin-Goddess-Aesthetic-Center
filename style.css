@@ -3025,7 +3025,7 @@ hr {
 
 /* ===== CLIENT APPOINTMENT BOOKING PAGE (UserAppointment.html) ===== */
 
-/* Layout: 3-column grid — services | date/time + client details | booking summary.
+/* Layout: 3-column grid â€” services | date/time + client details | booking summary.
  Placeholder service data + placeholder calendar availability; both are meant to be
  swapped for API-driven data once the backend exists (see comments in appointment-booking.js). */
 
@@ -3676,13 +3676,13 @@ hr {
 }
 
 /* ============================================================
- HOMEPAGE (Skin Goddess Aesthetic Center — public site)
+ HOMEPAGE (Skin Goddess Aesthetic Center â€” public site)
  Everything below is scoped to <body class="homepage">
  so it can't affect the staff/admin pages above, and vice versa.
  ============================================================ */
 
 /* ============================================================
- Skin Goddess Aesthetic Center — Hero Section
+ Skin Goddess Aesthetic Center â€” Hero Section
  ============================================================ */
 
 
@@ -3711,11 +3711,12 @@ a {
    HERO
    Layered approach: full-bleed photo sits behind everything,
    a wide gradient overlay fades the photo into the cream tone,
-   and the text column floats on top — no hard seam anywhere.
+   and the text column floats on top â€” no hard seam anywhere.
 ============================================================ */
 .hero {
   position: relative;
-  min-height: 780px;
+  min-height: max(620px, calc(100vh - 72px));
+  min-height: max(620px, calc(100svh - 72px));
   overflow: hidden;
   background: var(--cream);
   /* fallback under the fade */
@@ -3737,7 +3738,7 @@ a {
 }
 
 /* the fade: solid cream through the text zone, then a long
-   soft transition into full photo — this is what removes the seam */
+   soft transition into full photo â€” this is what removes the seam */
 .hero-fade {
   position: absolute;
   inset: 0;
@@ -3758,7 +3759,8 @@ a {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  min-height: 780px;
+  min-height: max(620px, calc(100vh - 72px));
+  min-height: max(620px, calc(100svh - 72px));
 }
 
 .eyebrow {
@@ -3927,7 +3929,7 @@ a {
   border-bottom: 1px solid var(--line);
 }
 
-/* thin gold accent line across the very top, fading out to the right —
+/* thin gold accent line across the very top, fading out to the right â€”
    echoes the hairline seen in the reference */
 .services-strip::before {
   content: "";
@@ -4013,7 +4015,7 @@ a {
 /* ============================================================
    TREATMENTS
    Intro block + 3-column card grid. Card photos are placeholder
-   gradients for now — swap .card-media for an <img> once real
+   gradients for now â€” swap .card-media for an <img> once real
    treatment photos are ready (see note near .card-media below).
 ============================================================ */
 .treatments {
@@ -4172,71 +4174,61 @@ a {
 }
 
 .treatment-card {
-  background: var(--white);
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  overflow: hidden;
+  position: relative;
   display: flex;
   flex-direction: column;
+  justify-content: flex-end;
   flex: 0 0 320px;
   width: 320px;
+  height: 500px;
+  border-radius: 4px;
+  border-top: 4px solid var(--gold);
+  overflow: hidden;
+  color: var(--white);
+  text-decoration: none;
+  background: var(--espresso);
   transition: transform .2s ease, box-shadow .2s ease;
 }
 
-.treatment-card:hover {
+.treatment-card:hover,
+.treatment-card:focus-visible {
   transform: translateY(-4px);
-  box-shadow: 0 16px 32px rgba(90, 58, 30, .1);
+  box-shadow: 0 16px 32px rgba(90, 58, 30, .2);
 }
 
-/* Photo block: image fills the box, cropped to fit, with the
-   gold accent line across the top. */
-.card-media {
-  height: 230px;
-  border-top: 4px solid var(--gold);
-  overflow: hidden;
-}
-
-.card-media img {
+/* Photo fills the whole card; a bottom gradient keeps the text legible. */
+.card-bg {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  display: block;
   transition: transform .35s ease;
 }
 
-.treatment-card:hover .card-media img {
+.treatment-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(20, 12, 6, .88) 0%, rgba(20, 12, 6, .55) 45%, rgba(20, 12, 6, 0) 75%);
+}
+
+.treatment-card:hover .card-bg {
   transform: scale(1.05);
 }
 
-/* Placeholder photo block for treatments without a photo yet —
-   swap in an <img> (like the cards above) once one is available. */
-.card-media--placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, var(--cream-deep), var(--gold) 165%);
-}
-
-.card-media--placeholder span {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 46px;
-  color: var(--white);
-  opacity: .9;
-}
-
 .card-body {
-  padding: 26px 26px 30px;
-  display: flex;
-  flex-direction: column;
-  flex: 1;
+  position: relative;
+  z-index: 1;
+  padding: 26px;
+  text-align: left;
 }
 
 .card-body h3 {
   font-family: var(--font-display);
   font-weight: 600;
   font-size: 21px;
-  color: var(--ink);
+  color: var(--white);
   margin-bottom: 6px;
 }
 
@@ -4244,30 +4236,19 @@ a {
   font-size: 12px;
   font-weight: 600;
   letter-spacing: .04em;
-  color: var(--grey);
-  margin-bottom: 16px;
+  color: var(--gold);
+  margin-bottom: 10px;
 }
 
 .card-body p {
-  font-size: 14px;
-  line-height: 1.6;
-  color: var(--ink-soft);
-  margin-bottom: 22px;
-  flex: 1;
-}
-
-.learn-more {
-  font-size: 12.5px;
-  font-weight: 700;
-  letter-spacing: .06em;
-  color: var(--gold-dark);
-  text-decoration: underline;
-  text-underline-offset: 5px;
-  width: fit-content;
-}
-
-.learn-more:hover {
-  color: var(--espresso);
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, .88);
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* ---- Responsive ---- */
@@ -4275,6 +4256,7 @@ a {
   .treatment-card {
     flex-basis: 280px;
     width: 280px;
+    height: 470px;
   }
 }
 
@@ -4286,10 +4268,7 @@ a {
   .treatment-card {
     flex-basis: 250px;
     width: 250px;
-  }
-
-  .card-media {
-    height: 190px;
+    height: 440px;
   }
 }
 
@@ -4498,7 +4477,7 @@ a {
 }
 
 /* "How we work" now lives inside .all-treatments as the right-hand
-   column — always in the compact vertical-with-connector layout,
+   column â€” always in the compact vertical-with-connector layout,
    styled for the dark photo background instead of the cream one. */
 .hww-headline {
   display: flex;
@@ -5159,7 +5138,7 @@ a {
 /* BAGONG ADD */
 
 /* ============================================
-   SKIN GODDESS AESTHETIC CENTER — MERGED STYLESHEET
+   SKIN GODDESS AESTHETIC CENTER â€” MERGED STYLESHEET
    Combines: LoginPage.html + Registration page
    Gold + font resolved by Josh (2026-08-02)
    ============================================ */
@@ -5194,8 +5173,8 @@ a {
 }
 
 /* ============================================
-      TYPOGRAPHY — Poppins site-wide
-      ⚠️ Josh: add this to <head> of BOTH html files:
+      TYPOGRAPHY â€” Poppins site-wide
+      âš ï¸ Josh: add this to <head> of BOTH html files:
       <link rel="preconnect" href="https://fonts.googleapis.com">
       <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
       ============================================ */
@@ -5292,7 +5271,7 @@ select {
 }
 
 /* ============================================
-      LOGIN PAGE — page-specific
+      LOGIN PAGE â€” page-specific
       ============================================ */
 
 .login-layout {
@@ -5687,7 +5666,7 @@ body.modal-open {
 }
 
 /* ============================================
-      REGISTRATION PAGE — page-specific
+      REGISTRATION PAGE â€” page-specific
       ============================================ */
 
 .page {
@@ -6411,14 +6390,14 @@ main.page {
 /* ============================================
    Contact Us page (ContactUsPage.html)
    Append this block into the shared style.css
-   Uses existing brand variables (gold/Poppins) —
+   Uses existing brand variables (gold/Poppins) â€”
    renamed .auth-form-row -> .contact-form-row to avoid
    colliding with the login/registration .auth-form-row
    ============================================ */
 
 .contact-page {
   background-color: #F7F5F0;
-  /* close to --bg-cream but not identical — per Figma spec; tell me if you want it to match --bg-cream exactly instead */
+  /* close to --bg-cream but not identical â€” per Figma spec; tell me if you want it to match --bg-cream exactly instead */
   color: var(--text-dark);
 }
 
@@ -7019,7 +6998,7 @@ body.services {
 /* ---- Dark media panel ----
      1. Add  <img src="images/photo.jpg" class="category-photo">
         as the FIRST child inside .category-media (before the badge)
-   The scrim (.category-media::after) stays either way — that's
+   The scrim (.category-media::after) stays either way â€” that's
    what keeps the badge/title/price legible over a photo. */
 .category-media {
   position: relative;
@@ -7043,7 +7022,7 @@ body.services {
   z-index: 0;
 }
 
-/* the gradient scrim — transparent at the top so the photo shows,
+/* the gradient scrim â€” transparent at the top so the photo shows,
    darkening from the middle down so the title/price stay readable
    regardless of what's behind them */
 .category-media::after {
@@ -7229,7 +7208,7 @@ body.services {
 }
 
 /* the same "transparent top, dark bottom" scrim used on the
-   category cards — keeps the badge/title readable up top even
+   category cards â€” keeps the badge/title readable up top even
    without darkening, then deepens through the lower half where
    the subtitle/price/button sit */
 .featured-treatment-scrim {
@@ -7526,7 +7505,7 @@ body.services {
   transform: translateY(-2px);
 }
 
-/* Reset Password — success state */
+/* Reset Password â€” success state */
 .reset-success {
   margin-top: 16px;
 }
@@ -7538,7 +7517,7 @@ body.services {
 }
 
 /* ============================================
-   Admin — User Management page (UserManagement.html)
+   Admin â€” User Management page (UserManagement.html)
    Append this block to the end of the shared style.css.
    Reuses existing tokens where the value already matches
    (--gold-2, --text-dark, --text-muted). New tokens are
@@ -7549,7 +7528,7 @@ body.services {
 
 :root {
   --um-bg-cream: #F7F5F0;
-  /* NOT the same as --bg-cream (#F1ECE3) — this page's
+  /* NOT the same as --bg-cream (#F1ECE3) â€” this page's
                                       Figma spec uses a slightly different cream */
   --um-border: #ece7dd;
   --um-text-body: #4a4540;
@@ -8535,7 +8514,7 @@ body.services {
 
 
 /* ============================================
-   Admin Dashboard — content placeholder panels
+   Admin Dashboard â€” content placeholder panels
    (AdminDashboard.html)
    ============================================ */
 
@@ -10442,7 +10421,7 @@ body.services {
     padding-top: 60px;
   }
 
-  /* no more margin-left here — flex handles spacing on desktop, fixed sidebar only kicks in here */
+  /* no more margin-left here â€” flex handles spacing on desktop, fixed sidebar only kicks in here */
 
   .um-stats {
     grid-template-columns: repeat(2, 1fr);
@@ -10971,7 +10950,7 @@ body.services {
 }
 
 /* ============================================
-   Admin — Appointment Management page (AdminAppointment.html)
+   Admin â€” Appointment Management page (AdminAppointment.html)
    Append this block to the END of the shared style.css.
    Reuses the existing um-* shell, header, stat cards, tabs,
    buttons, and pagination. New classes are prefixed apt-
@@ -12795,7 +12774,7 @@ main.my-appointments-main .booking-intro {
 }
 
 /* ============================================
-   Admin — Content Management page (ContentManagement.html)
+   Admin â€” Content Management page (ContentManagement.html)
    Append this block to the END of the shared style.css.
    Reuses the existing um-* shell, header, tabs, table, and
    apt-action buttons from AdminAppointment.html. New classes
@@ -13941,4 +13920,8 @@ textarea.cm-editor__input {
     max-width: 210px;
     margin: 0 auto;
   }
+}
+.category-card[id],
+.featured-treatment[id] {
+  scroll-margin-top: 110px;
 }

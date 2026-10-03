@@ -87,7 +87,7 @@
   }
 
   function formatPrice(value) {
-    return `₱${Number(value).toLocaleString('en-PH', { maximumFractionDigits: 2 })}`;
+    return `â‚±${Number(value).toLocaleString('en-PH', { maximumFractionDigits: 2 })}`;
   }
 
   function createServiceCard(category, items) {
@@ -132,7 +132,7 @@
     const high = Math.max(...prices);
     article.querySelector('.category-price-range').textContent = low === high
       ? formatPrice(low)
-      : `${formatPrice(low)} – ${formatPrice(high)}`;
+      : `${formatPrice(low)} â€“ ${formatPrice(high)}`;
     article.querySelector('.category-count').textContent = `${items.length} ${items.length === 1 ? 'service' : 'services'}`;
     const description = article.querySelector('.category-body-description');
     if (description) description.textContent = items[0]?.description || '';
@@ -180,6 +180,7 @@
         }
       });
       existingCards.forEach((card) => card.remove());
+      if (location.hash) document.getElementById(decodeURIComponent(location.hash.slice(1)))?.scrollIntoView();
     } catch (error) {
       console.warn('Could not load published services:', error.message);
     }
