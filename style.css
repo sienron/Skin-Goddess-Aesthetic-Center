@@ -1227,6 +1227,27 @@ hr {
     min-height: 1.8em;
   }
 
+  .clients-table {
+    min-width: 0;
+    table-layout: fixed;
+  }
+
+  .clients-table-wrap,
+  .staff-appointments-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .clients-table th,
+  .clients-table td,
+  .staff-appointments-table th,
+  .staff-appointments-table td {
+    padding: 10px 8px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
   .clients-table-heading {
     padding: 13px 14px;
   }
@@ -1939,6 +1960,21 @@ hr {
   .staff-toolbar-search {
     width: 100%;
     max-width: none;
+  }
+
+  .staff-page-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .staff-page-heading h1 {
+    font-size: clamp(1.3rem, 8vw, 1.9rem);
+  }
+
+  .staff-primary-link {
+    width: 100%;
+    text-align: center;
   }
 }
 
@@ -10517,6 +10553,10 @@ body.services {
 }
 
 @media (max-width: 640px) {
+  .um-shell {
+    display: block;
+  }
+
   .um-main {
     width: 100%;
     min-width: 0;
@@ -10693,16 +10733,32 @@ body.services {
   }
 
   .um-tabs {
-    overflow: hidden;
-    white-space: normal;
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 2px;
+  }
+
+  .um-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .um-tab {
+    flex: 0 0 auto;
   }
 
   .um-table-wrap {
-    overflow: hidden;
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
   }
 
   .um-table {
-    min-width: 0;
+    min-width: 640px;
     table-layout: fixed;
   }
 
@@ -12212,8 +12268,23 @@ body.services {
     gap: 3px;
   }
 
+  .inquiry-list-email,
+  .inquiry-list-preview {
+    white-space: normal;
+    line-height: 1.5;
+  }
+
   .inquiry-detail-header h2 {
     font-size: 17px;
+  }
+
+  .inquiry-reply-actions {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .inquiry-reply-actions .um-btn {
+    width: 100%;
   }
 }
 
@@ -13101,6 +13172,33 @@ textarea.cm-editor__input {
   .cm-actions {
     width: 100%;
     justify-content: flex-end;
+  }
+
+  .cm-card .um-tabs {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    white-space: nowrap;
+    padding: 0 10px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .cm-card .um-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .cm-card .um-tab {
+    flex: 0 0 auto;
+  }
+
+  .cm-editor__footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .cm-editor__footer .um-btn {
+    width: 100%;
   }
 }
 
