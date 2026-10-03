@@ -1,4 +1,4 @@
-/* ===== Profile Area: show real user info if logged in, Sign In button if not ===== */
+﻿/* ===== Profile Area: show real user info if logged in, Sign In button if not ===== */
 (function () {
     const profileWrap = document.getElementById('profileWrap');
     const profileBtn = document.getElementById('profileBtn');
@@ -288,4 +288,35 @@
     drawerLinks.forEach((link) => {
         link.addEventListener("click", closeDrawer);
     });
+})();
+
+/* ===== Glass nav: sliding hover indicator ===== */
+(function () {
+    const list = document.querySelector('body.homepage .public-nav-links');
+    if (!list) return;
+    const indicator = document.createElement('span');
+    indicator.className = 'nav-indicator';
+    list.appendChild(indicator);
+    const links = list.querySelectorAll('a');
+    const active = list.querySelector('a.active');
+
+    function moveTo(a) {
+        const el = a && a.parentElement;
+        if (!el) { indicator.style.opacity = '0'; return; }
+        indicator.style.width = el.offsetWidth + 'px';
+        indicator.style.height = el.offsetHeight + 'px';
+        indicator.style.transform = 'translate(' + el.offsetLeft + 'px,' + el.offsetTop + 'px)';
+        indicator.style.opacity = '1';
+    }
+    const reset = () => moveTo(active);
+
+    links.forEach(a => {
+        a.addEventListener('mouseenter', () => moveTo(a));
+        a.addEventListener('focus', () => moveTo(a));
+        a.addEventListener('blur', reset);
+    });
+    list.addEventListener('mouseleave', reset);
+    window.addEventListener('resize', reset);
+    window.addEventListener('load', reset);
+    reset();
 })();
