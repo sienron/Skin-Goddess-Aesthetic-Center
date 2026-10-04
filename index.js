@@ -140,6 +140,7 @@ const protectedPages = [
   { path: '/AdminAppointment.html', roles: ['admin'] },
   { path: '/AdminContentManagement.html', roles: ['admin'] },
   { path: '/AdminInquiries.html', roles: ['admin'] },
+  { path: '/AdminInventoryManagement.html', roles: ['admin'] },
   { path: '/Usermanagement.html', roles: ['admin'] },
 
   { path: '/InventoryManagement.html', roles: ['inventory_officer', 'admin'] },

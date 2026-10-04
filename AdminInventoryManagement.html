@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Admin Inventory Management</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="InventoryManagement.css">
+    <style>
+        .admin-inventory-main > .inventory-page {
+            display: block;
+            min-width: 0;
+        }
+
+        .admin-inventory-main .header-title h1 {
+            font-weight: 400;
+        }
+    </style>
+</head>
+
+<body class="InventoryManagement">
+    <div class="um-shell">
+        <button class="um-sidebar-toggle um-sidebar-toggle--admin" id="umSidebarToggle" type="button" aria-label="Toggle menu" aria-expanded="false">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+        <div class="um-sidebar-overlay" id="umSidebarOverlay"></div>
+
+        <aside class="um-sidebar" id="umSidebar">
+            <a href="index.html" class="um-sidebar__logo">
+                <div class="logo-container">
+                    <img id="logo" src="images/logo_horizontal.jpg" alt="Skin Goddess Aesthetic Center logo">
+                </div>
+            </a>
+            <p class="um-sidebar__label">MAIN MENU</p>
+            <nav class="um-sidebar__nav">
+                <a href="AdminDashboard.html" class="um-nav-link">Dashboard</a>
+                <a href="AdminAppointment.html" class="um-nav-link">Appointments</a>
+                <a href="AdminInquiries.html" class="um-nav-link">Inquiries</a>
+                <a href="AdminInventoryManagement.html" class="um-nav-link um-nav-link--active" aria-current="page">Inventory</a>
+                <a href="Reports.html" class="um-nav-link">Reports</a>
+                <a href="Usermanagement.html" class="um-nav-link">User Management</a>
+                <a href="AdminContentManagement.html" class="um-nav-link">Content Management</a>
+            </nav>
+            <div class="um-sidebar__account">
+                <button class="um-sidebar__profile" id="adminProfileBtn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="adminProfileMenu">
+                    <span class="um-avatar">A</span>
+                    <span class="um-sidebar__account-details">
+                        <span class="um-sidebar__account-name">Admin User</span>
+                        <span class="um-sidebar__account-role">Owner</span>
+                    </span>
+                </button>
+                <div class="um-sidebar__account-menu" id="adminProfileMenu" role="menu">
+                    <button class="um-sidebar__logout" id="adminLogoutBtn" type="button" role="menuitem">Log out</button>
+                </div>
+            </div>
+        </aside>
+
+        <div class="um-main admin-inventory-main" id="adminInventoryMain">
+         <!-- ================= HEADER ================= -->
+    <header class="inventory-header">
+
+        <div class="header-left">
+            <div class="header-title">
+                <h1>Admin Inventory Management</h1>
+                <p>Track stock, expiry, and low-stock alerts</p>
+            </div>
+        </div>
+
+        <div class="header-actions">
+            <div class="admin-notification-wrap">
+                <button class="admin-notification-btn" id="adminNotificationBtn" type="button" aria-label="View notifications" aria-haspopup="true" aria-expanded="false" aria-controls="adminNotificationDropdown">
+                    <img src="icons/notification-bell.svg" alt="">
+                </button>
+                <div class="admin-notification-dropdown" id="adminNotificationDropdown">
+                    <strong>Notifications</strong>
+                    <div class="admin-notification-list">No notifications yet</div>
+                </div>
+            </div>
+         
+            <button class="btn btn-batch-upload">
+                <img class = "ocr-img" src="images/OCRImg.png" alt="OCR LOGO">  
+                Batch Upload
+            </button>
+            
+            <button class="btn btn-export" id="exportInventory" type="button">
+                Export
+            </button>
+
+            <button class="btn btn-add-product">
+                + Add Product
+            </button>
+
+           
+
+        </div>
+
+    </header>
+
+    
+
+    <main class="inventory-page">
+
+       
+       
+
+        <!-- ================= SUMMARY CARDS ================= -->
+        <section class="summary-cards">
+
+            <div class="summary-card clickable-summary" id="totalProductsCard">
+                <div class="summary-label">TOTAL PRODUCTS</div>
+                <div class="summary-value" id="totalProducts"></div>
+                <div class="summary-info positive" id="restockedToday">
+                    ↑  restocked today
+                </div>
+                <div class="summary-info positive" id="deductedToday">
+                    ↓  units deducted today
+                </div>
+            </div>
+
+            <div class="summary-card clickable-summary" id="lowStockCard">
+                <div class="summary-label">LOW STOCK ITEMS</div>
+                <div class="summary-value" id="lowStockCount"></div>
+                <div class="summary-info warning" id="lowStockToday" >
+                    ↑ new today
+                </div>
+            </div>
+
+            <div class="summary-card clickable-summary" id="criticalStockCard">
+                <div class="summary-label">CRITICAL STOCK ITEMS</div>
+                <div class="summary-value" id="criticalStockCount"></div>
+                <div class="summary-info positive" id="criticalStockToday">
+                    ↑ new today
+                </div>
+            </div>
+
+            <div class="summary-card clickable-summary" id="outOfStockCard">
+                <div class="summary-label">OUT OF STOCK ITEMS</div>
+                <div class="summary-value" id="outOfStockCount"></div>
+                <div class="summary-info positive" id="outOfStockToday">
+                    ↑ new today
+                </div>
+            </div>
+
+            <div class="summary-card clickable-summary" id="expiringSoonCard">
+                <div class="summary-label">EXPIRING SOON</div>
+                <div class="summary-value" id="expiringSoonCount"></div>
+                <div class="summary-info danger">
+                    Within 30 days
+                </div>
+            </div>
+
+         
+
+
+
+        </section>
+
+
+        <!-- ================= FILTERS (just removed) ================= -->
+
+
+
+        <!-- ================= MAIN CONTENT ================= -->
+        <section class="inventory-layout">
+
+            <!-- PRODUCT TABLE -->
+            <div class="inventory-table-container">
+
+                <div class="table-heading">
+
+                    <div class="table-title">
+                        <h2>Products</h2>
+                        <p>Manage product stock and expiration dates</p>
+                    </div>
+                
+                    <div class="table-filters">
+                
+                        <div class="search-box">
+                            <input 
+                                type="text" 
+                                id="searchInput" 
+                                placeholder="Search products..."
+                            >
+                        </div>
+                
+                        <button class="btn clear-filters" id="clearFilters">
+                            Clear Filters
+                        </button>
+                
+                    </div>
+                
+                </div>
+
+
+                <div class="table-wrapper">
+
+                    <table class="inventory-table">
+
+                        <thead>
+                            <tr>
+                                <th>PRODUCT NAME</th>
+                            
+                                <th>
+                                    <div class="table-header-filter">
+                                        
+                                        <select id="categoryFilter">
+                                            <option value="all">ALL CATEGORIES</option>
+                                            <option value="Medical/Injection Supplies">Medical/Injection Supplies</option>
+                                            <option value="Disposables & Clinic Consumables">Disposables & Clinic Consumables</option>
+                                            <option value="Facial/Treatment Prep Products">Facial/Treatment Prep Products</option>
+                                            <option value="Facial Treatment Products (Professional Use)">Facial Treatment Products (Professional Use)</option>
+                                            <option value="Skincare Products (Retail / Aftercare)">Skincare Products (Retail / Aftercare)</option>
+                                            <option value="Soaps & Cleansers">Soaps & Cleansers</option>
+                                            <option value="Tools/Equipment/Misc.">Tools/Equipment/Misc.</option>
+                                        </select>
+                                    </div>
+                                </th>
+                            
+                                <th>
+                                    <div class="table-header-filter">
+                                       
+                                        <select id="stockFilter">
+                                            <option value="all">ALL STOCKS</option>
+                                            <option value="0">0</option>
+                                            <option value="low">LOW STOCK</option>
+                                            <option value="21-40">21–40</option>
+                                            <option value="41-60">41–60</option>
+                                            <option value="61-80">61–80</option>
+                                            <option value="81-100">81–100</option>
+                                        </select>
+                                    </div>
+                                </th>
+                            
+                                <th>
+                                    <div class="table-header-filter">
+                                        
+                                        <select id="expiryFilter">
+                                            <option value="all">ALL EXPIRY DATES</option>
+                                            <option value="expired">Expired</option>
+                                            <option value="30">Within 30 Days</option>
+                                            <option value="60">31–60 Days</option>
+                                            <option value="90">61–90 Days</option>
+                                            <option value="over90">Over 90 Days</option>
+                                            <option value="none">No Expiration</option>
+                                        </select>
+                                    </div>
+                                </th>
+                            
+                                <th>
+                                    <div class="table-header-filter">
+                                        
+                                        <select id="statusFilter">
+                                            <option value="all">ALL STATUS</option>
+                                            <option value="out-of-stock">Out of Stock</option>
+                                            <option value="critical">Critical</option>
+                                            <option value="low">Low Stock</option>
+                                            <option value="in-stock">In Stock</option>
+                                            
+                                        </select>
+                                    </div>
+                                </th>
+                            
+                                <th>ACTIONS</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="inventoryBody">
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+
+            <!-- ================= RIGHT SIDEBAR ================= -->
+            <aside class="inventory-sidebar">
+
+                <!-- Stock by Category -->
+                <div class="side-card">
+
+                    <h3>STOCK BY CATEGORY</h3>
+
+                    <div class="category-stock" id="categoryStock"></div>
+
+                </div>
+
+
+                <!-- Low Stock Alerts -->
+                <div class="side-card">
+
+                    <h3>LOW STOCK ALERTS</h3>
+
+                    <div class="low-stock-alerts" id="lowStockAlerts"></div>
+
+                </div>
+
+            </aside>
+
+        </section>
+
+
+        <section class="transaction-section" id="transactionLog" aria-labelledby="transactionLogTitle">
+            <div class="transaction-header">
+                <div>
+                    <h2 id="transactionLogTitle">Stock Transaction Log</h2>
+                    <p>All stock movements recorded here</p>
+                </div>
+                <div class="transaction-filters">
+                    <select id="transactionPeriodFilter" aria-label="Filter transactions by date">
+                        <option value="all">All Time</option>
+                        <option value="today">Today</option>
+                        <option value="week">This Week</option>
+                        <option value="month">This Month</option>
+                    </select>
+                    <select id="transactionTypeFilter" aria-label="Filter transactions by type">
+                        <option value="all">All Types</option>
+                        <option value="Restock">Restock</option>
+                        <option value="deduct-stock">Deduct Stock</option>
+                        <option value="Used in Service" disabled>Used in Service</option>
+                        <option value="Expired">Expired</option>
+                        <option value="Deleted">Deleted</option>
+                    </select>
+                    <button class="btn btn-export" id="exportTransactions" type="button">Export</button>
+                </div>
+            </div>
+
+            <div class="transaction-table-wrapper">
+                <table class="transaction-table">
+                    <thead>
+                        <tr>
+                            <th>DATE &amp; TIME</th>
+                            <th>PRODUCT</th>
+                            <th>ACTION</th>
+                            <th>QTY CHANGE</th>
+                            <th>STOCK AFTER</th>
+                            <th>PERFORMED BY</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactionBody">
+                        <tr><td colspan="6">Loading transaction history...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="table-footer" id="transactionFooter">Loading transaction history...</div>
+        </section>
+
+    </main>
+        <!-- Delete Confirmation Modal -->
+        <div class="delete-modal-overlay" id="deleteModal">
+            <div class="delete-modal">
+
+              
+
+                <h3>Delete Product?</h3>
+
+                <p>
+                    Are you sure you want to delete
+                    <strong id="deleteProductName"></strong>?
+                    This action cannot be undone.
+                </p>
+
+                <div class="delete-modal-actions">
+                    <button
+                        type="button"
+                        class="modal-btn cancel-btn"
+                        id="cancelDelete"
+                    >
+                        Cancel
+                    </button>
+
+                    <button
+                        type="button"
+                        class="modal-btn confirm-delete-btn"
+                        id="confirmDelete"
+                    >
+                        Delete
+                    </button>
+                </div>
+
+            </div>
+        </div>
+
+                <!-- Edit Product Modal -->
+        <div class="edit-modal-overlay" id="editModal">
+
+            <div class="edit-modal">
+
+                <div class="edit-modal-header">
+                    <div>
+                        <h3>Edit Product</h3>
+                        <p>Update product information</p>
+                    </div>
+
+                    <button
+                        type="button"
+                        class="edit-modal-close"
+                        id="closeEditModal"
+                    >
+                        ×
+                    </button>
+                </div>
+
+                <div class="edit-modal-body">
+
+                    <!-- Product Name -->
+                    <div class="edit-form-group">
+                        <label for="editProductName">
+                            Product Name
+                        </label>
+                
+                        <input
+                            type="text"
+                            id="editProductName"
+                            placeholder="Enter product name"
+                        >
+                    </div>
+                
+                
+                    <!-- Category -->
+                    <div class="edit-form-group">
+                        <label for="editCategory">
+                            Category
+                        </label>
+                
+                        <select id="editCategory">
+                
+                            <option value="Medical/Injection Supplies">
+                                Medical/Injection Supplies
+                            </option>
+                
+                            <option value="Disposables & Clinic Consumables">
+                                Disposables & Clinic Consumables
+                            </option>
+                
+                            <option value="Facial/Treatment Prep Products">
+                                Facial/Treatment Prep Products
+                            </option>
+                
+                            <option value="Facial Treatment Products (Professional Use)">
+                                Facial Treatment Products (Professional Use)
+                            </option>
+                
+                            <option value="Skincare Products (Retail / Aftercare)">
+                                Skincare Products (Retail / Aftercare)
+                            </option>
+                
+                            <option value="Soaps & Cleansers">
+                                Soaps & Cleansers
+                            </option>
+                
+                            <option value="Tools/Equipment/Misc.">
+                                Tools/Equipment/Misc.
+                            </option>
+                
+                        </select>
+                    </div>
+                
+                
+                    <!-- Expiration Date -->
+                    <div class="edit-form-group">
+                
+                        <label for="editExpiryDate">
+                            Expiration Date
+                        </label>
+                
+                        <input
+                            type="date"
+                            id="editExpiryDate"
+                        >
+                
+                        <label class="no-expiration-option">
+                            <input
+                                type="checkbox"
+                                id="editNoExpiration"
+                            >
+                
+                            No expiration
+                        </label>
+                
+                    </div>
+                
+                
+                    <!-- Stock -->
+                    <div class="edit-form-group">
+                
+                        <label for="editStock">
+                            Stock Quantity
+                        </label>
+                
+                        <input
+                            type="number"
+                            id="editStock"
+                            min="0"
+                            step="1"
+                        >
+                
+                    </div>
+                
+                </div>
+
+                <div class="edit-modal-actions">
+
+                    <button
+                        type="button"
+                        class="modal-btn cancel-btn"
+                        id="cancelEdit"
+                    >
+                        Cancel
+                    </button>
+
+                    <button
+                        type="button"
+                        class="modal-btn save-edit-btn"
+                        id="saveEdit"
+                    >
+                        Save Changes
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+                <!-- Add Product Modal -->
+        <div class="edit-modal-overlay" id="addProductModal">
+
+            <div class="edit-modal">
+
+                <div class="add-modal-header">
+
+                    <div>
+                        <h3>Add Product</h3>
+                        <p>Add a new product to your inventory</p>
+                    </div>
+
+                    <button
+                        type="button"
+                        class="edit-modal-close"
+                        id="closeAddProductModal"
+                    >
+                        ×
+                    </button>
+
+                </div>
+
+
+                <div class="edit-modal-body">
+
+                    <!-- Product Name -->
+
+                    <div class="edit-form-group">
+
+                        <label for="addProductName">
+                            Product Name
+                        </label>
+
+                        <input
+                            type="text"
+                            id="addProductName"
+                            placeholder="Enter product name"
+                        >
+
+                    </div>
+
+
+                    <!-- Category -->
+
+                    <div class="edit-form-group">
+
+                        <label for="addCategory">
+                            Category
+                        </label>
+
+                        <select id="addCategory">
+
+                            <option value="Medical/Injection Supplies">
+                                Medical/Injection Supplies
+                            </option>
+
+                            <option value="Disposables & Clinic Consumables">
+                                Disposables & Clinic Consumables
+                            </option>
+
+                            <option value="Facial/Treatment Prep Products">
+                                Facial/Treatment Prep Products
+                            </option>
+
+                            <option value="Facial Treatment Products (Professional Use)">
+                                Facial Treatment Products (Professional Use)
+                            </option>
+
+                            <option value="Skincare Products (Retail / Aftercare)">
+                                Skincare Products (Retail / Aftercare)
+                            </option>
+
+                            <option value="Soaps & Cleansers">
+                                Soaps & Cleansers
+                            </option>
+
+                            <option value="Tools/Equipment/Misc.">
+                                Tools/Equipment/Misc.
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+                    <!-- Expiration Date -->
+
+                    <div class="edit-form-group">
+
+                        <label for="addExpiryDate">
+                            Expiration Date
+                        </label>
+
+                        <input
+                            type="date"
+                            id="addExpiryDate"
+                        >
+
+                        <label class="no-expiration-option">
+
+                            <input
+                                type="checkbox"
+                                id="addNoExpiration"
+                            >
+
+                            No expiration
+
+                        </label>
+
+                    </div>
+
+
+                    <!-- Stock Quantity -->
+
+                    <div class="edit-form-group">
+
+                        <label for="addStock">
+                            Stock Quantity
+                        </label>
+
+                        <input
+                            type="number"
+                            id="addStock"
+                            min="0"
+                            step="1"
+                            value="0"
+                        >
+
+                    </div>
+
+                </div>
+
+
+                <div class="edit-modal-actions">
+
+                    <button
+                        type="button"
+                        class="modal-btn cancel-btn"
+                        id="cancelAddProduct"
+                    >
+                        Cancel
+                    </button>
+
+                    <button
+                        type="button"
+                        class="modal-btn save-edit-btn"
+                        id="confirmAddProduct"
+                    >
+                        Add Product
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        </div>
+    </div>
+
+    <div hidden aria-hidden="true">
+        <button id="sidebarToggle" type="button"></button>
+        <aside id="invSidebar"></aside>
+        <div id="sidebarBackdrop"></div>
+    </div>
+
+        <script src="InventoryManagement.js"></script>
+    <script src="AdminInventoryManagement.js"></script>
+        <script src="admin-dashboard.js"></script>
+    <script src="admin-notifications.js"></script>
+
+</body>
+</html>
