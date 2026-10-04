@@ -303,6 +303,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function loadHomepage() {
     HOMEPAGE_BLOCKS = await apiRequest(`/api/content/admin/pages/${selectedContentPage}`);
+    if (selectedContentPage === 'home') {
+      const removedHomepageBlocks = new Set(['services_strip', 'experience', 'why_skin_goddess']);
+      HOMEPAGE_BLOCKS = HOMEPAGE_BLOCKS.filter((block) => !removedHomepageBlocks.has(block.key));
+    }
     if (selectedContentPage === 'about') {
       TEAM = await apiRequest('/api/content/admin/team');
       HOMEPAGE_BLOCKS.push(...TEAM.map((member) => ({
@@ -430,16 +434,10 @@ document.addEventListener('DOMContentLoaded', () => {
       addImageEditorField(item);
       addEditorField('sortOrder', 'Display order', item?.sortOrder ?? TEAM.length, { type: 'number', required: true, min: 0, step: '1' });
     } else if (section === 'homepage') {
-      addEditorField('title', 'Title', item.title, { required: true, maxLength: 500, multiline: item.key === 'hero' || item.key === 'experience' });
+      addEditorField('title', 'Title', item.title, { required: true, maxLength: 500, multiline: item.key === 'hero' });
       addEditorField('body', 'Supporting text', item.body, { multiline: true, maxLength: 2000 });
       if (item.imageUrl || item.key === 'hero' || item.payload?.category) {
         addImageEditorField(item);
-      }
-      if (item.key === 'services_strip') {
-        (item.payload?.items || []).forEach((stripItem, index) => {
-          addEditorField(`stripTitle${index}`, `Service card ${index + 1} title`, stripItem.title, { required: true, maxLength: 160 });
-          addEditorField(`stripBody${index}`, `Service card ${index + 1} text`, stripItem.body, { multiline: true, maxLength: 500 });
-        });
       }
     }
 
@@ -483,9 +481,6 @@ document.addEventListener('DOMContentLoaded', () => {
       };
     } else {
       const block = HOMEPAGE_BLOCKS.find((item) => item.key === editing.id);
-      const stripItems = block?.key === 'services_strip'
-        ? (block.payload?.items || []).map((item, index) => ({ title: values[`stripTitle${index}`], body: values[`stripBody${index}`] }))
-        : undefined;
       url = `/api/content/admin/pages/${editing.pageKey}/${editing.id}`;
       method = 'PUT';
       payload = {
@@ -493,7 +488,7 @@ document.addEventListener('DOMContentLoaded', () => {
         body: values.body,
         imageUrl: editing.imageUrl,
         isPublished: block?.isPublished ?? true,
-        payload: stripItems ? { items: stripItems } : editing.payload,
+        payload: editing.payload,
       };
     }
 

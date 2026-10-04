@@ -57,7 +57,7 @@ router.get('/public', async (req, res) => {
       JOIN users c ON c.user_id = r.client_id
       WHERE r.is_public = TRUE AND r.comment IS NOT NULL AND BTRIM(r.comment) <> ''
       ORDER BY r.created_at DESC
-      LIMIT 12
+      LIMIT 7
     `);
     const testimonials = result.rows.map((row) => ({
       ratingId: row.rating_id,

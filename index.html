@@ -8,7 +8,6 @@
 <link rel="preload" as="font" type="font/ttf" href="fonts/Raleway/Raleway-VariableFont_wght.ttf" crossorigin>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<!-- Non-blocking: text paints with fallback fonts (display=swap) instead of waiting on the Google Fonts stylesheet -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" media="print" onload="this.media='all'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600&display=swap"></noscript>
 <link rel="stylesheet" href="style.css">
@@ -458,184 +457,50 @@
   </div>
 </section>
 
-<section class="services-strip" id="services">
-  <div class="strip-col">
-    <h3>Facial Treatments</h3>
-    <p>Deep cleansing and hydrating facials for every skin type.</p>
+<div class="homepage-closing">
+  <div class="homepage-closing__background" aria-hidden="true">
+    <img src="images/CenterOutsideImg.webp" alt="" loading="lazy" decoding="async">
   </div>
-  <div class="strip-col">
-    <h3>Skin Whitening</h3>
-    <p>Science-backed brightening for a luminous, even complexion.</p>
-  </div>
-  <div class="strip-col">
-    <h3>Anti-Aging</h3>
-    <p>Advanced collagen-boosting and wrinkle-reduction therapies.</p>
-  </div>
-  <div class="strip-col">
-    <h3>Laser Therapy</h3>
-    <p>Precision laser for pigmentation, acne scars and resurfacing.</p>
-  </div>
-</section>
-
-<section class="all-treatments">
-  <div class="all-treatments-bg">
-    <picture><source srcset="images/CenterOutsideImg.webp" type="image/webp"><img src="images/CenterOutsideImg.png" alt="Skin Goddess Aesthetic Center exterior corridor" width="1454" height="702" loading="lazy" decoding="async"></picture>
-    <div class="all-treatments-scrim"></div>
-  </div>
-
-  <div class="all-treatments-content">
-
-    <div class="all-treatments-copy">
-      <h2 class="all-treatments-heading">Experience<br><span class="script">Skin</span><br><span class="script">Goddess</span><br><span class="script">Glow</span></h2>
-      <p class="all-treatments-hours">Work Hours: 09:00 AM &ndash; 06:00 PM from Monday to Saturday</p>
-    </div>
-
-    <div class="hww-steps">
-      <p class="hww-headline"><span class="dash"></span> HOW WE WORK</p>
-
-      <div class="hww-steps-column">
-        <div class="step-marker">
-          <div class="step-number active">01</div>
-          <div class="step-connector"></div>
-        </div>
-        <div class="step-content">
-          <p class="hww-column-title">Book Online <span class="hww-column-body">Choose your service and preferred time.</span></p>
-        </div>
-      </div>
-
-      <div class="hww-steps-column">
-        <div class="step-marker">
-          <div class="step-number">02</div>
-          <div class="step-connector"></div>
-        </div>
-        <div class="step-content">
-          <p class="hww-column-title">Consultation <span class="hww-column-body">Our specialist assesses your skin's needs on-site.</span></p>
-        </div>
-      </div>
-
-      <div class="hww-steps-column">
-        <div class="step-marker">
-          <div class="step-number">03</div>
-          <div class="step-connector"></div>
-        </div>
-        <div class="step-content">
-          <p class="hww-column-title">Your Treatment <span class="hww-column-body">Relax as our team works their magic.</span></p>
-        </div>
-      </div>
-
-      <div class="hww-steps-column">
-        <div class="step-marker">
-          <div class="step-number">04</div>
-        </div>
-        <div class="step-content">
-          <p class="hww-column-title">Glow &amp; Aftercare <span class="hww-column-body">Leave radiant with a personalized aftercare plan.</span></p>
+  <div class="homepage-scroll-story" id="homepageScrollStory">
+    <section class="testimonials-section" id="testimonials" aria-labelledby="testimonialsHeading">
+      <div class="testimonials-section__surface" aria-hidden="true"></div>
+      <div class="testimonials-section__inner">
+        <div class="testimonials-viewport" id="testimonialsViewport">
+          <div class="testimonials-track" id="testimonialsTrack">
+            <header class="testimonials-section__header">
+              <h2 class="testimonials-section__heading" id="testimonialsHeading">Real Results, <span>Real Confidence</span></h2>
+              <p class="testimonials-section__subheading">See what the community is saying about Skin Goddess</p>
+            </header>
+            <div class="testimonials-list" id="testimonialsList" aria-live="polite"></div>
+            <div class="testimonials-brand" aria-hidden="true">
+              <img src="images/Logo.png" alt="" width="512" height="512" loading="lazy" decoding="async">
+            </div>
+          </div>
         </div>
       </div>
     </div>
-
-  </div>
-</section>
-
-<section class = "why-skin-goddess">
-  <div class = "wsg-text-side">
-    <p class = "wsg-eyebrow"> <span class = "wsg-line"></span> WHY SKIN GODDESS</p> 
-    <h2 class = "wsg-heading">Streamlined <br> Care, <br> <span class = "wsg-heading-gold"> Effortless </span> <br> Experience</h2>
-    <p class = "wsg-lede"> Our clinic pairs expert care with seamless <br> online booking <span class ="wsg-lede-em-dash"></span> so you focus only on 
-      your glow.</p>
-  </div>
-
-    <article class = "wsg-grid">
-      <div class="wsg-grid-item"> 
-        <p class = "wsg-grid-text"> <span class = "wsg-grid-text-title"> Certified Specialists </span> 
-          <br>Every treatment is performed by <br> fully licensed proffesionals <br> dedicated to your results<p>
+    <section class="homepage-signup" aria-labelledby="signupHeading">
+      <div class="homepage-signup__logo">
+        <img src="images/Logo.png" alt="Skin Goddess Aesthetic Center" width="512" height="512" loading="lazy" decoding="async">
       </div>
-      
-      <div class="wsg-grid-item"> 
-        <p class = "wsg-grid-text"> <span class = "wsg-grid-text-title"> Personalized Plans </span> 
-          <br>Your skin is unique. Every treatment <br> plan is built around your specific <br> skin types, goals, and concerns.<p>
+      <div class="homepage-signup__content">
+        <p class="homepage-signup__eyebrow"><span></span> STAY IN THE GLOW <span></span></p>
+        <h2 id="signupHeading">Join Our Newsletter</h2>
+        <p class="homepage-signup__lede">Skincare tips, exclusive offers, and clinic updates delivered straight to your inbox. No spam, ever.</p>
+        <form class="homepage-signup__form">
+          <label class="faq-chat-sr-only" for="newsletterEmail">Email address</label>
+          <input id="newsletterEmail" name="email" type="email" placeholder="your@email.com" autocomplete="email" required>
+          <button type="submit">SUBSCRIBE</button>
+        </form>
+        <p class="homepage-signup__permission">By subscribing, you agree to receive occasional emails from Skin Goddess Aesthetic Center. Unsubscribe anytime.</p>
       </div>
-
-      <div class="wsg-grid-item"> 
-        <p class = "wsg-grid-text"> <span class = "wsg-grid-text-title"> Premium Products </span> 
-          <br>We use only dermatologist approved, <br> medical-grade products and technologies <br> in every session.<p>
-      </div>
-
-      <div class="wsg-grid-item"> 
-        <p class = "wsg-grid-text"> <span class = "wsg-grid-text-title"> Ongoing Support </span> 
-          <br>Skin doesn't stop after your session. <br> We provide aftercare guidance and <br> follow-up consultations<p>
-      </div>
-    </article>
-</section>
-
-<section class="feedback" id="feedback">
-  <p class="feedback-eyebrow"> <span class = "feedback-dash-a"></span>CLIENT STORIES <span class = "feedback-dash-b"></span> </p>
-
-  <h2 class="feedback-heading">Real Results, <br> <span>Real Confidence</span></h2>
-  <span class="feedback-vertical-line "></span>
-  <span class="feedback-vertical-line"></span>
-  
-  <div class="feedback-grid" id="feedbackGrid">
-    <div class="feedback-grid-item">
-      <p class="feedback-grid-item-body">I highly recommend The RM Face and Skin Clinic. <br> Maliban sa napaka ganda ng clinic, napaka bait<br> ng mga staff, accommodating and very <br> 
-         knowledgeable. Thank you so much po.</p>
-
-      <div class="feedback-grid-items-footer">   
-        <span class="feedback-grid-item-dash"></span>
-        <p class="feedback-grid-item-person">Irene Rabino <br></p>
-        <span class="feedback-grid-item-service"> HYDRATING FACIAL &middot; 3 SESSIONS </span>
-        <div class="feedback-grid-item-stars">★★★★★ </div>
-      </div>
-    </div>
-
-    <div class="feedback-grid-item">
-      <p class="feedback-grid-item-body">I highly recommend this skin clinic. Sobrang friendly po ng mga staff, and they will really take care of your skin. I've been choosing RM Face and Skin Clinic for almost 3 years now! Never ka pong ma d-disappoint sa results. I used to have breakouts, and it’s really a big deal for me since I’m a model/ artist. Pero ngayon, super satisfied po ako sa skin ko. Thank you RM!  Experienced skin care professionals #AlagangRM</p>
-      
-        <span class="feedback-grid-item-dash"></span>
-        <p class="feedback-grid-item-person">Justine Villanueva <br></p>
-        <span class="feedback-grid-item-service"> SKIN WHITENING &middot; 3 SESSIONS </span>
-        <div class="feedback-grid-item-stars">★★★★★ </div>
-      
-    </div>
-
-    <div class="feedback-grid-item">
-      <p class="feedback-grid-item-body">Big thanks to The RM Face and Skin Clinic! The owner and staffs are very warm and professional. It’s always exciting to visit a classy and clean clinic that, in a way, gives you a relaxing experience. I feel satisfied with my treatment. Kudos!</p>
-      <div class="feedback-grid-items-footer"> 
-        <span class="feedback-grid-item-dash"></span>
-        <p class="feedback-grid-item-person">KC Bare-Espiritu <br></p>
-        <span class="feedback-grid-item-service"> LASER REJUVENATION &middot; 2 SESSIONS </span>
-        <div class="feedback-grid-item-stars">★★★★★ </div>
-      </div>
-    </div>
-  </div>
-
-</section>
-
-<section class="subscribe-notification">
-  
-  <p class="subscribe-eyebrow"> <span class="subscribe-dash-1"></span> STAY IN THE GLOW <span class="subscribe-dash-2"></span> </p>
-  <h2 class="subscribe-heading">Join Our Newsletter</h2>
-  <p class="subscribe-lede">Skincare tips, exclusive offers, and clinic updates delivered <br> straight to your inbox. No spam, ever.</p>
-
-  <form class="subscribe-form">
-    <input 
-        type="email" 
-        placeholder="your@email.com"
-        class="subscribe-input"
-    >
-
-    <button type="submit" class="subscribe-button">
-        SUBSCRIBE
-    </button>
-</form>
-
-<p class="subscribe-permission"> By subscribing, you agree to receive occasional emails from Skin Goddess Aesthetic Center. Unsubscribe anytime.</p>
-</section>
+    </section>
 
 <section class="index-footer">
     <div class="index-footer-grid">
       <div class="footer-col-1">
         <div class="footer-sg-label">
-          <img src="images/SGLogoImg.png" alt="SG LOGO" class="footer-logo">
+          <img src="images/logo_horizontal-removebg.png" alt="Skin Goddess Aesthetic Center" class="footer-logo">
           <p class="footer-sg-label-title">SKIN GODDESS <br> <span> AESTHETIC CENTER </span></p>
         </div>
         <p class="footer-lede">Skin Care Clinic that performs non-surgical treatments based on the needs of an individual.</p>
@@ -643,17 +508,6 @@
         
       </div>
     
-      <div class="footer-col-2">
-        <p class="footer-col-title">SERVICES</p>
-        <div class="footer-col-2-body">
-          <a href="#" class="footer-services">Facial Treatments</a>
-          <a href="#" class="footer-services">Skin Whitening</a>
-          <a href="#" class="footer-services">Anti Aging</a>
-          <a href="#" class="footer-services">Laser Therapy</a>
-        </div>  
-
-      </div>
-
       <div class="footer-col-3">
         <p class="footer-col-title">PORTAL</p>
         <div class="footer-col-3-body">
@@ -682,6 +536,7 @@
     <p class="footer-col-body-location">Imus - Philippines</p>
   </div>
 </section>
+</div>
 
 <section class="faq-chat" aria-label="Frequently asked questions">
   <div class="faq-chat-panel" id="faqChatPanel" hidden>
