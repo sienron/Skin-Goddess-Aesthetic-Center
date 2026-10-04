@@ -22,6 +22,7 @@ const browserScripts = [
   'finance-reports.js',
   'finance-transactions.js',
   'header.js',
+  'homepage-hero.js',
   'homepage-testimonials.js',
   'homepage-treatments-carousel.js',
   'inquiries-admin.js',

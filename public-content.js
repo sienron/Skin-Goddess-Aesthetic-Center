@@ -1,22 +1,41 @@
 (function () {
-  async function getJson(path) {
-    const response = await fetch(path, { credentials: 'same-origin' });
-    if (!response.ok) throw new Error(`Request failed (${response.status}).`);
-    return response.json();
+  async function getJson(path, timeoutMs = 5000) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetch(path, { credentials: 'same-origin', signal: controller.signal });
+      if (!response.ok) throw new Error(`Request failed (${response.status}).`);
+      return await response.json();
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
+  // Only touch the DOM when the published value differs from the static HTML, so default content never flickers.
   function setText(selector, value) {
     const element = document.querySelector(selector);
-    if (element && value !== undefined && value !== null) element.textContent = value;
+    if (element && value !== undefined && value !== null && element.textContent !== value) element.textContent = value;
   }
 
   function setTitleLines(element, value) {
     if (!element || !value) return;
+    const current = Array.from(element.childNodes).map((node) => (node.nodeName === 'BR' ? '\n' : node.textContent)).join('');
+    if (current === String(value)) return;
     element.replaceChildren();
     String(value).split('\n').forEach((line, index) => {
       if (index) element.append(document.createElement('br'));
       element.append(document.createTextNode(line));
     });
+  }
+
+  // A <picture> prefers its WebP <source>, so a CMS image has to drop the sources to take effect.
+  function setImageOverride(selector, url) {
+    if (typeof url !== 'string' || !/^images\/[a-zA-Z0-9_./ %-]+$/.test(url) || url.includes('..')) return;
+    const image = document.querySelector(selector);
+    if (!image) return;
+    image.parentElement?.querySelectorAll('source').forEach((source) => source.remove());
+    image.removeAttribute('srcset');
+    if (image.getAttribute('src') !== url) image.src = url;
   }
 
   async function loadHomepage() {
@@ -28,13 +47,16 @@
       const treatmentsIntro = blocks.get('treatments_intro');
       const why = blocks.get('why_skin_goddess');
       const newsletter = blocks.get('newsletter');
+      const experience = blocks.get('experience');
 
       if (hero) {
         setTitleLines(document.querySelector('.hero .headline'), hero.title);
         setText('.hero .lede', hero.body);
+        setImageOverride('.hero .hero-photo-img', hero.payload?.imageUrl);
       } else {
         document.querySelector('.hero')?.setAttribute('hidden', '');
       }
+      setImageOverride('.all-treatments-bg img', experience?.payload?.imageUrl);
 
       if (servicesStrip) {
         const section = document.querySelector('.services-strip');
@@ -57,7 +79,7 @@
 
       if (treatmentsIntro) {
         const heading = document.querySelector('.treatments-heading');
-        if (heading) {
+        if (heading && heading.textContent !== `${treatmentsIntro.title} ${treatmentsIntro.body}`) {
           heading.replaceChildren(document.createTextNode(`${treatmentsIntro.title} `));
           const accent = document.createElement('span');
           accent.className = 'accent';
@@ -87,7 +109,7 @@
   }
 
   function formatPrice(value) {
-    return `â‚±${Number(value).toLocaleString('en-PH', { maximumFractionDigits: 2 })}`;
+    return `${'\u20B1'}${Number(value).toLocaleString('en-PH', { maximumFractionDigits: 2 })}`;
   }
 
   function createServiceCard(category, items) {
@@ -132,7 +154,7 @@
     const high = Math.max(...prices);
     article.querySelector('.category-price-range').textContent = low === high
       ? formatPrice(low)
-      : `${formatPrice(low)} â€“ ${formatPrice(high)}`;
+      : `${formatPrice(low)} ${'\u2013'} ${formatPrice(high)}`;
     article.querySelector('.category-count').textContent = `${items.length} ${items.length === 1 ? 'service' : 'services'}`;
     const description = article.querySelector('.category-body-description');
     if (description) description.textContent = items[0]?.description || '';
@@ -169,7 +191,6 @@
         if (title) existingCards.set(title, card);
       });
       const insertionGrid = section.querySelector('.category-grid:last-of-type') || section.querySelector('.category-grid');
-+
       grouped.forEach((items, category) => {
         const card = existingCards.get(category.toLowerCase());
         if (card) {

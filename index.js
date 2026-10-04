@@ -7,6 +7,7 @@ const crypto = require('crypto');
 const PgSession = require('connect-pg-simple')(session);
 
 const db = require('./db');
+const compression = require('compression');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -187,7 +188,28 @@ app.use('/api/users', require('./routes/users'));
 app.use('/api/inquiries', require('./routes/inquiries'));
 app.use('/api/finance', require('./routes/finance'));
 
-app.use(express.static(publicDir, { dotfiles: 'deny', index: false }));
+// Static assets are not content-hashed, so they are cacheable but never `immutable`.
+const STATIC_CACHE_CONTROL = {
+  images: 'public, max-age=86400, stale-while-revalidate=604800',
+  fonts: 'public, max-age=2592000',
+  icons: 'public, max-age=604800',
+};
+const IMMUTABLE_HASHED_FILE = /[.-][0-9a-f]{8,}\.[a-z0-9]+$/i;
+
+app.use(compression());
+app.use(express.static(publicDir, {
+  dotfiles: 'deny',
+  index: false,
+  setHeaders(res, filePath) {
+    const relative = path.relative(publicDir, filePath).split(path.sep);
+    const policy = STATIC_CACHE_CONTROL[relative[0]];
+    if (!policy) return;
+    res.setHeader(
+      'Cache-Control',
+      IMMUTABLE_HASHED_FILE.test(filePath) ? 'public, max-age=31536000, immutable' : policy,
+    );
+  },
+}));
 
 require('./utils/notificationJobs').startNotificationJobs();
 

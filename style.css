@@ -30,6 +30,15 @@
   src: url(fonts/Playfair_Display/PlayfairDisplay-VariableFont_wght.ttf) format("truetype");
   font-style: normal;
   font-weight: 400 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Playfair Display";
+  src: url(fonts/Playfair_Display/PlayfairDisplay-Italic-VariableFont_wght.ttf) format("truetype");
+  font-style: italic;
+  font-weight: 400 900;
+  font-display: swap;
 }
 
 @font-face {
@@ -37,6 +46,7 @@
   src: url(fonts/Raleway/Raleway-VariableFont_wght.ttf) format("truetype");
   font-style: normal;
   font-weight: 100 900;
+  font-display: swap;
 }
 
 * {
@@ -14031,11 +14041,24 @@ body.homepage .public-header {
 
 body.homepage .glass-pill {
   background: rgba(255, 255, 255, 0.28);
-  backdrop-filter: blur(16px) saturate(160%);
-  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  backdrop-filter: blur(10px) saturate(160%);
+  -webkit-backdrop-filter: blur(10px) saturate(160%);
   border: none;
   box-shadow: 0 8px 28px rgba(31, 38, 60, 0.12);
   border-radius: 999px;
+}
+
+@media (max-width: 768px), (prefers-reduced-motion: reduce) {
+  body.homepage .glass-pill {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+/* <picture> wrappers must not affect the existing image sizing rules */
+body.homepage picture {
+  display: contents;
 }
 
 body.homepage .header-left {

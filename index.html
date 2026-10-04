@@ -4,9 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Skin Goddess Aesthetic Center Index</title>
+<link rel="preload" as="image" href="images/GSAP%20Hero.webp" type="image/webp" fetchpriority="high">
+<link rel="preload" as="font" type="font/ttf" href="fonts/Raleway/Raleway-VariableFont_wght.ttf" crossorigin>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600&family=Playfair+Display:ital,wght@1,500;1,600&display=swap" rel="stylesheet">
+<!-- Non-blocking: text paints with fallback fonts (display=swap) instead of waiting on the Google Fonts stylesheet -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600&display=swap"></noscript>
 <link rel="stylesheet" href="style.css">
 </head>
 <body class="homepage">
@@ -103,7 +107,7 @@
 
 <section class="hero">
   <div class="hero-visual">
-    <img src="images/GSAP%20Hero.png" alt="" class="hero-photo-img">
+    <picture><source srcset="images/GSAP%20Hero.webp" type="image/webp"><img src="images/GSAP%20Hero.png" alt="" class="hero-photo-img" width="2400" height="1350" fetchpriority="high" decoding="async"></picture>
   </div>
 
   <div class="hero-copy">
@@ -147,7 +151,7 @@
         <!-- Card set (16) — repeated once below so the scroll loops seamlessly -->
 
       <a class="treatment-card" href="ServicesPage.html#facials">
-        <img class="card-bg" src="images/HydratingFacialImg.png" alt="">
+        <picture><source srcset="images/HydratingFacialImg.webp" type="image/webp"><img class="card-bg" src="images/HydratingFacialImg.png" alt="" width="640" height="287" loading="lazy" decoding="async"></picture>
         <div class="card-body">
           <h3>Hydrating Facial</h3>
           <div class="card-meta">60 MIN &middot; FROM &#8369;1,200</div>
@@ -156,7 +160,7 @@
       </a>
 
       <a class="treatment-card" href="ServicesPage.html#facials">
-        <img class="card-bg" src="images/SkinWhiteningImg.png" alt="">
+        <picture><source srcset="images/SkinWhiteningImg.webp" type="image/webp"><img class="card-bg" src="images/SkinWhiteningImg.png" alt="" width="640" height="280" loading="lazy" decoding="async"></picture>
         <div class="card-body">
           <h3>Skin Whitening</h3>
           <div class="card-meta">90 MIN &middot; FROM &#8369;1,800</div>
@@ -165,7 +169,7 @@
       </a>
 
       <a class="treatment-card" href="ServicesPage.html#facials">
-        <img class="card-bg" src="images/AntiAgingTherapyImg.png" alt="">
+        <picture><source srcset="images/AntiAgingTherapyImg.webp" type="image/webp"><img class="card-bg" src="images/AntiAgingTherapyImg.png" alt="" width="640" height="287" loading="lazy" decoding="async"></picture>
         <div class="card-body">
           <h3>Anti-Aging Therapy</h3>
           <div class="card-meta">75 MIN &middot; FROM &#8369;2,500</div>
@@ -174,7 +178,7 @@
       </a>
 
       <a class="treatment-card" href="ServicesPage.html#eyelash-extension">
-        <img class="card-bg" src="images/EyelashExtension.png" alt="">
+        <picture><source srcset="images/EyelashExtension.webp" type="image/webp"><img class="card-bg" src="images/EyelashExtension.png" alt="" width="640" height="426" loading="lazy" decoding="async"></picture>
         <div class="card-body">
           <h3>Eyelash Extension</h3>
           <div class="card-meta">90 MIN &middot; FROM &#8369;350</div>
@@ -183,7 +187,7 @@
       </a>
 
       <a class="treatment-card" href="ServicesPage.html#paraffin-therapy">
-        <img class="card-bg" src="images/ParaffinTherapy.png" alt="">
+        <picture><source srcset="images/ParaffinTherapy.webp" type="image/webp"><img class="card-bg" src="images/ParaffinTherapy.png" alt="" width="640" height="426" loading="lazy" decoding="async"></picture>
         <div class="card-body">
           <h3>Paraffin Therapy</h3>
           <div class="card-meta">30 MIN &middot; FROM &#8369;299</div>
@@ -192,7 +196,7 @@
       </a>
 
       <a class="treatment-card" href="ServicesPage.html#hand-treatment">
-        <img class="card-bg" src="images/Manicure.png" alt="">
+        <picture><source srcset="images/Manicure.webp" type="image/webp"><img class="card-bg" src="images/Manicure.png" alt="" width="640" height="426" loading="lazy" decoding="async"></picture>
         <div class="card-body">
           <h3>Hand Treatment</h3>
           <div class="card-meta">45 MIN &middot; FROM &#8369;199</div>
@@ -201,7 +205,7 @@
       </a>
 
       <a class="treatment-card" href="ServicesPage.html#chemical-peeling">
-        <img class="card-bg" src="images/ChemicalPeel.png" alt="">
+        <picture><source srcset="images/ChemicalPeel.webp" type="image/webp"><img class="card-bg" src="images/ChemicalPeel.png" alt="" width="640" height="426" loading="lazy" decoding="async"></picture>
         <div class="card-body">
           <h3>Chemical Peeling (TCA)</h3>
           <div class="card-meta">60 MIN &middot; FROM &#8369;2,000</div>
@@ -210,7 +214,7 @@
       </a>
 
       <a class="treatment-card" href="ServicesPage.html#threading-services">
-        <img class="card-bg" src="images/ThreadingService.png" alt="">
+        <picture><source srcset="images/ThreadingService.webp" type="image/webp"><img class="card-bg" src="images/ThreadingService.png" alt="" width="612" height="408" loading="lazy" decoding="async"></picture>
         <div class="card-body">
           <h3>Threading Services</h3>
           <div class="card-meta">15 MIN &middot; FROM &#8369;200</div>
@@ -219,7 +223,7 @@
       </a>
 
       <a class="treatment-card" href="ServicesPage.html#foot-treatment">
-        <img class="card-bg" src="images/FootTreatment.png" alt="">
+        <picture><source srcset="images/FootTreatment.webp" type="image/webp"><img class="card-bg" src="images/FootTreatment.png" alt="" width="640" height="429" loading="lazy" decoding="async"></picture>
         <div class="card-body">
           <h3>Foot Treatment</h3>
           <div class="card-meta">45 MIN &middot; FROM &#8369;299</div>
@@ -228,7 +232,7 @@
       </a>
 
       <a class="treatment-card" href="ServicesPage.html#soft-gel-nail-extensions">
-        <img class="card-bg" src="images/NailExtension.png" alt="">
+        <picture><source srcset="images/NailExtension.webp" type="image/webp"><img class="card-bg" src="images/NailExtension.png" alt="" width="640" height="480" loading="lazy" decoding="async"></picture>
         <div class="card-body">
           <h3>Soft Gel Nail Extensions</h3>
           <div class="card-meta">75 MIN &middot; FROM &#8369;1,300</div>
@@ -237,7 +241,7 @@
       </a>
 
       <a class="treatment-card" href="ServicesPage.html#hair-removal">
-        <img class="card-bg" src="images/HairRemoval.png" alt="">
+        <picture><source srcset="images/HairRemoval.webp" type="image/webp"><img class="card-bg" src="images/HairRemoval.png" alt="" width="640" height="480" loading="lazy" decoding="async"></picture>
         <div class="card-body">
           <h3>Hair Removal (IPL-HR)</h3>
           <div class="card-meta">30 MIN &middot; FROM &#8369;2,000</div>
@@ -246,7 +250,7 @@
       </a>
 
       <a class="treatment-card" href="ServicesPage.html#drip-shot">
-        <img class="card-bg" src="images/DripShot.png" alt="">
+        <picture><source srcset="images/DripShot.webp" type="image/webp"><img class="card-bg" src="images/DripShot.png" alt="" width="640" height="426" loading="lazy" decoding="async"></picture>
         <div class="card-body">
           <h3>Drip / Shot (ED/GS)</h3>
           <div class="card-meta">45 MIN &middot; FROM &#8369;1,000</div>
@@ -255,7 +259,7 @@
       </a>
 
       <a class="treatment-card" href="ServicesPage.html#facials">
-        <img class="card-bg" src="images/HydratingFacialImg.png" alt="">
+        <picture><source srcset="images/HydratingFacialImg.webp" type="image/webp"><img class="card-bg" src="images/HydratingFacialImg.png" alt="" width="640" height="287" loading="lazy" decoding="async"></picture>
         <div class="card-body">
           <h3>Facials</h3>
           <div class="card-meta">60 MIN &middot; FROM &#8369;1,000</div>
@@ -264,7 +268,7 @@
       </a>
 
       <a class="treatment-card" href="ServicesPage.html#body-tightening">
-        <img class="card-bg" src="images/BodyTightening.png" alt="">
+        <picture><source srcset="images/BodyTightening.webp" type="image/webp"><img class="card-bg" src="images/BodyTightening.png" alt="" width="640" height="438" loading="lazy" decoding="async"></picture>
         <div class="card-body">
           <h3>Tightening (BT) / Body Fat Reduction</h3>
           <div class="card-meta">60 MIN &middot; FROM &#8369;1,300</div>
@@ -273,7 +277,7 @@
       </a>
 
       <a class="treatment-card" href="ServicesPage.html#electrocautery">
-        <img class="card-bg" src="images/Electrocautery.png" alt="">
+        <picture><source srcset="images/Electrocautery.webp" type="image/webp"><img class="card-bg" src="images/Electrocautery.png" alt="" width="640" height="426" loading="lazy" decoding="async"></picture>
         <div class="card-body">
           <h3>Electrocautery (ECT)</h3>
           <div class="card-meta">30 MIN &middot; FROM &#8369;3,000</div>
@@ -282,7 +286,7 @@
       </a>
 
       <a class="treatment-card" href="ServicesPage.html#mesotherapy">
-        <img class="card-bg" src="images/Mesotherapy.png" alt="">
+        <picture><source srcset="images/Mesotherapy.webp" type="image/webp"><img class="card-bg" src="images/Mesotherapy.png" alt="" width="640" height="359" loading="lazy" decoding="async"></picture>
         <div class="card-body">
           <h3>Mesotherapy (MT)</h3>
           <div class="card-meta">60 MIN &middot; FROM &#8369;3,000</div>
@@ -297,7 +301,7 @@
       <div class="treatments-track-dupe" aria-hidden="true">
 
         <a class="treatment-card" href="ServicesPage.html#facials" tabindex="-1">
-          <img class="card-bg" src="images/HydratingFacialImg.png" alt="">
+          <picture><source srcset="images/HydratingFacialImg.webp" type="image/webp"><img class="card-bg" src="images/HydratingFacialImg.png" alt="" width="640" height="287" loading="lazy" decoding="async"></picture>
           <div class="card-body">
             <h3>Hydrating Facial</h3>
             <div class="card-meta">60 MIN &middot; FROM &#8369;1,200</div>
@@ -306,7 +310,7 @@
         </a>
 
         <a class="treatment-card" href="ServicesPage.html#facials" tabindex="-1">
-          <img class="card-bg" src="images/SkinWhiteningImg.png" alt="">
+          <picture><source srcset="images/SkinWhiteningImg.webp" type="image/webp"><img class="card-bg" src="images/SkinWhiteningImg.png" alt="" width="640" height="280" loading="lazy" decoding="async"></picture>
           <div class="card-body">
             <h3>Skin Whitening</h3>
             <div class="card-meta">90 MIN &middot; FROM &#8369;1,800</div>
@@ -315,7 +319,7 @@
         </a>
 
         <a class="treatment-card" href="ServicesPage.html#facials" tabindex="-1">
-          <img class="card-bg" src="images/AntiAgingTherapyImg.png" alt="">
+          <picture><source srcset="images/AntiAgingTherapyImg.webp" type="image/webp"><img class="card-bg" src="images/AntiAgingTherapyImg.png" alt="" width="640" height="287" loading="lazy" decoding="async"></picture>
           <div class="card-body">
             <h3>Anti-Aging Therapy</h3>
             <div class="card-meta">75 MIN &middot; FROM &#8369;2,500</div>
@@ -324,7 +328,7 @@
         </a>
 
         <a class="treatment-card" href="ServicesPage.html#eyelash-extension" tabindex="-1">
-          <img class="card-bg" src="images/EyelashExtension.png" alt="">
+          <picture><source srcset="images/EyelashExtension.webp" type="image/webp"><img class="card-bg" src="images/EyelashExtension.png" alt="" width="640" height="426" loading="lazy" decoding="async"></picture>
           <div class="card-body">
             <h3>Eyelash Extension</h3>
             <div class="card-meta">90 MIN &middot; FROM &#8369;350</div>
@@ -333,7 +337,7 @@
         </a>
 
         <a class="treatment-card" href="ServicesPage.html#paraffin-therapy" tabindex="-1">
-          <img class="card-bg" src="images/ParaffinTherapy.png" alt="">
+          <picture><source srcset="images/ParaffinTherapy.webp" type="image/webp"><img class="card-bg" src="images/ParaffinTherapy.png" alt="" width="640" height="426" loading="lazy" decoding="async"></picture>
           <div class="card-body">
             <h3>Paraffin Therapy</h3>
             <div class="card-meta">30 MIN &middot; FROM &#8369;299</div>
@@ -342,7 +346,7 @@
         </a>
 
         <a class="treatment-card" href="ServicesPage.html#hand-treatment" tabindex="-1">
-          <img class="card-bg" src="images/Manicure.png" alt="">
+          <picture><source srcset="images/Manicure.webp" type="image/webp"><img class="card-bg" src="images/Manicure.png" alt="" width="640" height="426" loading="lazy" decoding="async"></picture>
           <div class="card-body">
             <h3>Hand Treatment</h3>
             <div class="card-meta">45 MIN &middot; FROM &#8369;199</div>
@@ -351,7 +355,7 @@
         </a>
 
         <a class="treatment-card" href="ServicesPage.html#chemical-peeling" tabindex="-1">
-          <img class="card-bg" src="images/ChemicalPeel.png" alt="">
+          <picture><source srcset="images/ChemicalPeel.webp" type="image/webp"><img class="card-bg" src="images/ChemicalPeel.png" alt="" width="640" height="426" loading="lazy" decoding="async"></picture>
           <div class="card-body">
             <h3>Chemical Peeling (TCA)</h3>
             <div class="card-meta">60 MIN &middot; FROM &#8369;2,000</div>
@@ -360,7 +364,7 @@
         </a>
 
         <a class="treatment-card" href="ServicesPage.html#threading-services" tabindex="-1">
-          <img class="card-bg" src="images/ThreadingService.png" alt="">
+          <picture><source srcset="images/ThreadingService.webp" type="image/webp"><img class="card-bg" src="images/ThreadingService.png" alt="" width="612" height="408" loading="lazy" decoding="async"></picture>
           <div class="card-body">
             <h3>Threading Services</h3>
             <div class="card-meta">15 MIN &middot; FROM &#8369;200</div>
@@ -369,7 +373,7 @@
         </a>
 
         <a class="treatment-card" href="ServicesPage.html#foot-treatment" tabindex="-1">
-          <img class="card-bg" src="images/FootTreatment.png" alt="">
+          <picture><source srcset="images/FootTreatment.webp" type="image/webp"><img class="card-bg" src="images/FootTreatment.png" alt="" width="640" height="429" loading="lazy" decoding="async"></picture>
           <div class="card-body">
             <h3>Foot Treatment</h3>
             <div class="card-meta">45 MIN &middot; FROM &#8369;299</div>
@@ -378,7 +382,7 @@
         </a>
 
         <a class="treatment-card" href="ServicesPage.html#soft-gel-nail-extensions" tabindex="-1">
-          <img class="card-bg" src="images/NailExtension.png" alt="">
+          <picture><source srcset="images/NailExtension.webp" type="image/webp"><img class="card-bg" src="images/NailExtension.png" alt="" width="640" height="480" loading="lazy" decoding="async"></picture>
           <div class="card-body">
             <h3>Soft Gel Nail Extensions</h3>
             <div class="card-meta">75 MIN &middot; FROM &#8369;1,300</div>
@@ -387,7 +391,7 @@
         </a>
 
         <a class="treatment-card" href="ServicesPage.html#hair-removal" tabindex="-1">
-          <img class="card-bg" src="images/HairRemoval.png" alt="">
+          <picture><source srcset="images/HairRemoval.webp" type="image/webp"><img class="card-bg" src="images/HairRemoval.png" alt="" width="640" height="480" loading="lazy" decoding="async"></picture>
           <div class="card-body">
             <h3>Hair Removal (IPL-HR)</h3>
             <div class="card-meta">30 MIN &middot; FROM &#8369;2,000</div>
@@ -396,7 +400,7 @@
         </a>
 
         <a class="treatment-card" href="ServicesPage.html#drip-shot" tabindex="-1">
-          <img class="card-bg" src="images/DripShot.png" alt="">
+          <picture><source srcset="images/DripShot.webp" type="image/webp"><img class="card-bg" src="images/DripShot.png" alt="" width="640" height="426" loading="lazy" decoding="async"></picture>
           <div class="card-body">
             <h3>Drip / Shot (ED/GS)</h3>
             <div class="card-meta">45 MIN &middot; FROM &#8369;1,000</div>
@@ -405,7 +409,7 @@
         </a>
 
         <a class="treatment-card" href="ServicesPage.html#facials" tabindex="-1">
-          <img class="card-bg" src="images/HydratingFacialImg.png" alt="">
+          <picture><source srcset="images/HydratingFacialImg.webp" type="image/webp"><img class="card-bg" src="images/HydratingFacialImg.png" alt="" width="640" height="287" loading="lazy" decoding="async"></picture>
           <div class="card-body">
             <h3>Facials</h3>
             <div class="card-meta">60 MIN &middot; FROM &#8369;1,000</div>
@@ -414,7 +418,7 @@
         </a>
 
         <a class="treatment-card" href="ServicesPage.html#body-tightening" tabindex="-1">
-          <img class="card-bg" src="images/BodyTightening.png" alt="">
+          <picture><source srcset="images/BodyTightening.webp" type="image/webp"><img class="card-bg" src="images/BodyTightening.png" alt="" width="640" height="438" loading="lazy" decoding="async"></picture>
           <div class="card-body">
             <h3>Tightening (BT) / Body Fat Reduction</h3>
             <div class="card-meta">60 MIN &middot; FROM &#8369;1,300</div>
@@ -423,7 +427,7 @@
         </a>
 
         <a class="treatment-card" href="ServicesPage.html#electrocautery" tabindex="-1">
-          <img class="card-bg" src="images/Electrocautery.png" alt="">
+          <picture><source srcset="images/Electrocautery.webp" type="image/webp"><img class="card-bg" src="images/Electrocautery.png" alt="" width="640" height="426" loading="lazy" decoding="async"></picture>
           <div class="card-body">
             <h3>Electrocautery (ECT)</h3>
             <div class="card-meta">30 MIN &middot; FROM &#8369;3,000</div>
@@ -432,7 +436,7 @@
         </a>
 
         <a class="treatment-card" href="ServicesPage.html#mesotherapy" tabindex="-1">
-          <img class="card-bg" src="images/Mesotherapy.png" alt="">
+          <picture><source srcset="images/Mesotherapy.webp" type="image/webp"><img class="card-bg" src="images/Mesotherapy.png" alt="" width="640" height="359" loading="lazy" decoding="async"></picture>
           <div class="card-body">
             <h3>Mesotherapy (MT)</h3>
             <div class="card-meta">60 MIN &middot; FROM &#8369;3,000</div>
@@ -475,7 +479,7 @@
 
 <section class="all-treatments">
   <div class="all-treatments-bg">
-    <img src="images/CenterOutsideImg.png" alt="Skin Goddess Aesthetic Center exterior corridor">
+    <picture><source srcset="images/CenterOutsideImg.webp" type="image/webp"><img src="images/CenterOutsideImg.png" alt="Skin Goddess Aesthetic Center exterior corridor" width="1454" height="702" loading="lazy" decoding="async"></picture>
     <div class="all-treatments-scrim"></div>
   </div>
 
@@ -708,114 +712,8 @@
 </section>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.15.0/gsap.min.js" integrity="sha512-oJ8QbaQThQoJZ7oEv+29jfPM6CcP+zUxh3PKJs1vyOhx0UraUrE7PQgeItu3dOuCJyrzWpoYMsVjkkPEBzbUqw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script>
-  (() => {
-    const hero = document.querySelector(".homepage .hero");
-    if (hero && window.gsap && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      const intro = window.gsap.timeline({ defaults: { ease: "power3.out" } });
-      intro
-        .from(hero.querySelector(".hero-photo-img"), { autoAlpha: 0, scale: 1.05, duration: 1.2 })
-        .from(hero.querySelector(".hero-book-btn"), { autoAlpha: 0, duration: 0.6 }, "-=0.65")
-        .from(hero.querySelectorAll(".hero-copy > *:not(.hero-book-btn)"), { autoAlpha: 0, y: 20, duration: 0.65, stagger: 0.12 }, "-=0.35");
-    }
-  })();
-</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.15.0/ScrollTrigger.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script>
-  (() => {
-    const hero = document.querySelector(".homepage .hero");
-    if (!hero || !window.gsap || !window.ScrollTrigger) return;
-    const gsap = window.gsap;
-    gsap.registerPlugin(window.ScrollTrigger);
-
-    const mm = gsap.matchMedia();
-    mm.add("(min-width: 701px) and (prefers-reduced-motion: no-preference)", () => {
-      hero.classList.add("hero-scrolly");
-      const visual = hero.querySelector(".hero-visual");
-      const copy = hero.querySelector(".hero-copy");
-      const W = () => hero.clientWidth;
-      const H = () => hero.clientHeight;
-      const q = (name) => hero.querySelector(".hero-step--" + name);
-
-      // focus: point on the photo (0-1), at: where it lands on screen (0-1), text: where the text centres
-      const stops = [
-        { el: q("certified"), scale: 3, focus: [0.455, 0.40], at: [0.88, 0.42], text: [0.27, 0.50] },
-        { el: q("personalized"), scale: 3, focus: [0.52, 0.22], at: [0.88, 0.74], text: [0.38, 0.22] },
-        { el: q("premium"), scale: 3, focus: [0.50, 0.25], at: [0.10, 0.72], text: [0.60, 0.22] },
-        { el: q("support"), scale: 3, focus: [0.52, 0.40], at: [0.06, 0.36], text: [0.70, 0.42] },
-      ];
-      const zoomTo = (s) => ({
-        scale: s.scale,
-        x: () => s.at[0] * W() - s.focus[0] * s.scale * visual.offsetWidth,
-        y: () => s.at[1] * H() - visual.offsetTop - s.focus[1] * s.scale * visual.offsetHeight,
-      });
-
-      gsap.set(visual, { transformOrigin: "0 0" });
-      const tl = gsap.timeline({
-        defaults: { ease: "power2.inOut" },
-        scrollTrigger: {
-          trigger: hero,
-          start: "top top",
-          end: () => "+=" + H() * 10,
-          pin: true,
-          scrub: 1,
-          anticipatePin: 1,
-          invalidateOnRefresh: true,
-        },
-      });
-
-      const k = 2.3;
-      const place = (s) => {
-        const r = s.el.getBoundingClientRect();
-        const h = hero.getBoundingClientRect();
-        return {
-          x: s.text[0] * W() - (r.left - h.left + r.width / 2),
-          y: s.text[1] * H() - (r.top - h.top + r.height / 2),
-        };
-      };
-      stops.forEach((s) => gsap.set(s.el, { autoAlpha: 0, scale: k, transformOrigin: "50% 50%", ...place(s) }));
-
-      tl.to(copy, { autoAlpha: 0, y: -40, duration: 0.6, ease: "power2.out" }, 0);
-      stops.forEach((s, i) => {
-        const t = 0.4 + i * 2;
-        tl.to(visual, { ...zoomTo(s), duration: 1.2 }, t)
-          .to(s.el, { autoAlpha: 1, duration: 0.5, ease: "power1.out" }, t + 0.8)
-          .to(s.el, { autoAlpha: 0, duration: 0.4, ease: "power1.in" }, t + 1.7);
-      });
-      const end = 0.4 + stops.length * 2;
-      tl.to(visual, { scale: 1, x: 0, y: 0, duration: 1.4 }, end);
-      stops.forEach((s) => tl.set(s.el, { x: 0, y: 0, scale: 1 }, end + 1.4).to(s.el, { autoAlpha: 1, duration: 0.6, ease: "power1.out" }, end + 1.4));
-      tl.to({}, { duration: 1 }); // hold on the final view
-
-      // Gold circle grows from the chat launcher corner and wipes the hero
-      const reveal = hero.querySelector(".hero-reveal");
-      const revealInner = hero.querySelector(".hero-reveal-inner");
-      const wipe = { r: 0 };
-      const paintWipe = () => {
-        const cx = W() - 51, cy = H() - 57;
-        reveal.style.clipPath = wipe.r <= 0 ? "circle(0px at " + cx + "px " + cy + "px)" : "circle(" + wipe.r + "px at " + cx + "px " + cy + "px)";
-      };
-      paintWipe();
-      const carouselWrap = hero.querySelector(".treatments-carousel-wrap");
-      gsap.set(revealInner, { xPercent: -130, autoAlpha: 0 });
-      gsap.set(carouselWrap, { xPercent: -105, autoAlpha: 0 });
-      tl.to(wipe, { r: () => Math.hypot(W(), H()), duration: 1.6, ease: "power2.in", onUpdate: paintWipe })
-        .set([visual, copy, ...stops.map((s) => s.el)], { autoAlpha: 0 })
-        .to(revealInner, { xPercent: 0, autoAlpha: 1, duration: 1.2, ease: "power3.out" }, ">-0.1")
-        .to(carouselWrap, { xPercent: 0, autoAlpha: 1, duration: 1.6, ease: "power3.out" }, ">0.1")
-        .to({}, { duration: 1.5 });
-
-      hero.querySelectorAll(".hero-step-inner").forEach((el, i) => {
-        gsap.to(el, { y: i % 2 ? 7 : -7, duration: 2.4 + i * 0.3, ease: "sine.inOut", yoyo: true, repeat: -1 });
-      });
-
-      return () => {
-        hero.classList.remove("hero-scrolly");
-        hero.querySelector(".hero-reveal").style.clipPath = "";
-      };
-    });
-  })();
-</script>
+<script src="homepage-hero.js" defer></script>
 <script src="header.js"></script>
 <script src="homepage-treatments-carousel.js"></script>
 <script src="homepage-testimonials.js"></script>
