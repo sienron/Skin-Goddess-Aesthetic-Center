@@ -88,6 +88,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  document.querySelectorAll('.um-sidebar__nav a').forEach((link) => {
+    link.addEventListener('click', closeSidebar);
+  });
+
   overlay.addEventListener('click', closeSidebar);
 
   // Close drawer automatically if the viewport is resized back to desktop

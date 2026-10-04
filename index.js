@@ -24,7 +24,7 @@ if (!sessionSecret) {
 app.set('trust proxy', 1);
 
 app.use('/api/appointments/paymongo/webhook', express.raw({ type: 'application/json' }));
-app.use(express.json());
+app.use(express.json({ limit: '8mb' }));
 
 app.use(session({
   store: new PgSession({ pool: db.pool, tableName: 'user_sessions', createTableIfMissing: true }),

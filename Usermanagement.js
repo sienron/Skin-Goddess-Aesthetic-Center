@@ -628,28 +628,5 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') { closeModal(); closeCreateModal(); }
 });
 
-// ---------- mobile sidebar toggle ----------
-const sidebarToggle = document.getElementById('umSidebarToggle');
-const sidebar = document.getElementById('umSidebar');
-const sidebarOverlay = document.getElementById('umSidebarOverlay');
-
-function openSidebar() {
-  sidebar.classList.add('um-sidebar--open');
-  sidebarOverlay.classList.add('um-sidebar-overlay--open');
-  sidebarToggle.classList.add('um-sidebar-toggle--open');
-  sidebarToggle.setAttribute('aria-expanded', 'true');
-}
-function closeSidebar() {
-  sidebar.classList.remove('um-sidebar--open');
-  sidebarOverlay.classList.remove('um-sidebar-overlay--open');
-  sidebarToggle.classList.remove('um-sidebar-toggle--open');
-  sidebarToggle.setAttribute('aria-expanded', 'false');
-}
-if (sidebarToggle) sidebarToggle.addEventListener('click', () => {
-  sidebar.classList.contains('um-sidebar--open') ? closeSidebar() : openSidebar();
-});
-if (sidebarOverlay) sidebarOverlay.addEventListener('click', closeSidebar);
-document.querySelectorAll('.um-sidebar__nav a').forEach((link) => link.addEventListener('click', closeSidebar));
-
 // ---------- init ----------
 renderAll();

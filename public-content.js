@@ -19,19 +19,44 @@
     });
   }
 
+  function setAccentHeading(selector, value) {
+    const element = document.querySelector(selector);
+    if (!element || !value) return;
+    const accent = element.querySelector('.text-gold, .text-gold-italic');
+    const accentText = accent?.textContent || '';
+    const accentIndex = accentText ? String(value).indexOf(accentText) : -1;
+    if (accentIndex < 0) {
+      element.textContent = value;
+      return;
+    }
+    const replacement = document.createElement(accent.tagName.toLowerCase());
+    replacement.className = accent.className;
+    replacement.textContent = accentText;
+    element.replaceChildren(
+      document.createTextNode(String(value).slice(0, accentIndex)),
+      replacement,
+      document.createTextNode(String(value).slice(accentIndex + accentText.length)),
+    );
+  }
+
   async function loadHomepage() {
     try {
-      const content = await getJson('/api/content/public/homepage');
-      const blocks = new Map(content.map((block) => [block.key, block]));
+      const content = await getJson('/api/content/public/pages/home');
+      const blocks = new Map(content.filter((block) => block.isPublished).map((block) => [block.key, block]));
       const hero = blocks.get('hero');
       const servicesStrip = blocks.get('services_strip');
       const treatmentsIntro = blocks.get('treatments_intro');
       const why = blocks.get('why_skin_goddess');
       const newsletter = blocks.get('newsletter');
+      const experience = blocks.get('experience');
 
       if (hero) {
         setTitleLines(document.querySelector('.hero .headline'), hero.title);
         setText('.hero .lede', hero.body);
+        if (hero.imageUrl) {
+          const image = document.querySelector('.hero-photo-img');
+          if (image) image.src = hero.imageUrl;
+        }
       } else {
         document.querySelector('.hero')?.setAttribute('hidden', '');
       }
@@ -52,6 +77,8 @@
           }));
         }
 
+        document.querySelector('.services-strip')?.removeAttribute('hidden');
+      } else {
         document.querySelector('.services-strip')?.setAttribute('hidden', '');
       }
 
@@ -73,6 +100,27 @@
         setText('.wsg-lede', why.body);
       } else {
         document.querySelector('.why-skin-goddess')?.setAttribute('hidden', '');
+      }
+
+      if (experience) {
+        const heading = document.querySelector('.all-treatments-heading');
+        if (heading) {
+          const [firstLine, ...accentLines] = experience.title.split('\n');
+          heading.replaceChildren(document.createTextNode(firstLine || ''));
+          accentLines.forEach((line) => {
+            const accent = document.createElement('span');
+            accent.className = 'script';
+            accent.textContent = line;
+            heading.append(document.createElement('br'), accent);
+          });
+        }
+        setText('.all-treatments-hours', experience.body);
+        if (experience.imageUrl) {
+          const image = document.querySelector('.all-treatments-bg img');
+          if (image) image.src = experience.imageUrl;
+        }
+      } else {
+        document.querySelector('.all-treatments')?.setAttribute('hidden', '');
       }
 
       if (newsletter) {
@@ -153,9 +201,29 @@
 
   async function loadServices() {
     try {
-      const services = await getJson('/api/services');
+      const [services, pageContent] = await Promise.all([
+        getJson('/api/services'),
+        getJson('/api/content/public/pages/services'),
+      ]);
       const section = document.querySelector('.all-services');
       if (!section || !services.length) return;
+      const pageBlocks = new Map(pageContent.map((block) => [block.key, block]));
+      const intro = pageBlocks.get('services_intro');
+      if (intro?.isPublished) {
+        setText('.services-headline h1', intro.title);
+        setText('.services-headline-lede', intro.body);
+        document.querySelector('.services-headline')?.removeAttribute('hidden');
+      } else {
+        document.querySelector('.services-headline')?.setAttribute('hidden', '');
+      }
+
+      const applyCategoryImage = (card, category) => {
+        const content = pageContent.find((block) => block.payload?.category === category);
+        if (content?.imageUrl) {
+          const image = card.querySelector('.category-photo');
+          if (image) image.src = content.imageUrl;
+        }
+      };
       const grouped = new Map();
       services.forEach((service) => {
         const category = service.category || 'General';
@@ -172,17 +240,101 @@
 +
       grouped.forEach((items, category) => {
         const card = existingCards.get(category.toLowerCase());
+        const categoryContent = pageContent.find((block) => block.payload?.category === category);
+        if (categoryContent && !categoryContent.isPublished) {
+          card?.remove();
+          existingCards.delete(category.toLowerCase());
+          return;
+        }
         if (card) {
           updateServiceCard(card, category, items);
+          applyCategoryImage(card, category);
           existingCards.delete(category.toLowerCase());
         } else if (insertionGrid) {
-          insertionGrid.append(createServiceCard(category, items));
+          const newCard = createServiceCard(category, items);
+          applyCategoryImage(newCard, category);
+          insertionGrid.append(newCard);
         }
       });
       existingCards.forEach((card) => card.remove());
       if (location.hash) document.getElementById(decodeURIComponent(location.hash.slice(1)))?.scrollIntoView();
     } catch (error) {
       console.warn('Could not load published services:', error.message);
+    }
+  }
+
+  async function loadAboutContent() {
+    try {
+      const blocks = new Map((await getJson('/api/content/public/pages/about'))
+        .filter((block) => block.isPublished).map((block) => [block.key, block]));
+      const hero = blocks.get('about_hero');
+      const story = blocks.get('about_story');
+      const teamIntro = blocks.get('about_team_intro');
+
+      if (hero) {
+        setAccentHeading('.about-title', hero.title);
+        setText('.about-breadcrumb', hero.body);
+      } else document.querySelector('.about-hero')?.setAttribute('hidden', '');
+
+      if (story) {
+        setAccentHeading('.story-heading', story.title);
+        setText('.story-text', story.body);
+        if (story.imageUrl) {
+          const image = document.querySelector('.story-photo img');
+          if (image) image.src = story.imageUrl;
+        }
+      } else document.querySelector('.story-section')?.setAttribute('hidden', '');
+
+      if (teamIntro) {
+        setAccentHeading('.team-heading', teamIntro.title);
+        setText('.team-subtitle', teamIntro.body);
+      } else document.querySelector('.team-section')?.setAttribute('hidden', '');
+    } catch (error) {
+      console.warn('Could not load published About page content:', error.message);
+    }
+  }
+
+  async function loadContactContent() {
+    try {
+      const blocks = new Map((await getJson('/api/content/public/pages/contact'))
+        .filter((block) => block.isPublished).map((block) => [block.key, block]));
+      const hero = blocks.get('contact_hero');
+      const message = blocks.get('contact_message');
+      if (hero) {
+        setAccentHeading('.contact-title', hero.title);
+        setText('.contact-breadcrumb', hero.body);
+      } else document.querySelector('.contact-hero')?.setAttribute('hidden', '');
+
+      if (message) {
+        setAccentHeading('.form-title', message.title);
+        setText('.form-subtitle', message.body);
+      } else document.querySelector('.contact-form-col')?.setAttribute('hidden', '');
+
+      const info = document.querySelectorAll('.contact-info-card .info-row');
+      [
+        ['contact_address', 0],
+        ['contact_phone', 1],
+        ['contact_email', 2],
+      ].forEach(([key, index]) => {
+        const block = blocks.get(key);
+        const row = info[index];
+        if (!block) {
+          row?.setAttribute('hidden', '');
+          return;
+        }
+        const title = row?.querySelector('.info-title');
+        if (title) title.textContent = block.title;
+        const descriptions = row?.querySelectorAll('.info-sub');
+        if (descriptions?.length) {
+          const lines = block.body.split('\n');
+          descriptions.forEach((description, lineIndex) => {
+            description.textContent = lines[lineIndex] || '';
+            description.hidden = !lines[lineIndex];
+          });
+        }
+      });
+    } catch (error) {
+      console.warn('Could not load published Contact page content:', error.message);
     }
   }
 
@@ -226,4 +378,6 @@
   if (document.querySelector('.hero')) loadHomepage();
   if (document.querySelector('.all-services')) loadServices();
   if (document.querySelector('.team-grid')) loadTeam();
+  if (document.querySelector('.about-main')) loadAboutContent();
+  if (document.querySelector('.contact-main')) loadContactContent();
 })();
