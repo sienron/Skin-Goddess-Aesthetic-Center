@@ -4458,9 +4458,9 @@ a {
   }
 }
 
-@media (max-width: 820px) {
+@media (max-width: 700px) {
   .testimonials-section {
-    min-height: 100vh;
+    min-height: 0;
     padding: 72px 24px 100px;
   }
 
@@ -4521,8 +4521,8 @@ a {
 }
 
 .homepage-closing--background-fixed .homepage-closing__background img {
-  inset: -5vh 0;
-  height: 110%;
+  inset: -32px 0;
+  height: calc(100% + 64px);
 }
 
 .homepage-signup {
@@ -4655,29 +4655,6 @@ a {
 }
 
 @media (max-width: 820px) {
-  .homepage-signup,
-  .homepage-signup.homepage-signup--pinned {
-    position: relative;
-    inset: auto;
-    min-height: 0;
-    visibility: visible;
-    opacity: 1;
-    padding: 72px 24px;
-  }
-
-  .homepage-signup {
-    grid-template-columns: 1fr;
-    gap: 42px;
-  }
-
-  .homepage-signup__logo img {
-    width: clamp(170px, 36vw, 260px);
-  }
-
-  .homepage-signup__content {
-    margin: 0 auto;
-  }
-
   .index-footer-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 48px 36px;
@@ -14542,7 +14519,7 @@ body.homepage .hero {
 body.homepage .hero-visual {
   position: absolute;
   inset: 0;
-  z-index: -1;
+  z-index: 0;
   width: auto;
   height: auto;
   pointer-events: none;
@@ -14554,6 +14531,8 @@ body.homepage .hero-photo-img {
   height: 100%;
   object-fit: cover;
   object-position: center top;
+  opacity: 0;
+  visibility: hidden;
 }
 
 body.homepage .hero-copy {
@@ -14816,26 +14795,171 @@ body.homepage .hero-reveal {
   body.homepage .hero-reveal .carousel-nav--next { right: 38px; }
 }
 
-@media (max-width: 700px) {
+@media (max-width: 700px), (prefers-reduced-motion: reduce) {
   body.homepage .hero {
-    min-height: max(760px, 100vh);
-    min-height: max(760px, 100svh);
+    min-height: 0;
+    height: auto;
+    overflow: visible;
+    display: flex;
+    flex-direction: column;
   }
 
   body.homepage .hero-visual {
-    height: 58%;
+    position: relative;
+    inset: auto;
+    order: 0;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    z-index: 0;
   }
 
   body.homepage .hero-photo-img {
     object-position: center top;
+    opacity: 1;
+    visibility: visible;
   }
 
   body.homepage .hero-copy {
-    top: auto;
-    bottom: 112px;
-    left: 24px;
-    width: calc(100% - 48px);
+    position: relative;
+    inset: auto;
+    order: 1;
+    width: auto;
+    padding: 32px 24px;
+  }
+
+  body.homepage .hero-reveal {
+    position: relative;
+    inset: auto;
+    order: 2;
+    display: block;
+    overflow: visible;
+    background: #C9A84C;
+    clip-path: none;
+  }
+
+  body.homepage .hero-reveal-inner {
+    padding: 40px 24px 0;
     transform: none;
+    opacity: 1;
+    visibility: visible;
+  }
+
+  body.homepage .hero-reveal .treatments-carousel-wrap {
+    margin: 24px 0 40px;
+    padding: 0 0 8px;
+    transform: none;
+    opacity: 1;
+    visibility: visible;
+  }
+
+  body.homepage .hero-reveal .treatments-carousel {
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 0 24px;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 24px;
+    -webkit-mask-image: none;
+    mask-image: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  body.homepage .hero-reveal .treatments-track {
+    transform: none;
+    animation: none;
+    will-change: auto;
+  }
+
+  body.homepage .hero-reveal .treatments-track-dupe {
+    display: none;
+  }
+
+  body.homepage .hero-reveal .treatment-card {
+    scroll-snap-align: start;
+  }
+
+  .homepage-scroll-story.homepage-scroll-story--animated {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .testimonials-section,
+  .testimonials-section.testimonials-section--pinned {
+    position: relative;
+    inset: auto;
+    height: auto;
+    min-height: 0;
+    background: var(--white);
+    padding: 72px 24px 100px;
+    overflow: visible;
+  }
+
+  .testimonials-section__header {
+    margin-bottom: 32px;
+  }
+
+  .testimonials-section__inner,
+  .testimonials-section--pinned .testimonials-section__inner {
+    height: auto;
+  }
+
+  .testimonials-viewport,
+  .testimonials-section--pinned .testimonials-viewport {
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .testimonials-track {
+    transform: none;
+    will-change: auto;
+  }
+
+  .testimonials-brand {
+    margin: 64px auto 32px;
+  }
+
+  .testimonial-entry--final {
+    margin-top: 32px;
+  }
+
+  .homepage-signup,
+  .homepage-signup.homepage-signup--pinned {
+    position: relative;
+    inset: auto;
+    min-height: 0;
+    margin: 0 auto;
+    padding: 72px 24px;
+  }
+
+  .homepage-signup.homepage-signup--released {
+    margin-top: 0;
+  }
+}
+
+@media (max-width: 700px) {
+  body.homepage .hero-visual {
+    aspect-ratio: 4 / 3;
+  }
+
+  .homepage-signup,
+  .homepage-signup.homepage-signup--pinned {
+    position: relative;
+    inset: auto;
+    min-height: 0;
+    visibility: visible;
+    opacity: 1;
+    padding: 72px 24px;
+    grid-template-columns: 1fr;
+    gap: 42px;
+  }
+
+  .homepage-signup__logo img {
+    width: clamp(170px, 36vw, 260px);
+  }
+
+  .homepage-signup__content {
+    margin: 0 auto;
   }
 
   body.homepage .hero-copy .headline {

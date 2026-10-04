@@ -1,45 +1,52 @@
-/* Treatments carousel: autoplays via the Web Animations API (instead
-   of a CSS @keyframes animation) so the nav buttons can push its
-   playback rate up/down without breaking the seamless loop. */
+/* Desktop uses a seamless autoplay loop; mobile and reduced-motion users
+   navigate the same cards with native horizontal scrolling. */
 (function () {
   const track = document.getElementById('treatmentsTrack');
   const carousel = document.getElementById('treatmentsCarousel');
+  const wrapper = document.querySelector('.treatments-carousel-wrap');
   const prevBtn = document.getElementById('carouselPrev');
   const nextBtn = document.getElementById('carouselNext');
+  if (!track || !carousel || !wrapper) return;
 
-  if (!track || !carousel) return;
-
-  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const BASE_DURATION = 70000; // ms — matches the original 70s loop
-  const BOOST_RATE = 7;        // playback multiplier while a nav button is held
-
-  const anim = track.animate(
-    [{ transform: 'translateX(0)' }, { transform: 'translateX(-50%)' }],
-    { duration: BASE_DURATION, iterations: Infinity, easing: 'linear' }
-  );
-
+  const desktopMotion = window.matchMedia('(min-width: 701px) and (prefers-reduced-motion: no-preference)');
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const BASE_DURATION = 70000;
+  const BOOST_RATE = 7;
+  let animation = null;
   let hovering = false;
   let boosting = false;
 
-  if (reduceMotion) anim.pause();
+  function startDesktopLoop() {
+    if (!desktopMotion.matches || animation) return;
+    animation = track.animate(
+      [{ transform: 'translateX(0)' }, { transform: 'translateX(-50%)' }],
+      { duration: BASE_DURATION, iterations: Infinity, easing: 'linear' },
+    );
+    restingState();
+  }
+
+  function stopDesktopLoop() {
+    if (!animation) return;
+    animation.cancel();
+    animation = null;
+    boosting = false;
+  }
 
   function restingState() {
-    if (boosting) return;
-    if (hovering || reduceMotion) {
-      anim.pause();
+    if (!animation || boosting) return;
+    if (hovering) {
+      animation.pause();
     } else {
-      anim.playbackRate = 1;
-      anim.play();
+      animation.playbackRate = 1;
+      animation.play();
     }
   }
 
-  carousel.addEventListener('mouseenter', () => { hovering = true; restingState(); });
-  carousel.addEventListener('mouseleave', () => { hovering = false; restingState(); });
-
   function startBoost(direction) {
+    if (!animation) return;
     boosting = true;
-    anim.playbackRate = BOOST_RATE * direction;
-    anim.play();
+    animation.playbackRate = BOOST_RATE * direction;
+    animation.play();
   }
 
   function endBoost() {
@@ -48,22 +55,62 @@
     restingState();
   }
 
-  [[prevBtn, -1], [nextBtn, 1]].forEach(([btn, direction]) => {
-    if (!btn) return;
-
-    // Hold-to-fast-forward (mouse, touch, pen) — release to resume normal play.
-    btn.addEventListener('pointerdown', (e) => { e.preventDefault(); startBoost(direction); });
-    btn.addEventListener('pointerup', endBoost);
-    btn.addEventListener('pointerleave', endBoost);
-    btn.addEventListener('pointercancel', endBoost);
-
-    // Keyboard: hold Enter/Space to fast-forward the same way.
-    btn.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startBoost(direction); }
+  function scrollByCard(direction) {
+    const card = track.querySelector('.treatment-card');
+    const gap = Number.parseFloat(getComputedStyle(track).columnGap) || 0;
+    const distance = (card?.getBoundingClientRect().width || carousel.clientWidth * 0.8) + gap;
+    carousel.scrollBy({
+      left: distance * direction,
+      behavior: reduceMotion.matches ? 'auto' : 'smooth',
     });
-    btn.addEventListener('keyup', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') endBoost();
+  }
+
+  function bindButton(button, direction) {
+    if (!button) return;
+
+    button.addEventListener('pointerdown', (event) => {
+      if (!animation) return;
+      event.preventDefault();
+      startBoost(direction);
     });
-    btn.addEventListener('blur', endBoost);
+    button.addEventListener('pointerup', endBoost);
+    button.addEventListener('pointerleave', endBoost);
+    button.addEventListener('pointercancel', endBoost);
+    button.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        if (animation) {
+          event.preventDefault();
+          startBoost(direction);
+        }
+      }
+    });
+    button.addEventListener('keyup', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') endBoost();
+    });
+    button.addEventListener('blur', endBoost);
+    button.addEventListener('click', () => {
+      if (!animation) scrollByCard(direction);
+    });
+  }
+
+  wrapper.addEventListener('mouseenter', () => {
+    hovering = true;
+    restingState();
   });
+  wrapper.addEventListener('mouseleave', () => {
+    hovering = false;
+    restingState();
+  });
+
+  bindButton(prevBtn, -1);
+  bindButton(nextBtn, 1);
+  desktopMotion.addEventListener('change', (event) => {
+    if (event.matches) startDesktopLoop();
+    else stopDesktopLoop();
+  });
+  reduceMotion.addEventListener('change', () => {
+    if (!desktopMotion.matches) stopDesktopLoop();
+    else startDesktopLoop();
+  });
+  startDesktopLoop();
 })();

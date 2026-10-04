@@ -2,24 +2,20 @@
   const hero = document.querySelector(".homepage .hero");
   const gsap = window.gsap;
   const ScrollTrigger = window.ScrollTrigger;
-  if (!hero || !gsap || !ScrollTrigger) return;
-
-  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-  if (!reducedMotion) {
-    const intro = gsap.timeline({ defaults: { ease: "power3.out" } });
-    intro
-      .from(hero.querySelector(".hero-photo-img"), { autoAlpha: 0, scale: 1.05, duration: 1.2 })
-      .from(hero.querySelector(".hero-book-btn"), { autoAlpha: 0, duration: 0.6 }, "-=0.65")
-      .from(hero.querySelectorAll(".hero-copy > *:not(.hero-book-btn)"), { autoAlpha: 0, y: 20, duration: 0.65, stagger: 0.12 }, "-=0.35");
-  }
-
-  gsap.registerPlugin(ScrollTrigger);
+  if (!hero || !gsap) return;
+  if (ScrollTrigger) gsap.registerPlugin(ScrollTrigger);
 
   const mm = gsap.matchMedia();
   mm.add("(min-width: 701px) and (prefers-reduced-motion: no-preference)", () => {
+    if (!ScrollTrigger) return;
+    const intro = gsap.timeline({ defaults: { ease: "power3.out" } });
+    intro
+      .from(hero.querySelector(".hero-book-btn"), { autoAlpha: 0, duration: 0.6 }, "-=0.65")
+      .from(hero.querySelectorAll(".hero-copy > *:not(.hero-book-btn)"), { autoAlpha: 0, y: 20, duration: 0.65, stagger: 0.12 }, "-=0.35");
+
     hero.classList.add("hero-scrolly");
     const visual = hero.querySelector(".hero-visual");
+    const photo = hero.querySelector(".hero-photo-img");
     const copy = hero.querySelector(".hero-copy");
     const reveal = hero.querySelector(".hero-reveal");
     const W = () => hero.clientWidth;
@@ -36,6 +32,22 @@
       { el: q("premium"), scale: 3, focus: [0.50, 0.25], at: [0.10, 0.72], text: [0.60, 0.22] },
       { el: q("support"), scale: 3, focus: [0.52, 0.40], at: [0.06, 0.36], text: [0.70, 0.42] },
     ];
+    const place = (s) => {
+      const r = s.el.getBoundingClientRect();
+      const h = hero.getBoundingClientRect();
+      return {
+        x: s.text[0] * W() - (r.left - h.left + r.width / 2),
+        y: s.text[1] * H() - (r.top - h.top + r.height / 2),
+      };
+    };
+    const updateStopPositions = () => {
+      stops.forEach((s) => gsap.set(s.el, {
+        autoAlpha: 0,
+        scale: k,
+        transformOrigin: "50% 50%",
+        ...place(s),
+      }));
+    };
     const zoomTo = (s) => ({
       scale: s.scale,
       x: () => s.at[0] * W() - s.focus[0] * s.scale * visual.offsetWidth,
@@ -64,16 +76,10 @@
     });
 
     const k = 2.3;
-    const place = (s) => {
-      const r = s.el.getBoundingClientRect();
-      const h = hero.getBoundingClientRect();
-      return {
-        x: s.text[0] * W() - (r.left - h.left + r.width / 2),
-        y: s.text[1] * H() - (r.top - h.top + r.height / 2),
-      };
-    };
-    stops.forEach((s) => gsap.set(s.el, { autoAlpha: 0, scale: k, transformOrigin: "50% 50%", ...place(s) }));
+    updateStopPositions();
+    ScrollTrigger.addEventListener("refreshInit", updateStopPositions);
 
+    tl.to(photo, { autoAlpha: 1, duration: 0.6, ease: "power1.out" }, 0);
     tl.to(copy, { autoAlpha: 0, y: -40, duration: 0.6 * S, ease: "power2.out" }, 0);
     stops.forEach((s, i) => {
       const t = (0.4 + i * 2) * S;
@@ -122,6 +128,7 @@
     setFloating(tl.scrollTrigger.isActive);
 
     return () => {
+      ScrollTrigger.removeEventListener("refreshInit", updateStopPositions);
       hero.classList.remove("hero-scrolly");
       visual.style.willChange = "";
       reveal.style.willChange = "";
@@ -129,4 +136,19 @@
       floaters.length = 0;
     };
   });
+
+  mm.add("(max-width: 700px) and (prefers-reduced-motion: no-preference)", () => {
+    const intro = gsap.timeline({ defaults: { ease: "power2.out" } });
+    intro
+      .from(hero.querySelector(".hero-photo-img"), { autoAlpha: 0, duration: 0.35 })
+      .from(hero.querySelector(".hero-book-btn"), { y: 10, duration: 0.25 }, "-=0.1")
+      .from(hero.querySelectorAll(".hero-copy > *:not(.hero-book-btn)"), { y: 10, duration: 0.3, stagger: 0.05 }, "-=0.1");
+  });
+
+  if (ScrollTrigger) {
+    const refresh = () => ScrollTrigger.refresh();
+    if (document.readyState === "complete") refresh();
+    else window.addEventListener("load", refresh, { once: true });
+    document.fonts?.ready.then(refresh);
+  }
 })();

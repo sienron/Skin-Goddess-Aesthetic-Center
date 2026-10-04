@@ -5,7 +5,45 @@
   const viewport = document.getElementById('testimonialsViewport');
   const track = document.getElementById('testimonialsTrack');
   const story = document.getElementById('homepageScrollStory');
+  const closing = document.querySelector('.homepage-closing');
+  const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
   let animationCleanup = null;
+  let visibleTestimonials = [];
+  let layoutSignature = '';
+  let resizeFrame = 0;
+  let assetRefreshHooksInstalled = false;
+  const watchedImages = new WeakSet();
+
+  function isPinnedLayout() {
+    return window.matchMedia('(min-width: 701px) and (prefers-reduced-motion: no-preference)').matches;
+  }
+
+  function getLayoutSignature() {
+    const desktop = isPinnedLayout();
+    const layout = getColumnCount();
+    return `${layout}-${desktop}-${reducedMotionQuery.matches}${desktop ? `-${window.innerWidth}x${window.innerHeight}` : ''}`;
+  }
+
+  function refreshAfterAssets() {
+    const refresh = () => {
+      if (isPinnedLayout() && animationCleanup) {
+        resetAnimation();
+        animationCleanup = setupAnimation();
+      }
+      window.ScrollTrigger?.refresh();
+    };
+    if (!assetRefreshHooksInstalled) {
+      assetRefreshHooksInstalled = true;
+      if (document.fonts?.status === 'loading') document.fonts.ready.then(refresh);
+      window.addEventListener('load', refresh, { once: true });
+    }
+    story.querySelectorAll('img').forEach((image) => {
+      if (image.complete || watchedImages.has(image)) return;
+      watchedImages.add(image);
+      image.addEventListener('load', refresh, { once: true });
+      image.addEventListener('error', refresh, { once: true });
+    });
+  }
 
   function createCard(item) {
     const entry = document.createElement('article');
@@ -55,14 +93,9 @@
   }
 
   function getColumnCount() {
-    if (window.matchMedia('(max-width: 820px)').matches) return 1;
+    if (window.matchMedia('(max-width: 700px)').matches) return 1;
     if (window.matchMedia('(max-width: 1240px)').matches) return 2;
     return 3;
-  }
-
-  function getLayoutSignature() {
-    const pinned = window.matchMedia('(min-width: 821px) and (min-height: 641px)').matches;
-    return `${getColumnCount()}-${pinned}`;
   }
 
   function renderTestimonials(testimonials) {
@@ -88,9 +121,8 @@
   function setupAnimation() {
     const gsap = window.gsap;
     const ScrollTrigger = window.ScrollTrigger;
-    if (!gsap || !ScrollTrigger || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return null;
-
-    gsap.registerPlugin(ScrollTrigger);
+    if (!gsap) return null;
+    if (ScrollTrigger) gsap.registerPlugin(ScrollTrigger);
     const surface = section.querySelector('.testimonials-section__surface');
     const heading = section.querySelector('.testimonials-section__heading');
     const subheading = section.querySelector('.testimonials-section__subheading');
@@ -101,36 +133,40 @@
     const signupLogo = signup.querySelector('.homepage-signup__logo img');
     const contentItems = signup.querySelectorAll('.homepage-signup__content > *');
     const background = document.querySelector('.homepage-closing__background img');
-    const closing = document.querySelector('.homepage-closing');
-    const isPinned = window.matchMedia('(min-width: 821px) and (min-height: 641px)').matches;
+    const isPinned = isPinnedLayout() && Boolean(ScrollTrigger) && !reducedMotionQuery.matches;
     const animatedElements = [surface, heading, subheading, ...entries, list, brand, track, signup, signupLogo, ...contentItems];
     let backgroundTrigger;
 
     if (!isPinned) {
-      backgroundTrigger = ScrollTrigger.create({
-        trigger: closing,
-        start: 'top top',
-        end: 'bottom top',
-        onToggle: (self) => closing.classList.toggle('homepage-closing--background-fixed', self.isActive),
-      });
-      closing.classList.toggle('homepage-closing--background-fixed', backgroundTrigger.isActive);
+      closing.classList.remove('homepage-closing--story-ready');
+      story.classList.remove('homepage-scroll-story--animated');
+      section.classList.remove('testimonials-section--pinned');
+      signup.classList.remove('homepage-signup--pinned', 'homepage-signup--released');
+      if (ScrollTrigger) {
+        backgroundTrigger = ScrollTrigger.create({
+          trigger: closing,
+          start: 'top top',
+          end: 'bottom top',
+          onToggle: (self) => closing.classList.toggle('homepage-closing--background-fixed', self.isActive),
+        });
+        closing.classList.toggle('homepage-closing--background-fixed', backgroundTrigger.isActive);
+      }
+      if (reducedMotionQuery.matches) {
+        return () => {
+          backgroundTrigger?.kill();
+          closing.classList.remove('homepage-closing--background-fixed');
+        };
+      }
 
-      const timeline = gsap.timeline({
-        scrollTrigger: {
-          trigger: story,
-          start: 'top 80%',
-          once: true,
-        },
-      });
+      const timeline = gsap.timeline({ defaults: { ease: 'power2.out' } });
       timeline
-        .from([heading, subheading], { autoAlpha: 0, y: 28, duration: 0.65, stagger: 0.12, ease: 'power3.out' })
-        .from(entries, { autoAlpha: 0, y: 24, duration: 0.5, stagger: 0.1, ease: 'power3.out' }, 0.3)
-        .from(brand, { autoAlpha: 0, y: 24, duration: 0.6, ease: 'power3.out' }, '>-0.1')
-        .from([signupLogo, ...contentItems], { autoAlpha: 0, y: 24, duration: 0.55, stagger: 0.1, ease: 'power3.out' }, '+=0.15');
+        .from([heading, subheading], { y: 12, duration: 0.35, stagger: 0.06 })
+        .from(entries, { y: 12, duration: 0.35, stagger: 0.04 }, 0.12)
+        .from(brand, { y: 12, duration: 0.35 }, '>-0.05')
+        .from([signupLogo, ...contentItems], { y: 12, duration: 0.35, stagger: 0.05 }, '>-0.05');
       return () => {
-        timeline.scrollTrigger?.kill();
         timeline.kill();
-        backgroundTrigger.kill();
+        backgroundTrigger?.kill();
         closing.classList.remove('homepage-closing--background-fixed');
         gsap.set(animatedElements, { clearProps: 'all' });
       };
@@ -259,7 +295,7 @@
       timeline.kill();
       parallax?.scrollTrigger?.kill();
       parallax?.kill();
-      backgroundTrigger.kill();
+      backgroundTrigger?.kill();
       gsap.set(animatedElements, { clearProps: 'all' });
       if (background) gsap.set(background, { clearProps: 'transform' });
       closing.classList.remove('homepage-closing--story-ready');
@@ -278,6 +314,25 @@
     }
   }
 
+  function scheduleLayoutUpdate() {
+    cancelAnimationFrame(resizeFrame);
+    resizeFrame = requestAnimationFrame(() => {
+      const nextSignature = getLayoutSignature();
+      if (nextSignature === layoutSignature) return;
+
+      const shouldRerender = nextSignature.split('-')[0] !== layoutSignature.split('-')[0];
+      layoutSignature = nextSignature;
+      resetAnimation();
+      if (shouldRerender) renderTestimonials(visibleTestimonials);
+      animationCleanup = setupAnimation();
+      refreshAfterAssets();
+      window.ScrollTrigger?.refresh();
+    });
+  }
+
+  window.addEventListener('resize', scheduleLayoutUpdate, { passive: true });
+  reducedMotionQuery.addEventListener('change', scheduleLayoutUpdate);
+
   async function loadTestimonials() {
     try {
       const response = await fetch('/api/ratings/public');
@@ -285,24 +340,17 @@
       const testimonials = await response.json();
       if (!Array.isArray(testimonials)) throw new Error('Testimonial response was not a list');
 
-      const visibleTestimonials = testimonials.slice(0, 7);
+      visibleTestimonials = testimonials.slice(0, 7);
       renderTestimonials(visibleTestimonials);
       animationCleanup = setupAnimation();
+      layoutSignature = getLayoutSignature();
+      refreshAfterAssets();
       window.ScrollTrigger?.refresh();
-
-      let layoutSignature = getLayoutSignature();
-      window.addEventListener('resize', () => {
-        const nextLayoutSignature = getLayoutSignature();
-        if (nextLayoutSignature === layoutSignature) return;
-        layoutSignature = nextLayoutSignature;
-        resetAnimation();
-        renderTestimonials(visibleTestimonials);
-        animationCleanup = setupAnimation();
-        window.ScrollTrigger?.refresh();
-      });
     } catch (error) {
       console.warn('Could not load public testimonials:', error.message);
       animationCleanup = setupAnimation();
+      layoutSignature = getLayoutSignature();
+      refreshAfterAssets();
       window.ScrollTrigger?.refresh();
     }
   }
