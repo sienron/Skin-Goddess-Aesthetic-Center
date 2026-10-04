@@ -68,7 +68,9 @@
       if (hero) {
         setTitleLines(document.querySelector('.hero .headline'), hero.title);
         setText('.hero .lede', hero.body);
-        setImageOverride('.hero .hero-photo-img', hero.imageUrl);
+        // The hero visual is part of the animation, not CMS page content.
+        // A CMS override here replaces the alpha-channel GSAP asset with a
+        // full-bleed photo that paints over the cream hero background.
       } else {
         document.querySelector('.hero')?.setAttribute('hidden', '');
       }

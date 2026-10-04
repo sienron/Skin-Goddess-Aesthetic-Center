@@ -140,7 +140,7 @@
   mm.add("(max-width: 700px) and (prefers-reduced-motion: no-preference)", () => {
     const intro = gsap.timeline({ defaults: { ease: "power2.out" } });
     intro
-      .from(hero.querySelector(".hero-photo-img"), { autoAlpha: 0, duration: 0.35 })
+      .fromTo(hero.querySelector(".hero-photo-img"), { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.35 })
       .from(hero.querySelector(".hero-book-btn"), { y: 10, duration: 0.25 }, "-=0.1")
       .from(hero.querySelectorAll(".hero-copy > *:not(.hero-book-btn)"), { y: 10, duration: 0.3, stagger: 0.05 }, "-=0.1");
   });

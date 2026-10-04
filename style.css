@@ -14816,8 +14816,6 @@ body.homepage .hero-reveal {
 
   body.homepage .hero-photo-img {
     object-position: center top;
-    opacity: 1;
-    visibility: visible;
   }
 
   body.homepage .hero-copy {

@@ -149,7 +149,7 @@
           end: 'bottom top',
           onToggle: (self) => closing.classList.toggle('homepage-closing--background-fixed', self.isActive),
         });
-        closing.classList.toggle('homepage-closing--background-fixed', backgroundTrigger.isActive);
+        closing.classList.toggle('homepage-closing--background-fixed', Boolean(backgroundTrigger.isActive));
       }
       if (reducedMotionQuery.matches) {
         return () => {
@@ -274,7 +274,7 @@
       end: 'bottom top',
       onToggle: (self) => closing.classList.toggle('homepage-closing--background-fixed', self.isActive),
     });
-    closing.classList.toggle('homepage-closing--background-fixed', backgroundTrigger.isActive);
+    closing.classList.toggle('homepage-closing--background-fixed', Boolean(backgroundTrigger.isActive));
 
     let parallax;
     if (background) {
