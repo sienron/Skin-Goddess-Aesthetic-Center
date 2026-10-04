@@ -1,7 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const sidebar = document.getElementById('umSidebar');
-  const toggleButton = document.getElementById('umSidebarToggle');
-  const overlay = document.getElementById('umSidebarOverlay');
   const listElement = document.getElementById('inquiryList');
   const detailElement = document.getElementById('inquiryDetail');
   const countElement = document.getElementById('inquiryCount');
@@ -9,24 +6,6 @@ document.addEventListener('DOMContentLoaded', () => {
   let inquiries = [];
   let selectedId = null;
   let activeFilter = 'all';
-
-  function closeSidebar() {
-    sidebar.classList.remove('um-sidebar--open');
-    overlay.classList.remove('um-sidebar-overlay--open');
-    toggleButton.classList.remove('um-sidebar-toggle--open');
-    toggleButton.setAttribute('aria-expanded', 'false');
-  }
-
-  toggleButton.addEventListener('click', () => {
-    const isOpen = sidebar.classList.toggle('um-sidebar--open');
-    overlay.classList.toggle('um-sidebar-overlay--open', isOpen);
-    toggleButton.classList.toggle('um-sidebar-toggle--open', isOpen);
-    toggleButton.setAttribute('aria-expanded', String(isOpen));
-  });
-  overlay.addEventListener('click', closeSidebar);
-  window.addEventListener('resize', () => {
-    if (window.innerWidth > 1024) closeSidebar();
-  });
 
   function makeElement(tag, className, text) {
     const element = document.createElement(tag);

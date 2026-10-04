@@ -72,50 +72,47 @@
       <section class="cm-card">
         <div class="um-tabs" id="cmTabs">
           <button class="um-tab um-tab--active" type="button" data-section="services">Services &amp; Treatments</button>
-          <button class="um-tab" type="button" data-section="homepage">Homepage Content</button>
-          <button class="um-tab" type="button" data-section="team">Team Members</button>
+          <button class="um-tab" type="button" data-section="homepage">Page Content</button>
           <button class="um-tab" type="button" data-section="testimonials">Testimonials</button>
         </div>
 
         <!-- ===== Services & Treatments ===== -->
         <div class="cm-panel cm-panel--active" id="cmPanelServices">
-          <div class="um-table-wrap">
-            <table class="um-table">
-              <thead>
-                <tr>
-                  <th>SERVICE</th>
-                  <th>CATEGORY</th>
-                  <th>PRICE RANGE</th>
-                  <th>DURATION</th>
-                  <th>STATUS</th>
-                  <th>ACTION</th>
-                </tr>
-              </thead>
-              <tbody id="cmServicesBody"></tbody>
-            </table>
+          <div class="cm-services-shell">
+            <div class="cm-services-toolbar">
+              <div class="cm-toolbar-group">
+                <label class="cm-select-field" for="cmServiceCategorySelect">
+                  <span>Service category</span>
+                  <select id="cmServiceCategorySelect" aria-label="Choose service category">
+                    <option value="">Select category</option>
+                  </select>
+                </label>
+              </div>
+
+              <label class="cm-search-field" for="cmServiceSearchInput">
+                <span>Search</span>
+                <input id="cmServiceSearchInput" type="search" placeholder="Search treatments..." aria-label="Search treatments" />
+              </label>
+            </div>
+            <div class="cm-service-list" id="cmServiceList"></div>
           </div>
         </div>
 
         <!-- ===== Homepage Content ===== -->
         <div class="cm-panel" id="cmPanelHomepage">
-          <div class="cm-block-list" id="cmHomepageList"></div>
-        </div>
-
-        <!-- ===== Team Members ===== -->
-        <div class="cm-panel" id="cmPanelTeam">
-          <div class="um-table-wrap">
-            <table class="um-table">
-              <thead>
-                <tr>
-                  <th>NAME</th>
-                  <th>ROLE</th>
-                  <th>SPECIALTY</th>
-                  <th>STATUS</th>
-                  <th>ACTION</th>
-                </tr>
-              </thead>
-              <tbody id="cmTeamBody"></tbody>
-            </table>
+          <div class="cm-page-shell">
+            <div class="cm-page-toolbar">
+              <label class="cm-select-field" for="cmPageSelect">
+                <span>Website page</span>
+                <select id="cmPageSelect" aria-label="Choose website page">
+                  <option value="home">Home</option>
+                  <option value="services">Services</option>
+                  <option value="about">About Us</option>
+                  <option value="contact">Contact Us</option>
+                </select>
+              </label>
+            </div>
+            <div class="cm-page-list" id="cmHomepageList"></div>
           </div>
         </div>
 

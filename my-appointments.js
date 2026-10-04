@@ -15,14 +15,34 @@
   const weekTimeColumn = document.getElementById('calWeekTimeColumn');
   const weekDaysGrid = document.getElementById('calWeekDaysGrid');
   const ratingContainer = document.getElementById('apptModalRatingContainer');
-    const upcomingList = document.getElementById('upcomingAppointments');
-    const upcomingCount = document.getElementById('upcomingAppointmentsCount');
-    const historyList = document.getElementById('appointmentHistory');
-    const historyCount = document.getElementById('appointmentHistoryCount');
+  const appointmentLists = document.getElementById('clientAppointmentLists');
+  const calendar = document.getElementById('clientCalendar');
+  const historyLinkWrap = document.getElementById('appointmentHistoryLinkWrap');
+  const calendarLinkWrap = document.getElementById('appointmentCalendarLinkWrap');
+  const pageTitle = document.getElementById('appointmentsPageTitle');
+  const pageDescription = document.getElementById('appointmentsPageDescription');
+  const upcomingList = document.getElementById('upcomingAppointments');
+  const upcomingCount = document.getElementById('upcomingAppointmentsCount');
+  const historyList = document.getElementById('appointmentHistory');
+  const historyCount = document.getElementById('appointmentHistoryCount');
+  const isAllAppointmentsView = new URLSearchParams(window.location.search).get('view') === 'all';
 
   if (!grid || !weekdaysEl || !titleEl || !prevBtn || !nextBtn || !weekBtn || !monthBtn ||
       !message || !monthView || !weekView ||
-      !weekHeader || !weekTimeColumn || !weekDaysGrid || !upcomingList || !historyList) return;
+      !weekHeader || !weekTimeColumn || !weekDaysGrid || !appointmentLists || !calendar ||
+      !historyLinkWrap || !calendarLinkWrap || !pageTitle || !pageDescription ||
+      !upcomingList || !historyList) return;
+
+  appointmentLists.hidden = !isAllAppointmentsView;
+  calendar.hidden = isAllAppointmentsView;
+  historyLinkWrap.hidden = isAllAppointmentsView;
+  calendarLinkWrap.hidden = !isAllAppointmentsView;
+  if (isAllAppointmentsView) {
+    const titleAccent = document.createElement('span');
+    titleAccent.textContent = 'Appointments';
+    pageTitle.replaceChildren(document.createTextNode('All '), titleAccent);
+    pageDescription.textContent = 'Review your upcoming, past, and cancelled appointments.';
+  }
 
   const DAY_NAMES = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
   const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
@@ -464,7 +484,7 @@
         list.sort((a, b) => String(a.appointment_time).localeCompare(String(b.appointment_time)));
       });
 
-      if (appointments.length === 0) {
+      if (appointments.length === 0 && !isAllAppointmentsView) {
         message.textContent = 'You have no appointments yet. Book one and it will show up here.';
       }
     } catch (error) {

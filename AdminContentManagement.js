@@ -12,11 +12,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const notice = document.getElementById('cmNotice');
   let activeSection = 'services';
   let editing = null;
+  let selectedServiceCategory = 'all';
+  let serviceSearchTerm = '';
+  let selectedContentPage = 'home';
 
   const SECTION_LABELS = {
     services: 'Service',
     homepage: 'Homepage Block',
-    team: 'Team Member',
     testimonials: 'Testimonial'
   };
 
@@ -62,47 +64,144 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ---------- renderers ----------
 
+  function formatMoney(value) {
+    const amount = Number(value ?? 0);
+    return `₱${amount.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+  }
+
   function renderServices() {
-    const tbody = document.getElementById('cmServicesBody');
-    tbody.textContent = '';
-    SERVICES.forEach((s) => {
-      const tr = el('tr');
-      tr.appendChild(el('td', '', s.service_name));
-      tr.appendChild(el('td', '', s.category));
-      tr.appendChild(el('td', '', `₱${Number(s.service_price).toLocaleString()}`));
-      tr.appendChild(el('td', '', `${s.duration_minutes} min`));
-      const statusTd = el('td');
-      statusTd.appendChild(statusBadge(s.is_active ? 'published' : 'draft'));
-      tr.appendChild(statusTd);
-      tr.appendChild(actionCell('services', s.service_id, s.is_active));
-      tbody.appendChild(tr);
+    const select = document.getElementById('cmServiceCategorySelect');
+    const list = document.getElementById('cmServiceList');
+    const searchInput = document.getElementById('cmServiceSearchInput');
+    if (!select || !list) return;
+
+    if (searchInput) {
+      searchInput.value = serviceSearchTerm;
+    }
+
+    const categories = [...new Set(SERVICES.map((service) => service.category).filter(Boolean))].sort();
+    if (!categories.length) {
+      list.textContent = '';
+      list.appendChild(el('p', 'cm-empty', 'No services found.'));
+      return;
+    }
+
+    if (!categories.includes(selectedServiceCategory) || selectedServiceCategory === 'all' || !selectedServiceCategory) {
+      selectedServiceCategory = categories[0];
+    }
+
+    select.innerHTML = categories.map((category) => `<option value="${category}">${category}</option>`).join('');
+    select.value = selectedServiceCategory;
+
+    const normalizedQuery = serviceSearchTerm.trim().toLowerCase();
+    const filteredServices = SERVICES.filter((service) => {
+      const matchesCategory = selectedServiceCategory === 'all' || service.category === selectedServiceCategory;
+      if (!matchesCategory) return false;
+
+      if (!normalizedQuery) return true;
+
+      const haystack = [
+        service.service_name,
+        service.category,
+        service.description,
+        service.duration_minutes,
+      ].filter(Boolean).join(' ').toLowerCase();
+
+      return haystack.includes(normalizedQuery);
     });
-    if (!SERVICES.length) tbody.appendChild(emptyRow(6, 'No services found.'));
+
+    list.textContent = '';
+
+    if (!filteredServices.length) {
+      const emptyMessage = normalizedQuery ? 'No services match your search.' : 'No services found for this category.';
+      list.appendChild(el('p', 'cm-empty', emptyMessage));
+      return;
+    }
+
+    const scrollWrap = el('div', 'cm-category-scroll');
+    filteredServices.forEach((service) => {
+      const item = el('article', 'cm-service-item');
+      const header = el('div', 'cm-service-header');
+      const summary = el('div', 'cm-service-summary');
+      const title = el('h3', 'cm-service-name', service.service_name);
+      const pills = el('div', 'cm-service-pills');
+      pills.appendChild(el('span', 'cm-mini-tag', service.category || 'General'));
+      pills.appendChild(el('span', 'cm-mini-tag cm-mini-tag--muted', `${service.duration_minutes || 0} min`));
+      summary.appendChild(title);
+      summary.appendChild(pills);
+
+      const price = el('div', 'cm-service-price', formatMoney(service.service_price));
+      header.appendChild(summary);
+      header.appendChild(price);
+
+      const description = el('p', 'cm-service-description', service.description || 'No description available yet.');
+      const footer = el('div', 'cm-service-footer');
+      const meta = el('div', 'cm-service-meta');
+      meta.appendChild(el('span', '', `Reservation fee: ${formatMoney(service.reservation_fee)}`));
+      footer.appendChild(meta);
+
+      const actions = el('div', 'cm-service-actions');
+      const editBtn = el('button', 'apt-action apt-action--view', 'Edit');
+      editBtn.type = 'button';
+      editBtn.dataset.section = 'services';
+      editBtn.dataset.action = 'edit';
+      editBtn.dataset.id = service.service_id;
+      const toggleBtn = actionButton(service.is_active ? 'Unpublish' : 'Publish', 'services', 'toggle', service.service_id);
+      actions.appendChild(editBtn);
+      actions.appendChild(toggleBtn);
+      footer.appendChild(actions);
+
+      const statusWrap = el('div', 'cm-service-status-row');
+      statusWrap.appendChild(statusBadge(service.is_active ? 'published' : 'draft'));
+      footer.appendChild(statusWrap);
+
+      item.appendChild(header);
+      item.appendChild(description);
+      item.appendChild(footer);
+      scrollWrap.appendChild(item);
+    });
+
+    list.appendChild(scrollWrap);
   }
 
   function renderHomepage() {
     const list = document.getElementById('cmHomepageList');
+    const pageSelect = document.getElementById('cmPageSelect');
+    if (!list) return;
+    if (pageSelect) pageSelect.value = selectedContentPage;
     list.textContent = '';
     HOMEPAGE_BLOCKS.forEach((b) => {
-      const row = el('div', 'cm-block-row');
-      const info = el('div', 'cm-block-info');
-      info.appendChild(el('p', 'cm-block-label', b.label));
-      info.appendChild(el('p', 'cm-block-detail', b.title));
-      if (b.body) info.appendChild(el('p', 'cm-block-detail', b.body));
-      row.appendChild(info);
-      row.appendChild(statusBadge(b.isPublished ? 'published' : 'draft'));
-      const actions = el('div', 'cm-actions');
+      const card = el('article', 'cm-content-card');
+      if (b.imageUrl) {
+        const image = el('img', 'cm-content-card__image');
+        image.src = b.imageUrl;
+        image.alt = `${b.label} preview`;
+        card.appendChild(image);
+      } else {
+        card.appendChild(el('div', 'cm-content-card__image cm-content-card__image--empty', 'No image'));
+      }
+
+      const info = el('div', 'cm-content-card__main');
+      info.appendChild(el('p', 'cm-content-card__label', b.label));
+      info.appendChild(el('h3', 'cm-content-card__title', b.title));
+      if (b.body) info.appendChild(el('p', 'cm-content-card__body', b.body));
+      card.appendChild(info);
+
+      const controls = el('div', 'cm-content-card__controls');
+      controls.appendChild(statusBadge(b.isPublished ? 'published' : 'draft'));
+      const editorSection = b.editorSection || 'homepage';
+      const itemId = b.editorSection === 'team' ? b.id : b.key;
       const editBtn = el('button', 'apt-action apt-action--view', 'Edit');
       editBtn.type = 'button';
-      editBtn.dataset.section = 'homepage';
+      editBtn.dataset.section = editorSection;
       editBtn.dataset.action = 'edit';
-      editBtn.dataset.id = b.key;
-      actions.appendChild(editBtn);
-      actions.appendChild(actionButton(b.isPublished ? 'Unpublish' : 'Publish', 'homepage', 'toggle', b.key));
-      row.appendChild(actions);
-      list.appendChild(row);
+      editBtn.dataset.id = itemId;
+      controls.appendChild(editBtn);
+      controls.appendChild(actionButton(b.isPublished ? 'Unpublish' : 'Publish', editorSection, 'toggle', itemId));
+      card.appendChild(controls);
+      list.appendChild(card);
     });
-    if (!HOMEPAGE_BLOCKS.length) list.appendChild(el('p', 'cm-empty', 'No homepage content found.'));
+    if (!HOMEPAGE_BLOCKS.length) list.appendChild(el('p', 'cm-empty', 'No content blocks found for this page.'));
   }
 
   function renderTeam() {
@@ -203,20 +302,34 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function loadHomepage() {
-    HOMEPAGE_BLOCKS = await apiRequest('/api/content/admin/homepage');
+    HOMEPAGE_BLOCKS = await apiRequest(`/api/content/admin/pages/${selectedContentPage}`);
+    if (selectedContentPage === 'about') {
+      TEAM = await apiRequest('/api/content/admin/team');
+      HOMEPAGE_BLOCKS.push(...TEAM.map((member) => ({
+        ...member,
+        key: `team_member_${member.id}`,
+        label: 'Specialist',
+        title: member.name,
+        body: member.role,
+        imageUrl: member.photoUrl,
+        editorSection: 'team',
+      })));
+    }
     renderHomepage();
   }
 
   async function loadTeam() {
     TEAM = await apiRequest('/api/content/admin/team');
-    renderTeam();
   }
 
   async function refreshSection(section) {
     try {
       if (section === 'services') await loadServices();
       if (section === 'homepage') await loadHomepage();
-      if (section === 'team') await loadTeam();
+      if (section === 'team') {
+        if (selectedContentPage === 'about') await loadHomepage();
+        else await loadTeam();
+      }
       if (section === 'testimonials') await loadTestimonials();
     } catch (error) {
       setNotice(error.message, true);
@@ -247,8 +360,56 @@ document.addEventListener('DOMContentLoaded', () => {
     editorFields.appendChild(fieldLabel);
   }
 
+  function addImageEditorField(item) {
+    const fieldLabel = el('label', 'cm-editor__field', 'Replace image (JPG, PNG, or WebP, up to 5 MB)');
+    const preview = el('img', 'cm-editor__image-preview');
+    const imageUrl = item?.imageUrl || item?.photoUrl || '';
+    preview.alt = 'Selected image preview';
+    preview.hidden = !imageUrl;
+    if (imageUrl) preview.src = imageUrl;
+
+    const field = el('input', 'cm-editor__input');
+    field.type = 'file';
+    field.name = 'imageFile';
+    field.accept = 'image/jpeg,image/png,image/webp';
+    field.addEventListener('change', () => {
+      const file = field.files?.[0];
+      if (!file) return;
+      preview.src = URL.createObjectURL(file);
+      preview.hidden = false;
+    });
+
+    fieldLabel.append(preview, field);
+    editorFields.appendChild(fieldLabel);
+  }
+
+  function readImageData(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.addEventListener('load', () => resolve(reader.result));
+      reader.addEventListener('error', () => reject(new Error('Could not read the selected image.')));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function uploadImage(file) {
+    if (file.size > 5 * 1024 * 1024) throw new Error('Choose an image under 5 MB.');
+    const imageData = await readImageData(file);
+    const result = await apiRequest('/api/content/admin/upload-image', {
+      method: 'POST',
+      body: JSON.stringify({ imageData }),
+    });
+    return result.imageUrl;
+  }
+
   function openEditor(section, item) {
-    editing = { section, id: item?.service_id || item?.id || item?.key || null };
+    editing = {
+      section,
+      id: item?.service_id || item?.id || item?.key || null,
+      pageKey: selectedContentPage,
+      imageUrl: item?.imageUrl || '',
+      payload: item?.payload || {},
+    };
     editorFields.textContent = '';
     editorError.hidden = true;
     editorError.textContent = '';
@@ -266,12 +427,14 @@ document.addEventListener('DOMContentLoaded', () => {
       addEditorField('role', 'Role', item?.role, { required: true, maxLength: 160 });
       addEditorField('specialty', 'Specialty', item?.specialty, { multiline: true, maxLength: 500 });
       addEditorField('experience', 'Experience', item?.experience, { multiline: true, maxLength: 500 });
-      addEditorField('photoUrl', 'Photo path (inside images/)', item?.photoUrl || 'images/SkinGoddessReceptionImg.jpg', { required: true, maxLength: 500 });
+      addImageEditorField(item);
       addEditorField('sortOrder', 'Display order', item?.sortOrder ?? TEAM.length, { type: 'number', required: true, min: 0, step: '1' });
     } else if (section === 'homepage') {
-      addEditorField('title', 'Title', item.title, { required: true, maxLength: 500, multiline: item.key === 'hero' });
+      addEditorField('title', 'Title', item.title, { required: true, maxLength: 500, multiline: item.key === 'hero' || item.key === 'experience' });
       addEditorField('body', 'Supporting text', item.body, { multiline: true, maxLength: 2000 });
-      addEditorCheckbox('isPublished', 'Published on the public site', item.isPublished);
+      if (item.imageUrl || item.key === 'hero' || item.payload?.category) {
+        addImageEditorField(item);
+      }
       if (item.key === 'services_strip') {
         (item.payload?.items || []).forEach((stripItem, index) => {
           addEditorField(`stripTitle${index}`, `Service card ${index + 1} title`, stripItem.title, { required: true, maxLength: 160 });
@@ -315,7 +478,7 @@ document.addEventListener('DOMContentLoaded', () => {
         role: values.role,
         specialty: values.specialty,
         experience: values.experience,
-        photoUrl: values.photoUrl,
+        photoUrl: editing.imageUrl,
         sortOrder: number('sortOrder'),
       };
     } else {
@@ -323,13 +486,14 @@ document.addEventListener('DOMContentLoaded', () => {
       const stripItems = block?.key === 'services_strip'
         ? (block.payload?.items || []).map((item, index) => ({ title: values[`stripTitle${index}`], body: values[`stripBody${index}`] }))
         : undefined;
-      url = `/api/content/admin/homepage/${editing.id}`;
+      url = `/api/content/admin/pages/${editing.pageKey}/${editing.id}`;
       method = 'PUT';
       payload = {
         title: values.title,
         body: values.body,
-        isPublished: values.isPublished === 'on',
-        ...(stripItems ? { payload: { items: stripItems } } : {}),
+        imageUrl: editing.imageUrl,
+        isPublished: block?.isPublished ?? true,
+        payload: stripItems ? { items: stripItems } : editing.payload,
       };
     }
 
@@ -337,6 +501,14 @@ document.addEventListener('DOMContentLoaded', () => {
     submit.disabled = true;
     editorError.hidden = true;
     try {
+      if (editing.section === 'homepage' || editing.section === 'team') {
+        const selectedImage = editorForm.elements.namedItem('imageFile')?.files?.[0];
+        if (selectedImage) {
+          editing.imageUrl = await uploadImage(selectedImage);
+          if (editing.section === 'team') payload.photoUrl = editing.imageUrl;
+          else payload.imageUrl = editing.imageUrl;
+        }
+      }
       await apiRequest(url, { method, body: JSON.stringify(payload) });
       closeEditor();
       setNotice('Changes saved.');
@@ -358,9 +530,9 @@ document.addEventListener('DOMContentLoaded', () => {
       await apiRequest(`/api/content/admin/team/${id}/status`, { method: 'PATCH', body: JSON.stringify({ isPublished: !item.isPublished }) });
     } else if (section === 'homepage') {
       const item = HOMEPAGE_BLOCKS.find((block) => block.key === id);
-      await apiRequest(`/api/content/admin/homepage/${id}`, {
+      await apiRequest(`/api/content/admin/pages/${selectedContentPage}/${id}`, {
         method: 'PUT',
-        body: JSON.stringify({ title: item.title, body: item.body, payload: item.payload, isPublished: !item.isPublished }),
+        body: JSON.stringify({ title: item.title, body: item.body, imageUrl: item.imageUrl, payload: item.payload, isPublished: !item.isPublished }),
       });
     } else {
       const item = TESTIMONIALS_STATE.items.find((rating) => String(rating.rating_id) === String(id));
@@ -376,6 +548,23 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!addBtn.hidden) addBtn.textContent = '+ Add ' + SECTION_LABELS[section];
     await refreshSection(section);
   }
+
+  const categorySelect = document.getElementById('cmServiceCategorySelect');
+  categorySelect?.addEventListener('change', (event) => {
+    selectedServiceCategory = event.target.value;
+    renderServices();
+  });
+
+  document.getElementById('cmPageSelect')?.addEventListener('change', async (event) => {
+    selectedContentPage = event.target.value;
+    await refreshSection('homepage');
+  });
+
+  const searchInput = document.getElementById('cmServiceSearchInput');
+  searchInput?.addEventListener('input', (event) => {
+    serviceSearchTerm = event.target.value;
+    renderServices();
+  });
 
   document.getElementById('cmEditorClose').addEventListener('click', closeEditor);
   document.getElementById('cmEditorCancel').addEventListener('click', closeEditor);
