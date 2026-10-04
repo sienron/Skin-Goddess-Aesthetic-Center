@@ -54,12 +54,19 @@
 
   <main class="my-appointments-main" id="myAppointmentsPage">
     <div class="booking-intro"><span class="booking-eyebrow">-- YOUR VISITS</span>
-      <h1>My <span>Appointments</span></h1>
-      <p>Review your upcoming visits and appointment history.</p>
+      <h1 id="appointmentsPageTitle">My <span>Appointments</span></h1>
+      <p id="appointmentsPageDescription">View your appointments on the calendar.</p>
     </div>
     <p class="appointments-message" id="appointmentsMessage" role="status" aria-live="polite"></p>
 
-    <div class="client-appointment-lists">
+    <p class="appointment-history-link-wrap" id="appointmentHistoryLinkWrap">
+      <a class="client-appointment-history-link" href="MyAppointments.html?view=all">Check appointment history</a>
+    </p>
+    <p class="appointment-calendar-link-wrap" id="appointmentCalendarLinkWrap" hidden>
+      <a class="client-appointment-history-link" href="MyAppointments.html">Back to calendar</a>
+    </p>
+
+    <div class="client-appointment-lists" id="clientAppointmentLists" hidden>
       <section class="client-appointment-section" aria-labelledby="upcomingAppointmentsTitle">
         <div class="client-appointment-section-heading">
           <h2 id="upcomingAppointmentsTitle">Upcoming appointments</h2>

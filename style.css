@@ -12386,6 +12386,35 @@ main.my-appointments-main .booking-intro {
   margin: 0 0 32px;
 }
 
+.client-appointment-lists[hidden],
+.client-calendar[hidden],
+.appointment-history-link-wrap[hidden],
+.appointment-calendar-link-wrap[hidden] {
+  display: none;
+}
+
+.appointment-history-link-wrap,
+.appointment-calendar-link-wrap {
+  margin: 0 0 24px;
+}
+
+.client-appointment-history-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid #c9a84c;
+  border-radius: 4px;
+  background: #fff;
+  color: #4f421f;
+  font: 600 13px "Raleway", sans-serif;
+  text-decoration: none;
+}
+
+.client-appointment-history-link:hover {
+  background: #f8f4e9;
+}
+
 .client-appointment-section {
   min-width: 0;
   border-top: 2px solid #c9a84c;
