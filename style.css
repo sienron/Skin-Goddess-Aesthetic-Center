@@ -15452,3 +15452,246 @@ body.homepage .hero-pair--support .hero-pair-text p {
 .admin-inventory-main .summary-value {
   font-size: 25px;
 }
+
+/* Batch invoice upload */
+body.inventory-officer-page {
+  display: block;
+  height: auto;
+}
+
+body.inventory-officer-page > main.inventory-page {
+  display: block;
+  flex: initial;
+}
+
+.batch-upload-modal[hidden],
+.batch-review-section[hidden],
+.batch-preview-wrap[hidden],
+.batch-raw-text[hidden] {
+  display: none;
+}
+
+.batch-upload-modal {
+  position: fixed;
+  z-index: 5000;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(32, 28, 24, 0.58);
+}
+
+.batch-upload-dialog {
+  width: min(100%, 1080px);
+  max-height: 92vh;
+  overflow: auto;
+  padding: 24px;
+  border: 1px solid #e7ddc9;
+  border-radius: 14px;
+  background: #fff;
+  color: #201c18;
+  box-shadow: 0 20px 60px rgba(32, 28, 24, 0.24);
+}
+
+.batch-upload-heading,
+.batch-review-heading,
+.batch-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.batch-upload-heading h2 {
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.batch-upload-close,
+.batch-row-delete {
+  border: 0;
+  background: transparent;
+  color: #5a3a1e;
+  font-size: 20px;
+}
+
+.batch-upload-help {
+  margin: 8px 0 16px;
+  color: #756c62;
+  font-size: 14px;
+}
+
+.batch-file-label,
+.batch-input-label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.batch-upload-modal input,
+.batch-upload-modal select {
+  width: 100%;
+  min-width: 90px;
+  padding: 9px 10px;
+  border: 1px solid #d3d3d3;
+  border-radius: 6px;
+  background: #fff;
+  color: #201c18;
+}
+
+.batch-preview-wrap {
+  margin-top: 12px;
+}
+
+.batch-preview-image {
+  display: block;
+  max-width: 190px;
+  max-height: 170px;
+  border: 1px solid #e7ddc9;
+  border-radius: 8px;
+  object-fit: contain;
+}
+
+.batch-upload-status {
+  min-height: 24px;
+  margin: 10px 0;
+  color: #5a3a1e;
+  font-size: 14px;
+}
+
+.batch-upload-status[data-error="true"] {
+  color: #a52a2a;
+}
+
+.batch-review-section {
+  margin-top: 16px;
+}
+
+.batch-review-heading {
+  margin-bottom: 10px;
+}
+
+.batch-review-heading h3 {
+  font-size: 17px;
+}
+
+.batch-table-wrap {
+  overflow: auto;
+  border: 1px solid #e7ddc9;
+  border-radius: 8px;
+}
+
+.batch-review-table {
+  width: 100%;
+  min-width: 860px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.batch-review-table th,
+.batch-review-table td {
+  padding: 9px;
+  border-bottom: 1px solid #eeeae3;
+  text-align: left;
+  vertical-align: top;
+}
+
+.batch-review-table th {
+  background: #fbf3e7;
+  color: #5a3a1e;
+}
+
+.batch-review-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.batch-review-table .batch-row--review td {
+  background: #fff5e7;
+}
+
+.batch-review-reason {
+  display: block;
+  margin-top: 4px;
+  color: #9a4e00;
+  font-size: 11px;
+}
+
+.batch-existing-badge {
+  display: inline-block;
+  padding: 3px 7px;
+  border-radius: 12px;
+  background: #e8f3e7;
+  color: #315c32;
+  font-size: 11px;
+}
+
+.batch-row-delete {
+  font-size: 14px;
+}
+
+.batch-raw-text {
+  margin-top: 12px;
+}
+
+.batch-raw-text pre {
+  max-height: 150px;
+  overflow: auto;
+  padding: 10px;
+  background: #f6f4f0;
+  white-space: pre-wrap;
+}
+
+.batch-actions {
+  justify-content: flex-end;
+  margin-top: 18px;
+}
+
+.batch-action-button {
+  min-height: 38px;
+  padding: 8px 16px;
+  border: 1px solid #b5892a;
+  border-radius: 6px;
+  background: #d4a937;
+  color: #201c18;
+  font-weight: 600;
+}
+
+.batch-action-button.batch-secondary {
+  border-color: #d3d3d3;
+  background: #fff;
+}
+
+.batch-action-button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.batch-toast {
+  position: fixed;
+  z-index: 6000;
+  top: 18px;
+  right: 18px;
+  max-width: min(420px, calc(100vw - 36px));
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: #315c32;
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(32, 28, 24, 0.2);
+}
+
+.batch-toast[data-error="true"] {
+  background: #a52a2a;
+}
+
+@media (max-width: 600px) {
+  .batch-upload-modal {
+    padding: 8px;
+  }
+
+  .batch-upload-dialog {
+    max-height: 96vh;
+    padding: 16px;
+  }
+}

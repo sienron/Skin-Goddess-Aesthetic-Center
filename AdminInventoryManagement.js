@@ -132,6 +132,7 @@
         }
     }
 
+    window.addEventListener("inventory:batch-upload-confirmed", loadTransactions);
     periodFilter.addEventListener("change", renderTransactions);
     typeFilter.addEventListener("change", renderTransactions);
     transactionsExport.addEventListener("click", () => {

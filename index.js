@@ -218,6 +218,21 @@ app.use(express.static(publicDir, {
 
 require('./utils/notificationJobs').startNotificationJobs();
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Server is running http://localhost:${PORT}`);
+});
+
+const { terminateWorker } = require('./utils/invoiceOcr');
+['SIGINT', 'SIGTERM'].forEach(signal => {
+  process.once(signal, () => {
+    server.close(() => {
+      terminateWorker()
+        .then(() => db.pool.end())
+        .then(() => process.exit(0))
+        .catch(error => {
+          console.error('Failed to stop the server cleanly:', error);
+          process.exit(1);
+        });
+    });
+  });
 });

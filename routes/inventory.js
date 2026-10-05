@@ -1,11 +1,222 @@
 const express = require('express');
+const multer = require('multer');
 const router = express.Router();
 const db = require('../db');
 const { requireRole } = require('../middleware/auth');
 const { notifyRoles } = require('../utils/notifications');
 const { LOW_STOCK_THRESHOLD, CRITICAL_STOCK_THRESHOLD } = require('../utils/inventoryThresholds');
+const { recognizeImage } = require('../utils/invoiceOcr');
+const { parseInvoiceText, INVOICE_PARSER_CONFIG } = require('../utils/invoiceParser');
 
 router.use(requireRole('inventory_officer', 'admin'));
+
+const uploadInvoice = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 10 * 1024 * 1024 },
+    fileFilter(req, file, callback) {
+        if (!['image/jpeg', 'image/png'].includes(file.mimetype)) {
+            return callback(new Error('Only JPEG and PNG invoice images are allowed.'));
+        }
+        callback(null, true);
+    }
+});
+
+function handleInvoiceUpload(req, res, next) {
+    uploadInvoice.single('image')(req, res, error => {
+        if (!error) return next();
+
+        const isTooLarge = error instanceof multer.MulterError
+            && error.code === 'LIMIT_FILE_SIZE';
+        const isInvalidType = error.message === 'Only JPEG and PNG invoice images are allowed.';
+        return res.status(isTooLarge ? 413 : 400).json({
+            message: isTooLarge
+                ? 'The invoice image must be 10 MB or smaller.'
+                : isInvalidType
+                    ? error.message
+                    : 'The invoice image could not be uploaded.'
+        });
+    });
+}
+
+function validExpiryDate(value) {
+    if (value === null || value === undefined || value === '') return true;
+    if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+    const date = new Date(`${value}T00:00:00Z`);
+    return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+function validateBatchRows(rows) {
+    if (!Array.isArray(rows) || rows.length === 0 || rows.length > 500) {
+        return 'Add between 1 and 500 reviewed invoice rows.';
+    }
+
+    for (let index = 0; index < rows.length; index += 1) {
+        const row = rows[index];
+        if (!row || typeof row !== 'object' || Array.isArray(row)) {
+            return `Row ${index + 1} is invalid.`;
+        }
+        if (typeof row.product_name !== 'string' || !row.product_name.trim()
+            || row.product_name.trim().length > 255) {
+            return `Row ${index + 1} needs a product name of 1 to 255 characters.`;
+        }
+        if (!Number.isInteger(Number(row.quantity)) || Number(row.quantity) <= 0) {
+            return `Row ${index + 1} quantity must be a positive whole number.`;
+        }
+        if (row.unit_price === null || row.unit_price === undefined
+            || row.unit_price === '' || !Number.isFinite(Number(row.unit_price))
+            || Number(row.unit_price) < 0 || Number(row.unit_price) > 99999999.99) {
+            return `Row ${index + 1} unit price must be a non-negative number.`;
+        }
+        if (typeof row.category !== 'string' || !row.category.trim()
+            || row.category.trim().length > 100) {
+            return `Row ${index + 1} needs a category of 1 to 100 characters.`;
+        }
+        if (!validExpiryDate(row.expiry_date)) {
+            return `Row ${index + 1} expiration date must be a valid date.`;
+        }
+    }
+    return null;
+}
+
+router.post('/batch-upload/scan', handleInvoiceUpload, async (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ message: 'Select a JPEG or PNG invoice image to scan.' });
+    }
+
+    try {
+        const rawText = await recognizeImage(req.file.buffer);
+        if (rawText.trim().length < INVOICE_PARSER_CONFIG.minimumTextLength) {
+            return res.status(422).json({
+                message: 'We could not read enough text. Please retake the photo on a flat surface with good lighting.'
+            });
+        }
+
+        const rows = parseInvoiceText(rawText);
+        const names = [...new Set(rows
+            .map(row => row.product_name.trim().toLowerCase())
+            .filter(Boolean))];
+        const existingResult = names.length
+            ? await db.query(`
+                SELECT product_id, product_name, category, stock_quantity,
+                    expiry_date::text AS expiry_date, unit_price
+                FROM inventory_products
+                WHERE LOWER(BTRIM(product_name)) = ANY($1::text[])
+                ORDER BY product_id ASC
+            `, [names])
+            : { rows: [] };
+        const existingProducts = new Map();
+        existingResult.rows.forEach(product => {
+            const key = product.product_name.trim().toLowerCase();
+            if (!existingProducts.has(key)) existingProducts.set(key, product);
+        });
+
+        const reviewedRows = rows.map(row => {
+            const existing = existingProducts.get(row.product_name.trim().toLowerCase());
+            return existing
+                ? {
+                    ...row,
+                    existing: true,
+                    existingProductId: existing.product_id,
+                    category: existing.category,
+                    expiry_date: existing.expiry_date
+                }
+                : row;
+        });
+
+        const response = { rows: reviewedRows };
+        if (process.env.OCR_RETURN_RAW_TEXT !== 'false') response.rawText = rawText;
+        return res.json(response);
+    } catch (error) {
+        console.error('Invoice OCR scan failed:', error);
+        return res.status(500).json({
+            message: 'The invoice image could not be processed. Please try again with a clearer photo.'
+        });
+    }
+});
+
+router.post('/batch-upload/confirm', async (req, res) => {
+    const validationError = validateBatchRows(req.body?.rows);
+    if (validationError) {
+        return res.status(400).json({ message: validationError });
+    }
+
+    try {
+        const savedProducts = await db.transaction(async client => {
+            const savedRows = [];
+
+            for (const row of req.body.rows) {
+                const productName = row.product_name.trim();
+                const quantity = Number(row.quantity);
+                const unitPrice = Number(row.unit_price);
+                const expiryDate = row.expiry_date || null;
+                const existingResult = await client.query(`
+                    SELECT product_id, product_name, category, stock_quantity
+                    FROM inventory_products
+                    WHERE LOWER(BTRIM(product_name)) = LOWER(BTRIM($1))
+                    ORDER BY product_id ASC
+                    LIMIT 1
+                    FOR UPDATE
+                `, [productName]);
+
+                if (existingResult.rows.length) {
+                    const existing = existingResult.rows[0];
+                    const previousStock = Number(existing.stock_quantity);
+                    const newStock = previousStock + quantity;
+                    const updated = await client.query(`
+                        UPDATE inventory_products
+                        SET stock_quantity = $1,
+                            unit_price = $2,
+                            expiry_date = COALESCE($3, expiry_date),
+                            updated_at = NOW()
+                        WHERE product_id = $4
+                        RETURNING product_id, product_name, category, stock_quantity,
+                            expiry_date::text AS expiry_date, unit_price
+                    `, [newStock, unitPrice, expiryDate, existing.product_id]);
+                    await client.query(`
+                        INSERT INTO inventory_transactions
+                            (product_id, product_name, transaction_type, quantity,
+                                previous_stock, new_stock, created_by, created_at)
+                        VALUES ($1, $2, 'Restock', $3, $4, $5, $6, NOW())
+                    `, [
+                        existing.product_id,
+                        existing.product_name,
+                        quantity,
+                        previousStock,
+                        newStock,
+                        req.session.userId
+                    ]);
+                    savedRows.push(updated.rows[0]);
+                    continue;
+                }
+
+                const inserted = await client.query(`
+                    INSERT INTO inventory_products
+                        (product_name, category, stock_quantity, expiry_date, unit_price)
+                    VALUES ($1, $2, $3, $4, $5)
+                    RETURNING product_id, product_name, category, stock_quantity,
+                        expiry_date::text AS expiry_date, unit_price
+                `, [productName, row.category.trim(), quantity, expiryDate, unitPrice]);
+                const product = inserted.rows[0];
+                await client.query(`
+                    INSERT INTO inventory_transactions
+                        (product_id, product_name, transaction_type, quantity,
+                            previous_stock, new_stock, created_by, created_at)
+                    VALUES ($1, $2, 'Adjustment', $3, 0, $3, $4, NOW())
+                `, [product.product_id, product.product_name, quantity, req.session.userId]);
+                savedRows.push(product);
+            }
+
+            return savedRows;
+        });
+
+        return res.status(201).json({ products: savedProducts });
+    } catch (error) {
+        console.error('Invoice batch confirmation failed:', error);
+        return res.status(500).json({
+            message: 'The invoice rows could not be saved. No rows were added; please try again.'
+        });
+    }
+});
 
 async function notifyStockTransition(previousStock, currentStock, productName) {
     let type;

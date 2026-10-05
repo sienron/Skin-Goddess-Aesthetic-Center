@@ -9,6 +9,7 @@ const browserScripts = [
   'admin-dashboard.js',
   'admin-notifications.js',
   'AdminInventoryManagement.js',
+  'batch-upload.js',
   'AdminAppointment.js',
   'AdminContentManagement.js',
   'appointment-booking.js',
