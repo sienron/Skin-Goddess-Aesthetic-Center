@@ -15023,3 +15023,50 @@ body.homepage .hero-reveal {
   }
 
 }
+
+/* Admin headers need room to wrap before the mobile layout breakpoint. */
+@media (min-width: 641px) and (max-width: 1024px) {
+  #adminDashboardMain > .um-header,
+  #appointmentsMain > .um-header,
+  #userManagementMain > .um-header {
+    height: auto;
+    min-height: 0;
+    padding-left: 0;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  #appointmentsMain > .um-header {
+    flex-shrink: 0;
+  }
+
+  #adminDashboardMain > .um-header .um-header__actions,
+  #appointmentsMain > .um-header .um-header__actions,
+  #userManagementMain > .um-header .um-header__actions {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  #adminDashboardMain > .um-header .um-header__actions-row,
+  #appointmentsMain > .um-header .um-header__actions-row,
+  #userManagementMain > .um-header .um-header__actions-row {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 640px) {
+  #adminDashboardMain > .um-header .um-header__actions-row,
+  #appointmentsMain > .um-header .um-header__actions-row,
+  #userManagementMain > .um-header .um-header__actions-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #adminDashboardMain > .um-header .um-header__actions-row .um-btn,
+  #appointmentsMain > .um-header .um-header__actions-row .um-btn,
+  #userManagementMain > .um-header .um-header__actions-row .um-btn {
+    min-width: 0;
+    white-space: normal;
+  }
+}
