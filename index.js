@@ -144,7 +144,6 @@ const protectedPages = [
   { path: '/Usermanagement.html', roles: ['admin'] },
 
   { path: '/InventoryManagement.html', roles: ['inventory_officer', 'admin'] },
-  { path: '/InventoryDashboard.html', roles: ['inventory_officer'] },
   { path: '/FinanceDashboard.html', roles: ['finance_officer', 'admin'] },
   { path: '/FinanceExpenses.html', roles: ['finance_officer', 'admin'] },
   { path: '/FinanceReports.html', roles: ['finance_officer', 'admin'] },
@@ -159,6 +158,10 @@ protectedPages.forEach(({ path: page, roles }) => {
       res.sendFile(path.join(publicDir, page));
     }
   );
+});
+
+app.get('/InventoryDashboard.html', requireRole('inventory_officer'), (req, res) => {
+  res.redirect('/InventoryManagement.html');
 });
 
 app.get('/', (req, res) => {
@@ -178,6 +181,7 @@ app.get('/LoginPage.html', (req, res) => {
 });
 
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/chatbot', require('./routes/chatbot'));
 app.use('/api/services', require('./routes/services'));
 app.use('/api/appointments', require('./routes/appointments'));
 app.use('/api/ratings', require('./routes/ratings'));

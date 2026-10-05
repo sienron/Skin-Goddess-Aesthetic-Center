@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -554,34 +554,7 @@
   <span class="scroll-indicator__dot"></span>
   <span class="scroll-indicator__thumb"></span>
 </div>
-
-<section class="faq-chat" aria-label="Frequently asked questions">
-  <div class="faq-chat-panel" id="faqChatPanel" hidden>
-    <div class="faq-chat-header">
-      <div>
-        <p class="faq-chat-title">Skin Goddess Help</p>
-        <p class="faq-chat-status">Frequently asked questions</p>
-      </div>
-      <button class="faq-chat-close" id="faqChatClose" type="button" aria-label="Close chat">&times;</button>
-    </div>
-    <div class="faq-chat-messages" id="faqChatMessages" role="log" aria-live="polite" aria-relevant="additions">
-      <p class="faq-chat-message faq-chat-message--bot">Hi! Ask me about services, prices, booking, available times, clinic hours, payments, or treatment care.</p>
-    </div>
-    <form class="faq-chat-form" id="faqChatForm">
-      <label class="faq-chat-sr-only" for="faqChatInput">Ask a question</label>
-      <input id="faqChatInput" name="question" type="text" placeholder="Type your question..." autocomplete="off" required>
-      <button type="submit" aria-label="Send question">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 21 3l-6.7 18-3.7-7.3L3 11.5Zm7.6 2.2L21 3"/></svg>
-      </button>
-    </form>
-  </div>
-  <button class="faq-chat-launcher" id="faqChatLauncher" type="button" aria-label="Open FAQ chat" aria-expanded="false" aria-controls="faqChatPanel">
-    <svg viewBox="0 0 100 100" aria-hidden="true">
-      <path class="faq-chat-bubble" d="M50 25c-18.8 0-34 12.3-34 27.5 0 7 3.2 13.4 8.7 18.3 1.5 5.7-.2 11.1-2.7 16.2l15.4-6.5c4 1.3 8.2 2 12.6 2 18.8 0 34-12.3 34-27.5S68.8 25 50 25Z"/>
-      <circle cx="37" cy="53" r="3.2"/><circle cx="50" cy="53" r="3.2"/><circle cx="63" cy="53" r="3.2"/>
-    </svg>
-  </button>
-</section>
+<div data-faq-chatbot-mount></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.15.0/gsap.min.js" integrity="sha512-oJ8QbaQThQoJZ7oEv+29jfPM6CcP+zUxh3PKJs1vyOhx0UraUrE7PQgeItu3dOuCJyrzWpoYMsVjkkPEBzbUqw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.15.0/ScrollTrigger.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
