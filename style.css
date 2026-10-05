@@ -15012,3 +15012,28 @@ body.homepage .hero-reveal {
     white-space: normal;
   }
 }
+
+@media (min-width: 1025px) {
+  .admin-inventory-main {
+    padding: 0;
+  }
+
+  .admin-inventory-main > .inventory-header {
+    min-height: 72px;
+    padding: 0 28px;
+  }
+}
+
+.admin-inventory-main .summary-cards {
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+.admin-inventory-main .summary-card {
+  min-height: 72px;
+  padding: 11px 14px;
+}
+
+.admin-inventory-main .summary-value {
+  font-size: 25px;
+}
