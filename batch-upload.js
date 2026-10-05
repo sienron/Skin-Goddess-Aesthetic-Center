@@ -24,6 +24,16 @@
             <p class="batch-upload-help">Place the invoice on a flat surface, use good lighting, and fill the frame.</p>
             <label class="batch-file-label" for="batchInvoiceFile">Invoice photo</label>
             <input id="batchInvoiceFile" type="file" accept="image/*">
+            <div class="batch-camera-actions">
+                <button class="batch-action-button batch-secondary batch-camera-start" type="button">Use camera</button>
+            </div>
+            <div class="batch-camera-wrap" hidden>
+                <video class="batch-camera-video" autoplay playsinline muted></video>
+                <div class="batch-camera-actions">
+                    <button class="batch-action-button batch-camera-capture" type="button">Take photo</button>
+                    <button class="batch-action-button batch-secondary batch-camera-stop" type="button">Close camera</button>
+                </div>
+            </div>
             <div class="batch-preview-wrap" hidden>
                 <img class="batch-preview-image" alt="Selected invoice preview">
             </div>
@@ -56,6 +66,11 @@
     document.body.appendChild(modal);
 
     const fileInput = modal.querySelector("#batchInvoiceFile");
+    const cameraStartButton = modal.querySelector(".batch-camera-start");
+    const cameraWrap = modal.querySelector(".batch-camera-wrap");
+    const cameraVideo = modal.querySelector(".batch-camera-video");
+    const cameraCaptureButton = modal.querySelector(".batch-camera-capture");
+    const cameraStopButton = modal.querySelector(".batch-camera-stop");
     const previewWrap = modal.querySelector(".batch-preview-wrap");
     const previewImage = modal.querySelector(".batch-preview-image");
     const status = modal.querySelector(".batch-upload-status");
@@ -67,6 +82,7 @@
     const rawText = rawTextDetails.querySelector("pre");
     let selectedFile = null;
     let previewUrl = "";
+    let cameraStream = null;
     let rows = [];
 
     function validRow(row) {
@@ -94,7 +110,34 @@
         setTimeout(() => toast.remove(), 5000);
     }
 
+    function stopCamera() {
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(track => track.stop());
+            cameraStream = null;
+        }
+        cameraVideo.srcObject = null;
+        cameraWrap.hidden = true;
+        cameraStartButton.disabled = false;
+    }
+
+    function setSelectedImage(file, source, fromCamera = false) {
+        selectedFile = file;
+        if (fromCamera) fileInput.value = "";
+        scanButton.disabled = !selectedFile;
+        reviewSection.hidden = true;
+        confirmButton.hidden = true;
+        scanButton.hidden = false;
+        rows = [];
+        tableBody.replaceChildren();
+        if (previewUrl) URL.revokeObjectURL(previewUrl);
+        previewUrl = URL.createObjectURL(file);
+        previewImage.src = previewUrl;
+        previewWrap.hidden = false;
+        setStatus(source);
+    }
+
     function closeModal() {
+        stopCamera();
         modal.hidden = true;
         if (previewUrl) URL.revokeObjectURL(previewUrl);
         previewUrl = "";
@@ -300,24 +343,103 @@
     });
 
     fileInput.addEventListener("change", () => {
-        selectedFile = fileInput.files[0] || null;
-        scanButton.disabled = !selectedFile;
-        reviewSection.hidden = true;
-        confirmButton.hidden = true;
-        scanButton.hidden = false;
-        rows = [];
-        tableBody.replaceChildren();
-        setStatus("");
-        if (previewUrl) URL.revokeObjectURL(previewUrl);
-        previewUrl = selectedFile ? URL.createObjectURL(selectedFile) : "";
-        previewImage.src = previewUrl;
-        previewWrap.hidden = !selectedFile;
+        stopCamera();
+        const file = fileInput.files[0] || null;
+        if (!file) {
+            selectedFile = null;
+            scanButton.disabled = true;
+            previewWrap.hidden = true;
+            setStatus("");
+            return;
+        }
+        setSelectedImage(file, "Photo selected. Select Scan invoice when ready.");
+    });
+
+    cameraStartButton.addEventListener("click", async () => {
+        if (!navigator.mediaDevices?.getUserMedia) {
+            setStatus("Camera access is unavailable here. Open the site over HTTPS on your phone, or choose a photo instead.", true);
+            return;
+        }
+
+        cameraStartButton.disabled = true;
+        setStatus("Requesting camera access...");
+        try {
+            cameraStream = await navigator.mediaDevices.getUserMedia({
+                audio: false,
+                video: {
+                    facingMode: { ideal: "environment" },
+                    width: { ideal: 2000 },
+                    height: { ideal: 2000 }
+                }
+            });
+            cameraVideo.srcObject = cameraStream;
+            cameraWrap.hidden = false;
+            await cameraVideo.play();
+            setStatus("Center the invoice in the camera, then take a photo.");
+        } catch (error) {
+            stopCamera();
+            const message = error.name === "NotAllowedError" || error.name === "PermissionDeniedError"
+                ? "Camera permission was denied. Allow camera access in your browser settings, or choose a photo instead."
+                : error.name === "NotFoundError" || error.name === "DevicesNotFoundError"
+                    ? "No camera was found on this device. Choose a photo instead."
+                    : "Could not open the camera. Use HTTPS, check browser permission, or choose a photo instead.";
+            setStatus(message, true);
+        }
+    });
+
+    cameraCaptureButton.addEventListener("click", async () => {
+        const width = cameraVideo.videoWidth;
+        const height = cameraVideo.videoHeight;
+        if (!width || !height) {
+            setStatus("The camera is not ready yet. Wait a moment and try again.", true);
+            return;
+        }
+
+        cameraCaptureButton.disabled = true;
+        const scale = Math.min(1, 2000 / Math.max(width, height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(width * scale));
+        canvas.height = Math.max(1, Math.round(height * scale));
+        const context = canvas.getContext("2d");
+        if (!context) {
+            cameraCaptureButton.disabled = false;
+            setStatus("Camera capture is not supported by this browser. Choose a photo instead.", true);
+            return;
+        }
+
+        context.drawImage(cameraVideo, 0, 0, canvas.width, canvas.height);
+        try {
+            const blob = await new Promise((resolve, reject) => {
+                canvas.toBlob(result => {
+                    if (result) resolve(result);
+                    else reject(new Error("The camera photo could not be created. Please try again."));
+                }, "image/jpeg", 0.8);
+            });
+            setSelectedImage(
+                new File([blob], "invoice-camera.jpg", { type: "image/jpeg" }),
+                "Camera photo ready. Select Scan invoice when ready.",
+                true
+            );
+            stopCamera();
+        } catch (error) {
+            setStatus(error.message, true);
+        } finally {
+            cameraCaptureButton.disabled = false;
+        }
+    });
+
+    cameraStopButton.addEventListener("click", () => {
+        stopCamera();
+        setStatus(selectedFile
+            ? "Camera closed. Your selected photo is ready to scan."
+            : "Camera closed. Choose a photo or open the camera to capture one.");
     });
 
     scanButton.addEventListener("click", async () => {
         if (!selectedFile) return;
         scanButton.disabled = true;
         fileInput.disabled = true;
+        cameraStartButton.disabled = true;
         setStatus("Preparing and scanning invoice...");
         try {
             const resizedFile = await resizeImage(selectedFile);
@@ -350,6 +472,7 @@
             setStatus(error.message, true);
         } finally {
             fileInput.disabled = false;
+            cameraStartButton.disabled = false;
             scanButton.disabled = !selectedFile;
         }
     });

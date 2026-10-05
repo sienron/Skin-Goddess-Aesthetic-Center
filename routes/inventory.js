@@ -98,7 +98,7 @@ router.post('/batch-upload/scan', handleInvoiceUpload, async (req, res) => {
         const existingResult = names.length
             ? await db.query(`
                 SELECT product_id, product_name, category, stock_quantity,
-                    expiry_date::text AS expiry_date, unit_price
+                    expiry_date::text AS expiry_date
                 FROM inventory_products
                 WHERE LOWER(BTRIM(product_name)) = ANY($1::text[])
                 ORDER BY product_id ASC
@@ -212,6 +212,16 @@ router.post('/batch-upload/confirm', async (req, res) => {
         return res.status(201).json({ products: savedProducts });
     } catch (error) {
         console.error('Invoice batch confirmation failed:', error);
+        if (error.code === '42703' && error.column === 'product_name') {
+            return res.status(503).json({
+                message: 'The inventory transaction table is missing its product_name column. Run npm run migrate:inventory-transactions against the database configured for this server, then try again.'
+            });
+        }
+        if (error.code === '42703' && error.column === 'unit_price') {
+            return res.status(503).json({
+                message: 'The inventory database is missing the unit_price column. Run npm run migrate:inventory-unit-price against the database configured for this server, then try again.'
+            });
+        }
         return res.status(500).json({
             message: 'The invoice rows could not be saved. No rows were added; please try again.'
         });

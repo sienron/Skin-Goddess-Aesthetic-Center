@@ -11,6 +11,35 @@ const INVOICE_PARSER_CONFIG = {
         'price',
         'amount'
     ],
+    unitKeywords: [
+        'pc',
+        'pcs',
+        'piece',
+        'pieces',
+        'box',
+        'boxes',
+        'btl',
+        'bottle',
+        'bottles',
+        'pack',
+        'packs',
+        'set',
+        'sets',
+        'roll',
+        'rolls',
+        'tube',
+        'tubes',
+        'sachet',
+        'sachets',
+        'pair',
+        'pairs',
+        'unit',
+        'units',
+        'kg',
+        'g',
+        'ml',
+        'pes'
+    ],
     ignoreLineKeywords: [
         'total',
         'vat',
@@ -29,7 +58,18 @@ const INVOICE_PARSER_CONFIG = {
         'cashier',
         'customer',
         'thank you',
-        'phone'
+        'phone',
+        'wholesale',
+        'trading',
+        'street',
+        'sold to',
+        'po no',
+        'vatable',
+        'received',
+        'signature',
+        'representative',
+        'reg',
+        'tel'
     ],
     minimumTextLength: 8
 };
@@ -70,6 +110,7 @@ function parseInvoiceLine(line) {
     const numberTokens = [];
     tokens.forEach((token, index) => {
         const candidate = token.replace(/[()]/g, '');
+        if (/^\d+s$/i.test(candidate)) return;
         if (/^(?:₱|PHP|P|\$)?[\dOoIlSs][\dOoIlSs,]*(?:\.[\dOoIlSs]{1,2})?$/i.test(candidate)) {
             numberTokens.push({ index, value: parseNumberToken(candidate) });
         }
@@ -91,14 +132,30 @@ function parseInvoiceLine(line) {
     }
 
     const firstNumber = numberTokens[0];
-    const productName = tokens.slice(0, firstNumber.index)
-        .join(' ')
-        .replace(/^[#*-]+/, '')
-        .trim();
+    const unitLabel = tokens[1]?.toLowerCase().replace(/[.,]/g, '');
+    const isQuantityUnitDescriptionRow = firstNumber.index === 0
+        && INVOICE_PARSER_CONFIG.unitKeywords.includes(unitLabel);
+    const ambiguousQuantity = !isQuantityUnitDescriptionRow && numberTokens.length === 2;
     const quantity = firstNumber.value;
-    const priceToken = numberTokens.length >= 3
-        ? numberTokens[numberTokens.length - 2]
-        : numberTokens[1];
+    let productName;
+    let priceToken;
+
+    if (isQuantityUnitDescriptionRow) {
+        priceToken = numberTokens.length >= 3
+            ? numberTokens[numberTokens.length - 2]
+            : numberTokens[1];
+        productName = tokens.slice(2, priceToken?.index)
+            .join(' ')
+            .trim();
+    } else {
+        productName = tokens.slice(0, firstNumber.index)
+            .join(' ')
+            .replace(/^[#*-]+/, '')
+            .trim();
+        priceToken = numberTokens.length >= 3
+            ? numberTokens[numberTokens.length - 2]
+            : numberTokens[1];
+    }
     const unitPrice = priceToken ? priceToken.value : null;
     const reasons = [];
 
@@ -108,6 +165,9 @@ function parseInvoiceLine(line) {
     }
     if (!Number.isFinite(unitPrice) || unitPrice < 0) {
         reasons.push('Unit price could not be read.');
+    }
+    if (ambiguousQuantity) {
+        reasons.push('Only two numeric values were found; verify the quantity and unit price.');
     }
     if (numberTokens.length > 3) {
         reasons.push('Several numeric values were found; verify the quantity and unit price.');
