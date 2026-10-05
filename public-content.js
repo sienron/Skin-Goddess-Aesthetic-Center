@@ -63,39 +63,16 @@
       const content = await getJson('/api/content/public/pages/home');
       const blocks = new Map(content.filter((block) => block.isPublished).map((block) => [block.key, block]));
       const hero = blocks.get('hero');
-      const servicesStrip = blocks.get('services_strip');
       const treatmentsIntro = blocks.get('treatments_intro');
-      const why = blocks.get('why_skin_goddess');
-      const newsletter = blocks.get('newsletter');
-      const experience = blocks.get('experience');
 
       if (hero) {
         setTitleLines(document.querySelector('.hero .headline'), hero.title);
         setText('.hero .lede', hero.body);
-        setImageOverride('.hero .hero-photo-img', hero.imageUrl);
+        // The hero visual is part of the animation, not CMS page content.
+        // A CMS override here replaces the alpha-channel GSAP asset with a
+        // full-bleed photo that paints over the cream hero background.
       } else {
         document.querySelector('.hero')?.setAttribute('hidden', '');
-      }
-
-      if (servicesStrip) {
-        const section = document.querySelector('.services-strip');
-        const items = servicesStrip.payload?.items || [];
-        if (section && items.length) {
-          section.replaceChildren(...items.map((item) => {
-            const card = document.createElement('div');
-            card.className = 'strip-col';
-            const heading = document.createElement('h3');
-            heading.textContent = item.title;
-            const body = document.createElement('p');
-            body.textContent = item.body;
-            card.append(heading, body);
-            return card;
-          }));
-        }
-
-        document.querySelector('.services-strip')?.removeAttribute('hidden');
-      } else {
-        document.querySelector('.services-strip')?.setAttribute('hidden', '');
       }
 
       if (treatmentsIntro) {
@@ -111,37 +88,6 @@
         document.querySelector('.treatments')?.setAttribute('hidden', '');
       }
 
-      if (why) {
-        setText('.wsg-heading', why.title);
-        setText('.wsg-lede', why.body);
-      } else {
-        document.querySelector('.why-skin-goddess')?.setAttribute('hidden', '');
-      }
-
-      if (experience) {
-        const heading = document.querySelector('.all-treatments-heading');
-        if (heading) {
-          const [firstLine, ...accentLines] = experience.title.split('\n');
-          heading.replaceChildren(document.createTextNode(firstLine || ''));
-          accentLines.forEach((line) => {
-            const accent = document.createElement('span');
-            accent.className = 'script';
-            accent.textContent = line;
-            heading.append(document.createElement('br'), accent);
-          });
-        }
-        setText('.all-treatments-hours', experience.body);
-        setImageOverride('.all-treatments-bg img', experience.imageUrl);
-      } else {
-        document.querySelector('.all-treatments')?.setAttribute('hidden', '');
-      }
-
-      if (newsletter) {
-        setText('.subscribe-heading', newsletter.title);
-        setText('.subscribe-lede', newsletter.body);
-      } else {
-        document.querySelector('.subscribe-notification')?.setAttribute('hidden', '');
-      }
     } catch (error) {
       console.warn('Could not load published homepage content:', error.message);
     }
