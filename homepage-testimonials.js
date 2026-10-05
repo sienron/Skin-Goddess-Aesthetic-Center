@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
   const section = document.querySelector('.testimonials-section');
   const list = document.getElementById('testimonialsList');
   if (!section || !list) return;
@@ -21,15 +21,11 @@
   function getLayoutSignature() {
     const desktop = isPinnedLayout();
     const layout = getColumnCount();
-    return `${layout}-${desktop}-${reducedMotionQuery.matches}${desktop ? `-${window.innerWidth}x${window.innerHeight}` : ''}`;
+    return `${layout}-${desktop}-${reducedMotionQuery.matches}`;
   }
 
   function refreshAfterAssets() {
     const refresh = () => {
-      if (isPinnedLayout() && animationCleanup) {
-        resetAnimation();
-        animationCleanup = setupAnimation();
-      }
       window.ScrollTrigger?.refresh();
     };
     if (!assetRefreshHooksInstalled) {
@@ -172,101 +168,46 @@
       };
     }
 
-    closing.classList.add('homepage-closing--story-ready');
-    story.classList.add('homepage-scroll-story--animated');
-    section.classList.add('testimonials-section--pinned');
-    signup.classList.add('homepage-signup--pinned');
-    gsap.set(surface, { yPercent: 100 });
-    gsap.set([heading, subheading], { autoAlpha: 0, y: 44 });
-    gsap.set(entries, { autoAlpha: 0, y: 34, scale: 0.97 });
-    gsap.set(brand, { autoAlpha: 0 });
-    gsap.set(signup, { autoAlpha: 0 });
-    gsap.set(signupLogo, { autoAlpha: 0 });
-    gsap.set(contentItems, { autoAlpha: 0, y: 28 });
-
-    const viewportHeight = viewport.clientHeight;
-    const trackHeight = track.scrollHeight;
-    const sourceRect = logo.getBoundingClientRect();
-    const targetRect = signupLogo.getBoundingClientRect();
-    const brandRect = brand.getBoundingClientRect();
-    const trackRect = track.getBoundingClientRect();
-    const logoWidth = sourceRect.width;
-    const centerTrackY = viewportHeight / 2 - (brandRect.top - trackRect.top + brandRect.height / 2);
-    const logoFinalX = targetRect.left + targetRect.width / 2 - (sourceRect.left + sourceRect.width / 2);
-    const logoFinalY = targetRect.top + targetRect.height / 2 - (sourceRect.top + sourceRect.height / 2 + centerTrackY);
-    const logoFinalScale = targetRect.width / logoWidth;
-    const cardStart = 1.9;
-    const cardDuration = 4.6;
-    const morphAt = cardStart + cardDuration + 0.45;
-    const listFadeAt = cardStart + cardDuration - 0.45;
-    const totalDuration = morphAt + 1.6;
-
-    const timeline = gsap.timeline({
-      defaults: { ease: 'none' },
-      scrollTrigger: {
-        trigger: story,
-        start: 'top top',
-        end: () => `+=${Math.round(window.innerHeight * totalDuration)}`,
-        pin: true,
-        scrub: 1,
-        anticipatePin: 1,
-        invalidateOnRefresh: true,
-        onLeave: () => {
-          signup.classList.remove('homepage-signup--pinned');
-          signup.classList.add('homepage-signup--released');
-          closing.classList.remove('homepage-closing--story-ready');
-        },
-        onEnterBack: () => {
-          closing.classList.add('homepage-closing--story-ready');
-          signup.classList.remove('homepage-signup--released');
-          signup.classList.add('homepage-signup--pinned');
-        },
-      },
+    // One-shot entrances: each element plays once when scrolled into view, then stays in its final state.
+    const triggers = [];
+    const playOnce = (targets, vars) => gsap.to(targets, {
+      autoAlpha: 1,
+      y: 0,
+      scale: 1,
+      ease: 'power2.out',
+      overwrite: true,
+      onComplete: () => gsap.set(targets, { clearProps: 'all' }),
+      ...vars,
     });
 
-    timeline
-      .to(surface, { yPercent: 0, duration: 0.7 }, 0)
-      .to(heading, { autoAlpha: 1, y: 0, duration: 0.55 }, 0.75)
-      .to(subheading, { autoAlpha: 1, y: 0, duration: 0.55 }, 1.3);
+    gsap.set(brand, { display: 'none' });
+    gsap.set([heading, subheading], { autoAlpha: 0, y: 28 });
+    gsap.set(entries, { autoAlpha: 0, y: 36, scale: 0.97 });
+    gsap.set([signupLogo, ...contentItems], { autoAlpha: 0, y: 28 });
 
-    const trackDistance = Math.max(0, trackHeight - viewportHeight);
-    timeline.to(track, { y: -trackDistance, duration: cardDuration }, cardStart);
+    triggers.push(ScrollTrigger.create({
+      trigger: heading,
+      start: 'top 95%',
+      once: true,
+      onEnter: () => playOnce([heading, subheading], { duration: 0.6, stagger: 0.1 }),
+    }));
 
-    entries.forEach((entry, index) => {
-      const entryTop = entry.getBoundingClientRect().top - trackRect.top;
-      const revealAt = cardStart + gsap.utils.clamp(0, 1, entryTop / Math.max(1, trackDistance)) * cardDuration;
-      timeline.to(entry, {
-        autoAlpha: 1,
-        y: 0,
-        scale: 1,
-        duration: 0.32,
-        ease: 'power2.out',
-      }, revealAt + index * 0.025);
-    });
+    if (entries.length) {
+      triggers.push(...ScrollTrigger.batch(entries, {
+        start: 'top 96%',
+        once: true,
+        batchMax: 3,
+        interval: 0.05,
+        onEnter: (batch) => playOnce(batch, { duration: 0.6, stagger: 0.1 }),
+      }));
+    }
 
-    timeline
-      .to(track, { y: centerTrackY, duration: 0.45 }, morphAt - 0.45)
-      .to(list, { autoAlpha: 0, duration: 0.4 }, listFadeAt)
-      .to([heading, subheading], { autoAlpha: 0, y: -20, duration: 0.4 }, listFadeAt)
-      .to(brand, { autoAlpha: 1, duration: 0.25 }, morphAt - 0.2)
-      .to(logo, {
-        x: logoFinalX,
-        y: logoFinalY,
-        scale: logoFinalScale,
-        duration: 1.15,
-        ease: 'power2.inOut',
-      }, morphAt)
-      .to(surface, { autoAlpha: 0, duration: 0.65 }, morphAt + 0.6)
-      .to(section, { autoAlpha: 0, duration: 0.45 }, morphAt + 1.05)
-      .to(signup, { autoAlpha: 1, duration: 0.3 }, morphAt + 0.35)
-      .to(signupLogo, { autoAlpha: 1, duration: 0.2 }, morphAt + 0.85)
-      .to(contentItems, {
-        autoAlpha: 1,
-        y: 0,
-        duration: 0.5,
-        stagger: 0.15,
-        ease: 'power2.out',
-      }, morphAt + 0.5);
+    triggers.push(ScrollTrigger.create({
+      trigger: signup,
+      start: 'top 70%',
+      once: true,
+      onEnter: () => playOnce([signupLogo, ...contentItems], { duration: 0.6, stagger: 0.1 }),
+    }));
 
     backgroundTrigger = ScrollTrigger.create({
       trigger: closing,
@@ -291,19 +232,14 @@
     }
 
     return () => {
-      timeline.scrollTrigger?.kill();
-      timeline.kill();
+      triggers.forEach((trigger) => trigger.kill());
+      gsap.killTweensOf(animatedElements);
       parallax?.scrollTrigger?.kill();
       parallax?.kill();
       backgroundTrigger?.kill();
       gsap.set(animatedElements, { clearProps: 'all' });
       if (background) gsap.set(background, { clearProps: 'transform' });
-      closing.classList.remove('homepage-closing--story-ready');
       closing.classList.remove('homepage-closing--background-fixed');
-      signup.classList.remove('homepage-signup--released');
-      story.classList.remove('homepage-scroll-story--animated');
-      section.classList.remove('testimonials-section--pinned');
-      signup.classList.remove('homepage-signup--pinned');
     };
   }
 

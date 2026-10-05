@@ -24,6 +24,7 @@ const browserScripts = [
   'finance-transactions.js',
   'header.js',
   'homepage-hero.js',
+  'homepage-scroll-indicator.js',
   'homepage-testimonials.js',
   'homepage-treatments-carousel.js',
   'inquiries-admin.js',

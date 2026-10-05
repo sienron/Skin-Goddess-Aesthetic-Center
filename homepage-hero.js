@@ -5,92 +5,119 @@
   if (!hero || !gsap) return;
   if (ScrollTrigger) gsap.registerPlugin(ScrollTrigger);
 
+  const pairsWrap = document.getElementById("heroPairs");
+  const indicator = document.getElementById("scrollIndicator");
+  const dots = indicator ? Array.from(indicator.querySelectorAll(".scroll-indicator__dot")) : [];
+
   const mm = gsap.matchMedia();
+  mm.add("(prefers-reduced-motion: no-preference)", () => {
+    gsap.from(hero.querySelectorAll(".hero-copy > *"), {
+      autoAlpha: 0,
+      y: 28,
+      duration: 0.9,
+      ease: "power3.out",
+      stagger: 0.18,
+      delay: 0.15,
+    });
+  });
+
   mm.add("(min-width: 701px) and (prefers-reduced-motion: no-preference)", () => {
-    if (!ScrollTrigger) return;
-    const intro = gsap.timeline({ defaults: { ease: "power3.out" } });
-    intro
-      .from(hero.querySelector(".hero-book-btn"), { autoAlpha: 0, duration: 0.6 }, "-=0.65")
-      .from(hero.querySelectorAll(".hero-copy > *:not(.hero-book-btn)"), { autoAlpha: 0, y: 20, duration: 0.65, stagger: 0.12 }, "-=0.35");
+    const reveal = hero.querySelector(".hero-reveal");
+    if (!ScrollTrigger || !pairsWrap || !reveal) return;
 
     hero.classList.add("hero-scrolly");
-    const visual = hero.querySelector(".hero-visual");
-    const photo = hero.querySelector(".hero-photo-img");
     const copy = hero.querySelector(".hero-copy");
-    const reveal = hero.querySelector(".hero-reveal");
+    const band = hero.querySelector(".hero-band");
+    const pairs = Array.from(pairsWrap.querySelectorAll(".hero-pair"));
     const W = () => hero.clientWidth;
     const H = () => hero.clientHeight;
-    const q = (name) => hero.querySelector(".hero-step--" + name);
 
-    // Timeline was authored for a 10-viewport scroll; scale it to 7 viewports with the same pacing.
+    // Timeline units: 0-2.6 cream line appears and expands over the hero text, 2.4-3.4 first pair
+    // settles in, then each pair holds for 0.6 and glides to the next over 1.4.
+    const T0 = 3.4;
+    const HOLD = 0.6;
+    const MOVE = 1.4;
     const S = 0.7;
+    const lastHold = T0 + (pairs.length - 1) * (HOLD + MOVE) + HOLD;
 
-    // focus: point on the photo (0-1), at: where it lands on screen (0-1), text: where the text centres
-    const stops = [
-      { el: q("certified"), scale: 3, focus: [0.455, 0.40], at: [0.88, 0.42], text: [0.27, 0.50] },
-      { el: q("personalized"), scale: 3, focus: [0.52, 0.22], at: [0.88, 0.74], text: [0.38, 0.22] },
-      { el: q("premium"), scale: 3, focus: [0.50, 0.25], at: [0.10, 0.72], text: [0.60, 0.22] },
-      { el: q("support"), scale: 3, focus: [0.52, 0.40], at: [0.06, 0.36], text: [0.70, 0.42] },
-    ];
-    const place = (s) => {
-      const r = s.el.getBoundingClientRect();
-      const h = hero.getBoundingClientRect();
-      return {
-        x: s.text[0] * W() - (r.left - h.left + r.width / 2),
-        y: s.text[1] * H() - (r.top - h.top + r.height / 2),
-      };
+    // One scroll-driven stack position (p) is shared by every pair; each pair derives its own
+    // y / scale / opacity from its distance (d = i - p) to the centre slot.
+    const slots = { d: [-1, 0, 1, 2], y: [-0.5, 0, 0.44, 0.7], scale: [0.5, 1, 0.6, 0.4], alpha: [0, 1, 0.9, 0] };
+    const sample = (arr, d) => {
+      if (d <= -1) return arr[0];
+      if (d >= 2) return arr[3];
+      const k = d < 0 ? 0 : d < 1 ? 1 : 2;
+      return gsap.utils.interpolate(arr[k], arr[k + 1], d - slots.d[k]);
     };
-    const updateStopPositions = () => {
-      stops.forEach((s) => gsap.set(s.el, {
-        autoAlpha: 0,
-        scale: k,
-        transformOrigin: "50% 50%",
-        ...place(s),
-      }));
+    const stack = { p: -1, vis: 0 };
+    const render = () => {
+      const h = H();
+      pairs.forEach((pair, i) => {
+        const d = i - stack.p;
+        gsap.set(pair, {
+          xPercent: -50,
+          yPercent: -50,
+          y: sample(slots.y, d) * h,
+          scale: sample(slots.scale, d),
+          autoAlpha: sample(slots.alpha, d) * stack.vis,
+          zIndex: 10 - Math.round(Math.abs(d) * 3),
+        });
+      });
     };
-    const zoomTo = (s) => ({
-      scale: s.scale,
-      x: () => s.at[0] * W() - s.focus[0] * s.scale * visual.offsetWidth,
-      y: () => s.at[1] * H() - visual.offsetTop - s.focus[1] * s.scale * visual.offsetHeight,
-    });
 
-    // Floating "breathing" tweens only need to run while the hero is pinned.
-    const floaters = [];
-    const setFloating = (active) => floaters.forEach((tween) => (active ? tween.play() : tween.pause()));
+    // At scroll 0 the band is invisible and collapsed, so the hero is a clean static screen.
+    gsap.set(band, { autoAlpha: 0, scaleX: 0, scaleY: 0.01, transformOrigin: "50% 50%" });
+    render();
 
-    gsap.set(visual, { transformOrigin: "0 0" });
-    visual.style.willChange = "transform";
+    let activeIdx = -1;
+    const setIndicator = (idx) => {
+      if (idx === activeIdx || !indicator) return;
+      activeIdx = idx;
+      indicator.classList.toggle("is-hero-seq", idx >= 0);
+      dots.forEach((dot, i) => dot.classList.toggle("is-active", i === idx));
+    };
 
     const tl = gsap.timeline({
       defaults: { ease: "power2.inOut" },
+      onUpdate: () => {
+        const on = stack.vis > 0.5 && tl.time() <= lastHold + 0.3;
+        setIndicator(on ? Math.min(pairs.length - 1, Math.max(0, Math.round(stack.p))) : -1);
+      },
       scrollTrigger: {
         trigger: hero,
         start: "top top",
-        end: () => "+=" + H() * 7,
+        end: () => "+=" + tl.duration() * H() * 0.5,
         pin: true,
-        scrub: 1,
+        scrub: 0.6,
+        snap: {
+          snapTo: (p) => {
+            const d = tl.duration();
+            if (p * d > lastHold) return p;
+            const stops = [0, ...pairs.map((_, i) => (T0 + i * (HOLD + MOVE) + HOLD / 2) / d)];
+            return gsap.utils.snap(stops, p);
+          },
+          duration: { min: 0.2, max: 0.7 },
+          delay: 0.05,
+          ease: "power1.inOut",
+        },
         anticipatePin: 1,
         invalidateOnRefresh: true,
-        onToggle: (self) => setFloating(self.isActive),
+        onRefresh: render,
       },
     });
 
-    const k = 2.3;
-    updateStopPositions();
-    ScrollTrigger.addEventListener("refreshInit", updateStopPositions);
+    // Cream line grows across the centre, then expands vertically over the hero text.
+    tl.to(band, { autoAlpha: 1, duration: 0.01, ease: "none" }, 0.4)
+      .to(band, { scaleX: 1, duration: 1, ease: "power2.inOut" }, 0.4)
+      .to(band, { scaleY: 1, duration: 1.2, ease: "power2.inOut" }, 1.4)
+      .to(copy, { autoAlpha: 0, duration: 0.8, ease: "power1.in" }, 1.8)
+      .to(stack, { vis: 1, duration: 0.8, ease: "none", onUpdate: render }, 2.4)
+      .to(stack, { p: 0, duration: 1, ease: "power2.out", onUpdate: render }, 2.4);
 
-    tl.to(photo, { autoAlpha: 1, duration: 0.6, ease: "power1.out" }, 0);
-    tl.to(copy, { autoAlpha: 0, y: -40, duration: 0.6 * S, ease: "power2.out" }, 0);
-    stops.forEach((s, i) => {
-      const t = (0.4 + i * 2) * S;
-      tl.to(visual, { ...zoomTo(s), duration: 1.2 * S }, t)
-        .to(s.el, { autoAlpha: 1, duration: 0.5 * S, ease: "power1.out" }, t + 0.8 * S)
-        .to(s.el, { autoAlpha: 0, duration: 0.4 * S, ease: "power1.in" }, t + 1.7 * S);
+    pairs.forEach((_, i) => {
+      if (i === pairs.length - 1) return;
+      tl.to(stack, { p: i + 1, duration: MOVE, ease: "power2.inOut", onUpdate: render }, T0 + i * (HOLD + MOVE) + HOLD);
     });
-    const end = (0.4 + stops.length * 2) * S;
-    tl.to(visual, { scale: 1, x: 0, y: 0, duration: 1.4 * S }, end);
-    stops.forEach((s) => tl.set(s.el, { x: 0, y: 0, scale: 1 }, end + 1.4 * S).to(s.el, { autoAlpha: 1, duration: 0.6 * S, ease: "power1.out" }, end + 1.4 * S));
-    tl.to({}, { duration: 1 * S }); // hold on the final view
 
     // Gold circle grows from the chat launcher corner and wipes the hero
     const revealInner = hero.querySelector(".hero-reveal-inner");
@@ -116,36 +143,20 @@
       onUpdate: paintWipe,
       onComplete: () => { paintWipe(); wipeStop(); },
       onReverseComplete: () => { paintWipe(); wipeStop(); },
-    })
-      .set([visual, copy, ...stops.map((s) => s.el)], { autoAlpha: 0 })
+    }, lastHold + 0.3)
+      .set([copy, band, ...pairs], { autoAlpha: 0 })
       .to(revealInner, { xPercent: 0, autoAlpha: 1, duration: 1.2 * S, ease: "power3.out" }, ">-" + 0.1 * S)
       .to(carouselWrap, { xPercent: 0, autoAlpha: 1, duration: 1.6 * S, ease: "power3.out" }, ">" + 0.1 * S)
       .to({}, { duration: 1.5 * S });
 
-    hero.querySelectorAll(".hero-step-inner").forEach((el, i) => {
-      floaters.push(gsap.to(el, { y: i % 2 ? 7 : -7, duration: 2.4 + i * 0.3, ease: "sine.inOut", yoyo: true, repeat: -1, paused: true }));
-    });
-    setFloating(tl.scrollTrigger.isActive);
-
     return () => {
-      ScrollTrigger.removeEventListener("refreshInit", updateStopPositions);
+      setIndicator(-1);
       hero.classList.remove("hero-scrolly");
-      visual.style.willChange = "";
       reveal.style.willChange = "";
       reveal.style.clipPath = "";
-      floaters.length = 0;
+      gsap.set([revealInner, carouselWrap, copy, band, ...pairs], { clearProps: "all" });
     };
-  });
-
-  mm.add("(max-width: 700px) and (prefers-reduced-motion: no-preference)", () => {
-    const intro = gsap.timeline({ defaults: { ease: "power2.out" } });
-    intro
-      .fromTo(hero.querySelector(".hero-photo-img"), { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.35 })
-      .from(hero.querySelector(".hero-book-btn"), { y: 10, duration: 0.25 }, "-=0.1")
-      .from(hero.querySelectorAll(".hero-copy > *:not(.hero-book-btn)"), { y: 10, duration: 0.3, stagger: 0.05 }, "-=0.1");
-  });
-
-  if (ScrollTrigger) {
+  });  if (ScrollTrigger) {
     const refresh = () => ScrollTrigger.refresh();
     if (document.readyState === "complete") refresh();
     else window.addEventListener("load", refresh, { once: true });

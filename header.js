@@ -1,4 +1,4 @@
-﻿/* ===== Profile Area: show real user info if logged in, Sign In button if not ===== */
+/* ===== Profile Area: show real user info if logged in, Sign In button if not ===== */
 (function () {
     const profileWrap = document.getElementById('profileWrap');
     const profileBtn = document.getElementById('profileBtn');
@@ -292,7 +292,7 @@
 
 /* ===== Glass nav: sliding hover indicator ===== */
 (function () {
-    const list = document.querySelector('body.homepage .public-nav-links');
+    const list = document.querySelector('body.homepage .public-nav-links, body.client-header .public-nav-links');
     if (!list) return;
     const indicator = document.createElement('span');
     indicator.className = 'nav-indicator';

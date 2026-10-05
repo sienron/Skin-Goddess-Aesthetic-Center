@@ -4,13 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Skin Goddess Aesthetic Center Index</title>
-<link rel="preload" as="image" href="images/GSAP%20Hero.webp" type="image/webp" fetchpriority="high">
 <link rel="preload" as="font" type="font/ttf" href="fonts/Raleway/Raleway-VariableFont_wght.ttf" crossorigin>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" media="print" onload="this.media='all'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600&display=swap"></noscript>
-<link rel="stylesheet" href="style.css?v=hero-fix-20261005">
+<link rel="stylesheet" href="style.css?v=hero-pairs-20261005">
 </head>
 <body class="homepage">
 
@@ -105,34 +104,43 @@
     </aside>
 
 <section class="hero">
-  <div class="hero-visual">
-    <picture><source srcset="images/GSAP%20Hero.webp" type="image/webp"><img src="images/GSAP%20Hero.png" alt="" class="hero-photo-img" width="2400" height="1350" fetchpriority="high" decoding="async"></picture>
-  </div>
-
   <div class="hero-copy">
-    <a href="UserAppointment.html" class="hero-book-btn">Book appointment</a>
     <p class="eyebrow">EXPERT CARE. GLOWING RESULTS.</p>
     <h1 class="headline">Healthy Skin.<br>Confident You.</h1>
     <p class="lede">Trusted skincare and aesthetic treatments, tailored to you at Skin-Goddess Aesthetic Center.</p>
   </div>
-
-      <div class="hero-step hero-step--certified" aria-hidden="false"><div class="hero-step-inner">
-        <h2>Certified Specialists</h2>
-        <p>Every treatment is<br>performed by fully licensed<br>professionals dedicated to<br>your results</p>
-      </div></div>
-      <div class="hero-step hero-step--personalized"><div class="hero-step-inner">
-        <h2>Personalized Plans</h2>
-        <p>Your skin is unique. Every<br>treatment plan is built around<br>your specific skin types, goals,<br>and concerns</p>
-      </div></div>
-      <div class="hero-step hero-step--premium"><div class="hero-step-inner">
-        <h2>Premium Products</h2>
-        <p>We use only dermatologist<br>approved, medical-grade<br>products and technologies in<br>every session</p>
-      </div></div>
-      <div class="hero-step hero-step--support"><div class="hero-step-inner">
-        <h2>Ongoing Support</h2>
-        <p>Skin doesn't stop after your<br>session. We provide<br>aftercare guidance and<br>follow-up consultations</p>
-      </div></div>
-  <div class="hero-reveal">
+  <div class="hero-band" aria-hidden="true"></div>
+  <div class="hero-pairs" id="heroPairs">
+      <article class="hero-pair hero-pair--certified">
+        <div class="hero-pair-media"><picture><img src="images/stock-team.webp" alt="" width="800" height="600" decoding="async"></picture></div>
+        <div class="hero-pair-text">
+          <h2>Certified Specialists</h2>
+          <p>Our treatments are performed by trained and certified specialists who understand the importance of proper technique, safety, and attention to detail. With professional knowledge and experience, our team works carefully to provide treatments that are suited to your skin while helping you feel comfortable and confident throughout every session.</p>
+        </div>
+      </article>
+      <article class="hero-pair hero-pair--personalized">
+        <div class="hero-pair-text">
+          <h2>Personalized Plans</h2>
+          <p>Every skin is unique, and your treatment plan should be too. We take the time to understand your skin concerns, goals, and preferences before recommending treatments that fit your individual needs. This personalized approach helps ensure that every session is purposeful and suited to your skin.</p>
+        </div>
+        <div class="hero-pair-media"><picture><img src="images/4.webp" alt="" width="800" height="600" decoding="async"></picture></div>
+      </article>
+      <article class="hero-pair hero-pair--premium">
+        <div class="hero-pair-media"><picture><img src="images/stock-products.webp" alt="" width="800" height="600" decoding="async"></picture></div>
+        <div class="hero-pair-text">
+          <h2>Premium Products</h2>
+          <p>We use carefully selected, high-quality products as part of our commitment to safe and effective skincare. Each product is chosen with your skin’s needs in mind, helping support the treatment process while providing the care your skin deserves before, during, and after your appointment.</p>
+        </div>
+      </article>
+      <article class="hero-pair hero-pair--support">
+        <div class="hero-pair-text">
+          <h2>Ongoing Support</h2>
+          <p>Your skincare journey doesn't end when your treatment is finished. We provide aftercare guidance and follow-up consultations to help you understand how to care for your skin, maintain your results, and address any concerns that may arise after your session.</p>
+        </div>
+        <div class="hero-pair-media"><picture><img src="images/stock-aftercare.webp" alt="" width="800" height="600" decoding="async"></picture></div>
+      </article>
+  </div>
+  <div class="hero-reveal" id="treatments">
     <div class="hero-reveal-inner">
       <div class="eyebrow-line"><span class="dash"></span> OUR TREATMENTS</div>
       <h2 class="treatments-heading">Tailored Care for <span class="accent">Every Skin Story</span></h2>
@@ -501,7 +509,6 @@
       <div class="footer-col-1">
         <div class="footer-sg-label">
           <img src="images/logo_horizontal-removebg.png" alt="Skin Goddess Aesthetic Center" class="footer-logo">
-          <p class="footer-sg-label-title">SKIN GODDESS <br> <span> AESTHETIC CENTER </span></p>
         </div>
         <p class="footer-lede">Skin Care Clinic that performs non-surgical treatments based on the needs of an individual.</p>
 
@@ -538,6 +545,16 @@
 </section>
 </div>
 
+<div class="scroll-indicator" id="scrollIndicator" aria-hidden="true">
+  <span class="scroll-indicator__dot"></span>
+  <span class="scroll-indicator__dot"></span>
+  <span class="scroll-indicator__dot"></span>
+  <span class="scroll-indicator__dot"></span>
+  <span class="scroll-indicator__dot"></span>
+  <span class="scroll-indicator__dot"></span>
+  <span class="scroll-indicator__thumb"></span>
+</div>
+
 <section class="faq-chat" aria-label="Frequently asked questions">
   <div class="faq-chat-panel" id="faqChatPanel" hidden>
     <div class="faq-chat-header">
@@ -568,11 +585,12 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.15.0/gsap.min.js" integrity="sha512-oJ8QbaQThQoJZ7oEv+29jfPM6CcP+zUxh3PKJs1vyOhx0UraUrE7PQgeItu3dOuCJyrzWpoYMsVjkkPEBzbUqw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.15.0/ScrollTrigger.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script src="homepage-hero.js?v=hero-fix-20261005" defer></script>
+<script src="homepage-hero.js?v=hero-pairs-20261005" defer></script>
 <script src="header.js"></script>
 <script src="homepage-treatments-carousel.js"></script>
 <script src="homepage-testimonials.js"></script>
-<script src="public-content.js?v=hero-fix-20261005"></script>
+<script src="public-content.js?v=hero-pairs-20261005"></script>
 <script src="faq-chatbot.js"></script>
+<script src="homepage-scroll-indicator.js"></script>
 </body>
 </html>
