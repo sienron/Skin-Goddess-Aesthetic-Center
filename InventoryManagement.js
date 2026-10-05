@@ -674,6 +674,13 @@ function renderInventorySidebar(){
 
 function filterInventory(){
 
+    const summaryEmptyState =
+        inventoryBody.querySelector(".summary-empty-state");
+
+    if(summaryEmptyState){
+        summaryEmptyState.remove();
+    }
+
     const searchValue =
         searchInput.value.toLowerCase().trim();
 
@@ -856,6 +863,27 @@ function filterInventory(){
 
 }
 
+function showSummaryEmptyState(countElement, message){
+
+    const countText = countElement.textContent.trim();
+    const count = Number(countText);
+
+    if(!countText || !Number.isFinite(count) || count !== 0){
+        return;
+    }
+
+    const row = document.createElement("tr");
+    row.className = "summary-empty-state";
+
+    const cell = document.createElement("td");
+    cell.colSpan = 6;
+    cell.textContent = message;
+
+    row.appendChild(cell);
+    inventoryBody.appendChild(row);
+
+}
+
 lowStockCard.addEventListener("click", () => {
 
     // Clear existing filters
@@ -868,6 +896,11 @@ lowStockCard.addEventListener("click", () => {
     statusFilter.value = "low";
 
     filterInventory();
+
+    showSummaryEmptyState(
+        lowStockCount,
+        "No low stock items found."
+    );
 
     // Focus on the inventory table
     document
@@ -892,6 +925,11 @@ criticalStockCard.addEventListener("click", () => {
 
     filterInventory();
 
+    showSummaryEmptyState(
+        criticalStockCount,
+        "No critical stock items found."
+    );
+
     // Focus on the inventory table
     document
         .querySelector(".inventory-table-container")
@@ -914,6 +952,11 @@ outOfStockCard.addEventListener("click", () => {
     statusFilter.value = "out-of-stock";
 
     filterInventory();
+
+    showSummaryEmptyState(
+        outOfStockCount,
+        "No out-of-stock items found."
+    );
 
     // Focus on the inventory table
     document
@@ -938,6 +981,11 @@ expiringSoonCard.addEventListener("click", () => {
 
     filterInventory();
 
+    showSummaryEmptyState(
+        expiringSoonCount,
+        "No products are expiring within 30 days."
+    );
+
     // Focus on the inventory table
     document
         .querySelector(".inventory-table-container")
@@ -959,6 +1007,11 @@ totalProductsCard.addEventListener("click", () => {
 
     // Show all products
     filterInventory();
+
+    showSummaryEmptyState(
+        totalProducts,
+        "No products found."
+    );
 
     // Focus on the inventory table
     document
@@ -1119,6 +1172,8 @@ if(button.classList.contains("edit")){
 
     }
 
+    editModal.dataset.originalExpiryDate =
+        product.expiry_date || "";
 
     editModal.classList.add("show");
 
@@ -1355,6 +1410,11 @@ confirmAddProduct.addEventListener("click", async () => {
         return;
     }
 
+    if(expiryDate && expiryDate < getEarliestExpirationDate()){
+        alert("Expiration date must be tomorrow or later.");
+        return;
+    }
+
     try {
 
         const response = await fetch("/api/inventory", {
@@ -1451,6 +1511,17 @@ confirmAddProduct.addEventListener("click", async () => {
 
     }
 
+    const originalExpiryDate =
+        editModal.dataset.originalExpiryDate || "";
+
+    if(
+        expiryDate &&
+        expiryDate < getEarliestExpirationDate() &&
+        expiryDate !== originalExpiryDate
+    ){
+        alert("Expiration date must be tomorrow or later.");
+        return;
+    }
 
     // Find the product ID from the open modal
     const productId =
