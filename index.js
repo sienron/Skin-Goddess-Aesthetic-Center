@@ -144,7 +144,6 @@ const protectedPages = [
   { path: '/Usermanagement.html', roles: ['admin'] },
 
   { path: '/InventoryManagement.html', roles: ['inventory_officer', 'admin'] },
-  { path: '/InventoryDashboard.html', roles: ['inventory_officer'] },
   { path: '/FinanceDashboard.html', roles: ['finance_officer', 'admin'] },
   { path: '/FinanceExpenses.html', roles: ['finance_officer', 'admin'] },
   { path: '/FinanceReports.html', roles: ['finance_officer', 'admin'] },
@@ -159,6 +158,10 @@ protectedPages.forEach(({ path: page, roles }) => {
       res.sendFile(path.join(publicDir, page));
     }
   );
+});
+
+app.get('/InventoryDashboard.html', requireRole('inventory_officer'), (req, res) => {
+  res.redirect('/InventoryManagement.html');
 });
 
 app.get('/', (req, res) => {
