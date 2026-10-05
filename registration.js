@@ -27,6 +27,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let secondsLeft = 0;
   let countdownInterval = null;
+  let resendSecondsLeft = 0;
+  let resendCountdownInterval = null;
+  const resendLinkText = resendLink.textContent;
+
+  function startResendCooldown() {
+    resendSecondsLeft = 60;
+    clearInterval(resendCountdownInterval);
+    resendLink.setAttribute('aria-disabled', 'true');
+    resendLink.tabIndex = -1;
+
+    const updateResendLabel = () => {
+      resendLink.textContent = `Resend code (${resendSecondsLeft}s)`;
+    };
+    updateResendLabel();
+    resendCountdownInterval = setInterval(() => {
+      resendSecondsLeft -= 1;
+      if (resendSecondsLeft <= 0) {
+        clearInterval(resendCountdownInterval);
+        resendLink.textContent = resendLinkText;
+        resendLink.removeAttribute('aria-disabled');
+        resendLink.tabIndex = 0;
+        return;
+      }
+      updateResendLabel();
+    }, 1000);
+  }
 
   // ===== Inline error helpers (same pattern as reset-password.js) =====
   function setFieldError(fieldName, message) {
@@ -89,6 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
     otpDigits.forEach((digit) => (digit.value = ''));
     otpDigits[0].focus();
     startCountdown();
+    startResendCooldown();
   }
 
   function closeOtpModal() {
@@ -231,6 +258,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // ---- Resend code ----
   resendLink.addEventListener('click', async (e) => {
     e.preventDefault();
+    if (resendSecondsLeft > 0) return;
     const errorEl = otpModal.querySelector('[data-error-for="otp"]');
     if (errorEl) errorEl.textContent = '';
 
@@ -249,6 +277,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       startCountdown();
+      startResendCooldown();
     } catch (err) {
       console.error('Resend OTP request failed:', err);
       if (errorEl) errorEl.textContent = 'Something went wrong. Please try again.';

@@ -192,6 +192,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     saveChatHistory();
   }
 
+  function showThinkingMessage() {
+    const message = createMessage('Thinking...', 'bot');
+    message.classList.add('faq-chat-message--thinking');
+    message.setAttribute('role', 'status');
+    messages.append(message);
+    scrollToLatestMessage();
+    return message;
+  }
+
   restoreChatHistory();
   renderSuggestions();
 
@@ -233,10 +242,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     input.value = '';
     input.disabled = true;
     sendButton.disabled = true;
-    status.textContent = 'Thinking...';
+    const thinkingMessage = showThinkingMessage();
 
     try {
       const history = Array.from(messages.querySelectorAll('.faq-chat-message'))
+        .filter((message) => !message.classList.contains('faq-chat-message--thinking'))
         .map((message) => ({
           role: message.classList.contains('faq-chat-message--user') ? 'user' : 'assistant',
           content: message.textContent || '',
@@ -255,9 +265,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (typeof result.answer !== 'string' || !result.answer.trim()) {
         throw new Error('The AI assistant returned an invalid response. Please try again.');
       }
+      thinkingMessage.remove();
       appendMessage(result.answer.trim(), 'bot');
       renderSuggestions();
     } catch (error) {
+      thinkingMessage.remove();
       appendMessage(
         error instanceof Error ? error.message : 'The AI assistant is temporarily unavailable. Please try again shortly.',
         'bot',

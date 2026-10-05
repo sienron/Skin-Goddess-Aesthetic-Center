@@ -105,6 +105,32 @@ document.addEventListener('DOMContentLoaded', () => {
   const loginMfaTimerValue = document.getElementById('loginMfaTimerValue');
   let loginMfaSecondsLeft = 0;
   let loginMfaCountdownInterval = null;
+  let loginMfaResendSecondsLeft = 0;
+  let loginMfaResendCountdownInterval = null;
+  const loginMfaResendLinkText = loginMfaResendLink.textContent;
+
+  function startLoginMfaResendCooldown() {
+    loginMfaResendSecondsLeft = 60;
+    clearInterval(loginMfaResendCountdownInterval);
+    loginMfaResendLink.setAttribute('aria-disabled', 'true');
+    loginMfaResendLink.tabIndex = -1;
+
+    const updateResendLabel = () => {
+      loginMfaResendLink.textContent = `Resend code (${loginMfaResendSecondsLeft}s)`;
+    };
+    updateResendLabel();
+    loginMfaResendCountdownInterval = setInterval(() => {
+      loginMfaResendSecondsLeft -= 1;
+      if (loginMfaResendSecondsLeft <= 0) {
+        clearInterval(loginMfaResendCountdownInterval);
+        loginMfaResendLink.textContent = loginMfaResendLinkText;
+        loginMfaResendLink.removeAttribute('aria-disabled');
+        loginMfaResendLink.tabIndex = 0;
+        return;
+      }
+      updateResendLabel();
+    }, 1000);
+  }
 
   function updateLoginMfaTimer() {
     const minutes = Math.floor(loginMfaSecondsLeft / 60).toString().padStart(2, '0');
@@ -138,6 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loginMfaOverlay.hidden = false;
     document.body.classList.add('modal-open');
     startLoginMfaCountdown();
+    startLoginMfaResendCooldown();
     loginMfaDigits[0].focus();
   }
 
@@ -206,6 +233,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   loginMfaResendLink.addEventListener('click', async (event) => {
     event.preventDefault();
+    if (loginMfaResendSecondsLeft > 0) return;
     loginMfaError.textContent = '';
     loginMfaMessage.textContent = '';
     try {
@@ -222,6 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
       loginMfaDigits.forEach((digit) => { digit.value = ''; });
       loginMfaMessage.textContent = data.message || 'A new sign-in code has been sent.';
       startLoginMfaCountdown();
+      startLoginMfaResendCooldown();
       loginMfaDigits[0].focus();
     } catch (error) {
       loginMfaError.textContent = 'Something went wrong. Please try again.';

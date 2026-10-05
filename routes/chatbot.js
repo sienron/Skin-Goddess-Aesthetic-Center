@@ -26,6 +26,40 @@ Safety:
 - You are not a medical professional. Do not diagnose conditions, recommend a treatment for a specific condition, or provide individualized medical advice. Suggest contacting the clinic and a qualified healthcare professional for medical concerns.
 - Never claim to have booked, changed, or cancelled an appointment. Do not ask for passwords, payment details, or sensitive medical information.`;
 
+function keywordFaqAnswer(question) {
+  const text = question.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+
+  if (/\b(diagnos|symptom|medical advice|medical condition|pregnan|allerg|side effect|is it safe|acne|eczema|rosacea|rash|infection|pain|skin condition|skin problem|skin concern)\b|recommend.*treatment|treatment for/.test(text)) {
+    return 'I can’t provide medical advice or recommend a treatment for a specific condition. Please contact the clinic and a qualified healthcare professional.';
+  }
+  if (/\b(cancel|cancellation|reschedul|change my appointment)\b/.test(text)) {
+    return 'For cancellations or rescheduling, please contact the clinic directly at +63 945 611 9436 or info@skingoddess.ph.';
+  }
+  if (/\b(hours?|opening time|open|closed|close|schedule)\b/.test(text)) {
+    return 'The clinic is open Monday to Saturday, 9:00 AM to 6:00 PM, and closed on Sunday.';
+  }
+  if (/\b(location|address|directions)\b|\bwhere\b.*\b(clinic|located|find)\b/.test(text)) {
+    return 'The clinic is at 2nd floor, KW Plaza Building, Pasong Buaya 2, Imus, Cavite, Philippines 4103.';
+  }
+  if (/\b(phone|telephone|call|email|contact|number)\b/.test(text)) {
+    return 'You can contact Skin Goddess at +63 945 611 9436 or info@skingoddess.ph.';
+  }
+  if (/\b(price|prices|pricing|cost|fee|fees|how much)\b/.test(text)) {
+    return 'You can see current services and prices on the Services page. Exact fees are shown during booking.';
+  }
+  if (/\b(service|services|treatment|facial|laser|nail|massage)\b/.test(text)) {
+    return 'Please browse the Services page for current treatments and prices. For treatment-specific instructions, contact the clinic at +63 945 611 9436 or info@skingoddess.ph.';
+  }
+  if (/\b(book|booking|appointment|reserve|reservation|available|availability|time slot)\b/.test(text)) {
+    return 'To book, select Book Now, then choose a service, date, and available time. Live availability and exact fees are shown during booking.';
+  }
+  if (/\b(payment|pay|paid|refund|gcash|maya|card)\b/.test(text)) {
+    return 'For payment or refund questions, please contact the clinic at +63 945 611 9436 or info@skingoddess.ph. Booking fees are shown during booking.';
+  }
+
+  return 'I can help with basic clinic information: services and prices, booking, opening hours, location, or contact details. For more help, call +63 945 611 9436 or email info@skingoddess.ph.';
+}
+
 const chatLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 20,
@@ -84,7 +118,8 @@ router.post('/', chatLimiter, async (req, res) => {
         return res.status(502).json({ message: 'Groq rejected the API key. Check that GROQ_API_KEY is valid and active.' });
       }
       if (response.status === 429) {
-        return res.status(503).json({ message: 'The AI assistant has reached its usage limit. Please wait and try again later.' });
+        console.warn('Groq chat usage limit reached; returning a keyword-based clinic FAQ answer.');
+        return res.json({ answer: keywordFaqAnswer(validMessages[validMessages.length - 1].content) });
       }
       if (response.status === 400) {
         return res.status(502).json({ message: 'Groq rejected the model or request settings. Check GROQ_MODEL and try again.' });

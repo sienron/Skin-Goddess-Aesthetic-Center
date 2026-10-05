@@ -22,11 +22,14 @@ const isValidPassword = require('../utils/password');
 const registerLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 5, message: { message: 'Too many registration attempts. Try again later.' } });
 const verifyOtpLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, message: { message: 'Too many verification attempts. Try again later.' } });
 const resendOtpLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 3, message: { message: 'Too many code requests. Try again later.' } });
+const resendOtpCooldownLimiter = rateLimit({ windowMs: 60 * 1000, limit: 1, message: { message: 'Please wait 60 seconds before requesting another code.' } });
 const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, message: { message: 'Too many sign-in attempts. Try again later.' } });
 const loginOtpVerifyLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, message: { message: 'Too many verification attempts. Try again later.' } });
 const loginOtpResendLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 3, message: { message: 'Too many code requests. Try again later.' } });
+const loginOtpResendCooldownLimiter = rateLimit({ windowMs: 60 * 1000, limit: 1, message: { message: 'Please wait 60 seconds before requesting another code.' } });
 const forgotPasswordLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 5, message: { message: 'Too many reset requests. Try again later.' } });
 const emailChangeLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 3, message: { message: 'Too many code requests. Try again later.' } });
+const emailChangeCooldownLimiter = rateLimit({ windowMs: 60 * 1000, limit: 1, message: { message: 'Please wait 60 seconds before requesting another code.' } });
 const verifyEmailChangeLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, message: { message: 'Too many verification attempts. Try again later.' } });
 const REMEMBERED_DEVICE_COOKIE = 'sg_remembered_device';
 const REMEMBERED_DEVICE_MAX_AGE = 1000 * 60 * 60 * 24 * 30;
@@ -305,7 +308,7 @@ router.post('/verify-otp', verifyOtpLimiter, async (req, res) => {
 // ============================================
 // ROUTE 3: RESEND OTP (Send a new code)
 // ============================================
-router.post('/resend-otp', resendOtpLimiter, async (req, res) => {
+router.post('/resend-otp', resendOtpLimiter, resendOtpCooldownLimiter, async (req, res) => {
   const userId = req.session.pendingVerificationUserId;
 
   if (!userId) {
@@ -537,7 +540,7 @@ router.post('/login/verify-otp', loginOtpVerifyLimiter, async (req, res) => {
   }
 });
 
-router.post('/login/resend-otp', loginOtpResendLimiter, async (req, res) => {
+router.post('/login/resend-otp', loginOtpResendLimiter, loginOtpResendCooldownLimiter, async (req, res) => {
   const userId = req.session.pendingLoginUserId;
   if (!userId) {
     return res.status(401).json({ message: 'Your sign-in verification session expired. Sign in again.' });
@@ -680,7 +683,7 @@ router.put('/update-profile', async (req, res) => {
 // ============================================
 // ROUTE: REQUEST EMAIL CHANGE (sends a code to the NEW email)
 // ============================================
-router.post('/request-email-change', emailChangeLimiter, async (req, res) => {
+router.post('/request-email-change', emailChangeLimiter, emailChangeCooldownLimiter, async (req, res) => {
   if (!req.session.userId) {
     return res.status(401).json({ message: 'Not logged in.' });
   }

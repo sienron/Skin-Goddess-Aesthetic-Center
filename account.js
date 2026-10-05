@@ -62,6 +62,32 @@ document.addEventListener('DOMContentLoaded', () => {
   const emailOtpError = document.querySelector('[data-error-for="email-otp"]');
 
   let pendingNewEmail = '';
+  let emailOtpResendSecondsLeft = 0;
+  let emailOtpResendCountdownInterval = null;
+  const emailOtpResendLinkText = emailOtpResend.textContent;
+
+  function startEmailOtpResendCooldown() {
+    emailOtpResendSecondsLeft = 60;
+    clearInterval(emailOtpResendCountdownInterval);
+    emailOtpResend.setAttribute('aria-disabled', 'true');
+    emailOtpResend.tabIndex = -1;
+
+    const updateResendLabel = () => {
+      emailOtpResend.textContent = `Resend code (${emailOtpResendSecondsLeft}s)`;
+    };
+    updateResendLabel();
+    emailOtpResendCountdownInterval = setInterval(() => {
+      emailOtpResendSecondsLeft -= 1;
+      if (emailOtpResendSecondsLeft <= 0) {
+        clearInterval(emailOtpResendCountdownInterval);
+        emailOtpResend.textContent = emailOtpResendLinkText;
+        emailOtpResend.removeAttribute('aria-disabled');
+        emailOtpResend.tabIndex = 0;
+        return;
+      }
+      updateResendLabel();
+    }, 1000);
+  }
 
   function maskEmail(value) {
     const [localPart, domain] = value.split('@');
@@ -78,6 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
     emailOtpModal.hidden = false;
     document.body.classList.add('modal-open');
     emailOtpInputs[0].focus();
+    startEmailOtpResendCooldown();
   }
 
   function closeEmailOtpModal() {
@@ -137,6 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   emailOtpResend.addEventListener('click', async (e) => {
     e.preventDefault();
+    if (emailOtpResendSecondsLeft > 0) return;
     emailOtpError.textContent = '';
     try {
       const response = await fetch('/api/auth/request-email-change', {
@@ -147,6 +175,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
         emailOtpError.textContent = data.message || 'Could not resend code.';
+      } else {
+        startEmailOtpResendCooldown();
       }
     } catch (err) {
       emailOtpError.textContent = 'Something went wrong. Please try again.';
