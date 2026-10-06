@@ -7,7 +7,7 @@ const testimonials = [
   { client: 'Blake S', comment: 'Booking my appointment was really easy, and the whole process from arrival to the end of my treatment was smooth. The staff took the time to listen to my concerns and recommended a treatment that suited what I needed. I never felt rushed, and the aftercare advice was really helpful. I would definitely come back again.', rating: 5 },
   { client: 'Casey S', comment: 'I’m very happy with my experience at Skin Goddess. The clinic was clean, relaxing, and the staff were friendly from the moment I arrived. They explained each step of the treatment so I knew what to expect, and I felt well taken care of the entire time. The service was professional while still feeling warm and personal.', rating: 5 },
   { client: 'Drew S', comment: 'The staff were friendly and made me feel comfortable throughout my appointment.', rating: 5 },
-  { client: 'Emery S', comment: 'Professional service, easy booking, and a really pleasant experience overall.', rating: 5 },
+  { client: 'Emery S', comment: 'Professional service, easy booking, and a really pleasant experience overall. Every detail was handled with great care, and the team made sure all of my questions were answered promptly', rating: 5 },
   { client: 'Finley S', comment: 'The clinic was clean, relaxing, and the staff were very attentive.', rating: 5 },
   { client: 'Gray S', comment: 'Great service and helpful aftercare advice. I’ll definitely come back.', rating: 5 },
 ];
