@@ -70,6 +70,30 @@ function hashDeviceToken(token) {
   return crypto.createHash('sha256').update(token).digest('hex');
 }
 
+async function revokeUserSessions(client, userId) {
+  await client.query(`
+    DELETE FROM user_sessions
+    WHERE sess->>'userId' = $1 OR sess->>'pendingLoginUserId' = $1
+  `, [String(userId)]);
+}
+
+function destroyCurrentSession(req, res) {
+  return new Promise((resolve) => {
+    req.session.destroy((error) => {
+      if (error) {
+        console.error('Could not destroy the current session after password update:', error);
+      }
+      res.clearCookie('connect.sid', {
+        path: '/',
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+      });
+      resolve();
+    });
+  });
+}
+
 function rememberedDeviceCookieOptions() {
   return {
     httpOnly: true,
@@ -835,11 +859,15 @@ router.put('/change-password', async (req, res) => {
     }
 
     const newHash = await bcrypt.hash(newPassword, 10);
-    await db.query('UPDATE users SET password_hash = $1 WHERE user_id = $2', [newHash, req.session.userId]);
+    await db.transaction(async (client) => {
+      await client.query('UPDATE users SET password_hash = $1 WHERE user_id = $2', [newHash, req.session.userId]);
+      await revokeUserSessions(client, req.session.userId);
+    });
 
-    res.status(200).json({ message: 'Password changed successfully.' });
+    await destroyCurrentSession(req, res);
+    return res.status(200).json({ message: 'Password changed. All active sessions have been signed out.' });
   } catch (error) {
-    console.log('Change password error:', error);
+    console.error('Change password error:', error);
     res.status(500).json({ message: 'Error. Try again.' });
   }
 });
@@ -956,18 +984,33 @@ router.post('/reset-password', forgotPasswordLimiter, async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await db.query('UPDATE users SET password_hash = $1 WHERE user_id = $2', [
-      hashedPassword,
-      tokenRow.user_id,
-    ]);
+    await db.transaction(async (client) => {
+      const usedToken = await client.query(`
+        UPDATE password_reset_tokens
+        SET is_used = TRUE
+        WHERE reset_id = $1 AND user_id = $2 AND is_used = FALSE AND expires_at > NOW()
+        RETURNING reset_id
+      `, [tokenRow.reset_id, tokenRow.user_id]);
+      if (usedToken.rows.length === 0) {
+        const error = new Error('Invalid or expired reset link.');
+        error.code = 'INVALID_RESET_TOKEN';
+        throw error;
+      }
 
-    await db.query('UPDATE password_reset_tokens SET is_used = TRUE WHERE reset_id = $1', [
-      tokenRow.reset_id,
-    ]);
+      await client.query('UPDATE users SET password_hash = $1 WHERE user_id = $2', [
+        hashedPassword,
+        tokenRow.user_id,
+      ]);
+      await revokeUserSessions(client, tokenRow.user_id);
+    });
 
-    res.status(200).json({ message: 'Password has been reset successfully.' });
+    await destroyCurrentSession(req, res);
+    return res.status(200).json({ message: 'Password has been reset. All active sessions have been signed out.' });
   } catch (error) {
-    console.log('Reset password error:', error);
+    if (error.code === 'INVALID_RESET_TOKEN') {
+      return res.status(400).json({ message: error.message });
+    }
+    console.error('Reset password error:', error);
     res.status(500).json({ message: 'Error. Try again.' });
   }
 });

@@ -15,6 +15,30 @@ function requireLogin(req, res, next) {
   next();
 }
 
+async function requireActiveAccount(req, res, next) {
+  if (!req.session.userId) {
+    return res.status(401).json({ message: 'You must be logged in.' });
+  }
+
+  try {
+    const result = await db.query(
+      'SELECT status FROM users WHERE user_id = $1',
+      [req.session.userId],
+    );
+    if (result.rows.length === 0) {
+      return res.status(401).json({ message: 'Your session is no longer valid.' });
+    }
+    if (result.rows[0].status === 'suspended') {
+      return res.status(403).json({ message: 'Your account is suspended.' });
+    }
+
+    return next();
+  } catch (error) {
+    console.error('Account status authorization error:', error);
+    return res.status(500).json({ message: 'Could not verify your account status.' });
+  }
+}
+
 function requireRole(...allowedRoles) {
   return async (req, res, next) => {
     if (!req.session.userId) return requireLogin(req, res, next);
@@ -51,4 +75,4 @@ function requireRole(...allowedRoles) {
   };
 }
 
-module.exports = { requireLogin, requireRole };
+module.exports = { requireLogin, requireActiveAccount, requireRole };

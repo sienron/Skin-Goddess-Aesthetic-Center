@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { rateLimit } = require('express-rate-limit');
 const db = require('../db');
-const { requireRole } = require('../middleware/auth');
+const { requireActiveAccount, requireRole } = require('../middleware/auth');
 const { roleForCategory } = require('../utils/staffRoles');
 const { notifyUser, notifyUsers, notifyRoles } = require('../utils/notifications');
 const { createHmac, randomBytes, timingSafeEqual } = require('crypto');
@@ -311,8 +311,7 @@ function noteResponse(row) {
   };
 }
 
-router.get('/:id/notes', async (req, res) => {
-  if (!req.session.userId) return res.status(401).json({ message: 'You must be logged in.' });
+router.get('/:id/notes', requireActiveAccount, async (req, res) => {
   const appointmentId = validAppointmentId(req.params.id);
   if (!appointmentId) return res.status(400).json({ message: 'Choose a valid appointment.' });
 
@@ -334,8 +333,7 @@ router.get('/:id/notes', async (req, res) => {
   }
 });
 
-router.get('/client/:clientId/notes', async (req, res) => {
-  if (!req.session.userId) return res.status(401).json({ message: 'You must be logged in.' });
+router.get('/client/:clientId/notes', requireActiveAccount, async (req, res) => {
   const clientId = validAppointmentId(req.params.clientId);
   if (!clientId) return res.status(400).json({ message: 'Choose a valid client.' });
 
@@ -364,8 +362,7 @@ router.get('/client/:clientId/notes', async (req, res) => {
   }
 });
 
-router.post('/:id/notes', async (req, res) => {
-  if (!req.session.userId) return res.status(401).json({ message: 'You must be logged in.' });
+router.post('/:id/notes', requireActiveAccount, async (req, res) => {
   const appointmentId = validAppointmentId(req.params.id);
   if (!appointmentId) return res.status(400).json({ message: 'Choose a valid appointment.' });
 
@@ -392,8 +389,7 @@ router.post('/:id/notes', async (req, res) => {
   }
 });
 
-router.patch('/:id/notes/:noteId', async (req, res) => {
-  if (!req.session.userId) return res.status(401).json({ message: 'You must be logged in.' });
+router.patch('/:id/notes/:noteId', requireActiveAccount, async (req, res) => {
   const appointmentId = validAppointmentId(req.params.id);
   const noteId = validNoteId(req.params.noteId);
   if (!appointmentId || !noteId) return res.status(400).json({ message: 'Choose a valid note.' });
@@ -428,8 +424,7 @@ router.patch('/:id/notes/:noteId', async (req, res) => {
   }
 });
 
-router.delete('/:id/notes/:noteId', async (req, res) => {
-  if (!req.session.userId) return res.status(401).json({ message: 'You must be logged in.' });
+router.delete('/:id/notes/:noteId', requireActiveAccount, async (req, res) => {
   const appointmentId = validAppointmentId(req.params.id);
   const noteId = validNoteId(req.params.noteId);
   if (!appointmentId || !noteId) return res.status(400).json({ message: 'Choose a valid note.' });
@@ -604,9 +599,7 @@ function validPaymentReference(value) {
 }
 
 // Must stay before any future /:id GET route so "mine" is never treated as an ID.
-router.get('/mine', async (req, res) => {
-  if (!req.session.userId) return res.status(401).json({ message: 'You must be logged in.' });
-
+router.get('/mine', requireActiveAccount, async (req, res) => {
   try {
     const userResult = await db.query('SELECT role FROM users WHERE user_id = $1', [req.session.userId]);
     if (userResult.rows.length === 0) return res.status(401).json({ message: 'Your session is no longer valid. Please log in again.' });
@@ -727,7 +720,6 @@ router.get('/mine', async (req, res) => {
 });
 
 router.post('/:id/cancel', requireRole('admin'), async (req, res) => {
-  if (!req.session.userId) return res.status(401).json({ message: 'You must be logged in.' });
   const appointmentId = validAppointmentId(req.params.id);
   if (!appointmentId) return res.status(400).json({ message: 'Choose a valid appointment.' });
 
@@ -769,8 +761,7 @@ router.post('/:id/cancel', requireRole('admin'), async (req, res) => {
   }
 });
 
-router.post('/:id/cancellation-request', async (req, res) => {
-  if (!req.session.userId) return res.status(401).json({ message: 'You must be logged in.' });
+router.post('/:id/cancellation-request', requireActiveAccount, async (req, res) => {
   const appointmentId = validAppointmentId(req.params.id);
   if (!appointmentId) return res.status(400).json({ message: 'Choose a valid appointment.' });
   const body = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
@@ -892,8 +883,7 @@ router.post('/:id/cancellation-request/review', requireRole('admin'), async (req
   }
 });
 
-router.post('/:id/finish', async (req, res) => {
-  if (!req.session.userId) return res.status(401).json({ message: 'You must be logged in.' });
+router.post('/:id/finish', requireActiveAccount, async (req, res) => {
   const appointmentId = validAppointmentId(req.params.id);
   if (!appointmentId) return res.status(400).json({ message: 'Choose a valid appointment.' });
   try {
@@ -930,8 +920,7 @@ router.post('/:id/finish', async (req, res) => {
   }
 });
 
-router.post('/:id/rating', ratingLimiter, async (req, res) => {
-  if (!req.session.userId) return res.status(401).json({ message: 'You must be logged in.' });
+router.post('/:id/rating', ratingLimiter, requireActiveAccount, async (req, res) => {
   const appointmentId = validAppointmentId(req.params.id);
   if (!appointmentId) return res.status(400).json({ message: 'Choose a valid appointment.' });
 
@@ -987,8 +976,7 @@ router.post('/:id/rating', ratingLimiter, async (req, res) => {
   }
 });
 
-router.post('/:id/no-show', async (req, res) => {
-  if (!req.session.userId) return res.status(401).json({ message: 'You must be logged in.' });
+router.post('/:id/no-show', requireActiveAccount, async (req, res) => {
   const appointmentId = validAppointmentId(req.params.id);
   if (!appointmentId) return res.status(400).json({ message: 'Choose a valid appointment.' });
   try {
@@ -1016,8 +1004,7 @@ router.post('/:id/no-show', async (req, res) => {
   }
 });
 
-router.post('/:id/reschedule', async (req, res) => {
-  if (!req.session.userId) return res.status(401).json({ message: 'You must be logged in.' });
+router.post('/:id/reschedule', requireActiveAccount, async (req, res) => {
   const appointmentId = validAppointmentId(req.params.id);
   if (!appointmentId) return res.status(400).json({ message: 'Choose a valid appointment.' });
 
@@ -1123,8 +1110,7 @@ router.post('/:id/reschedule', async (req, res) => {
   }
 });
 
-router.post('/paymongo/checkout-session', async (req, res) => {
-  if (!req.session.userId) return res.status(401).json({ message: 'You must be logged in.' });
+router.post('/paymongo/checkout-session', requireActiveAccount, async (req, res) => {
   const config = getPayMongoConfig();
   if (!config) return res.status(503).json({ message: 'PayMongo is not configured for this environment.' });
 
@@ -1233,8 +1219,7 @@ router.post('/paymongo/checkout-session', async (req, res) => {
   }
 });
 
-router.get('/paymongo/status/:referenceNumber', async (req, res) => {
-  if (!req.session.userId) return res.status(401).json({ message: 'You must be logged in.' });
+router.get('/paymongo/status/:referenceNumber', requireActiveAccount, async (req, res) => {
   const { referenceNumber } = req.params;
   if (!validPaymentReference(referenceNumber)) return res.status(400).json({ message: 'Choose a valid checkout reference.' });
 
@@ -1258,8 +1243,7 @@ router.get('/paymongo/status/:referenceNumber', async (req, res) => {
   }
 });
 
-router.post('/paymongo/confirm', async (req, res) => {
-  if (!req.session.userId) return res.status(401).json({ message: 'You must be logged in.' });
+router.post('/paymongo/confirm', requireActiveAccount, async (req, res) => {
   const body = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
   const referenceNumber = body.referenceNumber;
   if (!validPaymentReference(referenceNumber)) return res.status(400).json({ message: 'Choose a valid checkout reference.' });

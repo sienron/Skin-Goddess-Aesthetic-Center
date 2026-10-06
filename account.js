@@ -258,6 +258,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } finally {
       profileSubmitBtn.disabled = false;
       profileSubmitBtn.querySelector('.btn-label').textContent = 'SAVE CHANGES';
+      profileForm.dispatchEvent(new Event('profile:statechange'));
     }
   });
 
@@ -316,8 +317,12 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
+      passwordSuccess.textContent = data.message;
       passwordSuccess.hidden = false;
       passwordForm.reset();
+      window.setTimeout(() => {
+        window.location.assign('/LoginPage.html');
+      }, 1500);
     } catch (err) {
       setFieldError(passwordForm, 'password-form', 'Something went wrong. Please try again.');
       console.error('Change password failed:', err);

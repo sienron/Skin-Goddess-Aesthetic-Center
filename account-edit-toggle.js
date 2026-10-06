@@ -3,6 +3,7 @@
   // Profile information
   const profileEditBtn = document.getElementById('profileEditBtn');
   const profileCancelBtn = document.getElementById('profileCancelBtn');
+  const profileSubmitBtn = document.getElementById('profileSubmitBtn');
   const profileActions = document.getElementById('profileFormActions');
   const profileSuccess = document.getElementById('profile-success');
 
@@ -28,6 +29,10 @@
       profileActions.hidden = true;
     }
 
+    if (profileSubmitBtn) {
+      profileSubmitBtn.disabled = true;
+    }
+
     if (profileEditBtn) {
       profileEditBtn.hidden = false;
     }
@@ -46,7 +51,11 @@
     });
 
     if (profileActions) {
-      profileActions.hidden = true;
+      profileActions.hidden = false;
+    }
+
+    if (profileSubmitBtn) {
+      profileSubmitBtn.disabled = true;
     }
 
     if (profileEditBtn) {
@@ -72,8 +81,8 @@
         input.value !== profileOriginalValues[id];
     });
 
-    if (profileActions) {
-      profileActions.hidden = !changed;
+    if (profileSubmitBtn) {
+      profileSubmitBtn.disabled = !changed;
     }
   }
 
@@ -104,6 +113,8 @@
       input.addEventListener('input', checkProfileChanged);
     }
   });
+
+  document.getElementById('profile-form')?.addEventListener('profile:statechange', checkProfileChanged);
 
   enterProfileViewMode();
 

@@ -10957,6 +10957,12 @@ body.services {
   border-color: #b5892a;
 }
 
+.account-form-actions .btn-primary:disabled {
+  background: #d8c58e;
+  border-color: #d8c58e;
+  cursor: not-allowed;
+}
+
 .account-form-actions .btn-outline {
   color: #806f60;
   background: #ffffff;
