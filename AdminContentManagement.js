@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const SECTION_LABELS = {
     services: 'Service',
     homepage: 'Homepage Block',
+    announcements: 'Promo / Event',
     testimonials: 'Testimonial'
   };
 
@@ -27,6 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let SERVICES = [];
   let HOMEPAGE_BLOCKS = [];
   let TEAM = [];
+  let ANNOUNCEMENTS = [];
   const TESTIMONIALS_STATE = { items: [] };
 
   // ---------- helpers ----------
@@ -243,6 +245,43 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  function renderAnnouncements() {
+    const list = document.getElementById('cmAnnouncementList');
+    if (!list) return;
+    list.replaceChildren();
+    ANNOUNCEMENTS.forEach((announcement) => {
+      const card = el('article', 'cm-announcement-card');
+      const details = el('div', 'cm-announcement-card__details');
+      details.appendChild(el('p', 'cm-content-card__label', announcement.type.toUpperCase()));
+      details.appendChild(el('h3', 'cm-content-card__title', announcement.title));
+      details.appendChild(el('p', 'cm-content-card__body', announcement.message));
+
+      const controls = el('div', 'cm-content-card__controls');
+      controls.appendChild(statusBadge(announcement.is_published ? 'published' : 'draft'));
+      const editBtn = el('button', 'apt-action apt-action--view', 'Edit');
+      editBtn.type = 'button';
+      editBtn.dataset.section = 'announcements';
+      editBtn.dataset.action = 'edit';
+      editBtn.dataset.id = announcement.announcement_id;
+      controls.append(editBtn, actionButton(
+        announcement.is_published ? 'Unpublish' : 'Publish',
+        'announcements',
+        'toggle',
+        announcement.announcement_id
+      ));
+      const deleteBtn = actionButton('Delete', 'announcements', 'delete', announcement.announcement_id);
+      controls.appendChild(deleteBtn);
+      card.append(details, controls);
+      list.appendChild(card);
+    });
+    if (!ANNOUNCEMENTS.length) list.appendChild(el('p', 'cm-empty', 'No promos or events yet.'));
+  }
+
+  async function loadAnnouncements() {
+    ANNOUNCEMENTS = await apiRequest('/api/announcements/admin');
+    renderAnnouncements();
+  }
+
   function testimonialActionCell(rating) {
     const td = el('td');
     const wrap = el('div', 'cm-actions');
@@ -338,6 +377,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       if (section === 'services') await loadServices();
       if (section === 'homepage') await loadHomepage();
+      if (section === 'announcements') await loadAnnouncements();
       if (section === 'team') {
         if (selectedContentPage === 'about') await loadHomepage();
         else await loadTeam();
@@ -417,7 +457,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function openEditor(section, item) {
     editing = {
       section,
-      id: item?.service_id || item?.id || item?.key || null,
+      id: item?.service_id || item?.announcement_id || item?.id || item?.key || null,
       pageKey: selectedContentPage,
       imageUrl: item?.imageUrl || '',
       payload: item?.payload || {},
@@ -441,6 +481,29 @@ document.addEventListener('DOMContentLoaded', () => {
       addEditorField('experience', 'Experience', item?.experience, { multiline: true, maxLength: 500 });
       addImageEditorField(item);
       addEditorField('sortOrder', 'Display order', item?.sortOrder ?? TEAM.length, { type: 'number', required: true, min: 0, step: '1' });
+    } else if (section === 'announcements') {
+      const typeLabel = el('label', 'cm-editor__field', 'Type');
+      const typeSelect = el('select', 'cm-editor__input');
+      typeSelect.name = 'type';
+      typeSelect.required = true;
+      [
+        ['promo', 'Promo'],
+        ['deal', 'Deal'],
+        ['event', 'Event'],
+        ['announcement', 'Announcement'],
+      ].forEach(([value, label]) => {
+        const option = el('option', '', label);
+        option.value = value;
+        typeSelect.appendChild(option);
+      });
+      typeSelect.value = item?.type || 'promo';
+      typeLabel.appendChild(typeSelect);
+      editorFields.appendChild(typeLabel);
+      addEditorField('title', 'Title', item?.title, { required: true, maxLength: 160 });
+      addEditorField('message', 'Details', item?.message, { required: true, multiline: true, maxLength: 2000 });
+      addEditorField('startsAt', 'Starts at (optional)', item?.starts_at ? new Date(item.starts_at).toISOString().slice(0, 16) : '', { type: 'datetime-local' });
+      addEditorField('endsAt', 'Ends at (optional)', item?.ends_at ? new Date(item.ends_at).toISOString().slice(0, 16) : '', { type: 'datetime-local' });
+      addEditorCheckbox('isPublished', 'Publish to customer pages', item?.is_published ?? true);
     } else if (section === 'homepage') {
       addEditorField('title', 'Title', item.title, { required: true, maxLength: 500, multiline: item.key === 'hero' });
       addEditorField('body', 'Supporting text', item.body, { multiline: true, maxLength: 2000 });
@@ -506,6 +569,17 @@ document.addEventListener('DOMContentLoaded', () => {
         photoUrl: editing.imageUrl,
         sortOrder: number('sortOrder'),
       };
+    } else if (editing.section === 'announcements') {
+      url = editing.id ? `/api/announcements/admin/${editing.id}` : '/api/announcements/admin';
+      method = editing.id ? 'PUT' : 'POST';
+      payload = {
+        type: values.type,
+        title: values.title,
+        message: values.message,
+        startsAt: values.startsAt ? new Date(values.startsAt).toISOString() : null,
+        endsAt: values.endsAt ? new Date(values.endsAt).toISOString() : null,
+        isPublished: values.isPublished === 'on',
+      };
     } else {
       const block = HOMEPAGE_BLOCKS.find((item) => item.key === editing.id);
       url = `/api/content/admin/pages/${editing.pageKey}/${editing.id}`;
@@ -566,6 +640,12 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (section === 'team') {
       const item = TEAM.find((member) => String(member.id) === String(id));
       await apiRequest(`/api/content/admin/team/${id}/status`, { method: 'PATCH', body: JSON.stringify({ isPublished: !item.isPublished }) });
+    } else if (section === 'announcements') {
+      const item = ANNOUNCEMENTS.find((announcement) => String(announcement.announcement_id) === String(id));
+      await apiRequest(`/api/announcements/admin/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ isPublished: !item.is_published }),
+      });
     } else if (section === 'homepage') {
       const item = HOMEPAGE_BLOCKS.find((block) => block.key === id);
       await apiRequest(`/api/content/admin/pages/${selectedContentPage}/${id}`, {
@@ -628,13 +708,30 @@ document.addEventListener('DOMContentLoaded', () => {
     const { section, id, action: actionName } = action.dataset;
     try {
       if (actionName === 'edit') {
-        const items = section === 'services' ? SERVICES : section === 'team' ? TEAM : HOMEPAGE_BLOCKS;
-        const key = section === 'services' ? 'service_id' : section === 'team' ? 'id' : 'key';
+        const items = section === 'services'
+          ? SERVICES
+          : section === 'team'
+            ? TEAM
+            : section === 'announcements'
+              ? ANNOUNCEMENTS
+              : HOMEPAGE_BLOCKS;
+        const key = section === 'services'
+          ? 'service_id'
+          : section === 'team'
+            ? 'id'
+            : section === 'announcements'
+              ? 'announcement_id'
+              : 'key';
         const item = items.find((entry) => String(entry[key]) === String(id));
         if (item) openEditor(section, item);
       } else if (actionName === 'toggle') {
         action.disabled = true;
         await toggleItem(section, id);
+      } else if (actionName === 'delete' && section === 'announcements') {
+        if (!window.confirm('Delete this promo or event?')) return;
+        await apiRequest(`/api/announcements/admin/${id}`, { method: 'DELETE' });
+        await refreshSection('announcements');
+        setNotice('Announcement deleted.');
       }
     } catch (error) {
       setNotice(error.message, true);

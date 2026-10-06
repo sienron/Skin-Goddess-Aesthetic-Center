@@ -139,89 +139,254 @@
     if (!notificationWrap || !notificationBtn || !notificationDropdown) return;
 
     const notificationList = notificationDropdown.querySelector('.notification-list');
-    const notificationBadge = notificationBtn.querySelector('.badge');
+    const badge = notificationBtn.querySelector('.badge') || document.createElement('span');
+    const readStorageKey = 'skinGoddess.readAnnouncements';
+    const popupDismissalStorageKey = 'skinGoddess.dismissedAnnouncementPopups';
+    const popupSuppressedKey = 'skinGoddess.suppressAnnouncementPopup';
+    let announcements = [];
+    let personalNotifications = [];
+    let personalUnreadCount = 0;
 
-    function showEmptyState(message) {
+    if (!badge.classList.contains('badge')) {
+        badge.className = 'badge';
+        notificationBtn.appendChild(badge);
+    }
+    notificationBtn.setAttribute('role', 'button');
+    notificationBtn.setAttribute('tabindex', '0');
+    notificationBtn.setAttribute('aria-haspopup', 'true');
+    notificationBtn.setAttribute('aria-expanded', 'false');
+    notificationBtn.setAttribute('aria-label', 'View notifications');
+
+    function readPreferenceSet(key, description) {
+        try {
+            const saved = JSON.parse(localStorage.getItem(key) || '[]');
+            return Array.isArray(saved) ? new Set(saved.map(String)) : new Set();
+        } catch (error) {
+            console.warn(`Could not read ${description}:`, error.message);
+            return new Set();
+        }
+    }
+
+    const readAnnouncementKeys = readPreferenceSet(readStorageKey, 'read announcements');
+    const dismissedPopupKeys = readPreferenceSet(popupDismissalStorageKey, 'dismissed announcement pop-ups');
+
+    const popup = document.createElement('aside');
+    popup.className = 'announcement-popup';
+    popup.hidden = true;
+    popup.setAttribute('aria-live', 'polite');
+    popup.setAttribute('aria-label', 'Promotion or event announcement');
+    document.body.appendChild(popup);
+
+    function savePreferenceSet(key, values, description) {
+        try {
+            localStorage.setItem(key, JSON.stringify([...values]));
+        } catch (error) {
+            console.warn(`Could not save ${description}:`, error.message);
+        }
+    }
+
+    function dismissalKey(announcement) {
+        return `${announcement.announcement_id}:${announcement.updated_at}`;
+    }
+
+    function unreadAnnouncements() {
+        return announcements.filter((announcement) => !readAnnouncementKeys.has(dismissalKey(announcement)));
+    }
+
+    function popupAnnouncements() {
+        return announcements.filter((announcement) => !dismissedPopupKeys.has(dismissalKey(announcement)));
+    }
+
+    function updateBadge() {
+        const unreadCount = personalUnreadCount + unreadAnnouncements().length;
+        badge.textContent = unreadCount > 99 ? '99+' : String(unreadCount);
+        badge.hidden = unreadCount === 0;
+    }
+
+    function renderNotificationList() {
         if (!notificationList) return;
-        const empty = document.createElement('div');
-        empty.className = 'notification-empty';
-        empty.textContent = message;
-        notificationList.replaceChildren(empty);
+        notificationList.replaceChildren();
+        unreadAnnouncements().forEach((announcement) => {
+            const item = document.createElement('button');
+            item.type = 'button';
+            item.className = 'notification-item notification-item--announcement unread';
+            item.dataset.announcementId = announcement.announcement_id;
+            const type = document.createElement('span');
+            type.className = 'notification-item__type';
+            type.textContent = announcement.type;
+            const title = document.createElement('strong');
+            title.textContent = announcement.title;
+            const message = document.createElement('span');
+            message.textContent = announcement.message;
+            item.append(type, title, message);
+            notificationList.append(item);
+        });
+
+        personalNotifications.forEach((notification) => {
+            const item = document.createElement('button');
+            item.type = 'button';
+            item.className = `notification-item${notification.is_read ? '' : ' unread'}`;
+            item.dataset.notificationId = notification.notification_id;
+            item.textContent = notification.message;
+            notificationList.append(item);
+        });
+
+        if (notificationList.children.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'notification-empty';
+            empty.textContent = 'No notifications yet';
+            notificationList.append(empty);
+        }
+    }
+
+    function renderAnnouncementsPopup() {
+        popup.replaceChildren();
+        let popupSuppressed = false;
+        try {
+            popupSuppressed = sessionStorage.getItem(popupSuppressedKey) === '1';
+        } catch (error) {
+            console.warn('Could not read announcement pop-up preference:', error.message);
+        }
+        const announcement = popupAnnouncements()[0];
+        if (!announcement || popupSuppressed) {
+            popup.hidden = true;
+            return;
+        }
+
+        const close = document.createElement('button');
+        close.type = 'button';
+        close.className = 'announcement-popup__close';
+        close.setAttribute('aria-label', 'Dismiss announcement');
+        close.textContent = '×';
+        close.addEventListener('click', () => dismissAnnouncement(announcement));
+
+        const type = document.createElement('span');
+        type.className = 'announcement-popup__type';
+        type.textContent = announcement.type;
+        const title = document.createElement('h2');
+        title.className = 'announcement-popup__title';
+        title.textContent = announcement.title;
+        const message = document.createElement('p');
+        message.className = 'announcement-popup__message';
+        message.textContent = announcement.message;
+
+        popup.append(close, type, title, message);
+        popup.hidden = false;
+    }
+
+    function dismissAnnouncement(announcement) {
+        dismissedPopupKeys.add(dismissalKey(announcement));
+        savePreferenceSet(popupDismissalStorageKey, dismissedPopupKeys, 'dismissed announcement pop-ups');
+        try {
+            sessionStorage.setItem(popupSuppressedKey, '1');
+        } catch (error) {
+            console.warn('Could not suppress announcement pop-up for this session:', error.message);
+        }
+        renderAnnouncementsPopup();
+        renderNotificationList();
+        updateBadge();
+    }
+
+    function markAnnouncementRead(announcement) {
+        const key = dismissalKey(announcement);
+        readAnnouncementKeys.add(key);
+        dismissedPopupKeys.add(key);
+        savePreferenceSet(readStorageKey, readAnnouncementKeys, 'read announcements');
+        savePreferenceSet(popupDismissalStorageKey, dismissedPopupKeys, 'dismissed announcement pop-ups');
+        try {
+            sessionStorage.setItem(popupSuppressedKey, '1');
+        } catch (error) {
+            console.warn('Could not suppress announcement pop-up for this session:', error.message);
+        }
+        renderAnnouncementsPopup();
+        renderNotificationList();
+        updateBadge();
+    }
+
+    async function loadPublicAnnouncements() {
+        const response = await fetch('/api/announcements/public');
+        if (!response.ok) throw new Error(`Announcement request failed (${response.status}).`);
+        const data = await response.json();
+        if (!Array.isArray(data.announcements)) throw new Error('Announcement response was invalid.');
+        announcements = data.announcements;
+        renderAnnouncementsPopup();
+        renderNotificationList();
+        updateBadge();
+    }
+
+    async function loadPersonalNotifications() {
+        const response = await fetch('/api/notifications');
+        if (response.status === 401) {
+            personalNotifications = [];
+            personalUnreadCount = 0;
+            return;
+        }
+        if (!response.ok) throw new Error(`Notification request failed (${response.status}).`);
+        const data = await response.json();
+        personalNotifications = Array.isArray(data.notifications) ? data.notifications : [];
+        personalUnreadCount = Number(data.unreadCount) || 0;
     }
 
     async function loadNotifications() {
-        try {
-            const response = await fetch('/api/notifications');
-            if (!response.ok) {
-                showEmptyState(response.status === 401
-                    ? 'Sign in to view notifications'
-                    : 'Notifications could not be loaded');
-                return;
-            }
-            const data = await response.json();
-            const notifications = Array.isArray(data.notifications) ? data.notifications : [];
-
-            if (notificationBadge) {
-                notificationBadge.textContent = data.unreadCount ? String(data.unreadCount) : '';
-                notificationBadge.hidden = !data.unreadCount;
-            }
-            if (!notificationList) return;
-
-            if (notifications.length === 0) {
-                showEmptyState('No notifications yet');
-                return;
-            }
-
-            notificationList.replaceChildren();
-            notifications.forEach((notification) => {
-                const item = document.createElement('button');
-                item.type = 'button';
-                item.className = `notification-item${notification.is_read ? '' : ' unread'}`;
-                item.dataset.notificationId = notification.notification_id;
-                item.textContent = notification.message;
-                notificationList.append(item);
-            });
-        } catch (error) {
-            console.error('Could not load notifications:', error);
-            showEmptyState('Notifications could not be loaded');
-        }
-    }
-
-    if (notificationList) {
-        notificationList.addEventListener('click', async (event) => {
-            const item = event.target.closest('[data-notification-id]');
-            if (!item || !item.classList.contains('unread')) return;
-            try {
-                await fetch(`/api/notifications/${encodeURIComponent(item.dataset.notificationId)}/read`, { method: 'PATCH' });
-                await loadNotifications();
-            } catch (error) {
-                console.error('Could not mark notification as read:', error);
+        const results = await Promise.allSettled([loadPublicAnnouncements(), loadPersonalNotifications()]);
+        results.forEach((result, index) => {
+            if (result.status === 'rejected') {
+                console.error(index === 0 ? 'Could not load announcements:' : 'Could not load notifications:', result.reason);
             }
         });
+        renderNotificationList();
+        updateBadge();
     }
 
-    loadNotifications();
+    notificationList?.addEventListener('click', async (event) => {
+        const announcementItem = event.target.closest('[data-announcement-id]');
+        if (announcementItem) {
+            const announcement = announcements.find((item) => String(item.announcement_id) === announcementItem.dataset.announcementId);
+            if (announcement) markAnnouncementRead(announcement);
+            return;
+        }
+        const notificationItem = event.target.closest('[data-notification-id]');
+        if (!notificationItem || !notificationItem.classList.contains('unread')) return;
+        try {
+            const response = await fetch(`/api/notifications/${encodeURIComponent(notificationItem.dataset.notificationId)}/read`, { method: 'PATCH' });
+            if (!response.ok) throw new Error(`Could not mark notification as read (${response.status}).`);
+            await loadNotifications();
+        } catch (error) {
+            console.error('Could not mark notification as read:', error);
+        }
+    });
 
-    notificationBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        const isOpen = notificationDropdown.classList.toggle("show");
+    function toggleNotifications() {
+        const isOpen = notificationDropdown.classList.toggle('show');
         notificationBtn.setAttribute('aria-expanded', String(isOpen));
         if (isOpen) loadNotifications();
+    }
+
+    notificationBtn.addEventListener('click', (event) => {
+        event.stopPropagation();
+        toggleNotifications();
+    });
+    notificationBtn.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        toggleNotifications();
     });
 
-    document.addEventListener("click", (e) => {
-        if (!notificationWrap.contains(e.target)) {
-            notificationDropdown.classList.remove("show");
+    document.addEventListener('click', (event) => {
+        if (!notificationWrap.contains(event.target)) {
+            notificationDropdown.classList.remove('show');
             notificationBtn.setAttribute('aria-expanded', 'false');
         }
     });
 
-    document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") {
-            notificationDropdown.classList.remove("show");
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            notificationDropdown.classList.remove('show');
             notificationBtn.setAttribute('aria-expanded', 'false');
         }
     });
+
+    loadNotifications();
 })();
 
 (function () {

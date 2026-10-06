@@ -188,6 +188,7 @@ app.use('/api/ratings', require('./routes/ratings'));
 app.use('/api/content', require('./routes/content'));
 app.use('/api/availability', require('./routes/availability'));
 app.use('/api/inventory', require('./routes/inventory'));
+app.use('/api/announcements', require('./routes/announcements'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/inquiries', require('./routes/inquiries'));
