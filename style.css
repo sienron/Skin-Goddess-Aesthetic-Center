@@ -13212,6 +13212,13 @@ main.my-appointments-main .booking-intro {
   gap: 14px;
 }
 
+.cm-editor__section-title {
+  margin: 8px 0 -4px;
+  color: #705d42;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
 .cm-editor__image-preview {
   display: block;
   width: min(100%, 360px);

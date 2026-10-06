@@ -54,6 +54,58 @@ router.post('/', requireRole('admin'), async (req, res) => {
     }
 });
 
+router.put('/category-prices', requireRole('admin'), async (req, res) => {
+    const category = String(req.body?.category || '').trim();
+    const prices = req.body?.prices;
+    if (!category || category.length > 255 || !Array.isArray(prices) || prices.length === 0) {
+        return res.status(400).json({ message: 'Choose a service category and at least one service price.' });
+    }
+
+    const submittedPrices = new Map();
+    for (const item of prices) {
+        const serviceId = Number(item?.serviceId);
+        const servicePrice = Number(item?.servicePrice);
+        if (!Number.isSafeInteger(serviceId) || serviceId < 1
+            || !Number.isFinite(servicePrice) || servicePrice <= 0 || servicePrice > 999999
+            || submittedPrices.has(serviceId)) {
+            return res.status(400).json({ message: 'Enter a valid price for each service.' });
+        }
+        submittedPrices.set(serviceId, servicePrice);
+    }
+
+    try {
+        const updatedServices = await db.transaction(async (client) => {
+            const categoryServices = await client.query(
+                'SELECT service_id FROM services WHERE category = $1 FOR UPDATE',
+                [category]
+            );
+            if (categoryServices.rows.length !== submittedPrices.size
+                || categoryServices.rows.some((service) => !submittedPrices.has(service.service_id))) {
+                const error = new Error('The services in this category have changed. Reload the page and try again.');
+                error.statusCode = 409;
+                throw error;
+            }
+
+            const updates = [];
+            for (const [serviceId, servicePrice] of submittedPrices) {
+                const result = await client.query(`
+                    UPDATE services
+                    SET service_price = $1, updated_at = NOW()
+                    WHERE service_id = $2 AND category = $3
+                    RETURNING service_id, service_name, service_price
+                `, [servicePrice, serviceId, category]);
+                updates.push(result.rows[0]);
+            }
+            return updates;
+        });
+        return res.json(updatedServices);
+    } catch (error) {
+        if (error.statusCode) return res.status(error.statusCode).json({ message: error.message });
+        console.error('Error updating service category prices:', error);
+        return res.status(500).json({ message: 'Could not update service prices.' });
+    }
+});
+
 router.put('/:id', requireRole('admin'), async (req, res) => {
     const serviceId = Number(req.params.id);
     if (!Number.isSafeInteger(serviceId) || serviceId < 1) return res.status(400).json({ message: 'Choose a valid service.' });

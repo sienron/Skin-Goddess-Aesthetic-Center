@@ -28,6 +28,14 @@
     });
   }
 
+  function setEyebrow(selector, value) {
+    const element = document.querySelector(selector);
+    if (!element || value === undefined || value === null) return;
+    const textNode = Array.from(element.childNodes).find((node) => node.nodeType === Node.TEXT_NODE);
+    if (textNode) textNode.textContent = value ? ` ${value} ` : '';
+    else if (value) element.append(document.createTextNode(value));
+  }
+
   function setAccentHeading(selector, value) {
     const element = document.querySelector(selector);
     if (!element || !value) return;
@@ -49,13 +57,19 @@
   }
 
   // A <picture> prefers its WebP <source>, so a CMS image has to drop the sources to take effect.
-  function setImageOverride(selector, url) {
-    if (typeof url !== 'string' || !url) return;
-    const image = document.querySelector(selector);
-    if (!image) return;
+  function setImageElement(image, url) {
+    if (typeof url !== 'string' || !url || !image) return;
     image.parentElement?.querySelectorAll('source').forEach((source) => source.remove());
     image.removeAttribute('srcset');
     if (image.getAttribute('src') !== url) image.src = url;
+  }
+
+  function setImageOverride(selector, url) {
+    setImageElement(document.querySelector(selector), url);
+  }
+
+  function slugContentKey(value) {
+    return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
   }
 
   async function loadHomepage() {
@@ -68,14 +82,13 @@
       if (hero) {
         setTitleLines(document.querySelector('.hero .headline'), hero.title);
         setText('.hero .lede', hero.body);
-        // The hero visual is part of the animation, not CMS page content.
-        // A CMS override here replaces the alpha-channel GSAP asset with a
-        // full-bleed photo that paints over the cream hero background.
+        setText('.hero .eyebrow', hero.payload?.eyebrow);
       } else {
         document.querySelector('.hero')?.setAttribute('hidden', '');
       }
 
       if (treatmentsIntro) {
+        setEyebrow('.hero-reveal-inner .eyebrow-line', treatmentsIntro.payload?.eyebrow);
         const heading = document.querySelector('.treatments-heading');
         if (heading && heading.textContent !== `${treatmentsIntro.title} ${treatmentsIntro.body}`) {
           heading.replaceChildren(document.createTextNode(`${treatmentsIntro.title} `));
@@ -85,7 +98,70 @@
           heading.append(accent);
         }
       } else {
-        document.querySelector('.treatments')?.setAttribute('hidden', '');
+        document.querySelector('.hero-reveal')?.setAttribute('hidden', '');
+      }
+
+      const featurePairs = {
+        home_feature_certified: '.hero-pair--certified',
+        home_feature_personalized: '.hero-pair--personalized',
+        home_feature_premium: '.hero-pair--premium',
+        home_feature_support: '.hero-pair--support',
+      };
+      Object.entries(featurePairs).forEach(([key, selector]) => {
+        const pair = document.querySelector(selector);
+        const block = content.find((item) => item.key === key);
+        if (!pair || !block) return;
+        pair.hidden = !block.isPublished;
+        if (!block.isPublished) return;
+        setText(`${selector} h2`, block.title);
+        setText(`${selector} p`, block.body);
+        const image = pair.querySelector('.hero-pair-media img');
+        if (image) {
+          image.alt = block.title;
+          setImageOverride(`${selector} .hero-pair-media img`, block.imageUrl);
+        }
+      });
+
+      content.filter((block) => block.key.startsWith('home_treatment_')).forEach((block) => {
+        const cards = document.querySelectorAll('.treatment-card');
+        cards.forEach((card) => {
+          if (!card.dataset.homeContentKey) {
+            const title = card.querySelector('.card-body h3')?.textContent;
+            card.dataset.homeContentKey = `home_treatment_${slugContentKey(title)}`;
+          }
+          if (card.dataset.homeContentKey !== block.key) return;
+          card.hidden = !block.isPublished;
+          if (!block.isPublished) return;
+          const heading = card.querySelector('.card-body h3');
+          const description = card.querySelector('.card-body p');
+          if (heading && heading.textContent !== block.title) heading.textContent = block.title;
+          if (description && description.textContent !== block.body) description.textContent = block.body;
+          const image = card.querySelector('.card-bg');
+          if (image) {
+            image.alt = block.title;
+            setImageElement(image, block.imageUrl);
+          }
+        });
+      });
+
+      const testimonialIntro = blocks.get('home_testimonials_intro');
+      if (testimonialIntro) {
+        setAccentHeading('.testimonials-section__heading', testimonialIntro.title);
+        setText('.testimonials-section__subheading', testimonialIntro.body);
+      } else if (content.some((block) => block.key === 'home_testimonials_intro')) {
+        document.querySelector('.testimonials-section')?.setAttribute('hidden', '');
+      }
+
+      const newsletter = content.find((block) => block.key === 'newsletter');
+      if (newsletter) {
+        const section = document.querySelector('.homepage-signup');
+        if (section) section.hidden = !newsletter.isPublished;
+        if (newsletter.isPublished) {
+          setEyebrow('.homepage-signup__eyebrow', newsletter.payload?.eyebrow);
+          setText('.homepage-signup h2', newsletter.title);
+          setText('.homepage-signup__lede', newsletter.body);
+          setImageOverride('.homepage-closing__background img', newsletter.imageUrl);
+        }
       }
 
     } catch (error) {

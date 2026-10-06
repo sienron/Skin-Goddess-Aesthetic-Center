@@ -172,9 +172,10 @@ document.addEventListener('DOMContentLoaded', () => {
     list.textContent = '';
     HOMEPAGE_BLOCKS.forEach((b) => {
       const card = el('article', 'cm-content-card');
-      if (b.imageUrl) {
+      const previewImageUrl = selectedContentPage === 'home' && b.key === 'hero' ? '' : b.imageUrl;
+      if (previewImageUrl) {
         const image = el('img', 'cm-content-card__image');
-        image.src = b.imageUrl;
+        image.src = previewImageUrl;
         image.alt = `${b.label} preview`;
         card.appendChild(image);
       } else {
@@ -303,8 +304,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function loadHomepage() {
     HOMEPAGE_BLOCKS = await apiRequest(`/api/content/admin/pages/${selectedContentPage}`);
+    if (selectedContentPage === 'services') {
+      SERVICES = await apiRequest('/api/services/admin');
+    }
     if (selectedContentPage === 'home') {
-      const removedHomepageBlocks = new Set(['services_strip', 'experience', 'why_skin_goddess']);
+      const removedHomepageBlocks = new Set([
+        'services_strip',
+        'experience',
+        'why_skin_goddess',
+      ]);
       HOMEPAGE_BLOCKS = HOMEPAGE_BLOCKS.filter((block) => !removedHomepageBlocks.has(block.key));
     }
     if (selectedContentPage === 'about') {
@@ -424,7 +432,7 @@ document.addEventListener('DOMContentLoaded', () => {
       addEditorField('category', 'Category', item?.category, { required: true, maxLength: 255 });
       addEditorField('description', 'Description', item?.description, { multiline: true, maxLength: 2000 });
       addEditorField('durationMinutes', 'Duration (minutes)', item?.duration_minutes, { type: 'number', required: true, min: 1, step: '1' });
-      addEditorField('servicePrice', 'Price (PHP)', item?.service_price, { type: 'number', required: true, min: 0.01, step: '0.01' });
+      addEditorField('servicePrice', 'Service price (PHP)', item?.service_price, { type: 'number', required: true, min: 0.01, max: 999999, step: '0.01' });
       addEditorField('reservationFee', 'Reservation fee (PHP)', item?.reservation_fee, { type: 'number', required: true, min: 0.01, step: '0.01' });
     } else if (section === 'team') {
       addEditorField('name', 'Name', item?.name, { required: true, maxLength: 160 });
@@ -436,7 +444,26 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (section === 'homepage') {
       addEditorField('title', 'Title', item.title, { required: true, maxLength: 500, multiline: item.key === 'hero' });
       addEditorField('body', 'Supporting text', item.body, { multiline: true, maxLength: 2000 });
-      if (item.imageUrl || item.key === 'hero' || item.payload?.category) {
+      if (item.payload?.category) {
+        const categoryServices = SERVICES.filter((service) => service.category === item.payload.category);
+        if (categoryServices.length) {
+          editorFields.appendChild(el('p', 'cm-editor__section-title', 'Service prices shown on the Services page'));
+          categoryServices.forEach((service) => {
+            addEditorField(
+              `categoryPrice_${service.service_id}`,
+              service.service_name,
+              service.service_price,
+              { type: 'number', required: true, min: 0.01, max: 999999, step: '0.01' }
+            );
+          });
+          editing.category = item.payload.category;
+          editing.categoryServiceIds = categoryServices.map((service) => service.service_id);
+        }
+      }
+      if (['hero', 'treatments_intro', 'newsletter'].includes(item.key)) {
+        addEditorField('eyebrow', 'Eyebrow text', item.payload?.eyebrow, { maxLength: 160 });
+      }
+      if (item.key !== 'hero' && (item.imageUrl || item.payload?.category || item.key.startsWith('home_feature_') || item.key.startsWith('home_treatment_'))) {
         addImageEditorField(item);
       }
     }
@@ -483,13 +510,21 @@ document.addEventListener('DOMContentLoaded', () => {
       const block = HOMEPAGE_BLOCKS.find((item) => item.key === editing.id);
       url = `/api/content/admin/pages/${editing.pageKey}/${editing.id}`;
       method = 'PUT';
+      const contentPayload = { ...editing.payload };
+      if (Object.hasOwn(values, 'eyebrow')) contentPayload.eyebrow = values.eyebrow;
       payload = {
         title: values.title,
         body: values.body,
         imageUrl: editing.imageUrl,
         isPublished: block?.isPublished ?? true,
-        payload: editing.payload,
+        payload: contentPayload,
       };
+      if (editing.category && editing.categoryServiceIds?.length) {
+        payload.categoryPrices = editing.categoryServiceIds.map((serviceId) => ({
+          serviceId,
+          servicePrice: number(`categoryPrice_${serviceId}`),
+        }));
+      }
     }
 
     const submit = editorForm.querySelector('[type="submit"]');
@@ -503,6 +538,14 @@ document.addEventListener('DOMContentLoaded', () => {
           if (editing.section === 'team') payload.photoUrl = editing.imageUrl;
           else payload.imageUrl = editing.imageUrl;
         }
+      }
+      const categoryPrices = payload.categoryPrices;
+      if (categoryPrices) {
+        delete payload.categoryPrices;
+        await apiRequest('/api/services/category-prices', {
+          method: 'PUT',
+          body: JSON.stringify({ category: editing.category, prices: categoryPrices }),
+        });
       }
       await apiRequest(url, { method, body: JSON.stringify(payload) });
       closeEditor();
