@@ -163,3 +163,114 @@
     document.fonts?.ready.then(refresh);
   }
 })();
+
+(() => {
+  const motionQuery = window.matchMedia(
+    "(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)"
+  );
+  const body = document.body;
+  const heroCopy = document.querySelector("body.homepage .hero-copy");
+  if (!motionQuery.matches || !body || !heroCopy) return;
+
+  const heading = heroCopy.querySelector(".headline");
+  if (!heading) return;
+
+  const accessibleText = heading.textContent.replace(/\s+/g, " ").trim();
+  const walker = document.createTreeWalker(heading, NodeFilter.SHOW_TEXT);
+  const textNodes = [];
+  while (walker.nextNode()) textNodes.push(walker.currentNode);
+
+  const letters = [];
+  textNodes.forEach((node) => {
+    const fragment = document.createDocumentFragment();
+    for (const character of node.nodeValue) {
+      if (/\s/.test(character)) {
+        fragment.appendChild(document.createTextNode(character));
+      } else {
+        const letter = document.createElement("span");
+        letter.className = "hero-letter";
+        letter.setAttribute("aria-hidden", "true");
+        letter.textContent = character;
+        letters.push(letter);
+        fragment.appendChild(letter);
+      }
+    }
+    node.replaceWith(fragment);
+  });
+  heading.setAttribute("aria-label", accessibleText);
+
+  const halo = document.createElement("div");
+  halo.className = "cursor-halo";
+  halo.setAttribute("aria-hidden", "true");
+  body.appendChild(halo);
+
+  const radius = 72;
+  const fullLightRadius = 18;
+  let targetX = 0;
+  let targetY = 0;
+  let x = 0;
+  let y = 0;
+  let frame = 0;
+  let positioned = false;
+
+  function updateTextLight(clientX, clientY) {
+    letters.forEach((letter) => {
+      const rect = letter.getBoundingClientRect();
+      const dx = Math.max(rect.left - clientX, 0, clientX - rect.right);
+      const dy = Math.max(rect.top - clientY, 0, clientY - rect.bottom);
+      const distance = Math.hypot(dx, dy);
+      const light = distance <= fullLightRadius
+        ? 1
+        : Math.max(0, 1 - (distance - fullLightRadius) / (radius - fullLightRadius));
+      letter.style.setProperty("--letter-light", `${(light * 100).toFixed(1)}%`);
+      letter.style.setProperty("--letter-scale", (1 + light * 0.08).toFixed(3));
+    });
+  }
+
+  function animateGlow() {
+    frame = 0;
+    x += (targetX - x) * 0.14;
+    y += (targetY - y) * 0.14;
+    halo.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0) translate(-50%, -50%)`;
+
+    if (Math.abs(targetX - x) > 0.2 || Math.abs(targetY - y) > 0.2) {
+      frame = window.requestAnimationFrame(animateGlow);
+    } else {
+      x = targetX;
+      y = targetY;
+      halo.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0) translate(-50%, -50%)`;
+    }
+  }
+
+  function onPointerMove(event) {
+    if (event.pointerType === "touch") return;
+    targetX = event.clientX;
+    targetY = event.clientY;
+    if (!positioned) {
+      x = targetX;
+      y = targetY;
+      positioned = true;
+    }
+
+    halo.classList.add("is-visible");
+    updateTextLight(targetX, targetY);
+    if (!frame) frame = window.requestAnimationFrame(animateGlow);
+  }
+
+  function hideGlow() {
+    halo.classList.remove("is-visible");
+    letters.forEach((letter) => {
+      letter.style.removeProperty("--letter-light");
+      letter.style.removeProperty("--letter-scale");
+    });
+  }
+
+  document.addEventListener("pointermove", onPointerMove, { passive: true });
+  document.addEventListener("pointerout", (event) => {
+    if (!event.relatedTarget) hideGlow();
+  });
+  window.addEventListener("blur", hideGlow);
+  window.addEventListener("scroll", () => {
+    if (positioned) updateTextLight(targetX, targetY);
+  }, { passive: true });
+})();
