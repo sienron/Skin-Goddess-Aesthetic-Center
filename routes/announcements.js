@@ -11,6 +11,7 @@ function mapAnnouncement(row) {
     type: row.type,
     title: row.title,
     message: row.message,
+    image_url: row.image_url || '',
     starts_at: row.starts_at,
     ends_at: row.ends_at,
     is_published: row.is_published,
@@ -23,6 +24,7 @@ function readAnnouncementInput(body) {
   const type = String(body.type || '').trim();
   const title = String(body.title || '').trim();
   const message = String(body.message || '').trim();
+  const imageUrl = String(body.imageUrl || '').trim();
   const startsAt = body.startsAt ? new Date(body.startsAt) : null;
   const endsAt = body.endsAt ? new Date(body.endsAt) : null;
   const isPublished = body.isPublished;
@@ -30,18 +32,21 @@ function readAnnouncementInput(body) {
   if (!ANNOUNCEMENT_TYPES.has(type)) throw new Error('Choose a valid announcement type.');
   if (!title || title.length > 160) throw new Error('Enter a title up to 160 characters.');
   if (!message || message.length > 2000) throw new Error('Enter details up to 2000 characters.');
+  const isValidImageUrl = /^\/?(?:images|uploads)\/[a-zA-Z0-9_./% -]+$/.test(imageUrl)
+    || /^\/api\/content\/images\/[0-9a-f-]{36}$/i.test(imageUrl);
+  if (imageUrl && (!isValidImageUrl || imageUrl.includes('..'))) throw new Error('Choose a valid promo image.');
   if (startsAt && !Number.isFinite(startsAt.getTime())) throw new Error('Choose a valid start date.');
   if (endsAt && !Number.isFinite(endsAt.getTime())) throw new Error('Choose a valid end date.');
   if (startsAt && endsAt && endsAt <= startsAt) throw new Error('The end date must be after the start date.');
   if (typeof isPublished !== 'boolean') throw new Error('Choose whether to publish this announcement.');
 
-  return { type, title, message, startsAt, endsAt, isPublished };
+  return { type, title, message, imageUrl, startsAt, endsAt, isPublished };
 }
 
 router.get('/public', async (_req, res) => {
   try {
     const result = await db.query(`
-      SELECT announcement_id, type, title, message, starts_at, ends_at, is_published, created_at, updated_at
+      SELECT announcement_id, type, title, message, image_url, starts_at, ends_at, is_published, created_at, updated_at
       FROM promotional_announcements
       WHERE is_published = TRUE
         AND (starts_at IS NULL OR starts_at <= NOW())
@@ -59,7 +64,7 @@ router.get('/public', async (_req, res) => {
 router.get('/admin', requireRole('admin'), async (_req, res) => {
   try {
     const result = await db.query(`
-      SELECT announcement_id, type, title, message, starts_at, ends_at, is_published, created_at, updated_at
+      SELECT announcement_id, type, title, message, image_url, starts_at, ends_at, is_published, created_at, updated_at
       FROM promotional_announcements
       ORDER BY created_at DESC, announcement_id DESC
     `);
@@ -80,13 +85,14 @@ router.post('/admin', requireRole('admin'), async (req, res) => {
 
   try {
     const result = await db.query(`
-      INSERT INTO promotional_announcements (type, title, message, starts_at, ends_at, is_published)
-      VALUES ($1, $2, $3, $4, $5, $6)
-      RETURNING announcement_id, type, title, message, starts_at, ends_at, is_published, created_at, updated_at
+      INSERT INTO promotional_announcements (type, title, message, image_url, starts_at, ends_at, is_published)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING announcement_id, type, title, message, image_url, starts_at, ends_at, is_published, created_at, updated_at
     `, [
       announcement.type,
       announcement.title,
       announcement.message,
+      announcement.imageUrl,
       announcement.startsAt,
       announcement.endsAt,
       announcement.isPublished,
@@ -114,14 +120,15 @@ router.put('/admin/:id', requireRole('admin'), async (req, res) => {
   try {
     const result = await db.query(`
       UPDATE promotional_announcements
-      SET type = $1, title = $2, message = $3, starts_at = $4, ends_at = $5,
-          is_published = $6, updated_at = NOW()
-      WHERE announcement_id = $7
-      RETURNING announcement_id, type, title, message, starts_at, ends_at, is_published, created_at, updated_at
+      SET type = $1, title = $2, message = $3, image_url = $4, starts_at = $5, ends_at = $6,
+          is_published = $7, updated_at = NOW()
+      WHERE announcement_id = $8
+      RETURNING announcement_id, type, title, message, image_url, starts_at, ends_at, is_published, created_at, updated_at
     `, [
       announcement.type,
       announcement.title,
       announcement.message,
+      announcement.imageUrl,
       announcement.startsAt,
       announcement.endsAt,
       announcement.isPublished,

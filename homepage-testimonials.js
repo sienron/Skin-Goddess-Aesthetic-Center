@@ -102,16 +102,14 @@
       return column;
     });
 
-    testimonials.slice(0, 6).forEach((item, index) => {
+    testimonials.forEach((item, index) => {
       columns[index % columnCount].append(createCard(item));
     });
 
     const layout = document.createElement('div');
     layout.className = 'testimonial-columns';
     layout.append(...columns);
-    const finalEntry = testimonials[6] ? createCard(testimonials[6]) : null;
-    if (finalEntry) finalEntry.classList.add('testimonial-entry--final');
-    list.replaceChildren(layout, ...(finalEntry ? [finalEntry] : []));
+    list.replaceChildren(layout);
   }
 
   function setupAnimation() {
