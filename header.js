@@ -260,6 +260,19 @@
         }
 
         displayedAnnouncement = announcement;
+        if (announcement.image_url) {
+            const image = document.createElement('img');
+            image.className = 'announcement-popup__image';
+            image.src = announcement.image_url;
+            image.alt = announcement.title;
+            popup.appendChild(image);
+            popup.classList.add('announcement-popup--with-image');
+        } else {
+            popup.classList.remove('announcement-popup--with-image');
+        }
+
+        const content = document.createElement('div');
+        content.className = 'announcement-popup__content';
         const close = document.createElement('button');
         close.type = 'button';
         close.className = 'announcement-popup__close';
@@ -277,7 +290,8 @@
         message.className = 'announcement-popup__message';
         message.textContent = announcement.message;
 
-        popup.append(close, type, title, message);
+        content.append(close, type, title, message);
+        popup.appendChild(content);
         popup.hidden = false;
         popupBackdrop.hidden = false;
         close.focus({ preventScroll: true });

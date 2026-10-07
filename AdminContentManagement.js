@@ -251,6 +251,13 @@ document.addEventListener('DOMContentLoaded', () => {
     list.replaceChildren();
     ANNOUNCEMENTS.forEach((announcement) => {
       const card = el('article', 'cm-announcement-card');
+      if (announcement.image_url) {
+        const image = el('img', 'cm-announcement-card__image');
+        image.src = announcement.image_url;
+        image.alt = `${announcement.title} promo`;
+        card.appendChild(image);
+        card.classList.add('cm-announcement-card--with-image');
+      }
       const details = el('div', 'cm-announcement-card__details');
       details.appendChild(el('p', 'cm-content-card__label', announcement.type.toUpperCase()));
       details.appendChild(el('h3', 'cm-content-card__title', announcement.title));
@@ -415,7 +422,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function addImageEditorField(item) {
     const fieldLabel = el('label', 'cm-editor__field', 'Replace image (JPG, PNG, or WebP, up to 5 MB)');
     const preview = el('img', 'cm-editor__image-preview');
-    const imageUrl = item?.imageUrl || item?.photoUrl || '';
+    const imageUrl = item?.imageUrl || item?.image_url || item?.photoUrl || '';
     preview.alt = 'Selected image preview';
     preview.hidden = !imageUrl;
     if (imageUrl) preview.src = imageUrl;
@@ -459,7 +466,7 @@ document.addEventListener('DOMContentLoaded', () => {
       section,
       id: item?.service_id || item?.announcement_id || item?.id || item?.key || null,
       pageKey: selectedContentPage,
-      imageUrl: item?.imageUrl || '',
+      imageUrl: item?.imageUrl || item?.image_url || '',
       payload: item?.payload || {},
     };
     editorFields.textContent = '';
@@ -501,6 +508,7 @@ document.addEventListener('DOMContentLoaded', () => {
       editorFields.appendChild(typeLabel);
       addEditorField('title', 'Title', item?.title, { required: true, maxLength: 160 });
       addEditorField('message', 'Details', item?.message, { required: true, multiline: true, maxLength: 2000 });
+      addImageEditorField(item);
       addEditorField('startsAt', 'Starts at (optional)', item?.starts_at ? new Date(item.starts_at).toISOString().slice(0, 16) : '', { type: 'datetime-local' });
       addEditorField('endsAt', 'Ends at (optional)', item?.ends_at ? new Date(item.ends_at).toISOString().slice(0, 16) : '', { type: 'datetime-local' });
       addEditorCheckbox('isPublished', 'Publish to customer pages', item?.is_published ?? true);
@@ -576,6 +584,7 @@ document.addEventListener('DOMContentLoaded', () => {
         type: values.type,
         title: values.title,
         message: values.message,
+        imageUrl: editing.imageUrl,
         startsAt: values.startsAt ? new Date(values.startsAt).toISOString() : null,
         endsAt: values.endsAt ? new Date(values.endsAt).toISOString() : null,
         isPublished: values.isPublished === 'on',
@@ -605,7 +614,7 @@ document.addEventListener('DOMContentLoaded', () => {
     submit.disabled = true;
     editorError.hidden = true;
     try {
-      if (editing.section === 'homepage' || editing.section === 'team') {
+      if (editing.section === 'homepage' || editing.section === 'team' || editing.section === 'announcements') {
         const selectedImage = editorForm.elements.namedItem('imageFile')?.files?.[0];
         if (selectedImage) {
           editing.imageUrl = await uploadImage(selectedImage);

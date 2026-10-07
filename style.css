@@ -13515,6 +13515,19 @@ textarea.cm-editor__input {
   min-width: 0;
 }
 
+.cm-announcement-card--with-image {
+  grid-template-columns: 112px minmax(0, 1fr) auto;
+}
+
+.cm-announcement-card__image {
+  display: block;
+  width: 112px;
+  height: 84px;
+  border-radius: 4px;
+  background: #f3f0ec;
+  object-fit: cover;
+}
+
 .cm-announcement-card .cm-content-card__body {
   display: block;
   overflow: visible;
@@ -13553,6 +13566,11 @@ textarea.cm-editor__input {
   .cm-announcement-card {
     grid-template-columns: minmax(0, 1fr);
     gap: 10px;
+  }
+
+  .cm-announcement-card__image {
+    width: 100%;
+    height: 150px;
   }
 
   .cm-announcement-card .cm-content-card__controls {
@@ -16264,4 +16282,34 @@ body.client-header .announcement-popup {
   bottom: auto;
   left: 50%;
   transform: translate(-50%, -50%);
+  display: block;
+  width: min(460px, calc(100vw - 36px));
+  padding: 0;
+  border-left: 1px solid #eadfc9;
+  overflow: hidden auto;
+}
+
+body.homepage .announcement-popup__image,
+body.client-header .announcement-popup__image {
+  display: block;
+  width: 100%;
+  max-height: min(38dvh, 260px);
+  object-fit: cover;
+}
+
+body.homepage .announcement-popup__content,
+body.client-header .announcement-popup__content {
+  display: grid;
+  gap: 10px;
+  padding: 26px 28px;
+}
+
+body.homepage .announcement-popup--with-image .announcement-popup__content,
+body.client-header .announcement-popup--with-image .announcement-popup__content {
+  padding-top: 22px;
+}
+
+body.homepage .announcement-popup__close,
+body.client-header .announcement-popup__close {
+  z-index: 1;
 }
