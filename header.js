@@ -141,11 +141,11 @@
     const notificationList = notificationDropdown.querySelector('.notification-list');
     const badge = notificationBtn.querySelector('.badge') || document.createElement('span');
     const readStorageKey = 'skinGoddess.readAnnouncements';
-    const popupDismissalStorageKey = 'skinGoddess.dismissedAnnouncementPopups';
     const popupSuppressedKey = 'skinGoddess.suppressAnnouncementPopup';
     let announcements = [];
     let personalNotifications = [];
     let personalUnreadCount = 0;
+    let displayedAnnouncement = null;
 
     if (!badge.classList.contains('badge')) {
         badge.className = 'badge';
@@ -168,14 +168,26 @@
     }
 
     const readAnnouncementKeys = readPreferenceSet(readStorageKey, 'read announcements');
-    const dismissedPopupKeys = readPreferenceSet(popupDismissalStorageKey, 'dismissed announcement pop-ups');
 
+    const popupBackdrop = document.createElement('div');
+    popupBackdrop.className = 'announcement-popup-backdrop';
+    popupBackdrop.hidden = true;
     const popup = document.createElement('aside');
     popup.className = 'announcement-popup';
     popup.hidden = true;
+    popup.setAttribute('role', 'dialog');
+    popup.setAttribute('aria-modal', 'true');
+    popup.setAttribute('tabindex', '-1');
     popup.setAttribute('aria-live', 'polite');
     popup.setAttribute('aria-label', 'Promotion or event announcement');
-    document.body.appendChild(popup);
+    document.body.append(popupBackdrop, popup);
+
+    try {
+        const navigation = performance.getEntriesByType('navigation')[0];
+        if (navigation?.type === 'reload') sessionStorage.removeItem(popupSuppressedKey);
+    } catch (error) {
+        console.warn('Could not reset announcement pop-up preference after reload:', error.message);
+    }
 
     function savePreferenceSet(key, values, description) {
         try {
@@ -185,16 +197,8 @@
         }
     }
 
-    function dismissalKey(announcement) {
-        return `${announcement.announcement_id}:${announcement.updated_at}`;
-    }
-
     function unreadAnnouncements() {
-        return announcements.filter((announcement) => !readAnnouncementKeys.has(dismissalKey(announcement)));
-    }
-
-    function popupAnnouncements() {
-        return announcements.filter((announcement) => !dismissedPopupKeys.has(dismissalKey(announcement)));
+        return announcements.filter((announcement) => !readAnnouncementKeys.has(`${announcement.announcement_id}:${announcement.updated_at}`));
     }
 
     function updateBadge() {
@@ -247,18 +251,21 @@
         } catch (error) {
             console.warn('Could not read announcement pop-up preference:', error.message);
         }
-        const announcement = popupAnnouncements()[0];
+        const announcement = announcements[0];
         if (!announcement || popupSuppressed) {
             popup.hidden = true;
+            popupBackdrop.hidden = true;
+            displayedAnnouncement = null;
             return;
         }
 
+        displayedAnnouncement = announcement;
         const close = document.createElement('button');
         close.type = 'button';
         close.className = 'announcement-popup__close';
         close.setAttribute('aria-label', 'Dismiss announcement');
         close.textContent = '×';
-        close.addEventListener('click', () => dismissAnnouncement(announcement));
+        close.addEventListener('click', dismissAnnouncement);
 
         const type = document.createElement('span');
         type.className = 'announcement-popup__type';
@@ -272,11 +279,11 @@
 
         popup.append(close, type, title, message);
         popup.hidden = false;
+        popupBackdrop.hidden = false;
+        close.focus({ preventScroll: true });
     }
 
-    function dismissAnnouncement(announcement) {
-        dismissedPopupKeys.add(dismissalKey(announcement));
-        savePreferenceSet(popupDismissalStorageKey, dismissedPopupKeys, 'dismissed announcement pop-ups');
+    function dismissAnnouncement() {
         try {
             sessionStorage.setItem(popupSuppressedKey, '1');
         } catch (error) {
@@ -287,12 +294,20 @@
         updateBadge();
     }
 
+    popupBackdrop.addEventListener('click', () => {
+        if (displayedAnnouncement) dismissAnnouncement();
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && displayedAnnouncement) {
+            dismissAnnouncement();
+        }
+    });
+
     function markAnnouncementRead(announcement) {
-        const key = dismissalKey(announcement);
+        const key = `${announcement.announcement_id}:${announcement.updated_at}`;
         readAnnouncementKeys.add(key);
-        dismissedPopupKeys.add(key);
         savePreferenceSet(readStorageKey, readAnnouncementKeys, 'read announcements');
-        savePreferenceSet(popupDismissalStorageKey, dismissedPopupKeys, 'dismissed announcement pop-ups');
         try {
             sessionStorage.setItem(popupSuppressedKey, '1');
         } catch (error) {

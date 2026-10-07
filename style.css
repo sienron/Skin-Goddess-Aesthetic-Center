@@ -16106,11 +16106,11 @@ body.client-header .notification .badge {
 @keyframes announcement-pop-in {
   from {
     opacity: 0;
-    transform: translateY(-8px) scale(0.98);
+    transform: translate(-50%, calc(-50% - 8px)) scale(0.98);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translate(-50%, -50%) scale(1);
   }
 }
 
@@ -16234,4 +16234,34 @@ body.client-header .notification .badge {
     transform-origin: center bottom;
     transition: color 180ms ease, transform 180ms ease;
   }
+}
+
+.announcement-popup-backdrop {
+  position: fixed;
+  z-index: 4999;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.58);
+  backdrop-filter: blur(1px);
+}
+
+.announcement-popup-backdrop[hidden] {
+  display: none;
+}
+
+.announcement-popup {
+  top: 50%;
+  right: auto;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+}
+
+body.homepage .announcement-popup,
+body.client-header .announcement-popup {
+  top: 50%;
+  right: auto;
+  bottom: auto;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
