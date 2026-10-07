@@ -16348,3 +16348,36 @@ body.homepage .announcement-popup__close,
 body.client-header .announcement-popup__close {
   z-index: 1;
 }
+
+body.homepage .notification {
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+
+body.homepage .halo-toggle .theme-toggle-icon {
+  opacity: 0.45;
+  transition: opacity 0.2s ease;
+}
+
+body.homepage .halo-toggle[aria-pressed="true"] {
+  background-color: rgb(201, 168, 76);
+}
+
+body.homepage .halo-toggle[aria-pressed="true"] .theme-toggle-icon {
+  opacity: 1;
+}
+
+body.halo-off .cursor-halo {
+  display: none;
+}
+
+@keyframes heroBreathe {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 -5px; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  body.homepage .hero-copy .headline {
+    animation: heroBreathe 4s ease-in-out infinite;
+  }
+}

@@ -169,6 +169,24 @@
     "(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)"
   );
   const body = document.body;
+
+  const haloToggle = document.getElementById("haloToggle");
+  if (haloToggle && body) {
+    const setHalo = (on) => {
+      body.classList.toggle("halo-off", !on);
+      haloToggle.setAttribute("aria-pressed", String(on));
+      haloToggle.title = on ? "Cursor halo: on" : "Cursor halo: off";
+    };
+    let stored = null;
+    try { stored = localStorage.getItem("haloEnabled"); } catch (e) {}
+    setHalo(stored !== "false");
+    haloToggle.addEventListener("click", () => {
+      const on = body.classList.contains("halo-off");
+      setHalo(on);
+      try { localStorage.setItem("haloEnabled", String(on)); } catch (e) {}
+    });
+  }
+
   const heroCopy = document.querySelector("body.homepage .hero-copy");
   if (!motionQuery.matches || !body || !heroCopy) return;
 
