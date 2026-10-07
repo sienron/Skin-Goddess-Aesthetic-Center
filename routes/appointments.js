@@ -231,7 +231,7 @@ router.get('/admin', requireRole('admin'), async (req, res) => {
              a.cancellation_reason,
              a.cancellation_description,
              a.cancellation_requested_at,
-             CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')) AS client,
+             COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Client') AS client,
              c.gender,
              c.date_of_birth::text AS date_of_birth,
              c.contact_number AS contact,
@@ -243,7 +243,7 @@ router.get('/admin', requireRole('admin'), async (req, res) => {
                  AND (previous.appointment_date, previous.appointment_time) < (a.appointment_date, a.appointment_time)
              ) AS previous_appointment_count
       FROM appointments a
-      JOIN users c ON c.user_id = a.user_id
+      LEFT JOIN users c ON c.user_id = a.user_id
       JOIN services s ON s.service_id = a.service_id
       LEFT JOIN users aesthetician ON aesthetician.user_id = a.aesthetician_id
       ORDER BY a.appointment_date ASC, a.appointment_time ASC, a.appointment_id ASC
@@ -255,6 +255,95 @@ router.get('/admin', requireRole('admin'), async (req, res) => {
   }
 });
 
+router.get('/admin/walk-in-options', requireRole('admin'), async (req, res) => {
+  try {
+    const booking = await getValidatedSchedule(db, {
+      serviceId: req.query.serviceId,
+      date: req.query.date,
+      time: req.query.time
+    }, res);
+    if (!booking) return;
+
+    const availableStaff = await findAvailableAestheticians(db, {
+      ...booking,
+      serviceId: booking.service.service_id
+    });
+    return res.json(availableStaff.rows.map((staff) => ({
+      user_id: staff.user_id,
+      full_name: [staff.first_name, staff.last_name].filter(Boolean).join(' ').trim()
+    })));
+  } catch (error) {
+    console.error('Error fetching walk-in appointment staff:', error);
+    return res.status(500).json({ message: 'Could not load available staff.' });
+  }
+});
+
+router.post('/admin/walk-in', requireRole('admin'), async (req, res) => {
+  const body = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
+  const clientName = typeof body.clientName === 'string' ? body.clientName.trim() : '';
+  const staffValue = body.staffId;
+  const staffId = typeof staffValue === 'number' && Number.isSafeInteger(staffValue) && staffValue > 0
+    ? staffValue
+    : typeof staffValue === 'string' && /^\d+$/.test(staffValue) && Number.isSafeInteger(Number(staffValue)) && Number(staffValue) > 0
+      ? Number(staffValue)
+      : null;
+
+  if (!clientName || clientName.length > 200) {
+    return res.status(400).json({ message: 'Enter a walk-in client name up to 200 characters.' });
+  }
+  if (!staffId) return res.status(400).json({ message: 'Choose an available staff member.' });
+
+  try {
+    const created = await db.transaction(async (client) => {
+      const booking = await getValidatedSchedule(client, body, res);
+      if (!booking) return null;
+
+      const availableStaff = await findAvailableAestheticians(client, {
+        ...booking,
+        serviceId: booking.service.service_id
+      });
+      if (!availableStaff.rows.some((staff) => staff.user_id === staffId)) {
+        const error = new Error('That staff member is not available for this service and time. Choose another slot or staff member.');
+        error.statusCode = 409;
+        throw error;
+      }
+
+      const result = await client.query(`
+        INSERT INTO appointments
+          (user_id, walk_in_name, service_id, booked_service_price, booked_reservation_fee,
+           appointment_date, appointment_time, appointment_end_time, aesthetician_id,
+           appointment_status, payment_status)
+        VALUES (NULL, $1, $2, $3, $4, $5, $6, $7, $8, 'confirmed', 'unpaid')
+        RETURNING appointment_id, appointment_status, payment_status
+      `, [
+        clientName,
+        booking.service.service_id,
+        booking.service.service_price,
+        booking.service.reservation_fee,
+        booking.appointmentDate,
+        booking.appointmentTime,
+        booking.appointmentEndTime,
+        staffId
+      ]);
+      return result.rows[0];
+    });
+    if (!created) return;
+
+    return res.status(201).json({
+      message: 'Walk-in appointment created successfully.',
+      appointment: created,
+      referenceNumber: `APT-${String(created.appointment_id).padStart(4, '0')}`
+    });
+  } catch (error) {
+    if (error.statusCode) return res.status(error.statusCode).json({ message: error.message });
+    if (error.code === '23P01' || error.code === '23505') {
+      return res.status(409).json({ message: 'That time is no longer available. Choose another slot or staff member.' });
+    }
+    console.error('Error creating walk-in appointment:', error);
+    return res.status(500).json({ message: 'Could not create the walk-in appointment.' });
+  }
+});
+
 router.get('/admin/cancellation-requests', requireRole('admin'), async (req, res) => {
   try {
     const result = await db.query(`
@@ -262,11 +351,11 @@ router.get('/admin/cancellation-requests', requireRole('admin'), async (req, res
               a.appointment_status AS status, 'cancellation' AS request_type,
               a.cancellation_reason AS request_reason, a.cancellation_description AS request_description,
               a.cancellation_requested_at AS requested_at, NULL::text AS requested_date, NULL::text AS requested_time,
-             CONCAT_WS(' ', c.first_name, c.last_name) AS client,
+             COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Walk-in') AS client,
              CONCAT_WS(' ', aesthetician.first_name, aesthetician.last_name) AS aesthetician,
              s.service_name AS service
       FROM appointments a
-      JOIN users c ON c.user_id = a.user_id
+      LEFT JOIN users c ON c.user_id = a.user_id
       JOIN users aesthetician ON aesthetician.user_id = a.aesthetician_id
       JOIN services s ON s.service_id = a.service_id
       WHERE a.cancellation_request_status = 'pending'
@@ -276,11 +365,11 @@ router.get('/admin/cancellation-requests', requireRole('admin'), async (req, res
              a.reschedule_reason AS request_reason, a.reschedule_description AS request_description,
              a.reschedule_requested_at AS requested_at, a.reschedule_requested_date::text AS requested_date,
              a.reschedule_requested_time::text AS requested_time,
-             CONCAT_WS(' ', c.first_name, c.last_name) AS client,
+             COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Walk-in') AS client,
              CONCAT_WS(' ', aesthetician.first_name, aesthetician.last_name) AS aesthetician,
              s.service_name AS service
       FROM appointments a
-      JOIN users c ON c.user_id = a.user_id
+      LEFT JOIN users c ON c.user_id = a.user_id
       JOIN users aesthetician ON aesthetician.user_id = a.aesthetician_id
       JOIN services s ON s.service_id = a.service_id
       WHERE a.reschedule_request_status = 'pending'
@@ -463,18 +552,7 @@ function minutesUntil(dateStr, timeStr, now) {
   return (calendarDayNumber(dateStr) - calendarDayNumber(now.dateStr)) * 1440 + (hour * 60 + minute) - (nowHour * 60 + nowMinute);
 }
 
-async function getValidatedBooking(userId, body, res) {
-  const userResult = await db.query('SELECT user_id, email_verified, role FROM users WHERE user_id = $1', [userId]);
-  if (userResult.rows.length === 0) {
-    res.status(401).json({ message: 'Your session is no longer valid. Please log in again.' });
-    return null;
-  }
-  const user = userResult.rows[0];
-  if (!user.email_verified || user.role !== 'client') {
-    res.status(403).json({ message: 'Only verified client accounts can book appointments.' });
-    return null;
-  }
-
+async function getValidatedSchedule(queryClient, body, res) {
   const serviceId = validServiceId(body.serviceId);
   const appointmentDate = normalizeDate(body.date);
   if (!serviceId) {
@@ -482,7 +560,10 @@ async function getValidatedBooking(userId, body, res) {
     return null;
   }
 
-  const serviceResult = await db.query(`SELECT service_id, service_name, duration_minutes, service_price, reservation_fee FROM services WHERE service_id = $1 AND is_active = TRUE`, [serviceId]);
+  const serviceResult = await queryClient.query(`
+    SELECT service_id, service_name, category, duration_minutes, service_price, reservation_fee
+    FROM services WHERE service_id = $1 AND is_active = TRUE
+  `, [serviceId]);
   if (serviceResult.rows.length === 0) {
     res.status(404).json({ message: 'Service not found.' });
     return null;
@@ -527,14 +608,30 @@ async function getValidatedBooking(userId, body, res) {
     return null;
   }
 
-  return { user, service, appointmentDate, appointmentTime, appointmentEndTime };
+  return { service, appointmentDate, appointmentTime, appointmentEndTime };
+}
+
+async function getValidatedBooking(userId, body, res) {
+  const userResult = await db.query('SELECT user_id, email_verified, role FROM users WHERE user_id = $1', [userId]);
+  if (userResult.rows.length === 0) {
+    res.status(401).json({ message: 'Your session is no longer valid. Please log in again.' });
+    return null;
+  }
+  const user = userResult.rows[0];
+  if (!user.email_verified || user.role !== 'client') {
+    res.status(403).json({ message: 'Only verified client accounts can book appointments.' });
+    return null;
+  }
+
+  const schedule = await getValidatedSchedule(db, body, res);
+  return schedule ? { user, ...schedule } : null;
 }
 
 async function findAvailableAestheticians(queryClient, booking) {
   const serviceResult = await queryClient.query('SELECT category FROM services WHERE service_id = $1', [booking.serviceId]);
   const staffRole = roleForCategory(serviceResult.rows[0]?.category);
   return queryClient.query(`
-    SELECT u.user_id FROM users u
+    SELECT u.user_id, u.first_name, u.last_name FROM users u
     WHERE u.role = $4 AND u.status = 'active' AND u.email_verified = TRUE
       AND NOT EXISTS (
         SELECT 1 FROM appointments a
@@ -626,7 +723,7 @@ router.get('/mine', requireActiveAccount, async (req, res) => {
                a.reschedule_reason,
                a.reschedule_description,
                a.user_id AS client_id,
-               COALESCE(CONCAT(c.first_name, ' ', c.last_name), 'Client') AS client,
+               COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Walk-in') AS client,
                c.email AS client_email,
                COALESCE(CONCAT(aesthetician.first_name, ' ', aesthetician.last_name), 'Aesthetician') AS aesthetician,
                c.contact_number AS contact,
@@ -634,7 +731,7 @@ router.get('/mine', requireActiveAccount, async (req, res) => {
                a.appointment_id AS apptNumber
         FROM appointments a
         JOIN services s ON s.service_id = a.service_id
-        JOIN users c ON c.user_id = a.user_id
+        LEFT JOIN users c ON c.user_id = a.user_id
         JOIN users aesthetician ON aesthetician.user_id = a.aesthetician_id
         WHERE a.aesthetician_id = $1
         ORDER BY a.appointment_date ASC, a.appointment_time ASC

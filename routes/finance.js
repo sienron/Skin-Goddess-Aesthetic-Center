@@ -208,7 +208,7 @@ router.get('/by-method', endpoint(async (req, res) => {
   }
   if (req.query.q) {
     values.push(`%${String(req.query.q).slice(0, 100)}%`);
-    where.push(`(COALESCE(c.first_name || ' ' || c.last_name, '') ILIKE $${values.length} OR COALESCE(p.reference_no, '') ILIKE $${values.length} OR COALESCE(s.service_name, '') ILIKE $${values.length})`);
+    where.push(`(COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, '') ILIKE $${values.length} OR COALESCE(p.reference_no, '') ILIKE $${values.length} OR COALESCE(s.service_name, '') ILIKE $${values.length})`);
   }
   const result = await db.query(`SELECT p.method, SUM(p.amount)::float8 AS amount, COUNT(*)::int AS count FROM payments p LEFT JOIN appointments a ON a.appointment_id = p.appointment_id LEFT JOIN users c ON c.user_id = a.user_id LEFT JOIN services s ON s.service_id = a.service_id WHERE ${where.join(' AND ')} GROUP BY p.method ORDER BY amount DESC`, values);
   res.json(result.rows);
@@ -266,14 +266,14 @@ router.get('/expenses/by-category', endpoint(async (req, res) => {
 
 router.get('/deposits', endpoint(async (req, res) => {
   const { from, to } = dateRange(req.query);
-  const result = await db.query(`SELECT p.payment_id, p.appointment_id, p.amount::float8 AS amount, p.method, p.reference_no, p.note, p.status AS payment_status, (p.created_at AT TIME ZONE 'Asia/Manila')::date::text AS payment_date, a.appointment_status, a.appointment_date::text AS appointment_date, COALESCE(c.first_name || ' ' || c.last_name, 'Client') AS client FROM payments p LEFT JOIN appointments a ON a.appointment_id = p.appointment_id LEFT JOIN users c ON c.user_id = a.user_id WHERE p.payment_type = 'reservation' AND (p.created_at AT TIME ZONE 'Asia/Manila')::date BETWEEN $1::date AND $2::date ORDER BY p.created_at DESC`, [from, to]);
+  const result = await db.query(`SELECT p.payment_id, p.appointment_id, p.amount::float8 AS amount, p.method, p.reference_no, p.note, p.status AS payment_status, (p.created_at AT TIME ZONE 'Asia/Manila')::date::text AS payment_date, a.appointment_status, a.appointment_date::text AS appointment_date, COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Client') AS client FROM payments p LEFT JOIN appointments a ON a.appointment_id = p.appointment_id LEFT JOIN users c ON c.user_id = a.user_id WHERE p.payment_type = 'reservation' AND (p.created_at AT TIME ZONE 'Asia/Manila')::date BETWEEN $1::date AND $2::date ORDER BY p.created_at DESC`, [from, to]);
   res.json(result.rows.map((row) => ({ ...row, deposit_status: row.payment_status === 'refunded' ? 'refunded' : row.appointment_status === 'no_show' ? 'forfeited' : 'paid' })));
 }));
 
 router.get('/payments/:id', endpoint(async (req, res) => {
   dateRange(req.query);
   const paymentId = idValue(req.params.id, 'Payment ID');
-  const result = await db.query(`SELECT p.payment_id, p.appointment_id, p.payment_type, p.amount::float8 AS amount, p.method, p.reference_no, p.note, p.status, (p.created_at AT TIME ZONE 'Asia/Manila')::date::text AS payment_date, a.appointment_date::text AS appointment_date, a.appointment_status, a.booked_service_price::float8 AS service_price, COALESCE(c.first_name || ' ' || c.last_name, 'Product sale') AS client, c.email, s.service_name AS service FROM payments p LEFT JOIN appointments a ON a.appointment_id = p.appointment_id LEFT JOIN users c ON c.user_id = a.user_id LEFT JOIN services s ON s.service_id = a.service_id WHERE p.payment_id = $1`, [paymentId]);
+  const result = await db.query(`SELECT p.payment_id, p.appointment_id, p.payment_type, p.amount::float8 AS amount, p.method, p.reference_no, p.note, p.status, (p.created_at AT TIME ZONE 'Asia/Manila')::date::text AS payment_date, a.appointment_date::text AS appointment_date, a.appointment_status, a.booked_service_price::float8 AS service_price, COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Product sale') AS client, c.email, s.service_name AS service FROM payments p LEFT JOIN appointments a ON a.appointment_id = p.appointment_id LEFT JOIN users c ON c.user_id = a.user_id LEFT JOIN services s ON s.service_id = a.service_id WHERE p.payment_id = $1`, [paymentId]);
   if (!result.rows.length) throw new ApiError(404, 'Payment not found.');
   const payment = result.rows[0];
   let history = [];
@@ -287,7 +287,7 @@ router.get('/payments/:id', endpoint(async (req, res) => {
 router.get('/appointments/:id', endpoint(async (req, res) => {
   dateRange(req.query);
   const appointmentId = idValue(req.params.id, 'Appointment ID');
-  const result = await db.query(`SELECT a.appointment_id, a.appointment_date::text AS appointment_date, a.appointment_status, a.booked_service_price::float8 AS service_price, COALESCE(c.first_name || ' ' || c.last_name, 'Client') AS client, c.email, s.service_name AS service FROM appointments a JOIN users c ON c.user_id = a.user_id JOIN services s ON s.service_id = a.service_id WHERE a.appointment_id = $1`, [appointmentId]);
+  const result = await db.query(`SELECT a.appointment_id, a.appointment_date::text AS appointment_date, a.appointment_status, a.booked_service_price::float8 AS service_price, COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Client') AS client, c.email, s.service_name AS service FROM appointments a LEFT JOIN users c ON c.user_id = a.user_id JOIN services s ON s.service_id = a.service_id WHERE a.appointment_id = $1`, [appointmentId]);
   if (!result.rows.length) throw new ApiError(404, 'Appointment not found.');
   const appointment = result.rows[0];
   const payments = await db.query(`SELECT payment_id, payment_type, amount::float8 AS amount, method, reference_no, note, status, (created_at AT TIME ZONE 'Asia/Manila')::date::text AS payment_date FROM payments WHERE appointment_id = $1 ORDER BY created_at, payment_id`, [appointmentId]);
@@ -312,18 +312,18 @@ router.get('/transactions', endpoint(async (req, res) => {
   }
   if (req.query.q) {
     values.push(`%${String(req.query.q).slice(0, 100)}%`);
-    where.push(`(COALESCE(c.first_name || ' ' || c.last_name, '') ILIKE $${values.length} OR COALESCE(p.reference_no, '') ILIKE $${values.length} OR COALESCE(p.note, '') ILIKE $${values.length} OR COALESCE(s.service_name, '') ILIKE $${values.length})`);
+    where.push(`(COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, '') ILIKE $${values.length} OR COALESCE(p.reference_no, '') ILIKE $${values.length} OR COALESCE(p.note, '') ILIKE $${values.length} OR COALESCE(s.service_name, '') ILIKE $${values.length})`);
   }
   const joins = 'FROM payments p LEFT JOIN appointments a ON a.appointment_id = p.appointment_id LEFT JOIN users c ON c.user_id = a.user_id LEFT JOIN services s ON s.service_id = a.service_id';
   const count = await db.query(`SELECT COUNT(*)::int AS count ${joins} WHERE ${where.join(' AND ')}`, values);
   values.push(limit, offset);
-  const result = await db.query(`SELECT p.payment_id, p.appointment_id, p.payment_type, p.amount::float8 AS amount, p.method, p.reference_no, p.note, p.status, p.created_at, (p.created_at AT TIME ZONE 'Asia/Manila')::date::text AS payment_date, a.appointment_date::text AS appointment_date, a.appointment_status, COALESCE(c.first_name || ' ' || c.last_name, 'Product sale') AS client, s.service_name AS service ${joins} WHERE ${where.join(' AND ')} ORDER BY p.created_at DESC LIMIT $${values.length - 1} OFFSET $${values.length}`, values);
+  const result = await db.query(`SELECT p.payment_id, p.appointment_id, p.payment_type, p.amount::float8 AS amount, p.method, p.reference_no, p.note, p.status, p.created_at, (p.created_at AT TIME ZONE 'Asia/Manila')::date::text AS payment_date, a.appointment_date::text AS appointment_date, a.appointment_status, COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Product sale') AS client, s.service_name AS service ${joins} WHERE ${where.join(' AND ')} ORDER BY p.created_at DESC LIMIT $${values.length - 1} OFFSET $${values.length}`, values);
   res.json({ rows: result.rows, page, limit, total: Number(count.rows[0].count) });
 }));
 
 router.get('/receivables', endpoint(async (req, res) => {
   const { from, to } = dateRange(req.query);
-  const result = await db.query(`SELECT a.appointment_id, a.appointment_date::text AS appointment_date, a.booked_service_price::float8 AS service_price, GREATEST(a.booked_service_price - COALESCE(SUM(p.amount) FILTER (WHERE p.status = 'posted' AND ($1::boolean OR p.payment_type <> 'reservation')), 0), 0)::float8 AS outstanding, COALESCE(c.first_name || ' ' || c.last_name, 'Client') AS client, c.email, s.service_name AS service FROM appointments a JOIN users c ON c.user_id = a.user_id JOIN services s ON s.service_id = a.service_id LEFT JOIN payments p ON p.appointment_id = a.appointment_id WHERE a.appointment_status = 'completed' AND a.appointment_date BETWEEN $2::date AND $3::date GROUP BY a.appointment_id, c.user_id, s.service_id HAVING GREATEST(a.booked_service_price - COALESCE(SUM(p.amount) FILTER (WHERE p.status = 'posted' AND ($1::boolean OR p.payment_type <> 'reservation')), 0), 0) > 0 ORDER BY a.appointment_date, a.appointment_id`, [DEPOSIT_DEDUCTED_FROM_PRICE, from, to]);
+  const result = await db.query(`SELECT a.appointment_id, a.appointment_date::text AS appointment_date, a.booked_service_price::float8 AS service_price, GREATEST(a.booked_service_price - COALESCE(SUM(p.amount) FILTER (WHERE p.status = 'posted' AND ($1::boolean OR p.payment_type <> 'reservation')), 0), 0)::float8 AS outstanding, COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Client') AS client, c.email, s.service_name AS service FROM appointments a LEFT JOIN users c ON c.user_id = a.user_id JOIN services s ON s.service_id = a.service_id LEFT JOIN payments p ON p.appointment_id = a.appointment_id WHERE a.appointment_status = 'completed' AND a.appointment_date BETWEEN $2::date AND $3::date GROUP BY a.appointment_id, c.user_id, s.service_id HAVING GREATEST(a.booked_service_price - COALESCE(SUM(p.amount) FILTER (WHERE p.status = 'posted' AND ($1::boolean OR p.payment_type <> 'reservation')), 0), 0) > 0 ORDER BY a.appointment_date, a.appointment_id`, [DEPOSIT_DEDUCTED_FROM_PRICE, from, to]);
   res.json(result.rows);
 }));
 
@@ -430,7 +430,7 @@ router.get('/export.csv', endpoint(async (req, res) => {
   const section = req.query.section;
   if (!['transactions', 'expenses', 'income-statement', 'daily-cash'].includes(section)) throw new ApiError(400, 'Invalid export section.');
   if (section === 'transactions') {
-    const result = await db.query(`SELECT (p.created_at AT TIME ZONE 'Asia/Manila')::date::text AS date, p.payment_type, p.method, p.amount::float8 AS amount, p.status, p.reference_no, p.note, COALESCE(c.first_name || ' ' || c.last_name, 'Product sale') AS client FROM payments p LEFT JOIN appointments a ON a.appointment_id = p.appointment_id LEFT JOIN users c ON c.user_id = a.user_id WHERE (p.created_at AT TIME ZONE 'Asia/Manila')::date BETWEEN $1::date AND $2::date ORDER BY p.created_at`, [from, to]);
+    const result = await db.query(`SELECT (p.created_at AT TIME ZONE 'Asia/Manila')::date::text AS date, p.payment_type, p.method, p.amount::float8 AS amount, p.status, p.reference_no, p.note, COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Product sale') AS client FROM payments p LEFT JOIN appointments a ON a.appointment_id = p.appointment_id LEFT JOIN users c ON c.user_id = a.user_id WHERE (p.created_at AT TIME ZONE 'Asia/Manila')::date BETWEEN $1::date AND $2::date ORDER BY p.created_at`, [from, to]);
     sendCsv(res, ['Date', 'Type', 'Method', 'Amount (PHP)', 'Status', 'Reference', 'Note', 'Client'], result.rows.map((row) => [row.date, row.payment_type, row.method, peso(row.amount), row.status, row.reference_no, row.note, row.client]), 'finance-transactions.csv'); return;
   }
   if (section === 'expenses') {

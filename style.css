@@ -11731,6 +11731,35 @@ body.services {
   color: var(--um-role-doctor);
 }
 
+.apt-modal--walk-in {
+  width: 620px;
+}
+
+.new-appointment-form {
+  padding: 20px;
+}
+
+.new-appointment-form .form-row {
+  gap: 0 14px;
+}
+
+.new-appointment-form input[readonly] {
+  background: #fbfaf7;
+  color: var(--text-muted);
+}
+
+.new-appointment-form .booking-status-message {
+  margin: 0 0 12px;
+}
+
+.new-appointment-form__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--um-border);
+}
+
 .apt-modal__close {
   position: absolute;
   top: 18px;

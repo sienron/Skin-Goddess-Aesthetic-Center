@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let APPOINTMENTS = [];
   let isLoading = true;
   let loadError = '';
-  let requestInProgress = false;
+  let appointmentLoadPromise = null;
 
   function manilaDateKey(date = new Date()) {
     const parts = new Intl.DateTimeFormat('en-CA', {
@@ -366,36 +366,42 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function loadAppointments() {
-    if (requestInProgress) return;
-    requestInProgress = true;
-    try {
-      const response = await fetch('/api/appointments/admin', {
-        headers: { Accept: 'application/json' },
-        cache: 'no-store'
-      });
-      if (!response.ok) {
-        let message = 'Could not load appointments.';
-        try {
-          const body = await response.json();
-          message = body.message || message;
-        } catch (error) {
-          const body = await response.text();
-          if (body) message = body;
+    if (appointmentLoadPromise) return appointmentLoadPromise;
+    const pendingLoad = (async () => {
+      try {
+        const response = await fetch('/api/appointments/admin', {
+          headers: { Accept: 'application/json' },
+          cache: 'no-store'
+        });
+        if (!response.ok) {
+          let message = 'Could not load appointments.';
+          try {
+            const body = await response.json();
+            message = body.message || message;
+          } catch (error) {
+            const body = await response.text();
+            if (body) message = body;
+          }
+          throw new Error(message);
         }
-        throw new Error(message);
-      }
 
-      const records = await response.json();
-      if (!Array.isArray(records)) throw new Error('The appointments response was invalid.');
-      APPOINTMENTS = records.map(normalizeAppointment);
-      loadError = '';
-    } catch (error) {
-      loadError = error.message || 'Could not load appointments.';
+        const records = await response.json();
+        if (!Array.isArray(records)) throw new Error('The appointments response was invalid.');
+        APPOINTMENTS = records.map(normalizeAppointment);
+        loadError = '';
+      } catch (error) {
+        loadError = error.message || 'Could not load appointments.';
+      } finally {
+        isLoading = false;
+        render();
+        if (cancelledModal?.classList.contains('apt-modal-overlay--open')) renderCancelledModal();
+      }
+    })();
+    appointmentLoadPromise = pendingLoad;
+    try {
+      await pendingLoad;
     } finally {
-      requestInProgress = false;
-      isLoading = false;
-      render();
-      if (cancelledModal?.classList.contains('apt-modal-overlay--open')) renderCancelledModal();
+      if (appointmentLoadPromise === pendingLoad) appointmentLoadPromise = null;
     }
   }
 
@@ -673,6 +679,182 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && cancellationRequestsModal.classList.contains('apt-modal-overlay--open')) closeCancellationRequests();
+  });
+
+  const newAppointmentBtn = document.getElementById('newAppointmentBtn');
+  const newAppointmentModal = document.getElementById('newAppointmentModal');
+  const newAppointmentForm = document.getElementById('newAppointmentForm');
+  const newAppointmentClose = document.getElementById('newAppointmentClose');
+  const newAppointmentCancel = document.getElementById('newAppointmentCancel');
+  const newAppointmentClientName = document.getElementById('newAppointmentClientName');
+  const newAppointmentReference = document.getElementById('newAppointmentReference');
+  const newAppointmentService = document.getElementById('newAppointmentService');
+  const newAppointmentDate = document.getElementById('newAppointmentDate');
+  const newAppointmentTime = document.getElementById('newAppointmentTime');
+  const newAppointmentStaff = document.getElementById('newAppointmentStaff');
+  const newAppointmentMessage = document.getElementById('newAppointmentMessage');
+  const newAppointmentSubmit = document.getElementById('newAppointmentSubmit');
+  let walkInServicesLoaded = false;
+  let walkInStaffRequestId = 0;
+
+  function setWalkInMessage(message, kind = '') {
+    newAppointmentMessage.textContent = message;
+    newAppointmentMessage.className = 'booking-status-message' + (kind ? ` ${kind}` : '');
+  }
+
+  async function loadWalkInServices() {
+    if (walkInServicesLoaded) return;
+    const response = await fetch('/api/services', {
+      headers: { Accept: 'application/json' },
+      cache: 'no-store'
+    });
+    const services = await readApiResponse(response);
+    if (!response.ok) throw new Error(services.message || services.error || 'Could not load services.');
+    if (!Array.isArray(services)) throw new Error('The services response was invalid.');
+    if (services.length === 0) throw new Error('No active services are available.');
+
+    services.forEach((service) => {
+      const option = el('option', '', `${service.service_name} (${service.duration_minutes} min)`);
+      option.value = String(service.service_id);
+      newAppointmentService.appendChild(option);
+    });
+    walkInServicesLoaded = true;
+  }
+
+  async function updateWalkInStaff() {
+    const requestId = ++walkInStaffRequestId;
+    const serviceId = newAppointmentService.value;
+    const date = newAppointmentDate.value;
+    const time = newAppointmentTime.value;
+    newAppointmentStaff.replaceChildren(el('option', '', 'Choose a service, date, and time first'));
+    newAppointmentStaff.disabled = true;
+
+    if (!serviceId || !date || !time) {
+      setWalkInMessage('');
+      return;
+    }
+
+    newAppointmentStaff.replaceChildren(el('option', '', 'Loading available staff…'));
+    setWalkInMessage('Checking staff availability…', 'info');
+    try {
+      const params = new URLSearchParams({ serviceId, date, time });
+      const response = await fetch(`/api/appointments/admin/walk-in-options?${params.toString()}`, {
+        headers: { Accept: 'application/json' },
+        cache: 'no-store'
+      });
+      const staff = await readApiResponse(response);
+      if (requestId !== walkInStaffRequestId) return;
+      if (!response.ok) throw new Error(staff.message || 'Could not check staff availability.');
+      if (!Array.isArray(staff)) throw new Error('The available staff response was invalid.');
+
+      newAppointmentStaff.replaceChildren(el('option', '', staff.length ? 'Choose available staff' : 'No staff available for this slot'));
+      staff.forEach((person) => {
+        const option = el('option', '', person.full_name || 'Staff member');
+        option.value = String(person.user_id);
+        newAppointmentStaff.appendChild(option);
+      });
+      newAppointmentStaff.disabled = staff.length === 0;
+      setWalkInMessage(
+        staff.length ? 'Only qualified staff available for this service and time are listed.' : 'No qualified staff are available for this time. Choose another date or time.',
+        staff.length ? 'info' : 'error'
+      );
+    } catch (error) {
+      if (requestId !== walkInStaffRequestId) return;
+      newAppointmentStaff.replaceChildren(el('option', '', 'Staff availability could not be loaded'));
+      setWalkInMessage(error.message || 'Could not check staff availability.', 'error');
+    }
+  }
+
+  function closeNewAppointmentModal() {
+    newAppointmentModal.classList.remove('apt-modal-overlay--open');
+    document.body.classList.remove('modal-open');
+    newAppointmentBtn.focus();
+  }
+
+  async function openNewAppointmentModal() {
+    newAppointmentForm.reset();
+    newAppointmentReference.value = 'Generated after saving';
+    newAppointmentForm.dataset.saved = '';
+    newAppointmentForm.querySelectorAll('input:not([readonly]), select').forEach((field) => { field.disabled = false; });
+    newAppointmentSubmit.disabled = false;
+    newAppointmentSubmit.textContent = 'Save Appointment';
+    newAppointmentStaff.replaceChildren(el('option', '', 'Choose a service, date, and time first'));
+    newAppointmentStaff.disabled = true;
+    setWalkInMessage('');
+
+    const today = manilaDateKey();
+    const [year, month, day] = today.split('-').map(Number);
+    const latest = new Date(Date.UTC(year, month - 1, day + 60)).toISOString().slice(0, 10);
+    newAppointmentDate.min = today;
+    newAppointmentDate.max = latest;
+    newAppointmentModal.classList.add('apt-modal-overlay--open');
+    document.body.classList.add('modal-open');
+    newAppointmentClientName.focus();
+    try {
+      await loadWalkInServices();
+    } catch (error) {
+      setWalkInMessage(error.message || 'Could not load services.', 'error');
+    }
+  }
+
+  newAppointmentBtn.addEventListener('click', openNewAppointmentModal);
+  newAppointmentClose.addEventListener('click', closeNewAppointmentModal);
+  newAppointmentCancel.addEventListener('click', closeNewAppointmentModal);
+  newAppointmentModal.addEventListener('click', (event) => {
+    if (event.target === newAppointmentModal) closeNewAppointmentModal();
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && newAppointmentModal.classList.contains('apt-modal-overlay--open')) {
+      closeNewAppointmentModal();
+    }
+  });
+  [newAppointmentService, newAppointmentDate, newAppointmentTime].forEach((field) => {
+    field.addEventListener('change', updateWalkInStaff);
+  });
+
+  newAppointmentForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (newAppointmentForm.dataset.saved === 'true' || !newAppointmentForm.reportValidity()) return;
+
+    newAppointmentSubmit.disabled = true;
+    setWalkInMessage('Saving appointment…', 'info');
+    try {
+      const response = await fetch('/api/appointments/admin/walk-in', {
+        method: 'POST',
+        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientName: newAppointmentClientName.value,
+          serviceId: newAppointmentService.value,
+          date: newAppointmentDate.value,
+          time: newAppointmentTime.value,
+          staffId: newAppointmentStaff.value
+        })
+      });
+      const result = await readApiResponse(response);
+      if (!response.ok) throw new Error(result.message || 'Could not create the appointment.');
+
+      newAppointmentForm.dataset.saved = 'true';
+      newAppointmentReference.value = result.referenceNumber;
+      newAppointmentForm.querySelectorAll('input:not([readonly]), select').forEach((field) => { field.disabled = true; });
+      newAppointmentSubmit.textContent = 'Appointment Saved';
+      setWalkInMessage(`${result.message} Reference number: ${result.referenceNumber}. Payment is unpaid and due in cash on-site.`, 'success');
+
+      await loadAppointments();
+      let createdIndex = APPOINTMENTS.findIndex((appointment) => appointment.id === String(result.appointment.appointment_id));
+      if (createdIndex < 0) {
+        await loadAppointments();
+        createdIndex = APPOINTMENTS.findIndex((appointment) => appointment.id === String(result.appointment.appointment_id));
+      }
+      state.status = 'all';
+      state.todayOnly = false;
+      state.query = '';
+      state.page = createdIndex >= 0 ? Math.floor(createdIndex / PAGE_SIZE) + 1 : 1;
+      if (searchInput) searchInput.value = '';
+      render();
+    } catch (error) {
+      setWalkInMessage(error.message || 'Could not create the appointment.', 'error');
+      newAppointmentSubmit.disabled = false;
+    }
   });
 
   loadAppointments();
