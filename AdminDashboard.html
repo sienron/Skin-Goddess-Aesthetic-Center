@@ -72,43 +72,91 @@
               <div class="admin-notification-list">No notifications yet</div>
             </div>
           </div>
-          <div class="um-search">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-            <input type="text" id="dashboardSearch" placeholder="Search users...">
-          </div>
-          <div class="um-header__actions-row">
-            <button class="um-btn um-btn--ghost" id="exportBtn" type="button">Export</button>
-            <button class="um-btn um-btn--primary" id="createUserBtn" type="button">+ Create New User</button>
-          </div>
         </div>
       </header>
 
-      <section class="um-dashboard-panel um-dashboard-panel--top" aria-labelledby="activityOverviewTitle">
-        <div class="admin-dashboard-panel__heading">
+      <nav class="admin-dashboard-quick-actions" aria-label="Quick actions">
+        <a href="AdminAppointment.html?new=1">+ New appointment</a>
+        <a href="AdminInventoryManagement.html?new=1">+ Add product</a>
+        <a href="Usermanagement.html?new=1">+ Create user</a>
+      </nav>
+
+      <section class="admin-dashboard-section" aria-labelledby="todayOverviewTitle">
+        <div class="admin-dashboard-section__heading">
           <div>
-            <p class="admin-dashboard-panel__eyebrow">OVERVIEW / 01</p>
-            <h2 id="activityOverviewTitle">Activity overview</h2>
+            <p class="admin-dashboard-panel__eyebrow">YOUR CLINIC AT A GLANCE</p>
+            <h2 id="todayOverviewTitle">Today at a glance</h2>
           </div>
-          <span class="admin-dashboard-panel__marker">ACTIVITY</span>
         </div>
-        <p class="um-dashboard-placeholder-text">Activity trends will appear here when data is available.</p>
+        <div class="admin-dashboard-stats" aria-live="polite">
+          <a class="admin-dashboard-stat" href="AdminAppointment.html">
+            <span class="admin-dashboard-stat__label">Appointments today</span>
+            <strong id="dashboardTodayAppointments">—</strong>
+            <span class="admin-dashboard-stat__hint">View schedule</span>
+          </a>
+          <a class="admin-dashboard-stat" href="AdminAppointment.html">
+            <span class="admin-dashboard-stat__label">Confirmed today</span>
+            <strong id="dashboardConfirmedAppointments">—</strong>
+            <span class="admin-dashboard-stat__hint">Ready for today</span>
+          </a>
+          <a class="admin-dashboard-stat" href="AdminAppointment.html">
+            <span class="admin-dashboard-stat__label">Requests to review</span>
+            <strong id="dashboardPendingRequests">—</strong>
+            <span class="admin-dashboard-stat__hint">Cancellation or reschedule</span>
+          </a>
+          <a class="admin-dashboard-stat" href="Usermanagement.html">
+            <span class="admin-dashboard-stat__label">Total users</span>
+            <strong id="dashboardTotalUsers">—</strong>
+            <span class="admin-dashboard-stat__hint">Manage accounts</span>
+          </a>
+        </div>
       </section>
 
-      <section class="um-dashboard-panel um-dashboard-panel--bottom" aria-labelledby="recentActivityTitle">
-        <div class="admin-dashboard-panel__heading">
+      <div class="admin-dashboard-content-grid">
+        <section class="admin-dashboard-section" aria-labelledby="needsAttentionTitle">
+          <div class="admin-dashboard-section__heading">
+            <div>
+              <p class="admin-dashboard-panel__eyebrow">FOLLOW UP</p>
+              <h2 id="needsAttentionTitle">Needs attention</h2>
+            </div>
+          </div>
+          <div class="admin-dashboard-attention" id="dashboardAttention" aria-live="polite">
+            <p class="admin-dashboard-state">Loading items that may need your attention…</p>
+          </div>
+        </section>
+
+        <section class="admin-dashboard-section" aria-labelledby="todayScheduleTitle">
+          <div class="admin-dashboard-section__heading">
+            <div>
+              <p class="admin-dashboard-panel__eyebrow">TODAY</p>
+              <h2 id="todayScheduleTitle">Appointment schedule</h2>
+            </div>
+            <a class="admin-dashboard-section__link" href="AdminAppointment.html">View all</a>
+          </div>
+          <div class="admin-dashboard-list" id="dashboardSchedule" aria-live="polite">
+            <p class="admin-dashboard-state">Loading today’s appointments…</p>
+          </div>
+        </section>
+      </div>
+
+      <section class="admin-dashboard-section admin-dashboard-section--recent" aria-labelledby="recentActivityTitle">
+        <div class="admin-dashboard-section__heading">
           <div>
-            <p class="admin-dashboard-panel__eyebrow">LATEST / 02</p>
+            <p class="admin-dashboard-panel__eyebrow">LATEST UPDATES</p>
             <h2 id="recentActivityTitle">Recent activity</h2>
           </div>
-          <span class="admin-dashboard-panel__marker">USERS + APPOINTMENTS</span>
+          <a class="admin-dashboard-section__link" href="AdminInquiries.html">View inquiries</a>
         </div>
-        <p class="um-dashboard-placeholder-text">New accounts and appointments will appear here.</p>
+        <div class="admin-dashboard-list admin-dashboard-activity" id="dashboardActivity" aria-live="polite">
+          <p class="admin-dashboard-state">Loading recent activity…</p>
+        </div>
       </section>
 
     </div>
   </div>
 
   <script src="admin-dashboard.js"></script>
+  <script src="admin-dashboard-overview.js"></script>
   <script src="admin-notifications.js"></script>
 </body>
 </html>

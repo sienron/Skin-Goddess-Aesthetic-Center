@@ -864,4 +864,9 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) loadAppointments();
   });
+
+  if (new URLSearchParams(window.location.search).get('new') === '1') {
+    newAppointmentBtn.click();
+    window.history.replaceState(null, '', window.location.pathname);
+  }
 });

@@ -1788,3 +1788,8 @@ loadCriticalStockToday();
 loadOutOfStockCount();
 loadOutOfStockToday();
 loadExpiringSoonCount();
+
+if (new URLSearchParams(window.location.search).get('new') === '1') {
+    addProductButton.click();
+    window.history.replaceState(null, '', window.location.pathname);
+}

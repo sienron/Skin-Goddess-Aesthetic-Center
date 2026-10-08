@@ -22,20 +22,6 @@ const tableSearchSlot = document.getElementById('umTableSearchSlot');
 const searchControl = document.getElementById('umSearchControl');
 if (tableSearchSlot && searchControl) tableSearchSlot.appendChild(searchControl);
 
-const sidebarActions = document.getElementById('umSidebarActions');
-const headerActionsRow = document.querySelector('#userManagementMain .um-header__actions-row');
-if (sidebarActions && headerActionsRow) {
-  const headerActionMarker = document.createComment('user management action row');
-  headerActionsRow.parentNode.insertBefore(headerActionMarker, headerActionsRow);
-  const mobileLayout = window.matchMedia('(max-width: 640px)');
-  const placeActionButtons = () => {
-    if (mobileLayout.matches) sidebarActions.appendChild(headerActionsRow);
-    else headerActionMarker.parentNode.insertBefore(headerActionsRow, headerActionMarker.nextSibling);
-  };
-  placeActionButtons();
-  mobileLayout.addEventListener('change', placeActionButtons);
-}
-
 // ---------- helpers ----------
 function badgeClass(role) {
   return { client: 'client', aesthetician: 'doctor' }[role] || 'staff';
@@ -590,6 +576,11 @@ function closeCreateModal() { createOverlay.classList.remove('um-modal-overlay--
 if (createBtn) createBtn.addEventListener('click', openCreateModal);
 if (createClose) createClose.addEventListener('click', closeCreateModal);
 createOverlay.addEventListener('click', (e) => { if (e.target === createOverlay) closeCreateModal(); });
+
+if (new URLSearchParams(window.location.search).get('new') === '1' && createBtn) {
+  createBtn.click();
+  window.history.replaceState(null, '', window.location.pathname);
+}
 
 if (createForm) {
   createForm.addEventListener('submit', async (e) => {

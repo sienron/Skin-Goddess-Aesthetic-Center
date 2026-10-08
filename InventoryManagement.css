@@ -1810,7 +1810,246 @@ button{
     cursor: pointer;
 }
 
+@media (max-width: 640px) {
+    .admin-inventory-main {
+        position: relative;
+        min-height: 100vh;
+        padding: 72px 16px 28px;
+        overflow: visible;
+        background: #f7f5f0;
+    }
 
+    .admin-inventory-main > .inventory-header {
+        display: block;
+        min-height: 0;
+        margin: 0 0 16px;
+        padding: 0 0 14px;
+        border: 0;
+        background: transparent;
+    }
 
+    .admin-inventory-main .header-left {
+        display: block;
+        min-width: 0;
+    }
+
+    .admin-inventory-main .header-title h1 {
+        font-size: clamp(20px, 6vw, 24px);
+        line-height: 1.2;
+        overflow-wrap: anywhere;
+    }
+
+    .admin-inventory-main .header-title p {
+        margin-top: 5px;
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+    .admin-inventory-main .header-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        width: 100%;
+        margin-top: 14px;
+    }
+
+    .admin-inventory-main .admin-notification-wrap {
+        position: fixed;
+        top: 14px;
+        right: 16px;
+        z-index: 120;
+    }
+
+    .admin-inventory-main .header-actions .btn-add-product {
+        grid-column: 1 / -1;
+    }
+
+    .admin-inventory-main .header-actions .btn {
+        width: 100%;
+        min-width: 0;
+        min-height: 44px;
+        padding: 8px 10px;
+        border-radius: 7px;
+        font-size: 12px;
+        white-space: normal;
+    }
+
+    .admin-inventory-main .header-actions .admin-notification-wrap {
+        width: auto;
+        margin: 0;
+    }
+
+    .admin-inventory-main > .inventory-page {
+        min-height: 0;
+        padding: 0;
+    }
+
+    .admin-inventory-main .summary-cards {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 9px;
+        padding: 0 0 14px;
+    }
+
+    .admin-inventory-main .summary-card {
+        min-width: 0;
+        min-height: 104px;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+    }
+
+    .admin-inventory-main .summary-card:first-child {
+        grid-column: 1 / -1;
+    }
+
+    .admin-inventory-main .summary-label {
+        font-size: 9px;
+        line-height: 1.4;
+    }
+
+    .admin-inventory-main .summary-value {
+        margin: 5px 0;
+        font-size: 25px;
+    }
+
+    .admin-inventory-main .summary-info {
+        font-size: 10px;
+        line-height: 1.4;
+    }
+
+    .admin-inventory-main .inventory-layout {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 14px;
+    }
+
+    .admin-inventory-main .inventory-table-container {
+        min-width: 0;
+        border-radius: 9px;
+    }
+
+    .admin-inventory-main .table-heading {
+        align-items: stretch;
+        gap: 12px;
+        padding: 14px;
+    }
+
+    .admin-inventory-main .table-filters {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 8px;
+    }
+
+    .admin-inventory-main .table-filters .search-box {
+        min-width: 0;
+    }
+
+    .admin-inventory-main .table-filters .search-box input {
+        width: 100%;
+        min-height: 42px;
+        font-size: 12px;
+    }
+
+    .admin-inventory-main .table-filters .clear-filters {
+        width: auto;
+        min-height: 42px;
+        padding: 8px 10px;
+        white-space: nowrap;
+    }
+
+    .admin-inventory-main .table-wrapper {
+        max-height: none;
+        overflow: visible;
+        padding: 0 10px 10px;
+    }
+
+    .admin-inventory-main .inventory-table,
+    .admin-inventory-main .inventory-table tbody {
+        display: block;
+        width: 100%;
+        min-width: 0;
+    }
+
+    .admin-inventory-main .inventory-table thead {
+        display: none;
+    }
+
+    .admin-inventory-main .inventory-table tbody tr {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px 12px;
+        margin-bottom: 9px;
+        padding: 13px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+    }
+
+    .admin-inventory-main .inventory-table tbody tr:last-child {
+        margin-bottom: 0;
+    }
+
+    .admin-inventory-main .inventory-table tbody td {
+        display: block;
+        min-width: 0;
+        padding: 0;
+        border: 0;
+        font-size: 11px;
+        overflow-wrap: anywhere;
+    }
+
+    .admin-inventory-main .inventory-table tbody td::before {
+        display: block;
+        margin-bottom: 4px;
+        color: var(--ink-soft);
+        content: "";
+        font-size: 9px;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+    }
+
+    .admin-inventory-main .inventory-table tbody td:nth-child(1)::before { content: "Product"; }
+    .admin-inventory-main .inventory-table tbody td:nth-child(2)::before { content: "Category"; }
+    .admin-inventory-main .inventory-table tbody td:nth-child(3)::before { content: "Stock"; }
+    .admin-inventory-main .inventory-table tbody td:nth-child(4)::before { content: "Expiry"; }
+    .admin-inventory-main .inventory-table tbody td:nth-child(5)::before { content: "Status"; }
+    .admin-inventory-main .inventory-table tbody td:nth-child(6)::before { content: "Actions"; }
+    .admin-inventory-main .inventory-table tbody td:first-child,
+    .admin-inventory-main .inventory-table tbody td:nth-child(2),
+    .admin-inventory-main .inventory-table tbody td:nth-child(6) {
+        grid-column: 1 / -1;
+    }
+
+    .admin-inventory-main .inventory-table tbody td:first-child .product-name {
+        font-size: 13px;
+        overflow-wrap: anywhere;
+    }
+
+    .admin-inventory-main .stock-control,
+    .admin-inventory-main .action-buttons {
+        flex-wrap: wrap;
+    }
+
+    .admin-inventory-main .inventory-sidebar {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 12px;
+    }
+}
+
+@media (max-width: 380px) {
+    .admin-inventory-main {
+        padding-right: 12px;
+        padding-left: 12px;
+    }
+
+    .admin-inventory-main .admin-notification-wrap {
+        right: 12px;
+    }
+
+    .admin-inventory-main .table-filters {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
 
 
