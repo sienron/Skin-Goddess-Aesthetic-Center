@@ -17067,6 +17067,20 @@ body.halo-off .cursor-halo {
   margin-bottom: 14px;
 }
 
+@media (min-width: 641px) {
+  #adminDashboardMain > .um-header {
+    height: 72px;
+    box-sizing: border-box;
+    border-bottom: 1px solid var(--um-border);
+    background: #fff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  }
+
+  #adminDashboardMain > .um-header > div:first-child {
+    padding-block: 8px;
+  }
+}
+
 #adminDashboardMain > .um-header .um-header__actions {
   justify-content: flex-end;
 }
@@ -17451,5 +17465,20 @@ body.halo-off .cursor-halo {
     max-width: 96px;
     text-align: right;
     white-space: normal;
+  }
+}
+
+@media (min-width: 641px) {
+  #adminDashboardMain {
+    height: 100vh;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+  }
+}
+
+@media (max-width: 640px) {
+  #adminDashboardMain {
+    height: auto;
+    overflow-y: visible;
   }
 }

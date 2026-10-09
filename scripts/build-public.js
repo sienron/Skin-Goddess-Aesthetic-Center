@@ -7,6 +7,7 @@ const browserScripts = [
   'account-edit-toggle.js',
   'account.js',
   'admin-dashboard.js',
+  'admin-dashboard-overview.js',
   'admin-notifications.js',
   'AdminInventoryManagement.js',
   'batch-upload.js',
