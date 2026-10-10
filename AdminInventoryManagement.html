@@ -22,11 +22,30 @@
         .admin-inventory-main .header-title h1 {
             font-weight: 400;
         }
+
+        .admin-inventory-shell > .um-sidebar {
+            position: fixed;
+            inset: 0 auto 0 0;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow-y: auto;
+            z-index: 106;
+        }
+
+        .admin-inventory-shell > .admin-inventory-main {
+            margin-left: 220px;
+        }
+
+        @media (max-width: 1024px) {
+            .admin-inventory-shell > .admin-inventory-main {
+                margin-left: 0;
+            }
+        }
     </style>
 </head>
 
 <body class="InventoryManagement">
-    <div class="um-shell">
+    <div class="um-shell admin-inventory-shell">
         <button class="um-sidebar-toggle um-sidebar-toggle--admin" id="umSidebarToggle" type="button" aria-label="Toggle menu" aria-expanded="false">
             <span></span>
             <span></span>
@@ -155,6 +174,14 @@
                 <div class="summary-value" id="expiringSoonCount"></div>
                 <div class="summary-info danger">
                     Within 30 days
+                </div>
+            </div>
+
+            <div class="summary-card clickable-summary" id="expiredItemsCard">
+                <div class="summary-label">EXPIRED ITEMS</div>
+                <div class="summary-value" id="expiredItemsCount"></div>
+                <div class="summary-info danger">
+                    Already expired
                 </div>
             </div>
 

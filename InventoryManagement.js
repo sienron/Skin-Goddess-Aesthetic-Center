@@ -45,6 +45,8 @@ const outOfStockCount = document.getElementById("outOfStockCount");
 const outOfStockToday = document.getElementById("outOfStockToday");
 
 const expiringSoonCount = document.getElementById("expiringSoonCount");
+const expiredItemsCard = document.getElementById("expiredItemsCard");
+const expiredItemsCount = document.getElementById("expiredItemsCount");
 
 const deleteModal = document.getElementById("deleteModal");
 const deleteProductName = document.getElementById("deleteProductName");
@@ -167,6 +169,7 @@ async function loadInventory(){
         }
 
         inventoryProducts = await response.json();
+        updateExpiredItemsCount();
 
         console.log(
             "Inventory loaded:",
@@ -197,6 +200,23 @@ async function loadInventory(){
 
     }
 
+}
+
+function updateExpiredItemsCount(){
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const expiredProducts = inventoryProducts.filter(product => {
+        if (!product.expiry_date) return false;
+
+        const [year, month, day] = product.expiry_date.split("-").map(Number);
+        const expiryDate = new Date(year, month - 1, day);
+        expiryDate.setHours(0, 0, 0, 0);
+
+        return !Number.isNaN(expiryDate.getTime()) && expiryDate < today;
+    });
+
+    expiredItemsCount.textContent = String(expiredProducts.length);
 }
 
 async function loadRestockedToday(){
@@ -994,6 +1014,24 @@ expiringSoonCard.addEventListener("click", () => {
             block: "start"
         });
 
+});
+
+expiredItemsCard.addEventListener("click", () => {
+    searchInput.value = "";
+    categoryFilter.value = "all";
+    stockFilter.value = "all";
+    statusFilter.value = "all";
+    expiryFilter.value = "expired";
+
+    filterInventory();
+    showSummaryEmptyState(expiredItemsCount, "No Product is expired.");
+
+    document
+        .querySelector(".inventory-table-container")
+        .scrollIntoView({
+            behavior: "smooth",
+            block: "start"
+        });
 });
 
 totalProductsCard.addEventListener("click", () => {

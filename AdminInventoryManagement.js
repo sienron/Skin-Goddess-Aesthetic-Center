@@ -6,6 +6,7 @@
     const transactionsExport = document.getElementById("exportTransactions");
     const inventoryExport = document.getElementById("exportInventory");
     let transactions = [];
+    let isLoadingTransactions = false;
 
     function getPeriodStart(period) {
         const start = new Date();
@@ -113,8 +114,11 @@
     }
 
     async function loadTransactions() {
+        if (isLoadingTransactions) return;
+        isLoadingTransactions = true;
+
         try {
-            const response = await fetch("/api/inventory/transactions");
+            const response = await fetch("/api/inventory/transactions", { cache: "no-store" });
             if (!response.ok) throw new Error("Failed to fetch transaction history.");
             const data = await response.json();
             transactions = Array.isArray(data) ? data : [];
@@ -129,6 +133,8 @@
             row.appendChild(cell);
             transactionBody.appendChild(row);
             transactionFooter.textContent = "Transaction history could not be loaded";
+        } finally {
+            isLoadingTransactions = false;
         }
     }
 
@@ -166,4 +172,5 @@
     });
 
     loadTransactions();
+    window.setInterval(loadTransactions, 5000);
 })();

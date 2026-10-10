@@ -4,6 +4,7 @@ const transactionPeriodFilter = document.getElementById("transactionPeriodFilter
 const transactionTypeFilter = document.getElementById("transactionTypeFilter");
 
 let transactions = [];
+let isLoadingTransactions = false;
 
 function getPeriodStart(period){
     const now = new Date();
@@ -115,8 +116,11 @@ function renderTransactions(){
 }
 
 async function loadTransactions(){
+    if (isLoadingTransactions) return;
+    isLoadingTransactions = true;
+
     try {
-        const response = await fetch("/api/inventory/transactions");
+        const response = await fetch("/api/inventory/transactions", { cache: "no-store" });
         if (!response.ok) {
             throw new Error("Failed to fetch transaction history.");
         }
@@ -133,6 +137,8 @@ async function loadTransactions(){
         row.appendChild(message);
         transactionBody.appendChild(row);
         transactionFooter.textContent = "Transaction history could not be loaded";
+    } finally {
+        isLoadingTransactions = false;
     }
 }
 
@@ -150,3 +156,4 @@ document.getElementById("sidebarBackdrop").addEventListener("click", () => {
 });
 
 loadTransactions();
+window.setInterval(loadTransactions, 5000);

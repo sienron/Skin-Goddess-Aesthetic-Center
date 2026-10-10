@@ -22,10 +22,10 @@
         <!-- ================= SIDEBAR ================= -->
         <aside class="inv-sidebar" id="invSidebar">
     
-            <a href="InventoryManagement.html" class="inv-sidebar__logo">
+            <a href="index.html" class="inv-sidebar__logo">
                 <div class="logo-container">
                     <img
-                        id="invLogo"
+                        id="logo"
                         src="images/logo_horizontal.jpg"
                         alt="Skin Goddess Aesthetic Center logo"
                     >
@@ -35,12 +35,6 @@
             <p class="inv-sidebar__label">MAIN MENU</p>
     
             <nav class="inv-sidebar__nav">
-    
-                <a href="InventoryManagement.html" class="inv-nav-link">
-                    Dashboard
-                </a>
-    
-               
     
                 <a href="InventoryManagement.html" class="inv-nav-link inv-nav-link--active">
                     Inventory
@@ -56,22 +50,17 @@
     
             </nav>
     
-            <div class="inv-sidebar__account">
-    
-                <div class="inv-avatar">
-                    A
+            <div class="inv-sidebar__account um-sidebar__account">
+                <button class="um-sidebar__profile" id="adminProfileBtn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="adminProfileMenu">
+                    <span class="inv-avatar um-avatar">A</span>
+                    <span class="um-sidebar__account-details">
+                        <span class="inv-sidebar__account-name um-sidebar__account-name">Admin User</span>
+                        <span class="inv-sidebar__account-role um-sidebar__account-role">Owner</span>
+                    </span>
+                </button>
+                <div class="um-sidebar__account-menu" id="adminProfileMenu" role="menu">
+                    <button class="um-sidebar__logout" id="adminLogoutBtn" type="button" role="menuitem">Log out</button>
                 </div>
-    
-                <div>
-                    <p class="inv-sidebar__account-name">
-                        Admin User
-                    </p>
-    
-                    <p class="inv-sidebar__account-role">
-                        Owner
-                    </p>
-                </div>
-    
             </div>
     
         </aside>
@@ -176,6 +165,14 @@
                 <div class="summary-value" id="expiringSoonCount"></div>
                 <div class="summary-info danger">
                     Within 30 days
+                </div>
+            </div>
+
+              <div class="summary-card clickable-summary" id="expiredItemsCard">
+                <div class="summary-label">EXPIRED ITEMS</div>
+                <div class="summary-value" id="expiredItemsCount"></div>
+                <div class="summary-info danger">
+                    Already expired
                 </div>
             </div>
 
@@ -668,6 +665,7 @@
 
     <script src="InventoryManagement.js"></script>
     <script src="batch-upload.js"></script>
+    <script src="admin-dashboard.js"></script>
     <script src="admin-notifications.js"></script>
 
 </body>

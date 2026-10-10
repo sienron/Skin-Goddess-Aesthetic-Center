@@ -323,7 +323,7 @@ button{
 
 .summary-cards{
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(6, 1fr);
     gap: 13px;
 
     padding: 18px 0;
@@ -331,7 +331,9 @@ button{
 
 .summary-card{
     background: var(--white);
-    border: 1px solid #ECE7DF;
+    border: 1px solid var(--um-border);
+    border-top: 3px solid var(--gold-2);
+    border-radius: 6px;;
     padding: 15px 18px;
     min-height: 84px;
 }
