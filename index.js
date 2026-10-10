@@ -123,6 +123,48 @@ function requireRole(...allowedRoles) {
   };
 }
 
+const INVENTORY_OFFICER_PAGES = new Set([
+  '/InventoryManagement.html',
+  '/InventoryTransactions.html',
+]);
+
+app.use(async (req, res, next) => {
+  const requestedPage = req.path;
+  if (!req.session.userId
+    || (requestedPage !== '/' && path.extname(requestedPage).toLowerCase() !== '.html')) {
+    return next();
+  }
+
+  try {
+    const result = await db.query(
+      'SELECT role, status, dev_access_all FROM users WHERE user_id = $1',
+      [req.session.userId]
+    );
+    const user = result.rows[0];
+
+    if (!user) {
+      return res.status(401).send('Your session is no longer valid.');
+    }
+
+    if (user.status === 'suspended') {
+      return res.status(403).send('Your account is suspended.');
+    }
+
+    req.session.role = user.role;
+    const localDevAccess = process.env.NODE_ENV !== 'production' && user.dev_access_all === true;
+    if (user.role === 'inventory_officer' && !localDevAccess) {
+      if (requestedPage === '/' || !INVENTORY_OFFICER_PAGES.has(requestedPage)) {
+        return res.redirect('/InventoryManagement.html');
+      }
+    }
+
+    return next();
+  } catch (error) {
+    console.error('Page access authorization error:', error);
+    return res.status(500).send('Could not verify your access.');
+  }
+});
+
 const protectedPages = [
   { path: '/UserAccount.html', roles: ['client'] },
   { path: '/UserAppointment.html', roles: ['client'] },
@@ -143,7 +185,8 @@ const protectedPages = [
   { path: '/AdminInventoryManagement.html', roles: ['admin'] },
   { path: '/Usermanagement.html', roles: ['admin'] },
 
-  { path: '/InventoryManagement.html', roles: ['inventory_officer', 'admin'] },
+  { path: '/InventoryManagement.html', roles: ['inventory_officer'] },
+  { path: '/InventoryTransactions.html', roles: ['inventory_officer'] },
   { path: '/FinanceDashboard.html', roles: ['finance_officer', 'admin'] },
   { path: '/FinanceExpenses.html', roles: ['finance_officer', 'admin'] },
   { path: '/FinanceReports.html', roles: ['finance_officer', 'admin'] },
