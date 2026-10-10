@@ -187,6 +187,7 @@
       trigger: heading,
       start: 'top 95%',
       once: true,
+      toggleActions: 'play none none none',
       onEnter: () => playOnce([heading, subheading], { duration: 0.6, stagger: 0.1 }),
     }));
 
@@ -194,6 +195,7 @@
       triggers.push(...ScrollTrigger.batch(entries, {
         start: 'top 96%',
         once: true,
+        toggleActions: 'play none none none',
         batchMax: 3,
         interval: 0.05,
         onEnter: (batch) => playOnce(batch, { duration: 0.6, stagger: 0.1 }),
@@ -204,6 +206,7 @@
       trigger: signup,
       start: 'top 70%',
       once: true,
+      toggleActions: 'play none none none',
       onEnter: () => playOnce([signupLogo, ...contentItems], { duration: 0.6, stagger: 0.1 }),
     }));
 

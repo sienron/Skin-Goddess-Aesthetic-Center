@@ -5,10 +5,6 @@
   if (!hero || !gsap) return;
   if (ScrollTrigger) gsap.registerPlugin(ScrollTrigger);
 
-  const pairsWrap = document.getElementById("heroPairs");
-  const indicator = document.getElementById("scrollIndicator");
-  const dots = indicator ? Array.from(indicator.querySelectorAll(".scroll-indicator__dot")) : [];
-
   const mm = gsap.matchMedia();
   mm.add("(prefers-reduced-motion: no-preference)", () => {
     gsap.from(hero.querySelectorAll(".hero-copy > *"), {
@@ -22,141 +18,118 @@
   });
 
   mm.add("(min-width: 701px) and (prefers-reduced-motion: no-preference)", () => {
-    const reveal = hero.querySelector(".hero-reveal");
-    if (!ScrollTrigger || !pairsWrap || !reveal) return;
+    const band = hero.querySelector(".hero-band");
+    const copy = hero.querySelector(".hero-copy");
+    const care = hero.querySelector("#featuredServices");
+    const careHeading = care?.querySelector(".homepage-service-panels__header");
+    const careColumns = care ? Array.from(care.querySelectorAll(".homepage-service-panel")) : [];
+    const treatments = hero.querySelector("#treatments");
+    const treatmentsHeader = treatments?.querySelector(".treatments-section__header");
+    const carouselWrap = treatments?.querySelector(".treatments-carousel-wrap");
+    if (!ScrollTrigger || !band || !copy || !careHeading || !careColumns.length || !treatments || !treatmentsHeader || !carouselWrap) return;
 
     hero.classList.add("hero-scrolly");
-    const copy = hero.querySelector(".hero-copy");
-    const band = hero.querySelector(".hero-band");
-    const pairs = Array.from(pairsWrap.querySelectorAll(".hero-pair"));
     const W = () => hero.clientWidth;
     const H = () => hero.clientHeight;
 
-    // Timeline units: 0-2.6 cream line appears and expands over the hero text, 2.4-3.4 first pair
-    // settles in, then each pair holds for 0.6 and glides to the next over 1.4.
-    const T0 = 3.4;
-    const HOLD = 0.6;
-    const MOVE = 1.4;
-    const S = 0.7;
-    const lastHold = T0 + (pairs.length - 1) * (HOLD + MOVE) + HOLD;
-
-    // One scroll-driven stack position (p) is shared by every pair; each pair derives its own
-    // y / scale / opacity from its distance (d = i - p) to the centre slot.
-    const slots = { d: [-1, 0, 1, 2], y: [-0.5, 0, 0.44, 0.7], scale: [0.5, 1, 0.6, 0.4], alpha: [0, 1, 0.9, 0] };
-    const sample = (arr, d) => {
-      if (d <= -1) return arr[0];
-      if (d >= 2) return arr[3];
-      const k = d < 0 ? 0 : d < 1 ? 1 : 2;
-      return gsap.utils.interpolate(arr[k], arr[k + 1], d - slots.d[k]);
-    };
-    const stack = { p: -1, vis: 0 };
-    const render = () => {
-      const h = H();
-      pairs.forEach((pair, i) => {
-        const d = i - stack.p;
-        gsap.set(pair, {
-          xPercent: -50,
-          yPercent: -50,
-          y: sample(slots.y, d) * h,
-          scale: sample(slots.scale, d),
-          autoAlpha: sample(slots.alpha, d) * stack.vis,
-          zIndex: 10 - Math.round(Math.abs(d) * 3),
-        });
-      });
-    };
-
-    // At scroll 0 the band is invisible and collapsed, so the hero is a clean static screen.
     gsap.set(band, { autoAlpha: 0, scaleX: 0, scaleY: 0.01, transformOrigin: "50% 50%" });
-    render();
+    gsap.set([care, careHeading, ...careColumns], { autoAlpha: 0 });
+    gsap.set(treatmentsHeader, { xPercent: -130, autoAlpha: 0 });
+    gsap.set(carouselWrap, { xPercent: -105, autoAlpha: 0 });
 
-    let activeIdx = -1;
-    const setIndicator = (idx) => {
-      if (idx === activeIdx || !indicator) return;
-      activeIdx = idx;
-      indicator.classList.toggle("is-hero-seq", idx >= 0);
-      dots.forEach((dot, i) => dot.classList.toggle("is-active", i === idx));
+    // Plays once when the cream finishes expanding and is never reversed by scrolling back up.
+    let careShown = false;
+    const careEntrance = gsap.timeline({ paused: true, defaults: { ease: "power3.out" } });
+    const showCare = () => {
+      // ScrollTrigger refreshes render the timeline end-to-end, so ignore calls unless the user has really scrolled past the cream expansion.
+      if (careShown || !tl.scrollTrigger || tl.scrollTrigger.progress < 2.5 / tl.duration()) return;
+      careShown = true;
+      gsap.set(care, { autoAlpha: 1 });
+      gsap.set(careHeading, { x: W() - careHeading.getBoundingClientRect().left });
+      careEntrance
+        .clear()
+        .to(careHeading, { x: 0, autoAlpha: 1, duration: 0.9 })
+        .to(careColumns, { autoAlpha: 1, duration: 0.3, ease: "power1.out", stagger: 0.05 }, ">-0.05")
+        .play(0);
+    };
+    // Scrolling back up into the hero hands the screen back to the hero; Care stays put while the cream is covering it.
+    const hideCare = () => {
+      careShown = false;
+      careEntrance.pause(0).clear();
+      gsap.set([care, careHeading, ...careColumns], { autoAlpha: 0 });
     };
 
+    const wipe = { r: 0 };
+    let lastClip = "";
+    const paintWipe = () => {
+      const clip = `circle(${Math.max(wipe.r, 0)}px at ${W() - 51}px ${H() - 57}px)`;
+      if (clip === lastClip) return;
+      lastClip = clip;
+      treatments.style.clipPath = clip;
+    };
+    paintWipe();
+
+    const S = 0.7;
     const tl = gsap.timeline({
       defaults: { ease: "power2.inOut" },
-      onUpdate: () => {
-        const on = stack.vis > 0.5 && tl.time() <= lastHold + 0.3;
-        setIndicator(on ? Math.min(pairs.length - 1, Math.max(0, Math.round(stack.p))) : -1);
-      },
       scrollTrigger: {
         trigger: hero,
         start: "top top",
         end: () => "+=" + tl.duration() * H() * 0.5,
         pin: true,
         scrub: 0.6,
-        snap: {
-          snapTo: (p) => {
-            const d = tl.duration();
-            if (p * d > lastHold) return p;
-            const stops = [0, ...pairs.map((_, i) => (T0 + i * (HOLD + MOVE) + HOLD / 2) / d)];
-            return gsap.utils.snap(stops, p);
-          },
-          duration: { min: 0.2, max: 0.7 },
-          delay: 0.05,
-          ease: "power1.inOut",
-        },
         anticipatePin: 1,
         invalidateOnRefresh: true,
-        onRefresh: render,
+        onUpdate: (self) => {
+          if (careShown && self.progress < 1.8 / tl.duration()) hideCare();
+        },
+        onLeave: (self) => finishSequence(self),
       },
     });
 
-    // Cream line grows across the centre, then expands vertically over the hero text.
+    // Once the user scrolls past the sequence, swap the pinned choreography for a static stack
+    // (hero, Care, Treatments) so scrolling back up never replays or reverses any animation.
+    const finishSequence = (self) => {
+      const over = Math.max(0, window.scrollY - self.end);
+      careEntrance.kill();
+      self.kill(true);
+      tl.kill();
+      hero.classList.remove("hero-scrolly");
+      hero.classList.add("hero-static");
+      treatments.style.clipPath = "";
+      gsap.set([band, copy, care, careHeading, ...careColumns, treatmentsHeader, carouselWrap], { clearProps: "all" });
+      window.scrollTo(0, treatments.getBoundingClientRect().top + window.scrollY + over);
+      ScrollTrigger.refresh();
+    };
     tl.to(band, { autoAlpha: 1, duration: 0.01, ease: "none" }, 0.4)
       .to(band, { scaleX: 1, duration: 1, ease: "power2.inOut" }, 0.4)
       .to(band, { scaleY: 1, duration: 1.2, ease: "power2.inOut" }, 1.4)
       .to(copy, { autoAlpha: 0, duration: 0.8, ease: "power1.in" }, 1.8)
-      .to(stack, { vis: 1, duration: 0.8, ease: "none", onUpdate: render }, 2.4)
-      .to(stack, { p: 0, duration: 1, ease: "power2.out", onUpdate: render }, 2.4);
-
-    pairs.forEach((_, i) => {
-      if (i === pairs.length - 1) return;
-      tl.to(stack, { p: i + 1, duration: MOVE, ease: "power2.inOut", onUpdate: render }, T0 + i * (HOLD + MOVE) + HOLD);
-    });
-
-    // Gold circle grows from the chat launcher corner and wipes the hero
-    const revealInner = hero.querySelector(".hero-reveal-inner");
-    const wipe = { r: 0 };
-    let lastClip = "";
-    const paintWipe = () => {
-      const clip = "circle(" + Math.max(wipe.r, 0) + "px at " + (W() - 51) + "px " + (H() - 57) + "px)";
-      if (clip === lastClip) return;
-      lastClip = clip;
-      reveal.style.clipPath = clip;
-    };
-    paintWipe();
-    const carouselWrap = hero.querySelector(".treatments-carousel-wrap");
-    gsap.set(revealInner, { xPercent: -130, autoAlpha: 0 });
-    gsap.set(carouselWrap, { xPercent: -105, autoAlpha: 0 });
-    const wipeStart = () => { reveal.style.willChange = "clip-path"; };
-    const wipeStop = () => { reveal.style.willChange = ""; };
-    tl.to(wipe, {
-      r: () => Math.hypot(W(), H()),
-      duration: 1.6 * S,
-      ease: "power2.in",
-      onStart: wipeStart,
-      onUpdate: paintWipe,
-      onComplete: () => { paintWipe(); wipeStop(); },
-      onReverseComplete: () => { paintWipe(); wipeStop(); },
-    }, lastHold + 0.3)
-      .set([copy, band, ...pairs], { autoAlpha: 0 })
-      .to(revealInner, { xPercent: 0, autoAlpha: 1, duration: 1.2 * S, ease: "power3.out" }, ">-" + 0.1 * S)
+      .call(showCare, null, 2.6)
+      .to({}, { duration: 2.2 }, 2.6)
+      .to(wipe, {
+        r: () => Math.hypot(W(), H()),
+        duration: 1.6 * S,
+        ease: "power2.in",
+        onUpdate: paintWipe,
+        onComplete: paintWipe,
+        onReverseComplete: paintWipe,
+      }, 4.8)
+      .to(treatmentsHeader, { xPercent: 0, autoAlpha: 1, duration: 1.2 * S, ease: "power3.out" }, ">-" + 0.1 * S)
       .to(carouselWrap, { xPercent: 0, autoAlpha: 1, duration: 1.6 * S, ease: "power3.out" }, ">" + 0.1 * S)
       .to({}, { duration: 1.5 * S });
 
     return () => {
-      setIndicator(-1);
-      hero.classList.remove("hero-scrolly");
-      reveal.style.willChange = "";
-      reveal.style.clipPath = "";
-      gsap.set([revealInner, carouselWrap, copy, band, ...pairs], { clearProps: "all" });
+      tl.scrollTrigger?.kill();
+      tl.kill();
+      careEntrance.kill();
+      hero.classList.remove("hero-scrolly", "hero-static");
+      treatments.style.clipPath = "";
+      gsap.set([band, copy, care, careHeading, ...careColumns, treatmentsHeader, carouselWrap], { clearProps: "all" });
     };
-  });  if (ScrollTrigger) {
+  });
+
+  if (ScrollTrigger) {
     const refresh = () => ScrollTrigger.refresh();
     if (document.readyState === "complete") refresh();
     else window.addEventListener("load", refresh, { once: true });

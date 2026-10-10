@@ -1,67 +1,38 @@
 (function () {
-  const indicator = document.getElementById('scrollIndicator');
-  const thumb = indicator?.querySelector('.scroll-indicator__thumb');
-  if (!indicator || !thumb) return;
+  const progress = document.getElementById('homepageScrollProgress');
+  const fill = document.getElementById('homepageScrollProgressFill');
+  if (!progress || !fill) return;
 
   let frame = 0;
 
-  // TEMP DIAGNOSTICS (remove after diagnosis)
-  const se = document.scrollingElement;
-  console.log('[scroll-indicator] init', {
-    htmlScrollHeight: document.documentElement.scrollHeight,
-    bodyScrollHeight: document.body.scrollHeight,
-    innerHeight: window.innerHeight,
-    scrollY: window.scrollY,
-    scrollingElement: se === document.documentElement ? 'html' : se === document.body ? 'body' : String(se),
-    indicatorHeight: indicator.offsetHeight,
-    thumbHeight: thumb.offsetHeight,
-    indicatorDisplay: getComputedStyle(indicator).display,
-  });
-  let diagCount = 0;
-
-  // style.css sets overflow-x:hidden on both html and body, so the scroll position and height
-  // can live on either element; read whichever one actually scrolls.
   function getScrollMetrics() {
-    const root = document.documentElement;
-    const body = document.body;
-    const scrollTop = Math.max(window.pageYOffset || 0, root.scrollTop || 0, body.scrollTop || 0);
-    const scrollHeight = Math.max(root.scrollHeight, body.scrollHeight);
-    const viewportHeight = window.innerHeight || root.clientHeight;
-    return { scrollTop, maxScroll: scrollHeight - viewportHeight };
+    const scrollingElement = document.scrollingElement || document.documentElement;
+    const maxScroll = Math.max(0, scrollingElement.scrollHeight - window.innerHeight);
+    return {
+      scrollTop: scrollingElement.scrollTop || window.pageYOffset || 0,
+      maxScroll,
+    };
   }
 
   function update() {
     frame = 0;
     const { scrollTop, maxScroll } = getScrollMetrics();
-    const progress = maxScroll > 1 ? Math.min(1, Math.max(0, scrollTop / maxScroll)) : 0;
-    const travel = Math.max(0, indicator.offsetHeight - thumb.offsetHeight);
-    thumb.style.transform = `translate3d(0, ${(progress * travel).toFixed(2)}px, 0)`;
-    // TEMP DIAGNOSTICS
-    if (diagCount++ % 10 === 0) {
-      console.log('[scroll-indicator] update', {
-        scrollY: window.scrollY,
-        htmlScrollTop: document.documentElement.scrollTop,
-        bodyScrollTop: document.body.scrollTop,
-        maxScroll,
-        progress,
-        travel,
-        appliedTransform: thumb.style.transform,
-      });
-    }
+    const percent = maxScroll > 0 ? Math.min(100, Math.max(0, (scrollTop / maxScroll) * 100)) : 0;
+    fill.style.width = `${percent.toFixed(2)}%`;
+    progress.setAttribute('aria-valuenow', String(Math.round(percent)));
   }
 
-  function requestUpdate(event) {
-    // TEMP DIAGNOSTICS
-    if (event && event.type === 'scroll' && diagCount % 10 === 0) {
-      console.log('[scroll-indicator] scroll event fired, target:', event.target === document ? 'document' : event.target.nodeName || event.target);
-    }
+  function requestUpdate() {
     if (!frame) frame = requestAnimationFrame(update);
   }
 
-  // Capture phase catches scroll events from html, body, or any scrolling ancestor.
-  window.addEventListener('scroll', requestUpdate, { passive: true, capture: true });
+  window.addEventListener('scroll', requestUpdate, { passive: true });
   window.addEventListener('resize', requestUpdate, { passive: true });
   window.addEventListener('load', requestUpdate);
-  if (window.ResizeObserver) new ResizeObserver(requestUpdate).observe(document.body);
+  if (window.ResizeObserver) {
+    const resizeObserver = new ResizeObserver(requestUpdate);
+    resizeObserver.observe(document.documentElement);
+    resizeObserver.observe(document.body);
+  }
   update();
 })();
