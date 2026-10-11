@@ -7814,6 +7814,7 @@ body.services {
   background: var(--um-bg);
 }
 
+
 .admin-notification-btn img {
   width: 16px;
   height: 16px;
@@ -13774,6 +13775,210 @@ textarea.cm-editor__input {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.fin-expenses-page .fin-filters {
+  padding-bottom: 8px;
+  border-bottom: 0;
+}
+
+.fin-expense-overview {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  align-items: stretch;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e7ddc9;
+}
+
+.fin-expense-overview-side {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  min-width: 0;
+}
+
+.fin-expense-overview article {
+  box-sizing: border-box;
+  display: grid;
+  align-content: center;
+  gap: 7px;
+  min-width: 0;
+  height: 96px;
+  padding: 12px 14px;
+  border: 1px solid #e7ddc9;
+  border-left: 3px solid #c9a84c;
+  border-radius: 5px;
+  background: #fff;
+}
+
+.fin-expense-overview article span,
+.fin-expense-overview article small {
+  color: #756c62;
+  font: 0.7rem "Raleway", sans-serif;
+}
+
+.fin-expense-overview article strong,
+.fin-expense-overview article span#machineExpenseTotal {
+  overflow-wrap: anywhere;
+  color: #201c18;
+  font: 600 1.12rem "Playfair Display", serif;
+}
+
+.fin-expense-card--electricity {
+  align-content: space-between !important;
+}
+
+.fin-electricity-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.fin-expense-overview article .fin-electricity-heading strong,
+.fin-expense-overview article.fin-expense-card--machine > strong {
+  color: #201c18;
+  font: 600 0.78rem "Raleway", sans-serif;
+}
+
+.fin-expense-upload {
+  flex: 0 0 auto;
+  min-height: 28px;
+  padding: 5px 8px;
+  border: 1px solid #d8d1c4;
+  border-radius: 4px;
+  background: #fff;
+  color: #8a6e2f;
+  font: 600 0.62rem "Raleway", sans-serif;
+  cursor: pointer;
+}
+
+.fin-demo-badge {
+  width: fit-content;
+  border: 1px solid #e7ddc9;
+  border-radius: 3px;
+  background: #fbf7ec;
+  color: #8a6e2f !important;
+  padding: 4px 6px;
+  font: 700 0.58rem "Raleway", sans-serif !important;
+  letter-spacing: 0.04em;
+}
+
+.fin-expense-chart-meta {
+  display: grid;
+  justify-items: end;
+  gap: 5px;
+}
+
+.fin-expense-analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 16px;
+}
+
+.fin-expense-analytics-grid > .fin-chart-section {
+  box-sizing: border-box;
+  height: 360px;
+  min-width: 0;
+}
+
+.fin-expense-analytics-grid > .fin-chart-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.fin-expense-category-chart .fin-chart-frame,
+.fin-machine-expense-chart .fin-chart-frame {
+  flex: 1;
+  height: auto;
+  min-height: 0;
+}
+
+.fin-machine-expense-total {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.fin-machine-expense-total strong {
+  overflow-wrap: anywhere;
+  color: #201c18;
+  font: 600 1.25rem "Playfair Display", serif;
+}
+
+.fin-machine-expense-total small {
+  color: #756c62;
+  font: 0.7rem "Raleway", sans-serif;
+}
+
+.fin-expense-record-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.fin-expense-record-search {
+  box-sizing: border-box;
+  width: min(100%, 300px);
+  min-width: 170px;
+  min-height: 38px;
+  padding: 8px 9px;
+  border: 1px solid #d8d1c4;
+  border-radius: 4px;
+  background: #fff;
+  color: #201c18;
+  font: 0.78rem "Raleway", sans-serif;
+}
+
+@media (max-width: 1050px) {
+  .fin-expense-analytics-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .fin-expense-analytics-grid > .fin-chart-section {
+    height: 340px;
+  }
+}
+
+@media (max-width: 760px) {
+  .fin-expense-overview {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .fin-expense-overview-side {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .fin-expense-record-toolbar {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 620px) {
+  .fin-expense-overview-side {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .fin-expense-overview article {
+    height: 88px;
+  }
+
+  .fin-expense-analytics-grid > .fin-chart-section {
+    height: 320px;
+  }
+
+  .fin-expense-record-actions {
+    flex: 1 1 100%;
+  }
+
+  .fin-expense-record-search {
+    flex: 1;
+  }
+}
+
 .fin-alert-row {
   display: flex;
   flex-wrap: wrap;
@@ -13829,6 +14034,44 @@ textarea.cm-editor__input {
 .fin-chart-section {
   min-width: 0;
   padding: 16px;
+}
+
+.fin-cash-closing-note {
+  margin: 0 0 14px;
+  color: #756c62;
+  font: 0.75rem "Raleway", sans-serif;
+  line-height: 1.55;
+}
+
+.fin-cash-closing-totals {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.fin-cash-closing-totals > div {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid #eee9df;
+  border-radius: 5px;
+}
+
+.fin-cash-closing-totals span {
+  color: #756c62;
+  font: 0.68rem "Raleway", sans-serif;
+}
+
+.fin-cash-closing-totals strong {
+  color: #201c18;
+  font: 600 1.1rem "Playfair Display", serif;
+}
+
+.fin-cash-closing h3 {
+  margin: 16px 0 6px;
+  color: #201c18;
+  font: 600 1rem "Playfair Display", serif;
 }
 
 .fin-section-heading {
@@ -13998,6 +14241,10 @@ textarea.cm-editor__input {
     grid-template-columns: 1fr;
   }
 
+  .fin-cash-closing-totals {
+    grid-template-columns: 1fr;
+  }
+
   .fin-summary-grid,
   .fin-summary-grid--dashboard {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -14066,6 +14313,7 @@ textarea.cm-editor__input {
 }
 
 .fin-period-controls input {
+  width: 100%;
   box-sizing: border-box;
   min-height: 38px;
   border: 1px solid #d8d1c4;
@@ -14098,6 +14346,99 @@ textarea.cm-editor__input {
   color: #fff;
 }
 
+.fin-filter-period-controls {
+  flex: 1 1 100%;
+  min-width: 0;
+}
+
+.fin-status-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 23px;
+  box-sizing: border-box;
+  border: 1px solid #d8d1c4;
+  border-radius: 999px;
+  background: #f4f1eb;
+  color: #554f47;
+  padding: 3px 9px;
+  font: 600 0.66rem "Raleway", sans-serif;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.fin-status-badge--active,
+.fin-status-badge--paid,
+.fin-status-badge--posted,
+.fin-status-badge--completed {
+  border-color: #b8dcc4;
+  background: #edf7f0;
+  color: #226b3b;
+}
+
+.fin-status-badge--pending {
+  border-color: #ead9a9;
+  background: #fbf5e5;
+  color: #80651e;
+}
+
+.fin-status-badge--refunded,
+.fin-status-badge--reversed,
+.fin-status-badge--voided,
+.fin-status-badge--cancelled {
+  border-color: #e6bcbc;
+  background: #fbefef;
+  color: #982f2f;
+}
+
+.fin-status-badge--forfeited {
+  border-color: #d8d1c4;
+  background: #f4f1eb;
+  color: #655a4d;
+}
+
+.fin-comparison {
+  margin: 0;
+  color: #756c62;
+  font: 0.72rem "Raleway", sans-serif;
+  line-height: 1.45;
+}
+
+.fin-report-stat small {
+  display: block;
+  margin-top: 6px;
+  color: #756c62;
+  font: 0.65rem "Raleway", sans-serif;
+  line-height: 1.45;
+}
+
+.fin-summary-grid--dashboard article small {
+  line-height: 1.4;
+}
+
+.fin-audit-values {
+  display: grid;
+  gap: 5px;
+  min-width: 180px;
+  margin: 0;
+  padding-left: 17px;
+  color: #554f47;
+  font: 0.7rem "Raleway", sans-serif;
+  overflow-wrap: anywhere;
+}
+
+.fin-modal :focus-visible,
+.fin-period-controls :focus-visible,
+.fin-button:focus-visible,
+.fin-tab:focus-visible {
+  outline: 3px solid #4388e8;
+  outline-offset: 2px;
+}
+
+.fin-period-controls input[aria-invalid="true"] {
+  border-color: #b93c3c;
+  box-shadow: 0 0 0 1px #b93c3c;
+}
+
 .fin-report-section {
   break-inside: avoid;
 }
@@ -14115,6 +14456,22 @@ textarea.cm-editor__input {
 @media (max-width: 760px) {
   .fin-summary-grid--report {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .fin-filter-period-controls {
+    align-items: stretch;
+  }
+
+  .fin-filter-period-controls .fin-segmented {
+    flex: 1 1 100%;
+    margin-right: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .fin-filter-period-controls>label {
+    min-width: 0;
+    flex: 1 1 130px;
   }
 }
 

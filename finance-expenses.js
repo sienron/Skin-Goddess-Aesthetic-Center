@@ -3,13 +3,32 @@
   if (!common) return;
 
   const categories = ['Inventory & Supplies', 'Salaries & Commissions', 'Rent', 'Utilities', 'Marketing', 'Equipment Maintenance', 'Other'];
-  const state = { from: common.monthStart(), to: common.manilaToday(), category: '', search: '', page: 1, limit: 25, total: 0, rows: [] };
+  function dateOffset(daysAgo) {
+    const date = new Date(`${common.manilaToday()}T00:00:00Z`);
+    const firstOfMonth = new Date(`${common.monthStart()}T00:00:00Z`).getUTCDate();
+    date.setUTCDate(Math.max(firstOfMonth, date.getUTCDate() - daysAgo));
+    return date.toISOString().slice(0, 10);
+  }
+  const demoExpenses = [
+    { expense_date: dateOffset(1), category: 'Equipment Maintenance', description: 'DEMO: Machine servicing', amount: 8200, supplier: 'Demo Equipment Service', reference_no: 'DEMO-MACHINE-01' },
+    { expense_date: dateOffset(5), category: 'Equipment Maintenance', description: 'DEMO: Replacement handpiece', amount: 5400, supplier: 'Demo Equipment Supply', reference_no: 'DEMO-MACHINE-02' },
+    { expense_date: dateOffset(9), category: 'Equipment Maintenance', description: 'DEMO: Device calibration', amount: 2350, supplier: 'Demo Calibration Center', reference_no: 'DEMO-MACHINE-03' },
+    { expense_date: dateOffset(3), category: 'Utilities', description: 'DEMO: Utility usage sample', amount: 3800, supplier: 'Demo Utility Provider', reference_no: 'DEMO-UTILITIES-01' },
+    { expense_date: dateOffset(7), category: 'Inventory & Supplies', description: 'DEMO: Treatment supplies sample', amount: 2600, supplier: 'Demo Supplies', reference_no: 'DEMO-SUPPLIES-01' },
+  ];
+  const state = { from: common.monthStart(), to: common.manilaToday(), category: '', search: '', page: 1, limit: 25, total: 0, rows: [], purchaseSuggestions: [] };
+  let expenseRequest = 0;
   const elements = Object.fromEntries([
-    'expenseFrom', 'expenseTo', 'expenseCategory', 'expenseSearch', 'expenseTotal', 'expensePeriodLabel',
-    'expenseCount', 'expenseRows', 'expenseEmpty', 'expensePrev', 'expenseNext', 'expensePageLabel',
+    'expenseFrom', 'expenseTo', 'expenseCategory', 'expenseSearch', 'expenseTotal', 'expenseComparison', 'machineExpenseTotal', 'expensePeriodLabel',
+    'expenseRows', 'expenseEmpty', 'expensePrev', 'expenseNext', 'expensePageLabel',
     'expensePageMessage', 'expenseModal', 'expenseForm', 'expenseId', 'expenseDate', 'expenseCategoryInput',
     'expenseDescription', 'expenseAmount', 'expenseSupplier', 'expenseReference', 'expenseFormMessage',
     'voidModal', 'voidForm', 'voidExpenseId', 'voidReason', 'voidFormMessage', 'addExpenseBtn',
+    'exportExpensesXlsx', 'purchaseSuggestionRows', 'purchaseSuggestionEmpty', 'purchaseSuggestionMessage',
+    'purchaseSuggestionModal', 'purchaseSuggestionForm', 'purchaseSuggestionId', 'purchaseSuggestionDate',
+    'purchaseSuggestionDescription', 'purchaseSuggestionAmount', 'purchaseSuggestionSupplier',
+    'purchaseSuggestionReference', 'purchaseSuggestionFormMessage',
+    'expenseHistoryModal', 'expenseHistoryMessage', 'expenseHistoryRows', 'expenseHistoryEmpty',
   ].map((id) => [id, document.getElementById(id)]));
 
   function node(tag, className, text) {
@@ -24,53 +43,166 @@
     elements.expensePageMessage.style.color = error ? '#b93c3c' : '#4388e8';
   }
 
-  function closeModal(modal) { modal.hidden = true; }
-  function openModal(modal) { modal.hidden = false; modal.querySelector('input:not([type="hidden"]), select, textarea')?.focus(); }
+  function closeModal(modal) { common.closeAccessibleModal(modal); }
+  function openModal(modal) { common.openAccessibleModal(modal); }
 
   function renderRows() {
     const body = elements.expenseRows;
     body.replaceChildren();
     for (const expense of state.rows) {
       const row = node('tr', expense.voided_at ? 'fin-row-voided' : '');
-      [expense.expense_date, expense.category, expense.description, expense.supplier || '-', common.formatPeso(expense.amount), expense.voided_at ? `Voided: ${expense.void_reason || ''}` : 'Active'].forEach((value) => row.append(node('td', '', value)));
+      [expense.expense_date, expense.category, expense.description, expense.supplier || '-', common.formatPeso(expense.amount)].forEach((value) => row.append(node('td', '', value)));
+      const statusCell = node('td');
+      const status = common.statusBadge(expense.voided_at ? 'voided' : 'active');
+      if (expense.voided_at && expense.void_reason) status.title = `Voided: ${expense.void_reason}`;
+      statusCell.append(status);
+      row.append(statusCell);
       const actionsCell = node('td');
       const actions = node('div', 'fin-row-actions');
+      const history = node('button', 'fin-button', 'History');
+      history.type = 'button'; history.dataset.action = 'history'; history.dataset.id = expense.expense_id;
+      actions.append(history);
       if (!expense.voided_at) {
         const edit = node('button', 'fin-button', 'Edit');
         edit.type = 'button'; edit.dataset.action = 'edit'; edit.dataset.id = expense.expense_id;
         const voidButton = node('button', 'fin-button fin-button-danger', 'Void');
         voidButton.type = 'button'; voidButton.dataset.action = 'void'; voidButton.dataset.id = expense.expense_id;
         actions.append(edit, voidButton);
-      } else {
-        actions.append(node('span', '', 'No actions'));
       }
       actionsCell.append(actions); row.append(actionsCell); body.append(row);
     }
     elements.expenseEmpty.hidden = state.rows.length > 0;
-    elements.expenseCount.textContent = `${state.total} record${state.total === 1 ? '' : 's'}`;
     elements.expensePageLabel.textContent = `Page ${state.page}`;
     elements.expensePrev.disabled = state.page <= 1;
     elements.expenseNext.disabled = state.page * state.limit >= state.total;
   }
 
+  function getVisibleDemoExpenses(range = state) {
+    const search = state.search.toLowerCase();
+    return demoExpenses.filter((expense) => (
+      expense.expense_date >= range.from
+      && expense.expense_date <= range.to
+      && (!state.category || expense.category === state.category)
+      && (!search || [expense.category, expense.description, expense.supplier, expense.reference_no]
+        .some((value) => value.toLowerCase().includes(search)))
+    ));
+  }
+
+  function combineCategoryTotals(chartData, demoRows) {
+    const totals = new Map(chartData.map((item) => [item.category, Number(item.amount)]));
+    for (const expense of demoRows) {
+      totals.set(expense.category, (totals.get(expense.category) || 0) + expense.amount);
+    }
+    return [...totals]
+      .map(([category, amount]) => ({ category, amount }))
+      .filter((item) => item.amount > 0)
+      .sort((a, b) => b.amount - a.amount);
+  }
+
+  function weekStart(dateString) {
+    const date = new Date(`${dateString}T00:00:00Z`);
+    date.setUTCDate(date.getUTCDate() - (date.getUTCDay() + 6) % 7);
+    return date.toISOString().slice(0, 10);
+  }
+
+  function combineMachineTrend(machineTrend, demoRows) {
+    const totals = new Map(machineTrend.map((item) => [item.week, Number(item.amount)]));
+    for (const expense of demoRows) {
+      if (expense.category !== 'Equipment Maintenance') continue;
+      const week = weekStart(expense.expense_date);
+      totals.set(week, (totals.get(week) || 0) + expense.amount);
+    }
+    return [...totals]
+      .map(([week, amount]) => ({ week, amount }))
+      .sort((a, b) => a.week.localeCompare(b.week));
+  }
+
   async function loadExpenses() {
+    const requestId = ++expenseRequest;
+    const previous = common.previousRange(state.from, state.to);
     showMessage('');
     const params = common.rangeParams(state.from, state.to, { page: state.page, limit: state.limit, category: state.category, q: state.search });
-    const [data, chartData] = await Promise.all([
+    const [data, chartData, rawMachineTrend, previousChartData] = await Promise.all([
       common.fetchJson(`/api/finance/expenses?${params}`),
       common.fetchJson(`/api/finance/expenses/by-category?${common.rangeParams(state.from, state.to, { category: state.category, q: state.search })}`),
+      common.fetchJson(`/api/finance/expenses/machine-trend?${common.rangeParams(state.from, state.to, { category: state.category, q: state.search })}`),
+      common.fetchJson(`/api/finance/expenses/by-category?${common.rangeParams(previous.from, previous.to, { category: state.category, q: state.search })}`),
     ]);
+    if (requestId !== expenseRequest) return;
     state.rows = data.rows;
     state.total = data.total;
     renderRows();
-    const total = chartData.reduce((sum, item) => sum + Number(item.amount), 0);
+    const demoRows = getVisibleDemoExpenses();
+    const categoryTotals = combineCategoryTotals(chartData, demoRows);
+    const machineTrend = combineMachineTrend(rawMachineTrend, demoRows);
+    const total = categoryTotals.reduce((sum, item) => sum + item.amount, 0);
+    const recordedTotal = chartData.reduce((sum, item) => sum + Number(item.amount), 0);
+    const previousRecordedTotal = previousChartData.reduce((sum, item) => sum + Number(item.amount), 0);
     elements.expenseTotal.textContent = common.formatPeso(total);
+    elements.expenseComparison.textContent = `Includes DEMO data. Recorded expenses only: ${common.formatComparison(recordedTotal, previousRecordedTotal)} · previous ${previous.from} to ${previous.to}`;
+    const machineTotal = machineTrend.reduce((sum, item) => sum + item.amount, 0);
+    elements.machineExpenseTotal.textContent = common.formatPeso(machineTotal);
     elements.expensePeriodLabel.textContent = `${state.from} to ${state.to}`;
     common.renderChart('expenseCategoryChart', {
       type: 'bar',
-      data: { labels: chartData.map((item) => item.category), datasets: [{ label: 'Expenses', data: chartData.map((item) => Number(item.amount)), backgroundColor: '#B93C3C', borderRadius: 3 }] },
+      data: { labels: categoryTotals.map((item) => item.category), datasets: [{ label: 'Expenses', data: categoryTotals.map((item) => item.amount), backgroundColor: '#B93C3C', borderRadius: 3 }] },
       options: { indexAxis: 'y', plugins: { legend: { display: false }, tooltip: { callbacks: { label: (item) => common.formatPeso(item.raw) } } } },
     });
+    common.renderChart('machineExpenseChart', {
+      type: 'line',
+      data: {
+        labels: machineTrend.map((item) => item.week.slice(5)),
+        datasets: [{
+          label: 'Machine expenses',
+          data: machineTrend.map((item) => Number(item.amount)),
+          borderColor: '#B5892A',
+          backgroundColor: 'rgba(181, 137, 42, 0.15)',
+          pointBackgroundColor: '#B5892A',
+          fill: true,
+          tension: 0.25,
+        }],
+      },
+      options: {
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: (item) => common.formatPeso(item.raw) } },
+        },
+        scales: {
+          y: { beginAtZero: true, ticks: { callback: (value) => common.formatPeso(value) } },
+        },
+      },
+    });
+    loadPurchaseSuggestions().catch((error) => {
+      elements.purchaseSuggestionRows.replaceChildren();
+      elements.purchaseSuggestionEmpty.hidden = true;
+      elements.purchaseSuggestionMessage.textContent = error.message;
+      elements.purchaseSuggestionMessage.style.color = '#b93c3c';
+    });
+  }
+
+  async function loadPurchaseSuggestions() {
+    state.purchaseSuggestions = await common.fetchJson('/api/finance/inventory-purchase-suggestions');
+    elements.purchaseSuggestionRows.replaceChildren();
+    elements.purchaseSuggestionMessage.textContent = '';
+    for (const purchase of state.purchaseSuggestions) {
+      const row = node('tr');
+      [
+        purchase.purchase_date,
+        purchase.product_name,
+        purchase.quantity,
+        common.formatPeso(purchase.unit_price),
+        common.formatPeso(purchase.suggested_amount),
+      ].forEach((value) => row.append(node('td', '', value)));
+      const actionCell = node('td');
+      const reviewButton = node('button', 'fin-button fin-button-primary', 'Review & record');
+      reviewButton.type = 'button';
+      reviewButton.dataset.purchaseId = purchase.purchase_id;
+      actionCell.append(reviewButton);
+      row.append(actionCell);
+      elements.purchaseSuggestionRows.append(row);
+    }
+    elements.purchaseSuggestionEmpty.hidden = state.purchaseSuggestions.length > 0;
   }
 
   function serializeForm() {
@@ -99,12 +231,98 @@
     openModal(elements.expenseModal);
   }
 
+  function changedValues(values) {
+    const labels = {
+      amount: 'Amount',
+      category: 'Category',
+      description: 'Description',
+      expense_date: 'Date',
+      reference_no: 'Reference',
+      supplier: 'Supplier',
+    };
+    const list = node('ul', 'fin-audit-values');
+    Object.keys(labels).forEach((key) => {
+      const value = values[key];
+      const display = key === 'amount' && value != null ? common.formatPeso(value) : value || '—';
+      const item = node('li', '', `${labels[key]}: ${display}`);
+      list.append(item);
+    });
+    return list;
+  }
+
+  async function showExpenseHistory(id) {
+    elements.expenseHistoryRows.replaceChildren();
+    elements.expenseHistoryEmpty.hidden = true;
+    elements.expenseHistoryMessage.textContent = 'Loading edit history...';
+    document.getElementById('expenseHistoryTitle').textContent = `Expense #${id} edit history`;
+    openModal(elements.expenseHistoryModal);
+    try {
+      const result = await common.fetchJson(`/api/finance/expenses/${encodeURIComponent(id)}/history`);
+      elements.expenseHistoryRows.replaceChildren();
+      result.rows.forEach((record) => {
+        const row = node('tr');
+        row.append(
+          node('td', '', new Date(record.edited_at).toLocaleString('en-PH', {
+            timeZone: 'Asia/Manila',
+            dateStyle: 'medium',
+            timeStyle: 'short',
+          })),
+          node('td', '', record.editor_name || `User #${record.edited_by}`),
+        );
+        const previous = node('td');
+        previous.append(changedValues(record.previous_values));
+        const updated = node('td');
+        updated.append(changedValues(record.updated_values));
+        row.append(previous, updated);
+        elements.expenseHistoryRows.append(row);
+      });
+      elements.expenseHistoryEmpty.hidden = result.rows.length > 0;
+      elements.expenseHistoryMessage.textContent = result.rows.length > 0
+        ? `${result.rows.length} most recent edit${result.rows.length === 1 ? '' : 's'} shown (maximum 100).`
+        : 'No edits have been recorded since edit history was enabled.';
+    } catch (error) {
+      elements.expenseHistoryMessage.textContent = `Could not load edit history: ${error.message}`;
+    }
+  }
+
+  function reviewPurchaseSuggestion(id) {
+    const purchase = state.purchaseSuggestions.find((item) => Number(item.purchase_id) === Number(id));
+    if (!purchase) return;
+    elements.purchaseSuggestionId.value = purchase.purchase_id;
+    elements.purchaseSuggestionDate.value = purchase.purchase_date;
+    elements.purchaseSuggestionDescription.value = `Inventory purchase: ${purchase.product_name} × ${purchase.quantity}`;
+    elements.purchaseSuggestionAmount.value = Number(purchase.suggested_amount).toFixed(2);
+    elements.purchaseSuggestionSupplier.value = '';
+    elements.purchaseSuggestionReference.value = purchase.reference_no;
+    elements.purchaseSuggestionFormMessage.textContent = '';
+    openModal(elements.purchaseSuggestionModal);
+  }
+
+  function exportExpenses() {
+    const params = common.rangeParams(state.from, state.to, {
+      section: 'expenses',
+      category: state.category,
+      q: state.search,
+    });
+    window.location.assign(`/api/finance/export.xlsx?${params}`);
+  }
+
   elements.expenseFrom.value = state.from;
   elements.expenseTo.value = state.to;
   elements.expenseDate.value = common.manilaToday();
   elements.expenseCategory.addEventListener('change', () => { state.category = elements.expenseCategory.value; state.page = 1; loadExpenses().catch((error) => showMessage(error.message, true)); });
-  elements.expenseFrom.addEventListener('change', () => { state.from = elements.expenseFrom.value; state.page = 1; loadExpenses().catch((error) => showMessage(error.message, true)); });
-  elements.expenseTo.addEventListener('change', () => { state.to = elements.expenseTo.value; state.page = 1; loadExpenses().catch((error) => showMessage(error.message, true)); });
+  common.bindPeriodControls({
+    fromInput: elements.expenseFrom,
+    toInput: elements.expenseTo,
+    buttons: document.querySelectorAll('[data-period]'),
+    onChange: (range) => {
+      state.from = range.from;
+      state.to = range.to;
+      state.page = 1;
+      loadExpenses().catch((error) => showMessage(error.message, true));
+    },
+    onInvalid: (error) => showMessage(error, true),
+  });
   let searchTimer;
   elements.expenseSearch.addEventListener('input', () => {
     clearTimeout(searchTimer);
@@ -116,17 +334,28 @@
     elements.expenseForm.reset(); elements.expenseId.value = ''; elements.expenseDate.value = common.manilaToday();
     document.getElementById('expenseModalTitle').textContent = 'Add expense'; elements.expenseFormMessage.textContent = ''; openModal(elements.expenseModal);
   });
+  elements.exportExpensesXlsx.addEventListener('click', exportExpenses);
+  elements.purchaseSuggestionRows.addEventListener('click', (event) => {
+    const button = event.target.closest('button[data-purchase-id]');
+    if (button) reviewPurchaseSuggestion(button.dataset.purchaseId);
+  });
   elements.expenseRows.addEventListener('click', (event) => {
     const button = event.target.closest('button[data-action]');
     if (!button) return;
     if (button.dataset.action === 'edit') editExpense(button.dataset.id);
+    if (button.dataset.action === 'history') showExpenseHistory(button.dataset.id);
     if (button.dataset.action === 'void') {
       elements.voidExpenseId.value = button.dataset.id; elements.voidReason.value = ''; elements.voidFormMessage.textContent = ''; openModal(elements.voidModal);
     }
   });
   document.querySelectorAll('[data-close-expense]').forEach((button) => button.addEventListener('click', () => closeModal(elements.expenseModal)));
   document.querySelectorAll('[data-close-void]').forEach((button) => button.addEventListener('click', () => closeModal(elements.voidModal)));
-  [elements.expenseModal, elements.voidModal].forEach((modal) => modal.addEventListener('click', (event) => { if (event.target === modal) closeModal(modal); }));
+  document.querySelectorAll('[data-close-purchase-suggestion]').forEach((button) => button.addEventListener('click', () => closeModal(elements.purchaseSuggestionModal)));
+  document.querySelectorAll('[data-close-expense-history]').forEach((button) => button.addEventListener('click', () => closeModal(elements.expenseHistoryModal)));
+  [elements.expenseModal, elements.voidModal, elements.purchaseSuggestionModal, elements.expenseHistoryModal].forEach((modal) => {
+    common.bindAccessibleModal(modal);
+    modal.addEventListener('click', (event) => { if (event.target === modal) closeModal(modal); });
+  });
 
   elements.expenseForm.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -146,6 +375,34 @@
       await common.fetchJson(`/api/finance/expenses/${encodeURIComponent(elements.voidExpenseId.value)}/void`, { method: 'POST', body: JSON.stringify({ reason: elements.voidReason.value.trim() }) });
       closeModal(elements.voidModal); await loadExpenses(); showMessage('Expense voided. It remains in the ledger but is excluded from totals.');
     } catch (error) { elements.voidFormMessage.textContent = error.message; }
+  });
+
+  elements.purchaseSuggestionForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!elements.purchaseSuggestionForm.reportValidity()) return;
+    const submitButton = elements.purchaseSuggestionForm.querySelector('button[type="submit"]');
+    submitButton.disabled = true;
+    elements.purchaseSuggestionFormMessage.textContent = '';
+    try {
+      const result = await common.fetchJson(`/api/finance/inventory-purchase-suggestions/${encodeURIComponent(elements.purchaseSuggestionId.value)}/expense`, {
+        method: 'POST',
+        body: JSON.stringify({
+          expense_date: elements.purchaseSuggestionDate.value,
+          description: elements.purchaseSuggestionDescription.value.trim(),
+          amount: Number(elements.purchaseSuggestionAmount.value),
+          supplier: elements.purchaseSuggestionSupplier.value.trim(),
+          reference_no: elements.purchaseSuggestionReference.value.trim(),
+        }),
+      });
+      closeModal(elements.purchaseSuggestionModal);
+      const refresh = loadExpenses();
+      showMessage(result.replayed ? 'This purchase was already recorded as an expense.' : 'Inventory & Supplies expense recorded.');
+      refresh.catch((error) => showMessage(`Expense recorded, but the page could not be refreshed: ${error.message}`, true));
+    } catch (error) {
+      elements.purchaseSuggestionFormMessage.textContent = error.message;
+    } finally {
+      submitButton.disabled = false;
+    }
   });
 
   if (!categories.length) return;
