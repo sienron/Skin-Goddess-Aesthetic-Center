@@ -23,10 +23,28 @@ document.addEventListener('DOMContentLoaded', async () => {
   const status = panel?.querySelector('.faq-chat-status');
   const sendButton = form?.querySelector('button[type="submit"]');
   const suggestions = panel?.querySelector('.faq-chat-suggestions');
-  const chatHistoryKey = 'sg_faq_chat_history';
   const maxChatHistoryMessages = 100;
 
   if (!launcher || !panel || !closeButton || !form || !input || !messages || !status || !sendButton || !suggestions) return;
+
+  let chatHistoryKey = null;
+  try {
+    sessionStorage.removeItem('sg_faq_chat_history');
+    const response = await fetch('/api/auth/me');
+    if (response.status === 401) {
+      chatHistoryKey = 'sg_faq_chat_history:guest';
+    } else if (response.ok) {
+      const account = await response.json();
+      if (typeof account.email !== 'string' || !account.email.trim()) {
+        throw new Error('The current account did not include an email address.');
+      }
+      chatHistoryKey = `sg_faq_chat_history:${encodeURIComponent(account.email.trim().toLowerCase())}`;
+    } else {
+      throw new Error(`Could not identify the current account (HTTP ${response.status}).`);
+    }
+  } catch (error) {
+    console.warn('Could not identify chatbot history owner; history will not be restored or saved:', error);
+  }
 
   const suggestionCatalog = [
     { id: 'services', label: 'Services & prices', question: 'What services and prices do you offer?' },
@@ -144,6 +162,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function saveChatHistory() {
+    if (!chatHistoryKey) return;
+
     const history = Array.from(messages.querySelectorAll('.faq-chat-message'))
       .map((message) => ({
         text: message.textContent || '',
@@ -159,6 +179,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function restoreChatHistory() {
+    if (!chatHistoryKey) return;
+
     let history;
     try {
       history = JSON.parse(sessionStorage.getItem(chatHistoryKey) || '[]');

@@ -15,6 +15,10 @@
     const authPages = ['login', 'registration'];
     const currentPage = document.body.dataset.page;
 
+    function revealProfile() {
+        document.body.classList.add('profile-ready');
+    }
+
     if (authPages.includes(currentPage)) {
         fetch('/api/auth/me')
             .then((res) => {
@@ -26,11 +30,13 @@
                     // placeholder profile markup with the Sign In button
                     showSignInButton(false);
                     showSignInButton(true);
+                    revealProfile();
                 }
             })
             .catch(() => {
                 showSignInButton(false);
                 showSignInButton(true);
+                revealProfile();
             });
         return;
     }
@@ -82,10 +88,12 @@
                 dashboardLink.textContent = 'Dashboard';
                 profileDropdown.prepend(dashboardLink);
             }
+            revealProfile();
         })
         .catch(() => {
             showSignInButton(false);
             showSignInButton(true);
+            revealProfile();
         });
 
     // Dropdown open/close (desktop only — wrap/dropdown don't exist once signed out)

@@ -8456,6 +8456,11 @@ body.services {
 }
 
 /* ===== PROFILE DROPDOWN (public header) ===== */
+body:not(.profile-ready) .header-profile-wrap,
+body:not(.profile-ready) .mobile-nav-profile {
+  visibility: hidden;
+}
+
 .header-profile-wrap {
   position: relative;
 }
@@ -10500,10 +10505,22 @@ body.services {
     position: fixed;
     top: 0;
     left: 0;
+    bottom: 0;
     height: 100vh;
+    height: 100dvh;
+    box-sizing: border-box;
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+    overflow-y: auto;
     z-index: 106;
     transform: translateX(-100%);
     transition: transform .25s ease;
+  }
+
+  .um-sidebar__logo,
+  .um-sidebar__label,
+  .um-sidebar__nav,
+  .um-sidebar__account {
+    flex-shrink: 0;
   }
 
   .um-sidebar--open {
@@ -10587,10 +10604,6 @@ body.services {
   #userManagementMain>.um-header .um-header__actions {
     width: 100%;
     margin: 0;
-  }
-
-  .um-sidebar {
-    overflow-y: auto;
   }
 
   .um-sidebar-actions {

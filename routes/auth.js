@@ -31,7 +31,8 @@ const forgotPasswordLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 5, me
 const emailChangeLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 3, message: { message: 'Too many code requests. Try again later.' } });
 const emailChangeCooldownLimiter = rateLimit({ windowMs: 60 * 1000, limit: 1, message: { message: 'Please wait 60 seconds before requesting another code.' } });
 const verifyEmailChangeLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, message: { message: 'Too many verification attempts. Try again later.' } });
-const REMEMBERED_DEVICE_COOKIE = 'sg_remembered_device';
+const REMEMBERED_DEVICE_COOKIE_PREFIX = 'sg_remembered_device_';
+const LEGACY_REMEMBERED_DEVICE_COOKIE = 'sg_remembered_device';
 const REMEMBERED_DEVICE_MAX_AGE = 1000 * 60 * 60 * 24 * 30;
 const STAY_SIGNED_IN_MAX_AGE = 1000 * 60 * 60 * 24 * 400;
 const DASHBOARD_PER_ROLE = {
@@ -68,6 +69,10 @@ function getCookieValue(req, name) {
 
 function hashDeviceToken(token) {
   return crypto.createHash('sha256').update(token).digest('hex');
+}
+
+function rememberedDeviceCookieName(userId) {
+  return `${REMEMBERED_DEVICE_COOKIE_PREFIX}${userId}`;
 }
 
 async function revokeUserSessions(client, userId) {
@@ -417,9 +422,16 @@ router.post('/login', loginLimiter, async (req, res) => {
       });
     }
 
-    const rememberedDeviceToken = getCookieValue(req, REMEMBERED_DEVICE_COOKIE);
-    if (rememberedDeviceToken && /^[a-f\d]{64}$/i.test(rememberedDeviceToken)) {
-      const tokenHash = hashDeviceToken(rememberedDeviceToken);
+    const deviceCookieName = rememberedDeviceCookieName(user.user_id);
+    const deviceToken = getCookieValue(req, deviceCookieName);
+    const legacyDeviceToken = getCookieValue(req, LEGACY_REMEMBERED_DEVICE_COOKIE);
+    const deviceTokenCandidates = [
+      { token: deviceToken, legacy: false },
+      { token: legacyDeviceToken, legacy: true },
+    ].filter(({ token }) => token && /^[a-f\d]{64}$/i.test(token));
+    let trustedDevice = null;
+    for (const candidate of deviceTokenCandidates) {
+      const tokenHash = hashDeviceToken(candidate.token);
       const trustedDeviceResult = await db.query(`
         SELECT device_id
         FROM trusted_login_devices
@@ -428,21 +440,32 @@ router.post('/login', loginLimiter, async (req, res) => {
       `, [user.user_id, tokenHash]);
 
       if (trustedDeviceResult.rows.length > 0) {
-        await db.query(
-          'UPDATE trusted_login_devices SET last_used_at = NOW() WHERE device_id = $1',
-          [trustedDeviceResult.rows[0].device_id]
-        );
-        await establishAuthenticatedSession(req, user, Boolean(staysignedin));
-        return res.status(200).json({
-          message: 'Successful login.',
-          userId: user.user_id,
-          role: user.role,
-          redirectUrl: DASHBOARD_PER_ROLE[user.role] || '/dashboard',
-        });
+        trustedDevice = { ...trustedDeviceResult.rows[0], ...candidate };
+        break;
       }
     }
-    if (rememberedDeviceToken) {
-      res.clearCookie(REMEMBERED_DEVICE_COOKIE, rememberedDeviceCookieOptions());
+    res.clearCookie(LEGACY_REMEMBERED_DEVICE_COOKIE, rememberedDeviceCookieOptions());
+    if (trustedDevice) {
+      await db.query(
+        'UPDATE trusted_login_devices SET last_used_at = NOW() WHERE device_id = $1',
+        [trustedDevice.device_id]
+      );
+      if (trustedDevice.legacy) {
+        res.cookie(deviceCookieName, trustedDevice.token, {
+          ...rememberedDeviceCookieOptions(),
+          maxAge: REMEMBERED_DEVICE_MAX_AGE,
+        });
+      }
+      await establishAuthenticatedSession(req, user, Boolean(staysignedin));
+      return res.status(200).json({
+        message: 'Successful login.',
+        userId: user.user_id,
+        role: user.role,
+        redirectUrl: DASHBOARD_PER_ROLE[user.role] || '/dashboard',
+      });
+    }
+    if (deviceToken) {
+      res.clearCookie(deviceCookieName, rememberedDeviceCookieOptions());
     }
 
     if (await recentLoginOtpCount(user.user_id) >= 5) {
@@ -546,7 +569,7 @@ router.post('/login/verify-otp', loginOtpVerifyLimiter, async (req, res) => {
     }
     await establishAuthenticatedSession(req, user, staySignedIn);
     if (newDeviceToken) {
-      res.cookie(REMEMBERED_DEVICE_COOKIE, newDeviceToken, {
+      res.cookie(rememberedDeviceCookieName(user.user_id), newDeviceToken, {
         ...rememberedDeviceCookieOptions(),
         maxAge: REMEMBERED_DEVICE_MAX_AGE,
       });
