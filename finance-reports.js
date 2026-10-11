@@ -1,9 +1,10 @@
 (function () {
   const common = window.FinanceCommon;
   if (!common) return;
-  const refs = Object.fromEntries(['reportPeriodLabel', 'reportFrom', 'reportTo', 'reportMessage', 'reportSales', 'reportCollected', 'reportExpenses', 'reportNet', 'reportDepositsReceived', 'reportDepositsReceivedCount', 'reportRefunds', 'reportRefundsCount', 'reportForfeited', 'reportForfeitedCount', 'dailyCashRows', 'dailyCashEmpty'].map((id) => [id, document.getElementById(id)]));
+  const refs = Object.fromEntries(['reportPeriodLabel', 'reportFrom', 'reportTo', 'reportMessage', 'reportSales', 'reportCollected', 'reportExpenses', 'reportNet', 'reportSalesComparison', 'reportCollectedComparison', 'reportExpensesComparison', 'reportNetComparison', 'reportDepositsReceived', 'reportDepositsReceivedCount', 'reportRefunds', 'reportRefundsCount', 'reportForfeited', 'reportForfeitedCount', 'dailyCashRows', 'dailyCashEmpty'].map((id) => [id, document.getElementById(id)]));
   const state = { from: common.monthStart(), to: common.manilaToday(), data: null, monthly: [], methods: [] };
   const colors = ['#C9A84C', '#228B46', '#4388E8', '#929292', '#8a6e2f', '#B93C3C'];
+  let reportRequest = 0;
 
   function addCell(row, value) {
     const cell = document.createElement('td');
@@ -29,15 +30,19 @@
   function peso(value) { return common.formatPeso(value); }
 
   async function load() {
+    const requestId = ++reportRequest;
+    const previous = common.previousRange(state.from, state.to);
     refs.reportMessage.textContent = '';
     refs.reportPeriodLabel.textContent = `${state.from} to ${state.to}`;
     const monthCount = (Number(state.to.slice(0, 4)) - Number(state.from.slice(0, 4))) * 12 + Number(state.to.slice(5, 7)) - Number(state.from.slice(5, 7)) + 1;
     const range = common.rangeParams(state.from, state.to);
-    const [report, monthly, methods] = await Promise.all([
+    const [report, previousReport, monthly, methods] = await Promise.all([
       common.fetchJson(`/api/finance/report?${range}`),
+      common.fetchJson(`/api/finance/report?${common.rangeParams(previous.from, previous.to)}`),
       common.fetchJson(`/api/finance/monthly?${common.rangeParams(state.from, state.to, { months: Math.min(Math.max(monthCount, 1), 24) })}`),
       common.fetchJson(`/api/finance/by-method?${range}`),
     ]);
+    if (requestId !== reportRequest) return;
     state.data = report;
     state.monthly = monthly;
     state.methods = methods;
@@ -46,6 +51,11 @@
     refs.reportCollected.textContent = peso(income.collected);
     refs.reportExpenses.textContent = peso(income.expenses);
     refs.reportNet.textContent = peso(income.net_income);
+    const previousIncome = previousReport.income_statement;
+    refs.reportSalesComparison.textContent = `${common.formatComparison(income.sales, previousIncome.sales)} · previous ${previous.from} to ${previous.to}`;
+    refs.reportCollectedComparison.textContent = `${common.formatComparison(income.collected, previousIncome.collected)} · previous ${previous.from} to ${previous.to}`;
+    refs.reportExpensesComparison.textContent = `${common.formatComparison(income.expenses, previousIncome.expenses)} · previous ${previous.from} to ${previous.to}`;
+    refs.reportNetComparison.textContent = `${common.formatComparison(income.net_income, previousIncome.net_income)} · previous ${previous.from} to ${previous.to}`;
 
     const depositByStatus = new Map(report.deposits.map((item) => [item.status, item]));
     const received = ['paid', 'forfeited'].map((status) => depositByStatus.get(status)).filter(Boolean);
@@ -96,16 +106,6 @@
     refs.dailyCashEmpty.hidden = report.daily_cash.length > 0;
   }
 
-  function setPeriod(kind) {
-    const today = common.manilaToday();
-    if (kind === 'today') state.from = state.to = today;
-    else if (kind === 'month') { state.from = common.monthStart(today); state.to = today; }
-    else if (kind === 'last-month') ({ from: state.from, to: state.to } = common.lastMonthRange());
-    refs.reportFrom.value = state.from; refs.reportTo.value = state.to;
-    document.querySelectorAll('[data-period]').forEach((button) => button.classList.toggle('is-active', button.dataset.period === kind));
-    load().catch((error) => { refs.reportMessage.textContent = error.message; });
-  }
-
   async function exportSection(section) {
     if (!state.data) return;
     const report = state.data;
@@ -126,18 +126,17 @@
 
   refs.reportFrom.value = state.from;
   refs.reportTo.value = state.to;
-  document.querySelectorAll('[data-period]').forEach((button) => button.addEventListener('click', () => {
-    if (button.dataset.period === 'custom') {
-      document.querySelectorAll('[data-period]').forEach((item) => item.classList.toggle('is-active', item === button));
-      return;
-    }
-    setPeriod(button.dataset.period);
-  }));
-  [refs.reportFrom, refs.reportTo].forEach((input) => input.addEventListener('change', () => {
-    state.from = refs.reportFrom.value; state.to = refs.reportTo.value;
-    document.querySelectorAll('[data-period]').forEach((button) => button.classList.toggle('is-active', button.dataset.period === 'custom'));
-    if (state.from && state.to) load().catch((error) => { refs.reportMessage.textContent = error.message; });
-  }));
+  common.bindPeriodControls({
+    fromInput: refs.reportFrom,
+    toInput: refs.reportTo,
+    buttons: document.querySelectorAll('[data-period]'),
+    onChange: (range) => {
+      state.from = range.from;
+      state.to = range.to;
+      load().catch((error) => { refs.reportMessage.textContent = error.message; });
+    },
+    onInvalid: (error) => { refs.reportMessage.textContent = error; },
+  });
   document.getElementById('printReport').addEventListener('click', () => window.print());
   document.querySelectorAll('[data-export]').forEach((button) => button.addEventListener('click', () => exportSection(button.dataset.export)));
   load().catch((error) => { refs.reportMessage.textContent = error.message; });
