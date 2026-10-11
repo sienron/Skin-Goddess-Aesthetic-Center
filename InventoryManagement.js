@@ -904,56 +904,12 @@ async function exportFilteredInventory(){
         };
 
         const filters = [
-            `Search: ${searchInput.value.trim() || "All"}`,
-            `Category: ${getSelectedFilterLabel(categoryFilter)}`,
-            `Stock range: ${getSelectedFilterLabel(stockFilter)}`,
-            `Expiration range: ${getSelectedFilterLabel(expiryFilter)}`,
-            `Stock status: ${getSelectedFilterLabel(statusFilter)}`
-        ].join(" | ");
-
-        worksheet.mergeCells("A1:H1");
-        worksheet.getCell("A1").value = "SKIN GODDESS AESTHETIC CENTER";
-        worksheet.getRow(1).height = 30;
-        setMergedRowStyle(
-            1,
-            { type: "pattern", pattern: "solid", fgColor: { argb: "FF17324D" } },
-            { name: "Aptos Display", size: 16, bold: true, color: { argb: "FFFFFFFF" } },
-            { horizontal: "center", vertical: "middle" }
-        );
-
-        worksheet.mergeCells("A2:H2");
-        worksheet.getCell("A2").value = "Inventory Management Report";
-        worksheet.getRow(2).height = 27;
-        worksheet.getCell("A2").font = {
-            name: "Aptos Display",
-            size: 18,
-            bold: true,
-            color: { argb: "FF17324D" }
-        };
-        worksheet.getCell("A2").alignment = { horizontal: "center", vertical: "middle" };
-
-        worksheet.mergeCells("A3:H3");
-        worksheet.getCell("A3").value = `Generated: ${generatedAt.toLocaleString()}`;
-        worksheet.getCell("A3").font = {
-            italic: true,
-            color: { argb: "FF526171" }
-        };
-        worksheet.getCell("A3").alignment = { horizontal: "center" };
-
-        worksheet.mergeCells("A4:H4");
-        worksheet.getCell("A4").value = `Applied filters: ${filters}`;
-        worksheet.getRow(4).height = 34;
-        worksheet.getCell("A4").alignment = { wrapText: true, vertical: "middle" };
-
-        worksheet.mergeCells("A6:H6");
-        worksheet.getCell("A6").value = "Summary";
-        worksheet.getRow(6).height = 23;
-        setMergedRowStyle(
-            6,
-            { type: "pattern", pattern: "solid", fgColor: { argb: "FFE8EEF3" } },
-            { bold: true, size: 12, color: { argb: "FF17324D" } },
-            { vertical: "middle" }
-        );
+            ["Search", searchInput.value.trim() || "All"],
+            ["Category", getSelectedFilterLabel(categoryFilter)],
+            ["Stock Range", getSelectedFilterLabel(stockFilter)],
+            ["Expiration Range", getSelectedFilterLabel(expiryFilter)],
+            ["Stock Status", getSelectedFilterLabel(statusFilter)]
+        ];
 
         const totalUnits = products.reduce((total, product) => {
             const quantity = Number(product.stock_quantity);
@@ -971,33 +927,7 @@ async function exportFilteredInventory(){
             }).length]
         ];
 
-        summaryMetrics.forEach(([label, value], index) => {
-            const rowNumber = 7 + Math.floor(index / 2);
-            const startColumn = index % 2 === 0 ? 1 : 5;
-            worksheet.mergeCells(rowNumber, startColumn, rowNumber, startColumn + 2);
-            const labelCell = worksheet.getCell(rowNumber, startColumn);
-            labelCell.value = label;
-            labelCell.font = { bold: true, color: { argb: "FF394957" } };
-            labelCell.alignment = { vertical: "middle", wrapText: true };
-            const valueCell = worksheet.getCell(rowNumber, startColumn + 3);
-            valueCell.value = value;
-            valueCell.font = { bold: true, color: { argb: "FF17324D" } };
-            valueCell.numFmt = "#,##0";
-            valueCell.alignment = { horizontal: "center", vertical: "middle" };
-            worksheet.getRow(rowNumber).height = 25;
-        });
-
-        worksheet.mergeCells("A10:H10");
-        worksheet.getCell("A10").value = "Inventory Details";
-        worksheet.getRow(10).height = 23;
-        setMergedRowStyle(
-            10,
-            { type: "pattern", pattern: "solid", fgColor: { argb: "FFE8EEF3" } },
-            { bold: true, size: 12, color: { argb: "FF17324D" } },
-            { vertical: "middle" }
-        );
-
-        const headerRowNumber = 11;
+        const headerRowNumber = 1;
         const headerRow = worksheet.getRow(headerRowNumber);
         headerRow.values = [
             "Product ID",
@@ -1087,13 +1017,120 @@ async function exportFilteredInventory(){
             from: { row: headerRowNumber, column: 1 },
             to: { row: headerRowNumber, column: 8 }
         };
+
+        const reportStartRow = worksheet.lastRow.number + 3;
+        worksheet.mergeCells(`A${reportStartRow}:H${reportStartRow}`);
+        worksheet.getCell(`A${reportStartRow}`).value = "SKIN GODDESS AESTHETIC CENTER";
+        worksheet.getRow(reportStartRow).height = 30;
+        setMergedRowStyle(
+            reportStartRow,
+            { type: "pattern", pattern: "solid", fgColor: { argb: "FF17324D" } },
+            { name: "Aptos Display", size: 16, bold: true, color: { argb: "FFFFFFFF" } },
+            { horizontal: "center", vertical: "middle" }
+        );
+
+        const reportTitleRow = reportStartRow + 1;
+        worksheet.mergeCells(`A${reportTitleRow}:H${reportTitleRow}`);
+        worksheet.getCell(`A${reportTitleRow}`).value = "Inventory Management Report";
+        worksheet.getRow(reportTitleRow).height = 27;
+        worksheet.getCell(`A${reportTitleRow}`).font = {
+            name: "Aptos Display",
+            size: 18,
+            bold: true,
+            color: { argb: "FF17324D" }
+        };
+        worksheet.getCell(`A${reportTitleRow}`).alignment = { horizontal: "center", vertical: "middle" };
+
+        const generatedAtRow = reportStartRow + 2;
+        worksheet.mergeCells(`A${generatedAtRow}:H${generatedAtRow}`);
+        worksheet.getCell(`A${generatedAtRow}`).value = `Generated: ${generatedAt.toLocaleString()}`;
+        worksheet.getCell(`A${generatedAtRow}`).font = {
+            italic: true,
+            color: { argb: "FF526171" }
+        };
+        worksheet.getCell(`A${generatedAtRow}`).alignment = { horizontal: "center" };
+
+        const filtersTitleRow = reportStartRow + 4;
+        worksheet.mergeCells(`A${filtersTitleRow}:H${filtersTitleRow}`);
+        worksheet.getCell(`A${filtersTitleRow}`).value = "Applied Filters";
+        worksheet.getRow(filtersTitleRow).height = 23;
+        setMergedRowStyle(
+            filtersTitleRow,
+            { type: "pattern", pattern: "solid", fgColor: { argb: "FFE8EEF3" } },
+            { bold: true, size: 12, color: { argb: "FF17324D" } },
+            { vertical: "middle" }
+        );
+
+        const filterHeaderRow = filtersTitleRow + 1;
+        worksheet.mergeCells(`A${filterHeaderRow}:C${filterHeaderRow}`);
+        worksheet.mergeCells(`D${filterHeaderRow}:H${filterHeaderRow}`);
+        worksheet.getCell(`A${filterHeaderRow}`).value = "Filter";
+        worksheet.getCell(`D${filterHeaderRow}`).value = "Selected Value";
+        [worksheet.getCell(`A${filterHeaderRow}`), worksheet.getCell(`D${filterHeaderRow}`)].forEach(cell => {
+            cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+            cell.fill = {
+                type: "pattern",
+                pattern: "solid",
+                fgColor: { argb: "FF294A63" }
+            };
+            cell.alignment = { vertical: "middle", wrapText: true };
+        });
+        worksheet.getRow(filterHeaderRow).height = 25;
+
+        filters.forEach(([label, value], index) => {
+            const rowNumber = filterHeaderRow + 1 + index;
+            worksheet.mergeCells(`A${rowNumber}:C${rowNumber}`);
+            worksheet.mergeCells(`D${rowNumber}:H${rowNumber}`);
+            const labelCell = worksheet.getCell(`A${rowNumber}`);
+            labelCell.value = label;
+            labelCell.font = { bold: true, color: { argb: "FF394957" } };
+            const valueCell = worksheet.getCell(`D${rowNumber}`);
+            valueCell.value = value;
+            [labelCell, valueCell].forEach(cell => {
+                cell.alignment = { vertical: "middle", wrapText: true };
+                cell.border = {
+                    bottom: { style: "hair", color: { argb: "FFD7DEE5" } }
+                };
+            });
+            worksheet.getRow(rowNumber).height = 25;
+        });
+
+        const summaryTitleRow = filterHeaderRow + filters.length + 2;
+        worksheet.mergeCells(`A${summaryTitleRow}:H${summaryTitleRow}`);
+        worksheet.getCell(`A${summaryTitleRow}`).value = "Summary";
+        worksheet.getRow(summaryTitleRow).height = 23;
+        setMergedRowStyle(
+            summaryTitleRow,
+            { type: "pattern", pattern: "solid", fgColor: { argb: "FFE8EEF3" } },
+            { bold: true, size: 12, color: { argb: "FF17324D" } },
+            { vertical: "middle" }
+        );
+
+        summaryMetrics.forEach(([label, value], index) => {
+            const rowNumber = summaryTitleRow + 1 + Math.floor(index / 2);
+            const startColumn = index % 2 === 0 ? 1 : 5;
+            worksheet.mergeCells(rowNumber, startColumn, rowNumber, startColumn + 2);
+            const labelCell = worksheet.getCell(rowNumber, startColumn);
+            labelCell.value = label;
+            labelCell.font = { bold: true, color: { argb: "FF394957" } };
+            labelCell.alignment = { vertical: "middle", wrapText: true };
+            const valueCell = worksheet.getCell(rowNumber, startColumn + 3);
+            valueCell.value = value;
+            valueCell.font = { bold: true, color: { argb: "FF17324D" } };
+            valueCell.numFmt = "#,##0";
+            valueCell.alignment = { horizontal: "center", vertical: "middle" };
+            worksheet.getRow(rowNumber).height = 25;
+        });
+
         worksheet.views = [{
             state: "frozen",
-            ySplit: headerRowNumber,
+            ySplit: 1,
             topLeftCell: `A${headerRowNumber + 1}`,
             activeCell: `A${headerRowNumber + 1}`,
             activePane: "bottomLeft",
-            showGridLines: false
+            showGridLines: false,
+            zoomScale: 90,
+            zoomScaleNormal: 90
         }];
         worksheet.pageSetup = {
             orientation: "landscape",
