@@ -10,6 +10,7 @@ const expiryFilter = document.getElementById("expiryFilter");
 const statusFilter = document.getElementById("statusFilter");
 
 const clearFilters = document.getElementById("clearFilters");
+const exportInventoryButton = document.getElementById("exportInventory");
 
 const inventoryBody = document.getElementById("inventoryBody");
 const categoryStock = document.getElementById("categoryStock");
@@ -139,6 +140,92 @@ let productToDelete = null;
 let inventoryProducts = [];
 let inventoryThresholds = null;
 
+function getStockStatus(product){
+    const stock = Number(product.stock_quantity);
+
+    if(!Number.isFinite(stock)){
+        return "unavailable";
+    }
+
+    if(stock === 0){
+        return "out-of-stock";
+    }
+
+    if(stock <= inventoryThresholds.criticalStock){
+        return "critical";
+    }
+
+    if(stock <= inventoryThresholds.lowStock){
+        return "low";
+    }
+
+    return "in-stock";
+}
+
+function getStockStatusLabel(product){
+    switch(getStockStatus(product)){
+        case "out-of-stock": return "Out of Stock";
+        case "critical": return "Critical";
+        case "low": return "Low Stock";
+        case "in-stock": return "In Stock";
+        default: return "Unavailable";
+    }
+}
+
+function getExpirationDays(expiryValue, referenceDate = new Date()){
+    if(!expiryValue){
+        return null;
+    }
+
+    const [year, month, day] = String(expiryValue).split("-").map(Number);
+    const expiryDate = new Date(year, month - 1, day);
+
+    if(
+        Number.isNaN(expiryDate.getTime()) ||
+        expiryDate.getFullYear() !== year ||
+        expiryDate.getMonth() !== month - 1 ||
+        expiryDate.getDate() !== day
+    ){
+        return Number.NaN;
+    }
+
+    expiryDate.setHours(0, 0, 0, 0);
+    const today = new Date(referenceDate);
+    today.setHours(0, 0, 0, 0);
+
+    return (expiryDate - today) / (1000 * 60 * 60 * 24);
+}
+
+function getExpirationStatus(product, referenceDate = new Date()){
+    if(!product.expiry_date){
+        return "No Expiration";
+    }
+
+    const days = getExpirationDays(product.expiry_date, referenceDate);
+
+    if(!Number.isFinite(days)){
+        return "Unavailable";
+    }
+
+    if(days < 0){
+        return "Expired";
+    }
+
+    if(days <= 30){
+        return "Within 30 Days";
+    }
+
+    if(days <= 60){
+        return "31–60 Days";
+    }
+
+    if(days <= 90){
+        return "61–90 Days";
+    }
+
+    return "More Than 90 Days";
+}
+
 //getting Inventory data from Postgres after communicating with Express
 
 async function loadInventory(){
@@ -203,17 +290,8 @@ async function loadInventory(){
 }
 
 function updateExpiredItemsCount(){
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
     const expiredProducts = inventoryProducts.filter(product => {
-        if (!product.expiry_date) return false;
-
-        const [year, month, day] = product.expiry_date.split("-").map(Number);
-        const expiryDate = new Date(year, month - 1, day);
-        expiryDate.setHours(0, 0, 0, 0);
-
-        return !Number.isNaN(expiryDate.getTime()) && expiryDate < today;
+        return getExpirationDays(product.expiry_date) < 0;
     });
 
     expiredItemsCount.textContent = String(expiredProducts.length);
@@ -422,31 +500,10 @@ async function loadExpiringSoonCount() {
         const products = await response.json();
 
         const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        const thirtyDaysFromNow = new Date(today);
-        thirtyDaysFromNow.setDate(
-            thirtyDaysFromNow.getDate() + 30
-        );
 
         const expiringProducts = products.filter(product => {
-
-            if (!product.expiry_date) {
-                return false;
-            }
-
-            const [year, month, day] =
-                product.expiry_date.split("-").map(Number);
-
-            const expiryDate =
-                new Date(year, month - 1, day);
-
-            expiryDate.setHours(0, 0, 0, 0);
-
-            return (
-                expiryDate >= today &&
-                expiryDate <= thirtyDaysFromNow
-            );
+            const days = getExpirationDays(product.expiry_date, today);
+            return Number.isFinite(days) && days >= 0 && days <= 30;
         });
 
         expiringSoonCount.textContent =
@@ -477,34 +534,8 @@ function renderInventory(){
         row.dataset.expiry =
             product.expiry_date || "none";
 
-            let status;
-            let statusClass;
-            
-            if(product.stock_quantity === 0){
-            
-                status = "out-of-stock";
-                statusClass = "out-of-stock";
-            
-            }
-            else if(product.stock_quantity <= inventoryThresholds.criticalStock){
-            
-                status = "critical";
-                statusClass = "critical";
-            
-            }
-            else if(product.stock_quantity <= inventoryThresholds.lowStock){
-            
-                status = "low";
-                statusClass = "low-stock";
-            
-            }
-            else{
-            
-                status = "in-stock";
-                statusClass = "in-stock";
-            
-            }
-            
+            const status = getStockStatus(product);
+            const statusClass = status === "low" ? "low-stock" : status;
             row.dataset.status = status;
 
 
@@ -556,15 +587,7 @@ function renderInventory(){
             <td>
                 <div class="status ${statusClass}">
                     <span></span>
-                    ${
-                        status === "out-of-stock"
-                            ? "OUT OF STOCK"
-                            : status === "critical"
-                                ? "CRITICAL"
-                                : status === "low"
-                                    ? "LOW STOCK"
-                                    : "IN STOCK"
-                    }
+                    ${getStockStatusLabel(product).toUpperCase()}
                 </div>
             </td>
 
@@ -596,6 +619,7 @@ function renderInventory(){
     });
 
     renderInventorySidebar();
+    filterInventory();
 
 }
 
@@ -692,8 +716,82 @@ function renderInventorySidebar(){
    SEARCH + FILTER
    ========================================================= */
 
-function filterInventory(){
+function getFilteredInventoryProducts(){
+    const searchValue = searchInput.value.toLowerCase().trim();
+    const categoryValue = categoryFilter.value.toLowerCase();
+    const stockValue = stockFilter.value;
+    const expiryValue = expiryFilter.value;
+    const statusValue = statusFilter.value;
+    const today = new Date();
 
+    return inventoryProducts.filter(product => {
+        const productName = String(product.product_name || "").toLowerCase();
+        const category = String(product.category || "").trim().toLowerCase();
+        const stock = Number(product.stock_quantity);
+        const expiry = String(product.expiry_date || "none").toLowerCase();
+        const status = getStockStatus(product);
+
+        const matchesSearch =
+            productName.includes(searchValue) ||
+            category.includes(searchValue) ||
+            String(product.stock_quantity).includes(searchValue) ||
+            expiry.includes(searchValue) ||
+            status.includes(searchValue);
+        const matchesCategory =
+            categoryValue === "all" || category === categoryValue.trim();
+
+        let matchesStock = true;
+        if(stockValue === "0"){
+            matchesStock = stock === 0;
+        }else if(stockValue === "low"){
+            matchesStock =
+                stock > 0 &&
+                stock <= inventoryThresholds.lowStock;
+        }else if(stockValue === "21-40"){
+            matchesStock = stock >= 21 && stock <= 40;
+        }else if(stockValue === "41-60"){
+            matchesStock = stock >= 41 && stock <= 60;
+        }else if(stockValue === "61-80"){
+            matchesStock = stock >= 61 && stock <= 80;
+        }else if(stockValue === "81-100"){
+            matchesStock = stock >= 81 && stock <= 100;
+        }
+
+        let matchesExpiry = true;
+        if(expiryValue === "none"){
+            matchesExpiry = expiry === "none";
+        }else if(expiryValue !== "all"){
+            const days = getExpirationDays(product.expiry_date, today);
+
+            if(!Number.isFinite(days)){
+                matchesExpiry = false;
+            }else if(expiryValue === "expired"){
+                matchesExpiry = days < 0;
+            }else if(expiryValue === "30"){
+                matchesExpiry = days >= 0 && days <= 30;
+            }else if(expiryValue === "60"){
+                matchesExpiry = days > 30 && days <= 60;
+            }else if(expiryValue === "90"){
+                matchesExpiry = days > 60 && days <= 90;
+            }else if(expiryValue === "over90"){
+                matchesExpiry = days > 90;
+            }
+        }
+
+        const matchesStatus =
+            statusValue === "all" || status === statusValue;
+
+        return (
+            matchesSearch &&
+            matchesCategory &&
+            matchesStock &&
+            matchesExpiry &&
+            matchesStatus
+        );
+    });
+}
+
+function filterInventory(){
     const summaryEmptyState =
         inventoryBody.querySelector(".summary-empty-state");
 
@@ -701,186 +799,323 @@ function filterInventory(){
         summaryEmptyState.remove();
     }
 
-    const searchValue =
-        searchInput.value.toLowerCase().trim();
+    const matchingProductIds = new Set(
+        getFilteredInventoryProducts().map(product => String(product.product_id))
+    );
 
-        const categoryValue =
-        categoryFilter.value.toLowerCase();
-
-    const stockValue =
-        stockFilter.value;
-
-    const expiryValue =
-        expiryFilter.value;
-
-    const statusValue =
-        statusFilter.value;
-
-
-    const rows =
-        inventoryBody.querySelectorAll("tr");
-
-
-    rows.forEach(row => {
-
-        const productName =
-            row.querySelector(".product-name")
-                .textContent
-                .toLowerCase();
-
-        const category =
-            row.dataset.category.toLowerCase();
-
-        const stock =
-            Number(row.dataset.stock);
-
-        const expiry =
-            row.dataset.expiry.toLowerCase();
-
-        const status =
-            row.dataset.status.toLowerCase();
-
-
-        /* SEARCH */
-
-        const matchesSearch =
-            productName.includes(searchValue) ||
-            category.includes(searchValue) ||
-            String(stock).includes(searchValue) ||
-            expiry.includes(searchValue) ||
-            status.includes(searchValue);
-
-
-        /* CATEGORY */
-
-        const matchesCategory =
-            categoryValue === "all" || category === categoryValue;
-
-
-        /* STOCK */
-
-        let matchesStock = true;
-
-        if(stockValue !== "all"){
-
-            if(stockValue === "0"){
-                matchesStock = stock === 0;
-            }
-
-            else if(stockValue === "low"){
-                matchesStock =
-                    stock > inventoryThresholds.criticalStock &&
-                    stock <= inventoryThresholds.lowStock;
-            }
-
-            else if(stockValue === "21-40"){
-                matchesStock = stock >= 21 && stock <= 40;
-            }
-
-            else if(stockValue === "41-60"){
-                matchesStock = stock >= 41 && stock <= 60;
-            }
-
-            else if(stockValue === "61-80"){
-                matchesStock = stock >= 61 && stock <= 80;
-            }
-
-            else if(stockValue === "81-100"){
-                matchesStock = stock >= 81 && stock <= 100;
-            }
-        }
-
-
-        /* EXPIRATION */
-
-        let matchesExpiry = true;
-
-        if(expiryValue !== "all"){
-
-            if(expiryValue === "none"){
-
-                matchesExpiry =
-                    expiry === "none";
-            }
-
-            else{
-
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-
-                const [year, month, day] = expiry.split("-").map(Number);
-                const expiryDate = new Date(year, month - 1, day);
-                expiryDate.setHours(0, 0, 0, 0);
-
-                const difference = expiryDate - today;
-                const days = difference / (1000 * 60 * 60 * 24);
-
-
-                if(expiryValue === "expired"){
-
-                    matchesExpiry =
-                        days < 0;
-                }
-
-                else if(expiryValue === "30"){
-
-                    matchesExpiry =
-                        days >= 0 &&
-                        days <= 30;
-                }
-
-                else if(expiryValue === "60"){
-
-                    matchesExpiry =
-                        days > 30 &&
-                        days <= 60;
-                }
-
-                else if(expiryValue === "90"){
-
-                    matchesExpiry =
-                        days > 60 &&
-                        days <= 90;
-                }
-
-                else if(expiryValue === "over90"){
-
-                    matchesExpiry =
-                        days > 90;
-                }
-            }
-        }
-
-
-        /* STATUS */
-
-        const matchesStatus =
-            statusValue === "all" ||
-            status === statusValue;
-
-
-        /* FINAL RESULT */
-
-        if(
-            matchesSearch &&
-            matchesCategory &&
-            matchesStock &&
-            matchesExpiry &&
-            matchesStatus
-        ){
-
-            row.style.display = "";
-
-        }
-
-        else{
-
-            row.style.display = "none";
-
-        }
-
+    inventoryBody.querySelectorAll("tr").forEach(row => {
+        row.style.display = matchingProductIds.has(row.dataset.id) ? "" : "none";
     });
+}
 
+function getSelectedFilterLabel(select){
+    if(select.value === "all"){
+        return "All";
+    }
+
+    return select.selectedOptions[0]?.textContent.trim() || select.value;
+}
+
+function getExcelDate(value){
+    if(!value){
+        return "Unavailable";
+    }
+
+    const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value));
+    const sourceDate = dateOnly
+        ? new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]))
+        : new Date(value);
+
+    if(Number.isNaN(sourceDate.getTime())){
+        return "Unavailable";
+    }
+
+    if(
+        dateOnly &&
+        (
+            sourceDate.getFullYear() !== Number(dateOnly[1]) ||
+            sourceDate.getMonth() !== Number(dateOnly[2]) - 1 ||
+            sourceDate.getDate() !== Number(dateOnly[3])
+        )
+    ){
+        return "Unavailable";
+    }
+
+    return new Date(Date.UTC(
+        sourceDate.getFullYear(),
+        sourceDate.getMonth(),
+        sourceDate.getDate(),
+        sourceDate.getHours(),
+        sourceDate.getMinutes(),
+        sourceDate.getSeconds(),
+        sourceDate.getMilliseconds()
+    ));
+}
+
+function getLocalDateForFilename(date){
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+}
+
+async function exportFilteredInventory(){
+    const products = getFilteredInventoryProducts();
+
+    if(!products.length){
+        alert("No inventory products match the current search and filters.");
+        return;
+    }
+
+    try{
+        if(!window.ExcelJS){
+            throw new Error("ExcelJS did not load.");
+        }
+
+        const generatedAt = new Date();
+        const workbook = new window.ExcelJS.Workbook();
+        workbook.creator = "Skin Goddess Aesthetic Center";
+        workbook.lastModifiedBy = "Skin Goddess Aesthetic Center";
+        workbook.created = generatedAt;
+        workbook.modified = generatedAt;
+        workbook.subject = "Inventory Management Report";
+
+        const worksheet = workbook.addWorksheet("Inventory Report");
+        worksheet.properties.defaultRowHeight = 19;
+        worksheet.properties.tabColor = { argb: "FFB58B4C" };
+        worksheet.columns = [
+            { width: 14 },
+            { width: 32 },
+            { width: 34 },
+            { width: 17 },
+            { width: 19 },
+            { width: 21 },
+            { width: 23 },
+            { width: 23 }
+        ];
+
+        const setMergedRowStyle = (rowNumber, fill, font, alignment) => {
+            worksheet.getRow(rowNumber).eachCell({ includeEmpty: true }, cell => {
+                cell.fill = fill;
+                cell.font = font;
+                cell.alignment = alignment;
+            });
+        };
+
+        const filters = [
+            `Search: ${searchInput.value.trim() || "All"}`,
+            `Category: ${getSelectedFilterLabel(categoryFilter)}`,
+            `Stock range: ${getSelectedFilterLabel(stockFilter)}`,
+            `Expiration range: ${getSelectedFilterLabel(expiryFilter)}`,
+            `Stock status: ${getSelectedFilterLabel(statusFilter)}`
+        ].join(" | ");
+
+        worksheet.mergeCells("A1:H1");
+        worksheet.getCell("A1").value = "SKIN GODDESS AESTHETIC CENTER";
+        worksheet.getRow(1).height = 30;
+        setMergedRowStyle(
+            1,
+            { type: "pattern", pattern: "solid", fgColor: { argb: "FF17324D" } },
+            { name: "Aptos Display", size: 16, bold: true, color: { argb: "FFFFFFFF" } },
+            { horizontal: "center", vertical: "middle" }
+        );
+
+        worksheet.mergeCells("A2:H2");
+        worksheet.getCell("A2").value = "Inventory Management Report";
+        worksheet.getRow(2).height = 27;
+        worksheet.getCell("A2").font = {
+            name: "Aptos Display",
+            size: 18,
+            bold: true,
+            color: { argb: "FF17324D" }
+        };
+        worksheet.getCell("A2").alignment = { horizontal: "center", vertical: "middle" };
+
+        worksheet.mergeCells("A3:H3");
+        worksheet.getCell("A3").value = `Generated: ${generatedAt.toLocaleString()}`;
+        worksheet.getCell("A3").font = {
+            italic: true,
+            color: { argb: "FF526171" }
+        };
+        worksheet.getCell("A3").alignment = { horizontal: "center" };
+
+        worksheet.mergeCells("A4:H4");
+        worksheet.getCell("A4").value = `Applied filters: ${filters}`;
+        worksheet.getRow(4).height = 34;
+        worksheet.getCell("A4").alignment = { wrapText: true, vertical: "middle" };
+
+        worksheet.mergeCells("A6:H6");
+        worksheet.getCell("A6").value = "Summary";
+        worksheet.getRow(6).height = 23;
+        setMergedRowStyle(
+            6,
+            { type: "pattern", pattern: "solid", fgColor: { argb: "FFE8EEF3" } },
+            { bold: true, size: 12, color: { argb: "FF17324D" } },
+            { vertical: "middle" }
+        );
+
+        const totalUnits = products.reduce((total, product) => {
+            const quantity = Number(product.stock_quantity);
+            return total + (Number.isFinite(quantity) ? quantity : 0);
+        }, 0);
+        const summaryMetrics = [
+            ["Total products listed", products.length],
+            ["Total units in stock", totalUnits],
+            ["Out-of-stock products", products.filter(product => getStockStatus(product) === "out-of-stock").length],
+            ["Critical-stock products", products.filter(product => getStockStatus(product) === "critical").length],
+            ["Low-stock products", products.filter(product => getStockStatus(product) === "low").length],
+            ["Products expiring within 30 days", products.filter(product => {
+                const days = getExpirationDays(product.expiry_date, generatedAt);
+                return Number.isFinite(days) && days >= 0 && days <= 30;
+            }).length]
+        ];
+
+        summaryMetrics.forEach(([label, value], index) => {
+            const rowNumber = 7 + Math.floor(index / 2);
+            const startColumn = index % 2 === 0 ? 1 : 5;
+            worksheet.mergeCells(rowNumber, startColumn, rowNumber, startColumn + 2);
+            const labelCell = worksheet.getCell(rowNumber, startColumn);
+            labelCell.value = label;
+            labelCell.font = { bold: true, color: { argb: "FF394957" } };
+            labelCell.alignment = { vertical: "middle", wrapText: true };
+            const valueCell = worksheet.getCell(rowNumber, startColumn + 3);
+            valueCell.value = value;
+            valueCell.font = { bold: true, color: { argb: "FF17324D" } };
+            valueCell.numFmt = "#,##0";
+            valueCell.alignment = { horizontal: "center", vertical: "middle" };
+            worksheet.getRow(rowNumber).height = 25;
+        });
+
+        worksheet.mergeCells("A10:H10");
+        worksheet.getCell("A10").value = "Inventory Details";
+        worksheet.getRow(10).height = 23;
+        setMergedRowStyle(
+            10,
+            { type: "pattern", pattern: "solid", fgColor: { argb: "FFE8EEF3" } },
+            { bold: true, size: 12, color: { argb: "FF17324D" } },
+            { vertical: "middle" }
+        );
+
+        const headerRowNumber = 11;
+        const headerRow = worksheet.getRow(headerRowNumber);
+        headerRow.values = [
+            "Product ID",
+            "Product Name",
+            "Category",
+            "Stock Quantity",
+            "Stock Status",
+            "Expiration Date",
+            "Expiration Status",
+            "Last Updated"
+        ];
+        headerRow.height = 30;
+        headerRow.eachCell(cell => {
+            cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+            cell.fill = {
+                type: "pattern",
+                pattern: "solid",
+                fgColor: { argb: "FF294A63" }
+            };
+            cell.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
+            cell.border = {
+                bottom: { style: "medium", color: { argb: "FFB58B4C" } }
+            };
+        });
+
+        products.forEach(product => {
+            const stockValue = Number(product.stock_quantity);
+            const row = worksheet.addRow([
+                product.product_id ?? "Unavailable",
+                product.product_name || "Unavailable",
+                product.category || "Unavailable",
+                Number.isFinite(stockValue) ? stockValue : "Unavailable",
+                getStockStatusLabel(product),
+                product.expiry_date
+                    ? getExcelDate(product.expiry_date)
+                    : "No Expiration",
+                getExpirationStatus(product, generatedAt),
+                getExcelDate(product.updated_at)
+            ]);
+            row.eachCell(cell => {
+                cell.alignment = { vertical: "middle", wrapText: true };
+                cell.border = {
+                    bottom: { style: "hair", color: { argb: "FFD7DEE5" } }
+                };
+            });
+
+            if(row.number % 2 === 0){
+                row.eachCell(cell => {
+                    cell.fill = {
+                        type: "pattern",
+                        pattern: "solid",
+                        fgColor: { argb: "FFF7F9FB" }
+                    };
+                });
+            }
+
+            row.getCell(4).numFmt = "#,##0";
+            row.getCell(6).numFmt = "mmm d, yyyy";
+            row.getCell(8).numFmt = "mmm d, yyyy h:mm AM/PM";
+
+            const stockStatusCell = row.getCell(5);
+            const stockStatus = stockStatusCell.value;
+            if(stockStatus === "Critical" || stockStatus === "Out of Stock"){
+                stockStatusCell.fill = {
+                    type: "pattern",
+                    pattern: "solid",
+                    fgColor: { argb: "FFFCE4E4" }
+                };
+                stockStatusCell.font = { bold: true, color: { argb: "FF9B1C1C" } };
+            }else if(stockStatus === "Low Stock"){
+                stockStatusCell.fill = {
+                    type: "pattern",
+                    pattern: "solid",
+                    fgColor: { argb: "FFFFF2CC" }
+                };
+                stockStatusCell.font = { bold: true, color: { argb: "FF805B00" } };
+            }
+
+            if(row.getCell(7).value === "Expired"){
+                row.getCell(7).font = { bold: true, color: { argb: "FF9B1C1C" } };
+            }else if(row.getCell(7).value === "Within 30 Days"){
+                row.getCell(7).font = { bold: true, color: { argb: "FF805B00" } };
+            }
+        });
+
+        worksheet.autoFilter = {
+            from: { row: headerRowNumber, column: 1 },
+            to: { row: headerRowNumber, column: 8 }
+        };
+        worksheet.views = [{
+            state: "frozen",
+            ySplit: headerRowNumber,
+            topLeftCell: `A${headerRowNumber + 1}`,
+            activeCell: `A${headerRowNumber + 1}`,
+            activePane: "bottomLeft",
+            showGridLines: false
+        }];
+        worksheet.pageSetup = {
+            orientation: "landscape",
+            fitToPage: true,
+            fitToWidth: 1,
+            fitToHeight: 0
+        };
+
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], {
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        });
+        const downloadUrl = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = downloadUrl;
+        link.download = `SkinGoddess_Inventory_Report_${getLocalDateForFilename(generatedAt)}.xlsx`;
+        link.click();
+        window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+    }catch(error){
+        console.error("Error exporting inventory report:", error);
+        alert("Inventory could not be exported. Please try again.");
+    }
 }
 
 function showSummaryEmptyState(countElement, message){
@@ -1074,6 +1309,8 @@ stockFilter.addEventListener("change",filterInventory);
 expiryFilter.addEventListener("change",filterInventory);
 
 statusFilter.addEventListener("change",filterInventory);
+
+exportInventoryButton.addEventListener("click", exportFilteredInventory);
 
 
 /* =========================================================

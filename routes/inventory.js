@@ -300,6 +300,7 @@ router.get('/', async (req, res) => {
                 product.category,
                 product.stock_quantity,
                 product.expiry_date::text AS expiry_date,
+                product.updated_at,
                 COALESCE(
                     (
                         SELECT MAX(stock_change.created_at)

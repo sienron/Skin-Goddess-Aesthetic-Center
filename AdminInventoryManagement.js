@@ -4,7 +4,6 @@
     const periodFilter = document.getElementById("transactionPeriodFilter");
     const typeFilter = document.getElementById("transactionTypeFilter");
     const transactionsExport = document.getElementById("exportTransactions");
-    const inventoryExport = document.getElementById("exportInventory");
     let transactions = [];
     let isLoadingTransactions = false;
 
@@ -150,25 +149,6 @@
             rows.push([dateTime, transaction.product_name, transaction.transaction_type, stockChange, transaction.new_stock, transaction.performed_by]);
         });
         downloadCsv("stock-transaction-log.csv", rows);
-    });
-
-    inventoryExport.addEventListener("click", async () => {
-        try {
-            const response = await fetch("/api/inventory");
-            if (!response.ok) throw new Error("Failed to fetch inventory.");
-            const products = await response.json();
-            const rows = [["Product Name", "Category", "Stock", "Expiry Date"]];
-            products.forEach(product => rows.push([
-                product.product_name,
-                product.category,
-                product.stock_quantity,
-                product.expiry_date || "No Expiration"
-            ]));
-            downloadCsv("inventory-products.csv", rows);
-        } catch (error) {
-            console.error("Error exporting inventory:", error);
-            alert("Inventory could not be exported. Please try again.");
-        }
     });
 
     loadTransactions();
