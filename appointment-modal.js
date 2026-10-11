@@ -149,6 +149,7 @@ function openApptModal(appt) {
     if (apptModalFinishBtn) {
         apptModalFinishBtn.dataset.apptId = normalizedAppt.id;
         apptModalFinishBtn.disabled = !canManageAppointment || normalizedAppt.date !== manilaToday;
+        apptModalFinishBtn.textContent = "Start Service";
     }
     if (apptModalNoShowBtn) {
         apptModalNoShowBtn.dataset.apptId = normalizedAppt.id;
@@ -242,9 +243,9 @@ if (apptModalOverlay) {
 
     apptModalFinishBtn?.addEventListener("click", async () => {
         apptModalFinishBtn.disabled = true;
-        if (apptActionMessage) apptActionMessage.textContent = "Finishing appointment...";
+        if (apptActionMessage) apptActionMessage.textContent = "Starting appointment...";
         try {
-            const response = await fetch(`/api/appointments/${apptModalFinishBtn.dataset.apptId}/finish`, { method: "POST" });
+            const response = await fetch(`/api/appointments/${apptModalFinishBtn.dataset.apptId}/start`, { method: "POST" });
             const data = await readApiResponse(response);
             if (!response.ok) throw new Error(data.message || "Could not finish appointment.");
             closeApptModal();

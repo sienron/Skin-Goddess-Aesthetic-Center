@@ -2,7 +2,7 @@
 // Safe to run repeatedly with: npm run migrate
 const db = require('../db');
 
-const ACTIVE_STATUSES = "'confirmed', 'completed'";
+const ACTIVE_STATUSES = "'confirmed', 'in_progress', 'completed'";
 
 async function migrate() {
   try {

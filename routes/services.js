@@ -32,6 +32,135 @@ router.get('/admin', requireRole('admin'), async (req, res) => {
     }
 });
 
+router.get('/admin/:id/inventory-defaults', requireRole('admin'), async (req, res) => {
+    const serviceId = Number(req.params.id);
+    if (!Number.isSafeInteger(serviceId) || serviceId < 1) {
+        return res.status(400).json({ message: 'Choose a valid service.' });
+    }
+
+    try {
+        const result = await db.query(`
+            SELECT mapping.product_id, product.product_name, product.category,
+                   mapping.default_quantity, mapping.is_enabled, mapping.review_note
+            FROM service_inventory_product_defaults mapping
+            JOIN inventory_products product ON product.product_id = mapping.product_id
+            WHERE mapping.service_id = $1
+            ORDER BY product.category, product.product_name, product.product_id
+        `, [serviceId]);
+        return res.json(result.rows);
+    } catch (error) {
+        console.error('Error fetching service inventory defaults:', error);
+        return res.status(500).json({ message: 'Could not load service product defaults.' });
+    }
+});
+
+router.put('/admin/:id/inventory-defaults', requireRole('admin'), async (req, res) => {
+    const serviceId = Number(req.params.id);
+    if (!Number.isSafeInteger(serviceId) || serviceId < 1) {
+        return res.status(400).json({ message: 'Choose a valid service.' });
+    }
+    const submittedProducts = req.body?.products;
+    if (!Array.isArray(submittedProducts) || submittedProducts.length > 500) {
+        return res.status(400).json({ message: 'The service product list is invalid.' });
+    }
+
+    const products = [];
+    const productIds = new Set();
+    for (const item of submittedProducts) {
+        const productId = Number(item?.productId);
+        const defaultQuantity = item?.defaultQuantity === null || item?.defaultQuantity === ''
+            ? null
+            : Number(item?.defaultQuantity);
+        if (!Number.isSafeInteger(productId) || productId < 1
+            || typeof item?.isEnabled !== 'boolean'
+            || (defaultQuantity !== null
+                && (!Number.isSafeInteger(defaultQuantity) || defaultQuantity < 1))
+            || (item.isEnabled && defaultQuantity === null)
+            || productIds.has(productId)) {
+            return res.status(400).json({
+                message: 'Each default must use a unique product and enabled defaults need a positive whole-number quantity.'
+            });
+        }
+        productIds.add(productId);
+        products.push({
+            productId,
+            defaultQuantity,
+            isEnabled: item.isEnabled,
+            reviewNote: typeof item.reviewNote === 'string' ? item.reviewNote.slice(0, 500) : ''
+        });
+    }
+
+    try {
+        const savedDefaults = await db.transaction(async (client) => {
+            const service = await client.query(
+                'SELECT service_id FROM services WHERE service_id = $1 FOR UPDATE',
+                [serviceId]
+            );
+            if (!service.rows.length) {
+                const error = new Error('Service not found.');
+                error.statusCode = 404;
+                throw error;
+            }
+            if (productIds.size) {
+                const inventoryProducts = await client.query(`
+                    SELECT product_id
+                    FROM inventory_products
+                    WHERE product_id = ANY($1::integer[])
+                `, [[...productIds]]);
+                if (inventoryProducts.rows.length !== productIds.size) {
+                    const error = new Error('One or more selected inventory products no longer exist.');
+                    error.statusCode = 409;
+                    throw error;
+                }
+            }
+
+            await client.query(`
+                UPDATE service_inventory_product_defaults
+                SET is_enabled = FALSE, updated_by = $1, updated_at = NOW()
+                WHERE service_id = $2
+                  AND NOT (product_id = ANY($3::integer[]))
+            `, [req.session.userId, serviceId, [...productIds]]);
+
+            for (const product of products) {
+                await client.query(`
+                    INSERT INTO service_inventory_product_defaults
+                      (service_id, product_id, default_quantity, is_enabled,
+                       review_note, updated_by, updated_at)
+                    VALUES ($1, $2, $3, $4, $5, $6, NOW())
+                    ON CONFLICT (service_id, product_id)
+                    DO UPDATE SET default_quantity = EXCLUDED.default_quantity,
+                                  is_enabled = EXCLUDED.is_enabled,
+                                  review_note = EXCLUDED.review_note,
+                                  updated_by = EXCLUDED.updated_by,
+                                  updated_at = NOW()
+                `, [
+                    serviceId,
+                    product.productId,
+                    product.defaultQuantity,
+                    product.isEnabled,
+                    product.reviewNote,
+                    req.session.userId
+                ]);
+            }
+
+            const result = await client.query(`
+                SELECT mapping.product_id, product.product_name, product.category,
+                       mapping.default_quantity, mapping.is_enabled, mapping.review_note
+                FROM service_inventory_product_defaults mapping
+                JOIN inventory_products product ON product.product_id = mapping.product_id
+                WHERE mapping.service_id = $1
+                ORDER BY product.category, product.product_name, product.product_id
+            `, [serviceId]);
+            return result.rows;
+        });
+        return res.json(savedDefaults);
+    } catch (error) {
+        if (error.statusCode) return res.status(error.statusCode).json({ message: error.message });
+        console.error('Error saving service inventory defaults:', error);
+        return res.status(500).json({ message: 'Could not save service product defaults.' });
+    }
+});
+
 router.post('/', requireRole('admin'), async (req, res) => {
     let service;
     try {

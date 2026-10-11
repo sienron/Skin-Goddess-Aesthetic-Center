@@ -336,6 +336,68 @@
     </div>
   </div>
 
+  <div class="apt-modal-overlay" id="appointmentDetailsModal">
+    <section class="apt-modal appointment-inventory-modal" role="dialog" aria-modal="true" aria-labelledby="appointmentDetailsTitle">
+      <header class="apt-modal__head">
+        <span class="apt-modal__accent"></span>
+        <div class="apt-modal__titles">
+          <h2 class="apt-modal__title" id="appointmentDetailsTitle">Appointment Details</h2>
+          <p class="apt-modal__subtitle" id="appointmentDetailsSubtitle"></p>
+        </div>
+        <button class="apt-modal__close" id="appointmentDetailsClose" type="button" aria-label="Close appointment details">&times;</button>
+      </header>
+      <dl class="appointment-details-grid">
+        <div><dt>Reference</dt><dd id="appointmentDetailsReference"></dd></div>
+        <div><dt>Client / Walk-in</dt><dd id="appointmentDetailsClient"></dd></div>
+        <div><dt>Service</dt><dd id="appointmentDetailsService"></dd></div>
+        <div><dt>Appointment date</dt><dd id="appointmentDetailsDate"></dd></div>
+        <div><dt>Assigned staff</dt><dd id="appointmentDetailsStaff"></dd></div>
+        <div><dt>Status</dt><dd id="appointmentDetailsStatus"></dd></div>
+      </dl>
+      <p class="appointment-inventory-message" id="appointmentDetailsMessage" role="status" aria-live="polite"></p>
+      <footer class="appointment-inventory-actions">
+        <button class="um-btn um-btn--ghost" id="appointmentDetailsDone" type="button">Close</button>
+        <button class="um-btn um-btn--primary" id="appointmentProductsReviewBtn" type="button" hidden>Review Products Used</button>
+      </footer>
+    </section>
+  </div>
+
+  <div class="apt-modal-overlay" id="appointmentProductsModal">
+    <section class="apt-modal appointment-inventory-modal appointment-products-modal" role="dialog" aria-modal="true" aria-labelledby="appointmentProductsTitle">
+      <header class="apt-modal__head">
+        <span class="apt-modal__accent"></span>
+        <div class="apt-modal__titles">
+          <h2 class="apt-modal__title" id="appointmentProductsTitle">Review Products Used</h2>
+          <p class="apt-modal__subtitle" id="appointmentProductsSubtitle"></p>
+        </div>
+        <button class="apt-modal__close" id="appointmentProductsClose" type="button" aria-label="Close product review">&times;</button>
+      </header>
+      <div class="appointment-products-content">
+        <div class="appointment-products-toolbar">
+          <label class="cm-search-field" for="appointmentProductsSearch">
+            <span>Search inventory</span>
+            <input id="appointmentProductsSearch" type="search" placeholder="Search products or categories">
+          </label>
+          <button class="um-btn um-btn--ghost" id="appointmentProductsRefreshSuggestions" type="button">Refresh Suggestions</button>
+        </div>
+        <p class="appointment-inventory-note">Suggested products are editable defaults and may require clinic validation. Review the actual products and quantities used before continuing.</p>
+        <div id="appointmentProductsList" class="appointment-products-list"></div>
+        <section id="appointmentProductsReviewStep" class="appointment-products-review" hidden>
+          <h3>Review Deduction</h3>
+          <p>Confirm that these are the products and quantities actually used. Stock changes and appointment completion happen together only after confirmation.</p>
+          <ul id="appointmentProductsReviewList"></ul>
+        </section>
+        <p class="appointment-inventory-message" id="appointmentProductsMessage" role="status" aria-live="polite"></p>
+      </div>
+      <footer class="appointment-inventory-actions">
+        <button class="um-btn um-btn--ghost" id="appointmentProductsCancel" type="button">Cancel</button>
+        <button class="um-btn um-btn--ghost" id="appointmentProductsBack" type="button" hidden>Back to Products</button>
+        <button class="um-btn um-btn--primary" id="appointmentProductsReview" type="button">Review Selection</button>
+        <button class="um-btn um-btn--primary" id="appointmentProductsConfirm" type="button" hidden>Confirm Products &amp; Complete Appointment</button>
+      </footer>
+    </section>
+  </div>
+
   <script src="admin-dashboard.js"></script>
   <script src="AdminAppointment.js"></script>
   <script src="admin-notifications.js"></script>

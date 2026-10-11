@@ -4,8 +4,9 @@ const crypto = require('node:crypto');
 const router = express.Router();
 const db = require('../db');
 const { requireRole } = require('../middleware/auth');
-const { notifyRoles } = require('../utils/notifications');
 const { LOW_STOCK_THRESHOLD, CRITICAL_STOCK_THRESHOLD } = require('../utils/inventoryThresholds');
+const { notifyStockTransition } = require('../utils/inventoryNotifications');
+const { recordInventoryTransaction } = require('../utils/inventoryTransactions');
 const { recognizeImage } = require('../utils/invoiceOcr');
 const { parseInvoiceText, INVOICE_PARSER_CONFIG } = require('../utils/invoiceParser');
 
@@ -328,26 +329,6 @@ router.post('/batch-upload/confirm', async (req, res) => {
     }
 });
 
-async function notifyStockTransition(previousStock, currentStock, productName) {
-    let type;
-    let severity;
-    if (previousStock > CRITICAL_STOCK_THRESHOLD && currentStock <= CRITICAL_STOCK_THRESHOLD) {
-        type = 'inventory_critical_stock';
-        severity = 'critical';
-    } else if (previousStock > LOW_STOCK_THRESHOLD && currentStock <= LOW_STOCK_THRESHOLD) {
-        type = 'inventory_low_stock';
-        severity = 'low';
-    }
-
-    if (type) {
-        await notifyRoles(
-            ['inventory_officer', 'admin'],
-            type,
-            `${severity === 'critical' ? 'URGENT: ' : ''}${productName} stock dropped to ${currentStock} units (${severity} stock alert).`,
-        );
-    }
-}
-
 async function updateInventoryProduct(productId, stock, details, userId) {
     return db.transaction(async (client) => {
         const current = await client.query(`
@@ -375,11 +356,15 @@ async function updateInventoryProduct(productId, stock, details, userId) {
             `, [stock, productId]);
 
         if (stock !== previousStock) {
-            await client.query(`
-                INSERT INTO inventory_transactions
-                    (product_id, product_name, transaction_type, quantity, previous_stock, new_stock, created_by, created_at)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
-            `, [productId, result.rows[0].product_name, stock > previousStock ? 'Restock' : 'Used in Service', Math.abs(stock - previousStock), previousStock, stock, userId]);
+            await recordInventoryTransaction(client, {
+                productId,
+                productName: result.rows[0].product_name,
+                transactionType: stock > previousStock ? 'Restock' : 'Used in Service',
+                quantity: Math.abs(stock - previousStock),
+                previousStock,
+                newStock: stock,
+                userId,
+            });
         }
 
         return { product: result.rows[0], previousStock };
@@ -455,6 +440,7 @@ router.get('/transactions', async (req, res) => {
                 stock_transaction.previous_stock,
                 stock_transaction.new_stock,
                 stock_transaction.created_at,
+                stock_transaction.appointment_id,
                 COALESCE(stock_transaction.product_name, product.product_name) AS product_name,
                 COALESCE(
                     NULLIF(CONCAT_WS(' ', actor.first_name, actor.last_name), ''),

@@ -15,6 +15,13 @@ document.addEventListener('DOMContentLoaded', () => {
   let selectedServiceCategory = 'all';
   let serviceSearchTerm = '';
   let selectedContentPage = 'home';
+  const serviceDefaultsDialog = document.getElementById('cmServiceDefaultsDialog');
+  const serviceDefaultsForm = document.getElementById('cmServiceDefaultsForm');
+  let serviceDefaultsInventory = [];
+  let serviceDefaultsState = new Map();
+  let serviceDefaultsSearchTerm = '';
+  let serviceDefaultsEditingService = null;
+  let serviceDefaultsLoaded = false;
 
   const SECTION_LABELS = {
     services: 'Service',
@@ -148,8 +155,14 @@ document.addEventListener('DOMContentLoaded', () => {
       editBtn.dataset.section = 'services';
       editBtn.dataset.action = 'edit';
       editBtn.dataset.id = service.service_id;
+      const defaultsBtn = el('button', 'apt-action', 'Products');
+      defaultsBtn.type = 'button';
+      defaultsBtn.dataset.section = 'services';
+      defaultsBtn.dataset.action = 'defaults';
+      defaultsBtn.dataset.id = service.service_id;
       const toggleBtn = actionButton(service.is_active ? 'Unpublish' : 'Publish', 'services', 'toggle', service.service_id);
       actions.appendChild(editBtn);
+      actions.appendChild(defaultsBtn);
       actions.appendChild(toggleBtn);
       footer.appendChild(actions);
 
@@ -164,6 +177,155 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     list.appendChild(scrollWrap);
+  }
+
+  function renderServiceDefaults() {
+    const list = document.getElementById('cmServiceDefaultsList');
+    if (!list) return;
+    const query = serviceDefaultsSearchTerm.trim().toLowerCase();
+    const products = serviceDefaultsInventory.filter((product) => (
+      !query || `${product.product_name} ${product.category}`.toLowerCase().includes(query)
+    ));
+    list.textContent = '';
+    if (!products.length) {
+      list.appendChild(el('p', 'cm-empty', 'No inventory products match your search.'));
+      return;
+    }
+
+    products.forEach((product) => {
+      const productId = Number(product.product_id);
+      const mapping = serviceDefaultsState.get(productId);
+      const row = el('article', 'cm-service-default-row');
+      const toggleLabel = el('label', 'cm-editor__checkbox');
+      const enabled = el('input');
+      enabled.type = 'checkbox';
+      enabled.checked = Boolean(mapping?.isEnabled);
+      enabled.setAttribute('aria-label', `Enable ${product.product_name} as a suggested default`);
+      toggleLabel.append(enabled, document.createTextNode('Default'));
+
+      const details = el('div', 'cm-service-default-row__details');
+      details.appendChild(el('strong', '', product.product_name));
+      details.appendChild(el('span', '', product.category));
+      if (mapping?.reviewNote) {
+        details.appendChild(el('small', 'cm-service-default-row__review', mapping.reviewNote));
+      } else if (mapping?.wasMapped && !mapping.isEnabled) {
+        details.appendChild(el('small', 'cm-service-default-row__review', 'Saved but disabled; it will not be suggested.'));
+      }
+
+      const quantityLabel = el('label', 'cm-editor__field', 'Default quantity');
+      const quantity = el('input', 'cm-editor__input');
+      quantity.type = 'number';
+      quantity.min = '1';
+      quantity.step = '1';
+      quantity.value = mapping?.quantity ?? '';
+      quantity.disabled = !enabled.checked;
+      quantity.setAttribute('aria-label', `Default quantity for ${product.product_name}`);
+      quantityLabel.appendChild(quantity);
+      row.append(toggleLabel, details, quantityLabel);
+      list.appendChild(row);
+
+      enabled.addEventListener('change', () => {
+        const current = serviceDefaultsState.get(productId) || {
+          productId,
+          quantity: '',
+          reviewNote: '',
+          wasMapped: false
+        };
+        current.isEnabled = enabled.checked;
+        if (enabled.checked && current.reviewNote) current.reviewNote = '';
+        serviceDefaultsState.set(productId, current);
+        renderServiceDefaults();
+      });
+      quantity.addEventListener('input', () => {
+        const current = serviceDefaultsState.get(productId);
+        if (current) current.quantity = quantity.value;
+      });
+    });
+  }
+
+  async function openServiceDefaults(serviceId) {
+    const service = SERVICES.find((item) => String(item.service_id) === String(serviceId));
+    if (!service) return;
+    serviceDefaultsEditingService = service;
+    serviceDefaultsLoaded = false;
+    document.getElementById('cmServiceDefaultsSave').disabled = true;
+    serviceDefaultsState = new Map();
+    serviceDefaultsInventory = [];
+    serviceDefaultsSearchTerm = '';
+    document.getElementById('cmServiceDefaultsSearch').value = '';
+    document.getElementById('cmServiceDefaultsSubtitle').textContent = `${service.service_name} · ${service.category}`;
+    const errorMessage = document.getElementById('cmServiceDefaultsError');
+    errorMessage.hidden = true;
+    errorMessage.textContent = '';
+
+    try {
+      const [inventory, mappings] = await Promise.all([
+        apiRequest('/api/inventory'),
+        apiRequest(`/api/services/admin/${serviceId}/inventory-defaults`)
+      ]);
+      if (!Array.isArray(inventory) || !Array.isArray(mappings)) {
+        throw new Error('The service product defaults response was invalid.');
+      }
+      serviceDefaultsInventory = inventory;
+      serviceDefaultsState = new Map(mappings.map((mapping) => [Number(mapping.product_id), {
+        productId: Number(mapping.product_id),
+        quantity: mapping.default_quantity == null ? '' : String(mapping.default_quantity),
+        isEnabled: Boolean(mapping.is_enabled),
+        reviewNote: mapping.review_note || '',
+        wasMapped: true
+      }]));
+      renderServiceDefaults();
+      serviceDefaultsLoaded = true;
+      document.getElementById('cmServiceDefaultsSave').disabled = false;
+      serviceDefaultsDialog.showModal();
+    } catch (error) {
+      errorMessage.textContent = error.message;
+      errorMessage.hidden = false;
+      serviceDefaultsDialog.showModal();
+    }
+  }
+
+  function closeServiceDefaults() {
+    if (serviceDefaultsDialog.open) serviceDefaultsDialog.close();
+    serviceDefaultsEditingService = null;
+  }
+
+  async function saveServiceDefaults(event) {
+    event.preventDefault();
+    if (!serviceDefaultsEditingService || !serviceDefaultsLoaded || !serviceDefaultsForm.reportValidity()) return;
+    const products = [];
+    for (const mapping of serviceDefaultsState.values()) {
+      if (!mapping.wasMapped && !mapping.isEnabled) continue;
+      const quantity = mapping.quantity === '' ? null : Number(mapping.quantity);
+      if (mapping.isEnabled && (!Number.isSafeInteger(quantity) || quantity < 1)) {
+        const errorMessage = document.getElementById('cmServiceDefaultsError');
+        errorMessage.textContent = 'Enabled defaults require a positive whole-number quantity.';
+        errorMessage.hidden = false;
+        return;
+      }
+      products.push({
+        productId: mapping.productId,
+        defaultQuantity: quantity,
+        isEnabled: Boolean(mapping.isEnabled),
+        reviewNote: mapping.reviewNote
+      });
+    }
+    const button = document.getElementById('cmServiceDefaultsSave');
+    button.disabled = true;
+    try {
+      await apiRequest(`/api/services/admin/${serviceDefaultsEditingService.service_id}/inventory-defaults`, {
+        method: 'PUT',
+        body: JSON.stringify({ products })
+      });
+      closeServiceDefaults();
+      setNotice('Service product defaults saved. Existing appointment review drafts were not changed.');
+    } catch (error) {
+      const errorMessage = document.getElementById('cmServiceDefaultsError');
+      errorMessage.textContent = error.message;
+      errorMessage.hidden = false;
+    } finally {
+      button.disabled = !serviceDefaultsLoaded;
+    }
   }
 
   function renderHomepage() {
@@ -699,6 +861,16 @@ document.addEventListener('DOMContentLoaded', () => {
   editor.addEventListener('click', (event) => {
     if (event.target === editor) closeEditor();
   });
+  document.getElementById('cmServiceDefaultsClose').addEventListener('click', closeServiceDefaults);
+  document.getElementById('cmServiceDefaultsCancel').addEventListener('click', closeServiceDefaults);
+  serviceDefaultsDialog.addEventListener('close', () => {
+    serviceDefaultsEditingService = null;
+  });
+  serviceDefaultsForm.addEventListener('submit', saveServiceDefaults);
+  document.getElementById('cmServiceDefaultsSearch').addEventListener('input', (event) => {
+    serviceDefaultsSearchTerm = event.target.value;
+    renderServiceDefaults();
+  });
 
   addBtn.addEventListener('click', () => openEditor(activeSection, null));
   document.querySelector('.cm-card').addEventListener('click', async (event) => {
@@ -736,6 +908,8 @@ document.addEventListener('DOMContentLoaded', () => {
       } else if (actionName === 'toggle') {
         action.disabled = true;
         await toggleItem(section, id);
+      } else if (actionName === 'defaults' && section === 'services') {
+        await openServiceDefaults(id);
       } else if (actionName === 'delete' && section === 'announcements') {
         if (!window.confirm('Delete this promo or event?')) return;
         await apiRequest(`/api/announcements/admin/${id}`, { method: 'DELETE' });

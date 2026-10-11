@@ -54,7 +54,7 @@ router.get('/', async (req, res) => {
     const appointments = await db.query(`
       SELECT aesthetician_id, appointment_date::text AS appointment_date, appointment_time::text AS appointment_time, appointment_end_time::text AS appointment_end_time
       FROM appointments
-      WHERE appointment_status IN ('confirmed', 'completed')
+      WHERE appointment_status IN ('confirmed', 'in_progress', 'completed')
         AND appointment_date BETWEEN $1::date AND $2::date
     `, [firstDate, lastDate]);
     const now = manilaNow();

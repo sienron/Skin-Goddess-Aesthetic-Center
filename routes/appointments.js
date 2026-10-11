@@ -5,6 +5,8 @@ const db = require('../db');
 const { requireActiveAccount, requireRole } = require('../middleware/auth');
 const { roleForCategory } = require('../utils/staffRoles');
 const { notifyUser, notifyUsers, notifyRoles } = require('../utils/notifications');
+const { notifyStockTransition } = require('../utils/inventoryNotifications');
+const { recordInventoryTransaction } = require('../utils/inventoryTransactions');
 const { createHmac, randomBytes, timingSafeEqual } = require('crypto');
 const RATING_WINDOW_DAYS = 14;
 const ratingLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, message: { message: 'Too many rating attempts. Try again later.' } });
@@ -242,6 +244,7 @@ router.get('/admin', requireRole('admin'), async (req, res) => {
   try {
     const result = await db.query(`
       SELECT a.appointment_id,
+             a.service_id,
              a.appointment_date::text AS date,
              a.appointment_time::text AS start,
              a.appointment_end_time::text AS end,
@@ -262,6 +265,7 @@ router.get('/admin', requireRole('admin'), async (req, res) => {
              c.date_of_birth::text AS date_of_birth,
              c.contact_number AS contact,
              COALESCE(NULLIF(BTRIM(CONCAT_WS(' ', NULLIF(BTRIM(aesthetician.first_name), ''), NULLIF(BTRIM(aesthetician.last_name), ''))), ''), 'Unassigned') AS assigned_to,
+             deduction.confirmed_at AS inventory_deduction_confirmed_at,
              (
                SELECT COUNT(*)
                FROM appointments previous
@@ -272,12 +276,452 @@ router.get('/admin', requireRole('admin'), async (req, res) => {
       LEFT JOIN users c ON c.user_id = a.user_id
       JOIN services s ON s.service_id = a.service_id
       LEFT JOIN users aesthetician ON aesthetician.user_id = a.aesthetician_id
+      LEFT JOIN appointment_inventory_deductions deduction ON deduction.appointment_id = a.appointment_id
       ORDER BY a.appointment_date ASC, a.appointment_time ASC, a.appointment_id ASC
     `);
     return res.json(result.rows);
   } catch (error) {
     console.error('Error fetching admin appointments:', error);
-    return res.status(500).json({ message: 'Could not load appointments.' });
+    return res.status(500).json({
+      message: process.env.NODE_ENV === 'production'
+        ? 'Could not load appointments.'
+        : error.message
+    });
+  }
+});
+
+router.get('/admin/:id/inventory-review', requireRole('admin'), async (req, res) => {
+  const appointmentId = validAppointmentId(req.params.id);
+  if (!appointmentId) return res.status(400).json({ message: 'Choose a valid appointment.' });
+
+  try {
+    const review = await db.transaction(async (client) => {
+      const appointmentResult = await client.query(`
+        SELECT a.appointment_id, a.service_id, a.appointment_status AS status,
+               a.appointment_date::text AS date, a.appointment_time::text AS start,
+               s.service_name AS service,
+               COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Client') AS client,
+               COALESCE(NULLIF(BTRIM(CONCAT_WS(' ', NULLIF(BTRIM(staff.first_name), ''), NULLIF(BTRIM(staff.last_name), ''))), ''), 'Unassigned') AS assigned_to
+        FROM appointments a
+        JOIN services s ON s.service_id = a.service_id
+        LEFT JOIN users c ON c.user_id = a.user_id
+        LEFT JOIN users staff ON staff.user_id = a.aesthetician_id
+        WHERE a.appointment_id = $1
+        FOR UPDATE OF a
+      `, [appointmentId]);
+      if (!appointmentResult.rows.length) {
+        const error = new Error('Appointment not found.');
+        error.statusCode = 404;
+        throw error;
+      }
+      const appointment = appointmentResult.rows[0];
+      if (appointment.status !== 'in_progress') {
+        const error = new Error('Product review is available only while the appointment is In Progress.');
+        error.statusCode = 409;
+        throw error;
+      }
+
+      const deductionResult = await client.query(`
+        SELECT confirmed_at
+        FROM appointment_inventory_deductions
+        WHERE appointment_id = $1
+      `, [appointmentId]);
+      if (deductionResult.rows.length) {
+        const error = new Error('Inventory has already been deducted for this appointment.');
+        error.statusCode = 409;
+        throw error;
+      }
+
+      let draftResult = await client.query(`
+        SELECT selected_items
+        FROM appointment_inventory_review_drafts
+        WHERE appointment_id = $1
+      `, [appointmentId]);
+      if (!draftResult.rows.length) {
+        const suggestions = await client.query(`
+          SELECT product_id, default_quantity
+          FROM service_inventory_product_defaults
+          WHERE service_id = $1 AND is_enabled = TRUE
+          ORDER BY product_id
+        `, [appointment.service_id]);
+        const initialSelection = suggestions.rows.map((item) => ({
+          productId: Number(item.product_id),
+          quantity: Number(item.default_quantity),
+          isSuggested: true
+        }));
+        draftResult = await client.query(`
+          INSERT INTO appointment_inventory_review_drafts
+            (appointment_id, selected_items, updated_by, updated_at)
+          VALUES ($1, $2::jsonb, $3, NOW())
+          RETURNING selected_items
+        `, [appointmentId, JSON.stringify(initialSelection), req.session.userId]);
+      }
+
+      const selectedItems = draftResult.rows[0].selected_items;
+      await client.query(`
+        UPDATE appointment_inventory_review_drafts
+        SET reviewed_by = NULL, reviewed_at = NULL
+        WHERE appointment_id = $1
+      `, [appointmentId]);
+      const selectedById = new Map(selectedItems.map((item) => [Number(item.productId), item]));
+      const productsResult = await client.query(`
+        SELECT product.product_id, product.product_name, product.category,
+               product.stock_quantity, mapping.default_quantity,
+               (mapping.product_id IS NOT NULL) AS is_suggested
+        FROM inventory_products product
+        LEFT JOIN service_inventory_product_defaults mapping
+          ON mapping.service_id = $1
+         AND mapping.product_id = product.product_id
+         AND mapping.is_enabled = TRUE
+        ORDER BY product.category, product.product_name, product.product_id
+      `, [appointment.service_id]);
+      const products = productsResult.rows.map((product) => {
+        const selected = selectedById.get(Number(product.product_id));
+        return {
+          ...product,
+          is_suggested: selected ? Boolean(selected.isSuggested) : Boolean(product.is_suggested),
+          is_selected: Boolean(selected),
+          selected_quantity: selected && selected.quantity !== null ? Number(selected.quantity) : null
+        };
+      });
+      return { appointment, products };
+    });
+    return res.json(review);
+  } catch (error) {
+    if (error.statusCode) return res.status(error.statusCode).json({ message: error.message });
+    console.error('Error loading appointment inventory review:', error);
+    return res.status(500).json({ message: 'Could not load products for review.' });
+  }
+});
+
+router.put('/admin/:id/inventory-review-draft', requireRole('admin'), async (req, res) => {
+  const appointmentId = validAppointmentId(req.params.id);
+  if (!appointmentId) return res.status(400).json({ message: 'Choose a valid appointment.' });
+  const submittedItems = req.body?.selectedItems;
+  if (!Array.isArray(submittedItems) || submittedItems.length > 500) {
+    return res.status(400).json({ message: 'The selected product list is invalid.' });
+  }
+  if (req.body?.reviewed !== undefined && typeof req.body.reviewed !== 'boolean') {
+    return res.status(400).json({ message: 'The product review state is invalid.' });
+  }
+  const markReviewed = req.body?.reviewed === true;
+
+  const selectedItems = [];
+  const selectedIds = new Set();
+  for (const item of submittedItems) {
+    const productId = Number(item?.productId);
+    const quantity = item?.quantity === null || item?.quantity === '' ? null : Number(item?.quantity);
+    if (!Number.isSafeInteger(productId) || productId < 1
+      || (quantity !== null && (!Number.isSafeInteger(quantity) || quantity < 1))
+      || (markReviewed && quantity === null)
+      || typeof item?.isSuggested !== 'boolean'
+      || selectedIds.has(productId)) {
+      return res.status(400).json({ message: 'Each selected product must have a unique ID and either an empty quantity or a positive whole number.' });
+    }
+    selectedIds.add(productId);
+    selectedItems.push({ productId, quantity, isSuggested: item.isSuggested });
+  }
+
+  try {
+    await db.transaction(async (client) => {
+      const appointmentResult = await client.query(`
+        SELECT appointment_status
+        FROM appointments
+        WHERE appointment_id = $1
+        FOR UPDATE
+      `, [appointmentId]);
+      if (!appointmentResult.rows.length) {
+        const error = new Error('Appointment not found.');
+        error.statusCode = 404;
+        throw error;
+      }
+      if (appointmentResult.rows[0].appointment_status !== 'in_progress') {
+        const error = new Error('Only In Progress appointments can save a product review.');
+        error.statusCode = 409;
+        throw error;
+      }
+      if (selectedIds.size) {
+        const products = await client.query(`
+          SELECT product_id
+          FROM inventory_products
+          WHERE product_id = ANY($1::integer[])
+        `, [[...selectedIds]]);
+        if (products.rows.length !== selectedIds.size) {
+          const error = new Error('One or more selected products are no longer available.');
+          error.statusCode = 409;
+          throw error;
+        }
+      }
+      await client.query(`
+        INSERT INTO appointment_inventory_review_drafts
+          (appointment_id, selected_items, updated_by, updated_at, reviewed_by, reviewed_at)
+        VALUES ($1, $2::jsonb, $3, NOW(), CASE WHEN $4 THEN $3 ELSE NULL END,
+                CASE WHEN $4 THEN NOW() ELSE NULL END)
+        ON CONFLICT (appointment_id)
+        DO UPDATE SET selected_items = EXCLUDED.selected_items,
+                      updated_by = EXCLUDED.updated_by,
+                      updated_at = NOW(),
+                      reviewed_by = EXCLUDED.reviewed_by,
+                      reviewed_at = EXCLUDED.reviewed_at
+      `, [appointmentId, JSON.stringify(selectedItems), req.session.userId, markReviewed]);
+    });
+    return res.json({ message: 'Product review draft saved.' });
+  } catch (error) {
+    if (error.statusCode) return res.status(error.statusCode).json({ message: error.message });
+    console.error('Error saving appointment inventory review draft:', error);
+    return res.status(500).json({ message: 'Could not save the product review.' });
+  }
+});
+
+router.post('/admin/:id/inventory-review/refresh-suggestions', requireRole('admin'), async (req, res) => {
+  const appointmentId = validAppointmentId(req.params.id);
+  if (!appointmentId) return res.status(400).json({ message: 'Choose a valid appointment.' });
+
+  try {
+    const selectedItems = await db.transaction(async (client) => {
+      const appointmentResult = await client.query(`
+        SELECT service_id, appointment_status
+        FROM appointments
+        WHERE appointment_id = $1
+        FOR UPDATE
+      `, [appointmentId]);
+      if (!appointmentResult.rows.length) {
+        const error = new Error('Appointment not found.');
+        error.statusCode = 404;
+        throw error;
+      }
+      const appointment = appointmentResult.rows[0];
+      if (appointment.appointment_status !== 'in_progress') {
+        const error = new Error('Suggestions can only be refreshed for an In Progress appointment.');
+        error.statusCode = 409;
+        throw error;
+      }
+      const suggestions = await client.query(`
+        SELECT product_id, default_quantity
+        FROM service_inventory_product_defaults
+        WHERE service_id = $1 AND is_enabled = TRUE
+        ORDER BY product_id
+      `, [appointment.service_id]);
+      const nextSelection = suggestions.rows.map((item) => ({
+        productId: Number(item.product_id),
+        quantity: Number(item.default_quantity),
+        isSuggested: true
+      }));
+      await client.query(`
+        INSERT INTO appointment_inventory_review_drafts
+          (appointment_id, selected_items, updated_by, updated_at)
+        VALUES ($1, $2::jsonb, $3, NOW())
+        ON CONFLICT (appointment_id)
+        DO UPDATE SET selected_items = EXCLUDED.selected_items,
+                      updated_by = EXCLUDED.updated_by,
+                      updated_at = NOW()
+      `, [appointmentId, JSON.stringify(nextSelection), req.session.userId]);
+      return nextSelection;
+    });
+    return res.json({ selectedItems });
+  } catch (error) {
+    if (error.statusCode) return res.status(error.statusCode).json({ message: error.message });
+    console.error('Error refreshing appointment product suggestions:', error);
+    return res.status(500).json({ message: 'Could not refresh product suggestions.' });
+  }
+});
+
+router.post('/admin/:id/complete-with-inventory', requireRole('admin'), async (req, res) => {
+  const appointmentId = validAppointmentId(req.params.id);
+  if (!appointmentId) return res.status(400).json({ message: 'Choose a valid appointment.' });
+  const submittedItems = req.body?.selectedItems;
+  if (!Array.isArray(submittedItems) || submittedItems.length > 500) {
+    return res.status(400).json({ message: 'The selected product list is invalid.' });
+  }
+
+  const quantities = new Map();
+  const submittedSelection = [];
+  for (const item of submittedItems) {
+    const productId = Number(item?.productId);
+    const quantity = Number(item?.quantity);
+    if (!Number.isSafeInteger(productId) || productId < 1
+      || !Number.isSafeInteger(quantity) || quantity < 1
+      || typeof item?.isSuggested !== 'boolean'
+      || quantities.has(productId)) {
+      return res.status(400).json({ message: 'Each selected product must have a unique ID and positive whole-number quantity.' });
+    }
+    quantities.set(productId, quantity);
+    submittedSelection.push({ productId, quantity, isSuggested: item.isSuggested });
+  }
+  submittedSelection.sort((left, right) => left.productId - right.productId);
+
+  try {
+    const deduction = await db.transaction(async (client) => {
+      const appointmentResult = await client.query(`
+        SELECT appointment_id, appointment_status, user_id
+        FROM appointments
+        WHERE appointment_id = $1
+        FOR UPDATE
+      `, [appointmentId]);
+      if (!appointmentResult.rows.length) {
+        const error = new Error('Appointment not found.');
+        error.statusCode = 404;
+        throw error;
+      }
+      const appointment = appointmentResult.rows[0];
+      if (appointment.appointment_status !== 'in_progress') {
+        const error = new Error('Only In Progress appointments can be completed with an inventory deduction.');
+        error.statusCode = 409;
+        throw error;
+      }
+
+      const reviewDraftResult = await client.query(`
+        SELECT selected_items, reviewed_by, reviewed_at
+        FROM appointment_inventory_review_drafts
+        WHERE appointment_id = $1
+        FOR UPDATE
+      `, [appointmentId]);
+      const reviewDraft = reviewDraftResult.rows[0];
+      if (!reviewDraft || Number(reviewDraft.reviewed_by) !== Number(req.session.userId) || !reviewDraft.reviewed_at) {
+        const error = new Error('Review the selected products and quantities before confirming appointment completion.');
+        error.statusCode = 409;
+        throw error;
+      }
+      const reviewedSelection = reviewDraft.selected_items
+        .map((item) => ({
+          productId: Number(item.productId),
+          quantity: Number(item.quantity),
+          isSuggested: Boolean(item.isSuggested)
+        }))
+        .sort((left, right) => left.productId - right.productId);
+      if (JSON.stringify(reviewedSelection) !== JSON.stringify(submittedSelection)) {
+        const error = new Error('The product selection changed after review. Review it again before confirming.');
+        error.statusCode = 409;
+        throw error;
+      }
+
+      const existingDeduction = await client.query(`
+        SELECT confirmed_at
+        FROM appointment_inventory_deductions
+        WHERE appointment_id = $1
+      `, [appointmentId]);
+      if (existingDeduction.rows.length) {
+        const error = new Error('Inventory has already been deducted for this appointment.');
+        error.statusCode = 409;
+        throw error;
+      }
+
+      const productIds = [...quantities.keys()].sort((left, right) => left - right);
+      const productsResult = await client.query(`
+        SELECT product_id, product_name, stock_quantity
+        FROM inventory_products
+        WHERE product_id = ANY($1::integer[])
+        ORDER BY product_id
+        FOR UPDATE
+      `, [productIds]);
+      if (productsResult.rows.length !== productIds.length) {
+        const error = new Error('One or more selected products are no longer available.');
+        error.statusCode = 409;
+        throw error;
+      }
+
+      for (const product of productsResult.rows) {
+        const quantity = quantities.get(Number(product.product_id));
+        if (quantity > Number(product.stock_quantity)) {
+          const error = new Error(`${product.product_name} has only ${product.stock_quantity} units available.`);
+          error.statusCode = 409;
+          throw error;
+        }
+      }
+
+      await client.query(`
+        INSERT INTO appointment_inventory_deductions (appointment_id, confirmed_by, confirmed_at)
+        VALUES ($1, $2, NOW())
+      `, [appointmentId, req.session.userId]);
+
+      const updatedProducts = [];
+      for (const product of productsResult.rows) {
+        const productId = Number(product.product_id);
+        const previousStock = Number(product.stock_quantity);
+        const quantity = quantities.get(productId);
+        const updateResult = await client.query(`
+          UPDATE inventory_products
+          SET stock_quantity = stock_quantity - $1, updated_at = NOW()
+          WHERE product_id = $2
+          RETURNING product_id, product_name, category, stock_quantity
+        `, [quantity, productId]);
+        const updatedProduct = updateResult.rows[0];
+        await recordInventoryTransaction(client, {
+          productId,
+          productName: updatedProduct.product_name,
+          transactionType: 'Used in Service',
+          quantity,
+          previousStock,
+          newStock: Number(updatedProduct.stock_quantity),
+          userId: req.session.userId,
+          appointmentId
+        });
+        updatedProducts.push({
+          ...updatedProduct,
+          previous_stock: previousStock,
+          quantity_deducted: quantity
+        });
+      }
+
+      const statusResult = await client.query(`
+        UPDATE appointments
+        SET appointment_status = 'completed', updated_at = NOW()
+        WHERE appointment_id = $1 AND appointment_status = 'in_progress'
+        RETURNING appointment_id, user_id
+      `, [appointmentId]);
+      if (!statusResult.rows.length) {
+        const error = new Error('The appointment status changed before it could be completed.');
+        error.statusCode = 409;
+        throw error;
+      }
+      await client.query(`
+        DELETE FROM appointment_inventory_review_drafts
+        WHERE appointment_id = $1
+      `, [appointmentId]);
+      return { appointment: statusResult.rows[0], updatedProducts };
+    });
+
+    for (const product of deduction.updatedProducts) {
+      try {
+        await notifyStockTransition(
+          Number(product.previous_stock),
+          Number(product.stock_quantity),
+          product.product_name
+        );
+      } catch (error) {
+        console.error(`Inventory threshold notification failed for product ${product.product_id}:`, error);
+      }
+    }
+    if (deduction.appointment.user_id) {
+      try {
+        await notifyUser(
+          deduction.appointment.user_id,
+          'appointment_status_changed',
+          `Appointment ${deduction.appointment.appointment_id} status changed to completed.`,
+        );
+        await notifyUser(
+          deduction.appointment.user_id,
+          'rating_request',
+          'How was your visit? Tap to rate it.',
+          { email: false },
+        );
+      } catch (error) {
+        console.error(`Appointment completion notification failed for appointment ${appointmentId}:`, error);
+      }
+    }
+    return res.json({
+      message: 'Products were deducted and the appointment was completed.',
+      appointment_id: appointmentId,
+      status: 'completed',
+      products: deduction.updatedProducts
+    });
+  } catch (error) {
+    if (error.code === '23505') {
+      return res.status(409).json({ message: 'Inventory has already been deducted for this appointment.' });
+    }
+    if (error.statusCode) return res.status(error.statusCode).json({ message: error.message });
+    console.error('Error completing appointment with inventory deduction:', error);
+    return res.status(500).json({ message: 'Could not deduct inventory and complete the appointment.' });
   }
 });
 
@@ -690,7 +1134,7 @@ async function findAvailableAestheticians(queryClient, booking) {
       AND NOT EXISTS (
         SELECT 1 FROM appointments a
         WHERE a.aesthetician_id = u.user_id
-          AND a.appointment_status IN ('confirmed', 'completed')
+          AND a.appointment_status IN ('confirmed', 'in_progress', 'completed')
           AND tsrange(a.appointment_date + a.appointment_time, a.appointment_date + a.appointment_end_time) && tsrange($1::date + $2::time, $1::date + $3::time)
       )
     ORDER BY u.user_id
@@ -1052,7 +1496,7 @@ router.post('/:id/cancellation-request/review', requireRole('admin'), async (req
   }
 });
 
-router.post('/:id/finish', requireActiveAccount, async (req, res) => {
+router.post('/:id/start', requireActiveAccount, async (req, res) => {
   const appointmentId = validAppointmentId(req.params.id);
   if (!appointmentId) return res.status(400).json({ message: 'Choose a valid appointment.' });
   try {
@@ -1062,31 +1506,39 @@ router.post('/:id/finish', requireActiveAccount, async (req, res) => {
       WHERE appointment_id = $1 AND aesthetician_id = $2
     `, [appointmentId, req.session.userId]);
     if (result.rows.length === 0) return res.status(404).json({ message: 'Appointment not found.' });
-    if (result.rows[0].appointment_date !== manilaNow().dateStr) return res.status(400).json({ message: 'An appointment can only be finished on its scheduled date.' });
-    if (result.rows[0].appointment_status !== 'confirmed') return res.status(400).json({ message: 'Only confirmed appointments can be finished.' });
+    if (result.rows[0].appointment_date !== manilaNow().dateStr) return res.status(400).json({ message: 'An appointment can only be started on its scheduled date.' });
+    if (result.rows[0].appointment_status !== 'confirmed') return res.status(400).json({ message: 'Only confirmed appointments can be started.' });
     const updated = await db.query(`
       UPDATE appointments
-      SET appointment_status = 'completed'
+      SET appointment_status = 'in_progress', updated_at = NOW()
       WHERE appointment_id = $1 AND aesthetician_id = $2 AND appointment_status = 'confirmed'
       RETURNING user_id, appointment_id
     `, [appointmentId, req.session.userId]);
     if (updated.rows.length === 0) return res.status(409).json({ message: 'This appointment is no longer confirmed.' });
-    await notifyUser(
-      updated.rows[0].user_id,
-      'appointment_status_changed',
-      `Appointment ${updated.rows[0].appointment_id} status changed to completed.`,
-    );
-    await notifyUser(
-      updated.rows[0].user_id,
-      'rating_request',
-      'How was your visit? Tap to rate it.',
-      { email: false },
-    );
-    return res.json({ message: 'Appointment marked as completed.' });
+    if (updated.rows[0].user_id) {
+      try {
+        await notifyUser(
+          updated.rows[0].user_id,
+          'appointment_status_changed',
+          `Appointment ${updated.rows[0].appointment_id} status changed to in progress.`,
+        );
+      } catch (error) {
+        console.error(`Appointment start notification failed for appointment ${appointmentId}:`, error);
+      }
+    }
+    return res.json({ message: 'Appointment marked as In Progress.' });
   } catch (error) {
-    console.error('Error finishing appointment:', error);
-    return res.status(500).json({ message: 'Could not finish appointment.' });
+    console.error('Error starting appointment:', error);
+    return res.status(500).json({ message: 'Could not start appointment.' });
   }
+});
+
+router.post('/:id/finish', requireActiveAccount, async (req, res) => {
+  const appointmentId = validAppointmentId(req.params.id);
+  if (!appointmentId) return res.status(400).json({ message: 'Choose a valid appointment.' });
+  return res.status(409).json({
+    message: `Appointment ${appointmentId} can be completed only after an admin confirms the inventory review.`
+  });
 });
 
 router.post('/:id/rating', ratingLimiter, requireActiveAccount, async (req, res) => {
