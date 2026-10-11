@@ -168,7 +168,7 @@ app.use(async (req, res, next) => {
 });
 
 const protectedPages = [
-  { path: '/UserAccount.html', roles: ['client'] },
+  { path: '/UserAccount.html', roles: ['client', 'admin', 'aesthetician', 'inventory_officer', 'finance_officer', 'staff'] },
   { path: '/UserAppointment.html', roles: ['client'] },
   { path: '/MyAppointments.html', roles: ['client'] },
   { path: '/UserDashboard.html', roles: ['client'] },
@@ -213,7 +213,6 @@ app.get('/', (req, res) => {
   if (req.session.userId) {
     return res.sendFile(path.join(publicDir, 'index.html'));
   }
-
   res.sendFile(path.join(publicDir, 'LoginPage.html'));
 });
 

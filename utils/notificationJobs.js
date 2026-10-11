@@ -1,8 +1,10 @@
 const cron = require('node-cron');
 const db = require('../db');
 const { notifyUser, notifyRoles } = require('./notifications');
+const { sendAppointmentReminderEmail } = require('./mailer');
 
 let remindersRunning = false;
+let emailRemindersRunning = false;
 let expiryRunning = false;
 
 function appointmentLabel(row) {
@@ -40,6 +42,69 @@ async function runAppointmentReminders() {
     console.error('Appointment reminder job failed:', error.message);
   } finally {
     remindersRunning = false;
+  }
+}
+
+async function sendAppointmentEmailReminders(flag, hours) {
+  const now = "(NOW() AT TIME ZONE 'Asia/Manila')";
+  const result = await db.query(`
+    SELECT a.appointment_id, u.email, u.first_name, s.service_name,
+           a.appointment_date::text AS appointment_date,
+           a.appointment_time::text AS appointment_time
+    FROM appointments a
+    JOIN users u ON u.user_id = a.user_id
+    JOIN services s ON s.service_id = a.service_id
+    WHERE a.appointment_status = 'confirmed'
+      AND a.${flag} = FALSE
+      AND a.appointment_date + a.appointment_time > ${now}
+      AND a.appointment_date + a.appointment_time <= ${now} + ($1 * INTERVAL '1 hour')
+    ORDER BY a.appointment_date, a.appointment_time
+  `, [hours]);
+
+  for (const appointment of result.rows) {
+    try {
+      await sendAppointmentReminderEmail(appointment, hours);
+      await db.query(`
+        UPDATE appointments
+        SET ${flag} = TRUE
+        WHERE appointment_id = $1 AND ${flag} = FALSE
+          AND appointment_status = 'confirmed'
+      `, [appointment.appointment_id]);
+    } catch (error) {
+      console.error(
+        `Could not send ${hours}-hour appointment reminder for appointment ${appointment.appointment_id}:`,
+        error.message,
+      );
+    }
+  }
+}
+
+async function runAppointmentEmailReminders() {
+  if (emailRemindersRunning) return;
+  emailRemindersRunning = true;
+
+  let client;
+  let lockAcquired = false;
+  try {
+    client = await db.pool.connect();
+    const lockResult = await client.query('SELECT pg_try_advisory_lock($1, $2) AS acquired', [203004171, 1]);
+    lockAcquired = lockResult.rows[0].acquired;
+    if (!lockAcquired) return;
+
+    await sendAppointmentEmailReminders('reminder_email_24h_sent', 24);
+    await sendAppointmentEmailReminders('reminder_email_1h_sent', 1);
+  } catch (error) {
+    console.error('Appointment email reminder job failed:', error.message);
+  } finally {
+    if (lockAcquired && client) {
+      try {
+        await client.query('SELECT pg_advisory_unlock($1, $2)', [203004171, 1]);
+      } catch (error) {
+        console.error('Could not release appointment email reminder lock:', error.message);
+      }
+    }
+    if (client) client.release();
+    emailRemindersRunning = false;
   }
 }
 
@@ -84,7 +149,13 @@ async function runExpiryAlerts() {
 
 function startNotificationJobs() {
   cron.schedule('*/5 * * * *', runAppointmentReminders, { timezone: 'Asia/Manila' });
+  cron.schedule('*/5 * * * *', runAppointmentEmailReminders, { timezone: 'Asia/Manila' });
   cron.schedule('0 9 * * *', runExpiryAlerts, { timezone: 'Asia/Manila' });
 }
 
-module.exports = { startNotificationJobs, runAppointmentReminders, runExpiryAlerts };
+module.exports = {
+  startNotificationJobs,
+  runAppointmentReminders,
+  runAppointmentEmailReminders,
+  runExpiryAlerts,
+};

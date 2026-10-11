@@ -83,6 +83,64 @@ function escapeHtml(value) {
   })[character]);
 }
 
+async function sendAppointmentReminderEmail(appointment, reminderHours) {
+  if (!process.env.BREVO_API_KEY || !process.env.EMAIL_USER) {
+    throw new Error('BREVO_API_KEY and EMAIL_USER must be configured to send appointment reminders.');
+  }
+
+  const dateParts = String(appointment.appointment_date).split('-').map(Number);
+  const timeParts = String(appointment.appointment_time).split(':').map(Number);
+  const appointmentDate = new Date(Date.UTC(
+    dateParts[0],
+    dateParts[1] - 1,
+    dateParts[2],
+    timeParts[0] - 8,
+    timeParts[1],
+  ));
+  const dateLabel = new Intl.DateTimeFormat('en-PH', {
+    timeZone: 'Asia/Manila',
+    dateStyle: 'long',
+  }).format(appointmentDate);
+  const timeLabel = new Intl.DateTimeFormat('en-PH', {
+    timeZone: 'Asia/Manila',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(appointmentDate);
+  const safeName = escapeHtml(appointment.first_name || 'there');
+  const safeService = escapeHtml(appointment.service_name);
+  const leadLabel = reminderHours === 24 ? 'tomorrow' : 'in about one hour';
+  const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'api-key': process.env.BREVO_API_KEY,
+    },
+    body: JSON.stringify({
+      sender: {
+        name: 'Skin Goddess Aesthetic Center',
+        email: process.env.EMAIL_USER,
+      },
+      to: [{ email: appointment.email }],
+      subject: `Appointment reminder: ${appointment.service_name}`,
+      htmlContent: `
+        <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto; color: #1A1714;">
+          <h2 style="color: #C9A84C;">Skin Goddess Aesthetic Center</h2>
+          <p>Hello ${safeName},</p>
+          <p>This is a reminder that your ${safeService} appointment is ${leadLabel}.</p>
+          <p><strong>Date:</strong> ${escapeHtml(dateLabel)}<br>
+             <strong>Time:</strong> ${escapeHtml(timeLabel)} (Philippine time)</p>
+          <p>We look forward to seeing you.</p>
+        </div>
+      `,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`The appointment reminder email was not sent: ${errorText}`);
+  }
+}
+
 async function sendInquiryReply(toEmail, firstName, reply) {
   const safeName = escapeHtml(firstName);
   const safeReply = escapeHtml(reply).replace(/\r?\n/g, '<br>');
@@ -160,4 +218,10 @@ async function sendInquiryNotification(inquiry) {
   }
 }
 
-module.exports = { sendOtpEmail, sendPasswordResetEmail, sendInquiryReply, sendInquiryNotification };
+module.exports = {
+  sendOtpEmail,
+  sendPasswordResetEmail,
+  sendAppointmentReminderEmail,
+  sendInquiryReply,
+  sendInquiryNotification,
+};

@@ -657,8 +657,16 @@ async function createAppointmentFromPaidCheckout(client, payment, referenceNumbe
     await client.query('SAVEPOINT appointment_candidate');
     try {
       const result = await client.query(`
-        INSERT INTO appointments (user_id, service_id, booked_service_price, booked_reservation_fee, appointment_date, appointment_time, appointment_end_time, aesthetician_id, appointment_status, payment_status)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'confirmed', 'paid')
+        INSERT INTO appointments (
+          user_id, service_id, booked_service_price, booked_reservation_fee,
+          appointment_date, appointment_time, appointment_end_time, aesthetician_id,
+          appointment_status, payment_status, reminder_email_24h_sent, reminder_email_1h_sent
+        )
+        VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, 'confirmed', 'paid',
+          $5::date + $6::time <= (NOW() AT TIME ZONE 'Asia/Manila') + INTERVAL '24 hours',
+          $5::date + $6::time <= (NOW() AT TIME ZONE 'Asia/Manila') + INTERVAL '1 hour'
+        )
         RETURNING appointment_id, appointment_status, payment_status, aesthetician_id
       `, [payment.user_id, payment.service_id, payment.service_price,
         Number(payment.amount_cents) / 100, payment.appointment_date,
@@ -935,6 +943,8 @@ router.post('/:id/cancellation-request/review', requireRole('admin'), async (req
             appointment_time = reschedule_requested_time,
             appointment_end_time = reschedule_requested_end_time,
           reminder_24h_sent = FALSE, reminder_3h_sent = FALSE,
+          reminder_email_24h_sent = reschedule_requested_date + reschedule_requested_time <= (NOW() AT TIME ZONE 'Asia/Manila') + INTERVAL '24 hours',
+          reminder_email_1h_sent = reschedule_requested_date + reschedule_requested_time <= (NOW() AT TIME ZONE 'Asia/Manila') + INTERVAL '1 hour',
             reschedule_request_status = 'approved', reschedule_reviewed_by = $1,
             reschedule_reviewed_at = NOW()
         WHERE appointment_id = $2
@@ -1189,7 +1199,9 @@ router.post('/:id/reschedule', requireActiveAccount, async (req, res) => {
     await db.query(`
       UPDATE appointments
         SET appointment_date = $1, appointment_time = $2, appointment_end_time = $3,
-          reminder_24h_sent = FALSE, reminder_3h_sent = FALSE
+          reminder_24h_sent = FALSE, reminder_3h_sent = FALSE,
+          reminder_email_24h_sent = $1::date + $2::time <= (NOW() AT TIME ZONE 'Asia/Manila') + INTERVAL '24 hours',
+          reminder_email_1h_sent = $1::date + $2::time <= (NOW() AT TIME ZONE 'Asia/Manila') + INTERVAL '1 hour'
       WHERE appointment_id = $4
     `, [appointmentDate, appointmentTime, appointmentEndTime, appointmentId]);
     await notifyUsers(
