@@ -18,6 +18,7 @@ const router = express.Router();
 const db = require('../db'); // used to query the database
 const { sendOtpEmail, sendPasswordResetEmail } = require('../utils/mailer'); // for sending actual emails
 const isValidPassword = require('../utils/password');
+const { DASHBOARD_PER_ROLE } = require('../utils/roleRoutes');
 
 const registerLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 5, message: { message: 'Too many registration attempts. Try again later.' } });
 const verifyOtpLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, message: { message: 'Too many verification attempts. Try again later.' } });
@@ -35,15 +36,6 @@ const REMEMBERED_DEVICE_COOKIE_PREFIX = 'sg_remembered_device_';
 const LEGACY_REMEMBERED_DEVICE_COOKIE = 'sg_remembered_device';
 const REMEMBERED_DEVICE_MAX_AGE = 1000 * 60 * 60 * 24 * 30;
 const STAY_SIGNED_IN_MAX_AGE = 1000 * 60 * 60 * 24 * 400;
-const DASHBOARD_PER_ROLE = {
-  client: '/index.html',
-  admin: '/AdminDashboard.html',
-  aesthetician: '/StaffDashboard.html',
-  nail_tech: '/StaffDashboard.html',
-  inventory_officer: '/InventoryManagement.html',
-  finance_officer: '/FinanceDashboard.html',
-  staff: '/StaffDashboard.html',
-};
 
 function regenerateSession(req) {
   return new Promise((resolve, reject) => {
@@ -410,6 +402,11 @@ router.post('/login', loginLimiter, async (req, res) => {
       return res.status(403).json({ message: 'Verify email to login.' });
     }
 
+    const redirectUrl = DASHBOARD_PER_ROLE[user.role];
+    if (!redirectUrl) {
+      return res.status(403).json({ message: 'Your account role does not have an assigned destination.' });
+    }
+
     const localDevMfaBypass = process.env.NODE_ENV !== 'production'
       && user.mfa_enabled === false;
     if (localDevMfaBypass) {
@@ -418,7 +415,7 @@ router.post('/login', loginLimiter, async (req, res) => {
         message: 'Successful local development login.',
         userId: user.user_id,
         role: user.role,
-        redirectUrl: DASHBOARD_PER_ROLE[user.role] || '/dashboard',
+        redirectUrl,
       });
     }
 
@@ -461,7 +458,7 @@ router.post('/login', loginLimiter, async (req, res) => {
         message: 'Successful login.',
         userId: user.user_id,
         role: user.role,
-        redirectUrl: DASHBOARD_PER_ROLE[user.role] || '/dashboard',
+        redirectUrl,
       });
     }
     if (deviceToken) {
@@ -556,6 +553,13 @@ router.post('/login/verify-otp', loginOtpVerifyLimiter, async (req, res) => {
       return res.status(403).json({ message: 'This account cannot sign in. Contact the clinic for help.' });
     }
 
+    const redirectUrl = DASHBOARD_PER_ROLE[user.role];
+    if (!redirectUrl) {
+      delete req.session.pendingLoginUserId;
+      delete req.session.pendingLoginStaySignedIn;
+      return res.status(403).json({ message: 'Your account role does not have an assigned destination.' });
+    }
+
     const staySignedIn = req.session.pendingLoginStaySignedIn === true;
     let newDeviceToken = null;
 
@@ -579,7 +583,7 @@ router.post('/login/verify-otp', loginOtpVerifyLimiter, async (req, res) => {
       message: 'Successful login.',
       userId: user.user_id,
       role: user.role,
-      redirectUrl: DASHBOARD_PER_ROLE[user.role] || '/dashboard',
+      redirectUrl,
     });
   } catch (error) {
     console.log('Login verification error:', error);

@@ -17,7 +17,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     ["AdminAppointment.html", "Appointments", "icons/staff-appointments.svg"],
     ["AdminTreatmentHistory.html", "Treatment History", "icons/finance-reports.svg"],
     ["AdminInventoryManagement.html", "Inventory", "icons/staff-inventory.svg"],
-    ["InventoryTransactions.html", "Stock Transaction Log", "icons/finance-transactions.svg"],
+    ["AdminInventoryTransactions.html", "Stock Transaction Log", "icons/finance-transactions.svg"],
     ["FinancesTransactions.html", "Sales & Transactions", "icons/finance-transactions.svg"],
     ["FinanceExpenses.html", "Expenses", "icons/finance-expenses.svg"],
     ["FinanceReports.html", "Reports", "icons/finance-reports.svg"],

@@ -221,7 +221,11 @@ document.addEventListener('DOMContentLoaded', () => {
         loginMfaError.textContent = data.message || 'Verification failed. Please try again.';
         return;
       }
-      window.location.href = data.redirectUrl || '/index.html';
+      if (typeof data.redirectUrl !== 'string' || !data.redirectUrl) {
+        loginMfaError.textContent = 'Could not determine the correct page for your account.';
+        return;
+      }
+      window.location.href = data.redirectUrl;
     } catch (error) {
       loginMfaError.textContent = 'Something went wrong. Please try again.';
       console.error('Login verification request failed:', error);
@@ -305,8 +309,11 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // Success — open the dashboard assigned to the user's role.
-      window.location.href = data.redirectUrl || '/index.html';
+      if (typeof data.redirectUrl !== 'string' || !data.redirectUrl) {
+        setFieldError('form', 'Could not determine the correct page for your account.');
+        return;
+      }
+      window.location.href = data.redirectUrl;
     } catch (err) {
       setFieldError('form', 'Something went wrong. Please try again.');
       console.error('Login request failed:', err);

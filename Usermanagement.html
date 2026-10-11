@@ -8,7 +8,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="Usermanagement.css">
 </head>
+<body>
 
 <div class="um-shell">
 
@@ -41,7 +43,7 @@
         <button class="admin-nav-group-toggle" type="button" aria-expanded="false" aria-controls="adminInventoryMenu"><img src="icons/staff-inventory.svg" alt=""><span>Inventory</span><svg class="admin-nav-chevron" aria-hidden="true" viewBox="0 0 20 20"><path d="m5 7.5 5 5 5-5"/></svg></button>
         <ul class="admin-nav-submenu" id="adminInventoryMenu" hidden>
           <li><a href="AdminInventoryManagement.html" class="um-nav-link admin-nav-child"><span>Inventory</span></a></li>
-          <li><a href="InventoryTransactions.html" class="um-nav-link admin-nav-child"><span>Stock Transaction Log</span></a></li>
+          <li><a href="AdminInventoryTransactions.html" class="um-nav-link admin-nav-child"><span>Stock Transaction Log</span></a></li>
         </ul>
       </section>
       <section class="admin-nav-group">
@@ -78,7 +80,7 @@
     <header class="um-header">
       <div>
         <h1 class="um-header__title">User Management</h1>
-        <p class="um-header__subtitle">Create, view, update, and delete system users and client accounts</p>
+        <p class="um-header__subtitle">Manage staff accounts and client access in one place.</p>
       </div>
       <div class="um-header__actions">
         <div class="admin-notification-wrap">
@@ -90,59 +92,91 @@
             <div class="admin-notification-list">No notifications yet</div>
           </div>
         </div>
-          <div class="um-search" id="umSearchControl">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input type="text" id="umSearchInput" placeholder="Search users...">
-          </div>
-        <!-- um-header__actions-row wraps the button group so it can wrap onto its own line on narrow screens -->
         <div class="um-header__actions-row">
-
-        <button class="um-btn um-btn--ghost" id="umExportBtn" type="button">Export</button>
-        <button class="um-btn um-btn--primary" id="umCreateBtn" type="button">+ Create New User</button>
+          <button class="um-btn um-btn--ghost" id="umExportBtn" type="button">Export</button>
+          <button class="um-btn um-btn--primary" id="umCreateBtn" type="button">+ Create New User</button>
         </div>
       </div>
     </header>
 
     <section class="um-stats">
       <div class="um-stat-card">
-        <p class="um-stat-card__label">TOTAL USERS</p>
-        <p class="um-stat-card__value" id="statTotalUsers">—</p>
-        <p class="um-stat-card__hint um-stat-card__hint--positive" id="statTotalUsersHint"></p>
+        <span class="um-stat-card__icon um-stat-card__icon--gold" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="10" cy="7" r="4"></circle><path d="M20 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+        </span>
+        <div class="um-stat-card__content">
+          <p class="um-stat-card__label">Total users</p>
+          <p class="um-stat-card__value" id="statTotalUsers">—</p>
+          <p class="um-stat-card__hint" id="statTotalUsersHint"></p>
+        </div>
       </div>
       <div class="um-stat-card">
-        <p class="um-stat-card__label">CLIENTS</p>
-        <p class="um-stat-card__value" id="statClients">—</p>
-        <p class="um-stat-card__hint um-stat-card__hint--positive">Active accounts</p>
+        <span class="um-stat-card__icon um-stat-card__icon--blue" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"></circle><path d="M4 21v-2a8 8 0 0 1 16 0v2"></path></svg>
+        </span>
+        <div class="um-stat-card__content">
+          <p class="um-stat-card__label">Clients</p>
+          <p class="um-stat-card__value" id="statClients">—</p>
+          <p class="um-stat-card__hint">Client accounts</p>
+        </div>
       </div>
       <div class="um-stat-card">
-        <p class="um-stat-card__label">STAFF ACCOUNTS</p>
-        <p class="um-stat-card__value" id="statStaff">—</p>
-        <p class="um-stat-card__hint">Aesthetician, admin, finance, inventory</p>
+        <span class="um-stat-card__icon um-stat-card__icon--violet" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="7" width="18" height="14" rx="2"></rect><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18M10 12v2h4v-2"></path></svg>
+        </span>
+        <div class="um-stat-card__content">
+          <p class="um-stat-card__label">Staff accounts</p>
+          <p class="um-stat-card__value" id="statStaff">—</p>
+          <p class="um-stat-card__hint">Aesthetician, nail tech and operations roles</p>
+        </div>
       </div>
-      <div class="um-stat-card um-stat-card--wide">
-        <p class="um-stat-card__label">INACTIVE / SUSPENDED</p>
-        <p class="um-stat-card__value" id="statSuspended">—</p>
-        <p class="um-stat-card__hint um-stat-card__hint--negative" id="statSuspendedHint"></p>
+      <div class="um-stat-card">
+        <span class="um-stat-card__icon um-stat-card__icon--red" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"></circle><path d="m9 9 6 6m0-6-6 6"></path></svg>
+        </span>
+        <div class="um-stat-card__content">
+          <p class="um-stat-card__label">Inactive / suspended</p>
+          <p class="um-stat-card__value" id="statSuspended">—</p>
+          <p class="um-stat-card__hint" id="statSuspendedHint"></p>
+        </div>
       </div>
     </section>
 
-    <nav class="um-tabs" id="umTabs">
-      <button class="um-tab um-tab--active" data-role="ALL" type="button">ALL</button>
-      <button class="um-tab" data-role="client" type="button">CLIENTS</button>
-      <button class="um-tab" data-role="aesthetician" type="button">AESTHETICIAN</button>
-      <button class="um-tab" data-role="nail_tech" type="button">NAIL TECH</button>
-      <button class="um-tab" data-role="admin" type="button">ADMIN</button>
-      <button class="um-tab" data-role="finance_officer" type="button">FINANCE OFFICER</button>
-      <button class="um-tab" data-role="inventory_officer" type="button">INVENTORY PROCUREMENT</button>
-      <button class="um-tab" data-role="SUSPENDED" type="button">SUSPENDED</button>
-    </nav>
-    <div id="umTableSearchSlot"></div>
+    <section class="um-toolbar" aria-label="Filter and search users">
+      <nav class="um-tabs" id="umTabs" aria-label="Filter users by role">
+        <button class="um-tab um-tab--active" data-role="ALL" type="button" aria-pressed="true">All</button>
+        <button class="um-tab" data-role="client" type="button" aria-pressed="false">Clients</button>
+        <button class="um-tab" data-role="aesthetician" type="button" aria-pressed="false">Aesthetician</button>
+        <button class="um-tab" data-role="nail_tech" type="button" aria-pressed="false">Nail Tech</button>
+        <button class="um-tab" data-role="admin" type="button" aria-pressed="false">Admin</button>
+        <button class="um-tab" data-role="finance_officer" type="button" aria-pressed="false">Finance Officer</button>
+        <button class="um-tab" data-role="inventory_officer" type="button" aria-pressed="false">Inventory Procurement</button>
+        <button class="um-tab" data-role="SUSPENDED" type="button" aria-pressed="false">Suspended</button>
+      </nav>
+      <div class="um-toolbar__controls">
+        <div id="umTableSearchSlot">
+          <label class="um-search" id="umSearchControl">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="search" id="umSearchInput" placeholder="Search users..." aria-label="Search users">
+          </label>
+        </div>
+        <label class="um-status-filter">
+          <span>Status</span>
+          <select id="umStatusFilter" name="umStatusFilter" aria-label="Filter by account status">
+            <option value="ALL">All statuses</option>
+            <option value="active">Active</option>
+            <option value="suspended">Suspended</option>
+          </select>
+        </label>
+      </div>
+    </section>
 
     <section class="um-table-wrap">
       <table class="um-table">
+        <caption class="um-visually-hidden">User accounts with roles, contact details, and account status</caption>
         <thead>
           <tr>
-            <th class="um-table__checkbox-col"><input type="checkbox" id="umSelectAll"></th>
+            <th class="um-table__checkbox-col"><input type="checkbox" id="umSelectAll" aria-label="Select all users on this page"></th>
             <th>USER</th>
             <th>ROLE</th>
             <th>EMAIL</th>
@@ -154,7 +188,7 @@
           </tr>
         </thead>
         <tbody id="umTableBody">
-          <!-- Rows rendered by user-management.js from USERS_DATA -->
+          <!-- Rows rendered from the user management API -->
         </tbody>
       </table>
     </section>

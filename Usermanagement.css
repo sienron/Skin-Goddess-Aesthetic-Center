@@ -1,0 +1,815 @@
+#userManagementMain {
+  width: min(100%, 1560px);
+  margin-inline: auto;
+  padding: 28px 32px 32px;
+  background: #f8f6f2;
+  color: #25211d;
+  font-family: 'Poppins', sans-serif;
+}
+
+#userManagementMain .um-header {
+  min-height: 0;
+  height: auto;
+  margin: 0 0 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  flex-wrap: nowrap;
+  gap: 24px;
+}
+
+#userManagementMain .um-header__title {
+  color: #25211d;
+  font-size: clamp(24px, 2vw, 30px);
+  font-weight: 600;
+  letter-spacing: -.035em;
+  line-height: 1.2;
+}
+
+#userManagementMain .um-header__subtitle {
+  margin-top: 7px;
+  color: #766e64;
+  font-size: 13px;
+}
+
+#userManagementMain .um-header__actions {
+  flex-wrap: nowrap;
+  gap: 12px;
+}
+
+#userManagementMain .admin-notification-wrap {
+  position: relative;
+  align-self: auto;
+}
+
+#userManagementMain .admin-notification-btn {
+  position: relative;
+  top: auto;
+  right: auto;
+  z-index: auto;
+  width: 42px;
+  height: 42px;
+}
+
+#userManagementMain .admin-notification-btn:hover {
+  background: #f4efe4;
+}
+
+#userManagementMain .um-header__actions-row {
+  flex-wrap: nowrap;
+  gap: 10px;
+}
+
+#userManagementMain .um-btn {
+  min-height: 42px;
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+
+#userManagementMain .um-btn--ghost {
+  border: 1px solid #e4ded3;
+  background: #fff;
+  color: #413a32;
+}
+
+#userManagementMain .um-btn--ghost:hover {
+  background: #fbf9f5;
+  border-color: #cfc2a9;
+}
+
+#userManagementMain .um-btn--primary {
+  border-color: #ad8538;
+  background: #ad8538;
+  color: #fff;
+  box-shadow: 0 2px 4px rgb(93 66 21 / 12%);
+}
+
+#userManagementMain .um-btn--primary:hover {
+  border-color: #906b2a;
+  background: #906b2a;
+}
+
+#userManagementMain .um-stats {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+#userManagementMain .um-stat-card {
+  display: flex;
+  min-height: 126px;
+  align-items: flex-start;
+  gap: 15px;
+  padding: 20px;
+  border: 1px solid #eae5dc;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgb(45 36 23 / 3%);
+}
+
+#userManagementMain .um-stat-card__icon {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  place-items: center;
+  border-radius: 12px;
+}
+
+#userManagementMain .um-stat-card__icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+#userManagementMain .um-stat-card__icon--gold {
+  background: #f7f0e2;
+  color: #9a722c;
+}
+
+#userManagementMain .um-stat-card__icon--blue {
+  background: #edf3fc;
+  color: #5275a4;
+}
+
+#userManagementMain .um-stat-card__icon--violet {
+  background: #f2eff8;
+  color: #79679b;
+}
+
+#userManagementMain .um-stat-card__icon--red {
+  background: #faeeee;
+  color: #a84c4c;
+}
+
+#userManagementMain .um-stat-card__content {
+  min-width: 0;
+}
+
+#userManagementMain .um-stat-card__label {
+  margin: 0 0 5px;
+  color: #71695f;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+#userManagementMain .um-stat-card__value {
+  margin: 0 0 5px;
+  color: #29241f;
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+#userManagementMain .um-stat-card__hint {
+  margin: 0;
+  color: #898177;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+#userManagementMain .um-toolbar {
+  margin-bottom: 14px;
+  padding: 12px 16px 14px;
+  border: 1px solid #e9e4da;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgb(45 36 23 / 3%);
+}
+
+#userManagementMain .um-tabs {
+  display: flex;
+  min-height: 0;
+  flex: none;
+  flex-wrap: wrap;
+  gap: 5px;
+  overflow: visible;
+  border: 0;
+}
+
+#userManagementMain .um-tab {
+  min-height: 38px;
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: #655d53;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+#userManagementMain .um-tab:hover {
+  border-color: #eee7db;
+  background: #fbf9f5;
+  color: #433a2e;
+}
+
+#userManagementMain .um-tab--active {
+  border-color: #eadfc7;
+  background: #f7f0e2;
+  color: #805f25;
+  font-weight: 600;
+}
+
+#userManagementMain .um-toolbar__controls {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) minmax(170px, 220px);
+  gap: 12px;
+  margin-top: 12px;
+}
+
+#userManagementMain #umTableSearchSlot {
+  min-width: 0;
+}
+
+#userManagementMain .um-search {
+  display: flex;
+  width: 100%;
+  height: 42px;
+  align-items: center;
+  gap: 10px;
+  padding: 0 13px;
+  border: 1px solid #e4ded3;
+  border-radius: 8px;
+  background: #fff;
+  color: #8b8173;
+}
+
+#userManagementMain .um-search:focus-within {
+  border-color: #b18b48;
+  box-shadow: 0 0 0 3px rgb(177 139 72 / 14%);
+}
+
+#userManagementMain .um-search svg {
+  position: static;
+  flex: 0 0 auto;
+  color: #847a6d;
+}
+
+#userManagementMain .um-search input {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #29241f;
+  font-family: inherit;
+  font-size: 13px;
+}
+
+#userManagementMain .um-search input::placeholder {
+  color: #968e83;
+}
+
+#userManagementMain .um-status-filter {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+  color: #71695f;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+#userManagementMain .um-status-filter select {
+  width: 100%;
+  min-width: 0;
+  height: 42px;
+  padding: 0 32px 0 12px;
+  border: 1px solid #e4ded3;
+  border-radius: 8px;
+  background: #fff;
+  color: #433c33;
+  font: inherit;
+}
+
+#userManagementMain .um-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #e8e3d9;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 3px 12px rgb(45 36 23 / 4%);
+  -webkit-overflow-scrolling: touch;
+}
+
+#userManagementMain .um-table {
+  width: 100%;
+  min-width: 1120px;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+#userManagementMain .um-table thead tr {
+  background: #faf8f4;
+}
+
+#userManagementMain .um-table th {
+  padding: 13px 14px;
+  border-bottom: 1px solid #eae5dc;
+  color: #746b60;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .035em;
+  text-align: left;
+  white-space: nowrap;
+}
+
+#userManagementMain .um-table th:first-child,
+#userManagementMain .um-table td:first-child {
+  width: 44px;
+  padding-right: 8px;
+  padding-left: 16px;
+}
+
+#userManagementMain .um-table th:nth-child(2) { width: 205px; }
+#userManagementMain .um-table th:nth-child(3) { width: 150px; }
+#userManagementMain .um-table th:nth-child(4) { width: 235px; }
+#userManagementMain .um-table th:nth-child(5) { width: 125px; }
+#userManagementMain .um-table th:nth-child(6) { width: 110px; }
+#userManagementMain .um-table th:nth-child(7) { width: 130px; }
+#userManagementMain .um-table th:nth-child(8) { width: 125px; }
+#userManagementMain .um-table th:nth-child(9) { width: 142px; }
+
+#userManagementMain .um-table td {
+  padding: 13px 14px;
+  border-bottom: 1px solid #f0ece5;
+  color: #4a443d;
+  font-size: 13px;
+  vertical-align: middle;
+}
+
+#userManagementMain .um-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+#userManagementMain .um-table tbody tr:hover {
+  background: #fdfbf7;
+}
+
+#userManagementMain .um-table input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: #a98139;
+  vertical-align: middle;
+}
+
+#userManagementMain .um-user-cell {
+  min-width: 0;
+  gap: 11px;
+}
+
+#userManagementMain .um-avatar--sm {
+  width: 38px;
+  height: 38px;
+  background: #f5eddd;
+  color: #8e6a2c;
+  font-size: 12px;
+}
+
+#userManagementMain .um-avatar--muted {
+  background: #efede9;
+  color: #817b73;
+}
+
+#userManagementMain .um-user-cell__info {
+  min-width: 0;
+}
+
+#userManagementMain .um-user-cell__name {
+  overflow: hidden;
+  color: #2d2823;
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#userManagementMain .um-user-cell__meta {
+  margin-top: 3px;
+  color: #827a70;
+  font-size: 11px;
+}
+
+#userManagementMain .um-table td:nth-child(4) {
+  overflow-wrap: anywhere;
+  color: #514b44;
+}
+
+#userManagementMain .um-badge {
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+#userManagementMain .um-badge--client {
+  background: #edf3fc;
+  color: #42668f;
+}
+
+#userManagementMain .um-badge--doctor {
+  background: #f4efe1;
+  color: #82642d;
+}
+
+#userManagementMain .um-badge--nail-tech {
+  background: #f3edf8;
+  color: #76598f;
+}
+
+#userManagementMain .um-badge--admin {
+  background: #f8ece9;
+  color: #965949;
+}
+
+#userManagementMain .um-badge--finance {
+  background: #eaf4ef;
+  color: #46765b;
+}
+
+#userManagementMain .um-badge--inventory {
+  background: #edf2f2;
+  color: #4e7071;
+}
+
+#userManagementMain .um-badge--staff {
+  background: #f4f0e7;
+  color: #705b37;
+}
+
+#userManagementMain .um-status {
+  gap: 7px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+#userManagementMain .um-status::before {
+  width: 7px;
+  height: 7px;
+}
+
+#userManagementMain .um-status--active {
+  background: #edf5ef;
+  color: #36714b;
+}
+
+#userManagementMain .um-status--suspended {
+  background: #faeeee;
+  color: #9e4141;
+}
+
+#userManagementMain .um-visits {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  line-height: 1.3;
+}
+
+#userManagementMain .um-visits__count {
+  color: #78602e;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+#userManagementMain .um-visits__label {
+  color: #898177;
+  font-size: 10px;
+}
+
+#userManagementMain .um-actions {
+  gap: 7px;
+}
+
+#userManagementMain .um-action {
+  min-height: 32px;
+  justify-content: center;
+  padding: 6px 9px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+#userManagementMain .um-action--view {
+  border-color: #e7ddc9;
+  background: #fbf8f1;
+  color: #765a27;
+}
+
+#userManagementMain .um-action--view:hover {
+  background: #f4ecd9;
+}
+
+#userManagementMain .um-action--danger {
+  color: #9c4545;
+}
+
+#userManagementMain .um-action--danger:hover {
+  background: #faeeee;
+}
+
+#userManagementMain .um-row--muted td {
+  color: #746d64;
+}
+
+#userManagementMain .um-row--muted .um-user-cell__name {
+  color: #655e56;
+}
+
+#userManagementMain .um-table-footer {
+  margin-top: 10px;
+  padding: 4px 2px;
+  color: #746b60;
+  font-size: 12px;
+}
+
+#userManagementMain .um-table-footer p {
+  margin: 0;
+}
+
+#userManagementMain .um-pagination {
+  gap: 6px;
+}
+
+#userManagementMain .um-pagination button {
+  width: 36px;
+  height: 36px;
+  border: 1px solid #e5dfd4;
+  border-radius: 8px;
+  background: #fff;
+  color: #5e564d;
+  font-family: inherit;
+  font-size: 13px;
+}
+
+#userManagementMain .um-pagination button:hover:not(:disabled):not(.active) {
+  background: #f8f4eb;
+  border-color: #d7c7a8;
+}
+
+#userManagementMain .um-pagination button.active {
+  border-color: #a98139;
+  background: #a98139;
+  color: #fff;
+}
+
+#userManagementMain button:focus-visible,
+#userManagementMain input:focus-visible,
+#userManagementMain select:focus-visible,
+#userManagementMain a:focus-visible,
+#adminNotificationBtn:focus-visible {
+  outline: 3px solid rgb(169 129 57 / 40%);
+  outline-offset: 2px;
+}
+
+.um-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+@media (max-width: 1100px) {
+  #userManagementMain {
+    padding-right: 24px;
+    padding-left: 24px;
+  }
+
+  #userManagementMain .um-header {
+    align-items: flex-start;
+  }
+
+  #userManagementMain .um-stats {
+    gap: 12px;
+  }
+
+  #userManagementMain .um-stat-card {
+    gap: 12px;
+    padding: 17px 14px;
+  }
+
+  #userManagementMain .um-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+}
+
+@media (max-width: 760px) {
+  #userManagementMain {
+    padding: 20px 18px 26px;
+  }
+
+  #userManagementMain .um-header {
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  #userManagementMain .um-header > div:first-child {
+    order: 0;
+  }
+
+  #userManagementMain > .um-header .um-header__actions {
+    order: 1;
+    width: 100%;
+    margin: 0;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  #userManagementMain > .um-header .um-header__actions-row {
+    display: flex;
+    width: auto;
+  }
+
+  #userManagementMain .um-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  #userManagementMain .um-stat-card {
+    min-height: 112px;
+    padding: 15px;
+  }
+
+  #userManagementMain .um-stat-card__value {
+    font-size: 26px;
+  }
+
+  #userManagementMain .um-toolbar {
+    padding: 10px 12px 12px;
+  }
+
+  #userManagementMain .um-toolbar__controls {
+    grid-template-columns: 1fr;
+    gap: 9px;
+  }
+
+  #userManagementMain .um-status-filter {
+    display: grid;
+    grid-template-columns: 58px minmax(0, 1fr);
+  }
+
+  #userManagementMain .um-table-wrap {
+    overflow-x: auto;
+  }
+
+  #userManagementMain .um-table {
+    display: table;
+    width: 100%;
+    min-width: 1120px;
+    table-layout: fixed;
+  }
+
+  #userManagementMain .um-table thead {
+    display: table-header-group;
+  }
+
+  #userManagementMain .um-table tbody {
+    display: table-row-group;
+    width: auto;
+    min-width: 0;
+  }
+
+  #userManagementMain .um-table tbody tr[data-id] {
+    position: static;
+    display: table-row;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: #fff;
+  }
+
+  #userManagementMain .um-table tbody tr[data-id] td {
+    display: table-cell;
+    padding: 12px 10px;
+    border-bottom: 1px solid #f0ece5;
+    font-size: 12px;
+    white-space: normal;
+  }
+
+  #userManagementMain .um-table tbody tr[data-id] td:first-child,
+  #userManagementMain .um-table tbody tr[data-id] td:nth-child(2),
+  #userManagementMain .um-table tbody tr[data-id] td:nth-child(3),
+  #userManagementMain .um-table tbody tr[data-id] td:nth-child(4),
+  #userManagementMain .um-table tbody tr[data-id] td:nth-child(5),
+  #userManagementMain .um-table tbody tr[data-id] td:nth-child(8),
+  #userManagementMain .um-table tbody tr[data-id] td:nth-child(9) {
+    grid-column: auto;
+    grid-row: auto;
+    justify-self: auto;
+    align-self: auto;
+  }
+
+  #userManagementMain .um-table tbody tr[data-id] td:nth-child(5)::before {
+    content: none;
+  }
+
+  #userManagementMain .um-table tbody tr[data-id] td:nth-child(6),
+  #userManagementMain .um-table tbody tr[data-id] td:nth-child(7) {
+    display: table-cell;
+  }
+
+  #userManagementMain .um-table-footer {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+@media (max-width: 480px) {
+  #userManagementMain {
+    padding: 18px 12px 24px;
+  }
+
+  #userManagementMain .um-header__title {
+    font-size: 24px;
+  }
+
+  #userManagementMain .um-header__subtitle {
+    max-width: 34ch;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  #userManagementMain .um-header__actions {
+    gap: 8px;
+  }
+
+  #userManagementMain .um-header__actions-row {
+    flex: 1;
+    width: auto;
+    justify-content: flex-end;
+    gap: 7px;
+  }
+
+  #userManagementMain .um-btn {
+    min-height: 42px;
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  #userManagementMain .um-stats {
+    gap: 8px;
+  }
+
+  #userManagementMain .um-stat-card {
+    min-height: 108px;
+    gap: 9px;
+    padding: 12px 10px;
+  }
+
+  #userManagementMain .um-stat-card__icon {
+    width: 34px;
+    height: 34px;
+    flex-basis: 34px;
+    border-radius: 9px;
+  }
+
+  #userManagementMain .um-stat-card__icon svg {
+    width: 19px;
+    height: 19px;
+  }
+
+  #userManagementMain .um-stat-card__label {
+    font-size: 11px;
+  }
+
+  #userManagementMain .um-stat-card__value {
+    font-size: 23px;
+  }
+
+  #userManagementMain .um-stat-card__hint {
+    font-size: 10px;
+  }
+
+  #userManagementMain .um-table-footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

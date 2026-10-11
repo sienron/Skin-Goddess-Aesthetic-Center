@@ -24,7 +24,14 @@ if (tableSearchSlot && searchControl) tableSearchSlot.appendChild(searchControl)
 
 // ---------- helpers ----------
 function badgeClass(role) {
-  return { client: 'client', aesthetician: 'doctor' }[role] || 'staff';
+  return {
+    client: 'client',
+    aesthetician: 'doctor',
+    nail_tech: 'nail-tech',
+    admin: 'admin',
+    finance_officer: 'finance',
+    inventory_officer: 'inventory',
+  }[role] || 'staff';
 }
 
 function formatDate(isoString) {
@@ -58,7 +65,9 @@ async function fetchUsers() {
   const params = new URLSearchParams({
     search: currentSearch,
     role: currentTab === 'SUSPENDED' ? 'ALL' : currentTab,
-    status: currentTab === 'SUSPENDED' ? 'suspended' : currentStatus,
+    status: currentTab === 'SUSPENDED'
+      ? (currentStatus === 'ALL' ? 'suspended' : currentStatus)
+      : currentStatus,
     page: currentPage,
     limit: PAGE_SIZE,
   });
@@ -72,12 +81,12 @@ function rowHTML(u) {
   const email = escapeHtml(u.email || '');
   const sexInitial = escapeHtml(u.sex ? u.sex.charAt(0).toUpperCase() : '');
   const statusCell = u.status === 'suspended'
-    ? `<span class="um-status um-status--suspended">&bull; SUSPENDED</span>`
-    : `<span class="um-status um-status--active">&bull; ACTIVE</span>`;
+    ? `<span class="um-status um-status--suspended">Suspended</span>`
+    : `<span class="um-status um-status--active">Active</span>`;
 
   return `
     <tr data-id="${u.id}" class="${u.status === 'suspended' ? 'um-row--muted' : ''}">
-      <td><input type="checkbox" class="um-row-check"></td>
+      <td><input type="checkbox" class="um-row-check" aria-label="Select ${fullName}"></td>
       <td class="um-user-cell">
         <span class="um-avatar um-avatar--sm ${u.status === 'suspended' ? 'um-avatar--muted' : ''}">${initials}</span>
         <span class="um-user-cell__info">
@@ -93,8 +102,8 @@ function rowHTML(u) {
       <td>${statusCell}</td>
       <td>
         <div class="um-actions">
-          <a href="#" class="um-action um-action--view" data-action="view" data-id="${u.id}">View</a>
-          <a href="#" class="um-action um-action--danger" data-action="delete" data-id="${u.id}">Del</a>
+          <button type="button" class="um-action um-action--view" data-action="view" data-id="${u.id}">View</button>
+          <button type="button" class="um-action um-action--danger" data-action="delete" data-id="${u.id}" aria-label="Delete ${fullName}">Delete</button>
         </div>
       </td>
     </tr>`;
@@ -136,7 +145,7 @@ async function renderStats() {
     document.getElementById('statClients').textContent = stats.clients;
     document.getElementById('statStaff').textContent = stats.staff;
     document.getElementById('statSuspended').textContent = stats.suspended;
-    document.getElementById('statTotalUsersHint').textContent = `${stats.total} total accounts`;
+    document.getElementById('statTotalUsersHint').textContent = 'Across all account types';
     document.getElementById('statSuspendedHint').textContent = `${stats.suspended} suspended account${stats.suspended === 1 ? '' : 's'}`;
   } catch (error) {
     console.error('Stats error:', error);
@@ -153,9 +162,34 @@ if (tabsNav) {
   tabsNav.addEventListener('click', (e) => {
     const btn = e.target.closest('.um-tab');
     if (!btn) return;
-    tabsNav.querySelectorAll('.um-tab').forEach((t) => t.classList.remove('um-tab--active'));
-    btn.classList.add('um-tab--active');
+    tabsNav.querySelectorAll('.um-tab').forEach((tab) => {
+      const active = tab === btn;
+      tab.classList.toggle('um-tab--active', active);
+      tab.setAttribute('aria-pressed', String(active));
+    });
     currentTab = btn.dataset.role; // ALL | client | aesthetician | admin | finance_officer | inventory_officer | SUSPENDED
+    const statusFilter = document.getElementById('umStatusFilter');
+    if (currentTab === 'SUSPENDED' && statusFilter) {
+      currentStatus = 'ALL';
+      statusFilter.value = 'ALL';
+    }
+    currentPage = 1;
+    renderTable();
+  });
+}
+
+const statusFilter = document.getElementById('umStatusFilter');
+if (statusFilter) {
+  statusFilter.addEventListener('change', () => {
+    currentStatus = statusFilter.value;
+    if (currentTab === 'SUSPENDED' && currentStatus !== 'ALL') {
+      currentTab = 'ALL';
+      tabsNav.querySelectorAll('.um-tab').forEach((tab) => {
+        const active = tab.dataset.role === 'ALL';
+        tab.classList.toggle('um-tab--active', active);
+        tab.setAttribute('aria-pressed', String(active));
+      });
+    }
     currentPage = 1;
     renderTable();
   });
@@ -177,7 +211,7 @@ if (searchInput) {
 // ---------- select all ----------
 if (selectAll) {
   selectAll.addEventListener('change', () => {
-    document.querySelectorAll('.um-row-check').forEach((cb) => { cb.checked = selectAll.checked; });
+    tableBody.querySelectorAll('.um-row-check').forEach((cb) => { cb.checked = selectAll.checked; });
   });
 }
 
@@ -601,8 +635,11 @@ if (createForm) {
       });
       closeCreateModal();
       currentTab = 'ALL';
-      tabsNav.querySelectorAll('.um-tab').forEach((t) => t.classList.remove('um-tab--active'));
-      tabsNav.querySelector('[data-role="ALL"]').classList.add('um-tab--active');
+      tabsNav.querySelectorAll('.um-tab').forEach((tab) => {
+        const active = tab.dataset.role === 'ALL';
+        tab.classList.toggle('um-tab--active', active);
+        tab.setAttribute('aria-pressed', String(active));
+      });
       currentPage = 1;
       renderAll();
       alert(`User created. Temporary password (share with them once): ${tempPassword}`);

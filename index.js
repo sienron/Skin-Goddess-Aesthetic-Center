@@ -4,6 +4,7 @@ const express = require('express');
 const session = require('express-session');
 const path = require('path');
 const crypto = require('crypto');
+const { DASHBOARD_PER_ROLE } = require('./utils/roleRoutes');
 const PgSession = require('connect-pg-simple')(session);
 
 const db = require('./db');
@@ -153,6 +154,16 @@ app.use(async (req, res, next) => {
     }
 
     req.session.role = user.role;
+    if (requestedPage === '/' || requestedPage === '/index.html') {
+      const dashboardPath = DASHBOARD_PER_ROLE[user.role];
+      if (!dashboardPath) {
+        return res.status(403).send('Your account role does not have an assigned destination.');
+      }
+      if (requestedPage !== dashboardPath) {
+        return res.redirect(dashboardPath);
+      }
+    }
+
     const localDevAccess = process.env.NODE_ENV !== 'production' && user.dev_access_all === true;
     if (user.role === 'inventory_officer' && !localDevAccess) {
       if (requestedPage === '/' || !INVENTORY_OFFICER_PAGES.has(requestedPage)) {
@@ -207,14 +218,15 @@ protectedPages.forEach(({ path: page, roles }) => {
   );
 });
 
+app.get('/AdminInventoryTransactions.html', requireRole('admin'), (req, res) => {
+  res.sendFile(path.join(publicDir, 'AdminInventoryTransactions.html'));
+});
+
 app.get('/InventoryDashboard.html', requireRole('inventory_officer'), (req, res) => {
   res.redirect('/InventoryManagement.html');
 });
 
 app.get('/', (req, res) => {
-  if (req.session.userId) {
-    return res.sendFile(path.join(publicDir, 'index.html'));
-  }
   res.sendFile(path.join(publicDir, 'LoginPage.html'));
 });
 

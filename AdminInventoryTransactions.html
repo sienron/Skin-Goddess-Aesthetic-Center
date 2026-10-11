@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Stock Transaction Log</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="InventoryManagement.css">
+    <style>
+        .admin-inventory-main > .inventory-page {
+            display: block;
+            min-width: 0;
+        }
+
+        .admin-inventory-main .header-title h1 {
+            font-weight: 400;
+        }
+
+        .admin-inventory-shell > .um-sidebar {
+            position: fixed;
+            inset: 0 auto 0 0;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow-y: hidden;
+            z-index: 106;
+        }
+
+        .admin-inventory-shell > .admin-inventory-main {
+            margin-left: 220px;
+        }
+
+        @media (max-width: 1024px) {
+            .admin-inventory-shell > .admin-inventory-main {
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+<body class="InventoryManagement">
+    <div class="um-shell admin-inventory-shell">
+        <button class="um-sidebar-toggle um-sidebar-toggle--admin" id="umSidebarToggle" type="button" aria-label="Toggle menu" aria-expanded="false">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+        <div class="um-sidebar-overlay" id="umSidebarOverlay"></div>
+
+        <aside class="um-sidebar" id="umSidebar">
+            <a href="AdminDashboard.html" class="um-sidebar__logo">
+                <div class="logo-container">
+                    <img id="logo" src="images/logo_horizontal.jpg" alt="Skin Goddess Aesthetic Center logo">
+                </div>
+            </a>
+            <p class="um-sidebar__label">My Links</p>
+            <nav class="um-sidebar__nav" aria-label="Main navigation">
+                <a href="AdminDashboard.html" class="um-nav-link"><img src="icons/finance-dashboard.svg" alt=""><span>Dashboard</span></a>
+                <section class="admin-nav-group">
+                    <button class="admin-nav-group-toggle" type="button" aria-expanded="false" aria-controls="adminAppointmentsMenu"><img src="icons/staff-appointments.svg" alt=""><span>Appointments</span><svg class="admin-nav-chevron" aria-hidden="true" viewBox="0 0 20 20"><path d="m5 7.5 5 5 5-5"/></svg></button>
+                    <ul class="admin-nav-submenu" id="adminAppointmentsMenu" hidden>
+                        <li><a href="AdminClients.html" class="um-nav-link admin-nav-child"><span>Clients</span></a></li>
+                        <li><a href="AdminAppointment.html" class="um-nav-link admin-nav-child"><span>Appointments</span></a></li>
+                        <li><a href="AdminTreatmentHistory.html" class="um-nav-link admin-nav-child"><span>Treatment History</span></a></li>
+                    </ul>
+                </section>
+                <section class="admin-nav-group is-active">
+                    <button class="admin-nav-group-toggle is-active" type="button" aria-expanded="true" aria-controls="adminInventoryMenu"><img src="icons/staff-inventory.svg" alt=""><span>Inventory</span><svg class="admin-nav-chevron" aria-hidden="true" viewBox="0 0 20 20"><path d="m5 7.5 5 5 5-5"/></svg></button>
+                    <ul class="admin-nav-submenu" id="adminInventoryMenu">
+                        <li><a href="AdminInventoryManagement.html" class="um-nav-link admin-nav-child"><span>Inventory</span></a></li>
+                        <li><a href="AdminInventoryTransactions.html" class="um-nav-link admin-nav-child um-nav-link--active" aria-current="page"><span>Stock Transaction Log</span></a></li>
+                    </ul>
+                </section>
+                <section class="admin-nav-group">
+                    <button class="admin-nav-group-toggle" type="button" aria-expanded="false" aria-controls="adminFinanceMenu"><img src="icons/finance-transactions.svg" alt=""><span>Finance</span><svg class="admin-nav-chevron" aria-hidden="true" viewBox="0 0 20 20"><path d="m5 7.5 5 5 5-5"/></svg></button>
+                    <ul class="admin-nav-submenu" id="adminFinanceMenu" hidden>
+                        <li><a href="FinancesTransactions.html" class="um-nav-link admin-nav-child"><span>Sales &amp; Transactions</span></a></li>
+                        <li><a href="FinanceExpenses.html" class="um-nav-link admin-nav-child"><span>Expenses</span></a></li>
+                        <li><a href="FinanceReports.html" class="um-nav-link admin-nav-child"><span>Reports</span></a></li>
+                    </ul>
+                </section>
+                <a href="AdminInquiries.html" class="um-nav-link"><img src="icons/staff-inquiries.svg" alt=""><span>Inquiries</span></a>
+                <a href="Usermanagement.html" class="um-nav-link"><img src="icons/staff-users.svg" alt=""><span>User Management</span></a>
+                <a href="AdminContentManagement.html" class="um-nav-link"><img src="icons/staff-content.svg" alt=""><span>Content Management</span></a>
+            </nav>
+            <div class="um-sidebar__account">
+                <button class="um-sidebar__profile" id="adminProfileBtn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="adminProfileMenu">
+                    <span class="um-avatar">A</span>
+                    <span class="um-sidebar__account-details">
+                        <span class="um-sidebar__account-name">Admin User</span>
+                        <span class="um-sidebar__account-role">Admin</span>
+                    </span>
+                </button>
+                <div class="um-sidebar__account-menu" id="adminProfileMenu" role="menu">
+                    <button class="um-sidebar__logout" id="adminLogoutBtn" type="button" role="menuitem">Log out</button>
+                </div>
+            </div>
+        </aside>
+
+        <div class="um-main admin-inventory-main" id="adminInventoryMain">
+            <header class="inventory-header">
+                <div class="header-left">
+                    <div class="header-title">
+                        <h1>Stock Transaction Log</h1>
+                        <p>All stock movements recorded here</p>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <div class="admin-notification-wrap">
+                        <button class="admin-notification-btn" id="adminNotificationBtn" type="button" aria-label="View notifications" aria-haspopup="true" aria-expanded="false" aria-controls="adminNotificationDropdown">
+                            <img src="icons/notification-bell.svg" alt="">
+                        </button>
+                        <div class="admin-notification-dropdown" id="adminNotificationDropdown">
+                            <strong>Notifications</strong>
+                            <div class="admin-notification-list">No notifications yet</div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <main class="inventory-page">
+                <section class="transaction-section">
+                    <div class="transaction-header">
+                        <div>
+                            <h2>Stock Transaction Log</h2>
+                            <p>All stock movements recorded here</p>
+                        </div>
+                        <div class="transaction-filters">
+                            <select id="transactionPeriodFilter" aria-label="Filter transactions by date">
+                                <option value="all">All Time</option>
+                                <option value="today">Today</option>
+                                <option value="week">This Week</option>
+                                <option value="month">This Month</option>
+                            </select>
+                            <select id="transactionTypeFilter" aria-label="Filter transactions by type">
+                                <option value="all">All Types</option>
+                                <option value="Restock">Restock</option>
+                                <option value="Sale">Retail Sale</option>
+                                <option value="Sale Reversed">Sale Reversal</option>
+                                <option value="deduct-stock">Deduct Stock</option>
+                                <option value="Used in Service">Used in Service</option>
+                                <option value="Expired">Expired</option>
+                                <option value="Deleted">Deleted</option>
+                            </select>
+                            <button class="btn btn-export" id="exportTransactions" type="button">Export</button>
+                        </div>
+                    </div>
+
+                    <div class="transaction-table-wrapper">
+                        <table class="transaction-table">
+                            <thead>
+                                <tr>
+                                    <th>DATE &amp; TIME</th>
+                                    <th>PRODUCT</th>
+                                    <th>ACTION</th>
+                                    <th>QTY CHANGE</th>
+                                    <th>STOCK AFTER</th>
+                                    <th>PERFORMED BY</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transactionBody">
+                                <tr><td colspan="6">Loading transaction history...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="table-footer" id="transactionFooter">Loading transaction history...</div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js" integrity="sha384-Pqp51FUN2/qzfxZxBCtF0stpc9ONI6MYZpVqmo8m20SoaQCzf+arZvACkLkirlPz" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="InventoryTransactions.js"></script>
+    <script src="admin-dashboard.js"></script>
+    <script src="admin-notifications.js"></script>
+</body>
+</html>

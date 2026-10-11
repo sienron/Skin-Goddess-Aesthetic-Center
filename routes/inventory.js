@@ -440,8 +440,10 @@ router.get('/transactions', async (req, res) => {
                 stock_transaction.previous_stock,
                 stock_transaction.new_stock,
                 stock_transaction.created_at,
-                stock_transaction.appointment_id,
-                COALESCE(stock_transaction.product_name, product.product_name) AS product_name,
+                COALESCE(
+                    to_jsonb(stock_transaction)->>'product_name',
+                    product.product_name
+                ) AS product_name,
                 COALESCE(
                     NULLIF(CONCAT_WS(' ', actor.first_name, actor.last_name), ''),
                     actor.email,

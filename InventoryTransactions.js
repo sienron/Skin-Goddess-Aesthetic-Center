@@ -429,20 +429,29 @@
 
         try {
             const response = await fetch("/api/inventory/transactions", { cache: "no-store" });
-            if (!response.ok) throw new Error("Failed to fetch transaction history.");
             const data = await response.json();
-            transactions = Array.isArray(data) ? data : [];
+            if (!response.ok) {
+                const message = data && typeof data.message === "string" ? data.message : "";
+                throw new Error(message || `Failed to fetch transaction history (${response.status}).`);
+            }
+            if (!Array.isArray(data)) {
+                throw new Error("The transaction history response was invalid.");
+            }
+            transactions = data;
             renderTransactions();
         } catch (error) {
             console.error("Error loading transaction history:", error);
+            const errorMessage = error instanceof Error
+                ? error.message
+                : "The transaction service could not be reached.";
             transactionBody.replaceChildren();
             const row = document.createElement("tr");
             const message = document.createElement("td");
             message.colSpan = 6;
-            message.textContent = "Unable to load transaction history.";
+            message.textContent = `Unable to load transaction history: ${errorMessage}`;
             row.appendChild(message);
             transactionBody.appendChild(row);
-            transactionFooter.textContent = "Transaction history could not be loaded";
+            transactionFooter.textContent = `Transaction history could not be loaded. ${errorMessage}`;
         } finally {
             isLoadingTransactions = false;
         }
