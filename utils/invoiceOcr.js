@@ -11,10 +11,15 @@ let recognitionQueue = Promise.resolve();
 
 function getWorker() {
     if (!workerPromise) {
-        workerPromise = createWorker('eng', 1, { cachePath }).catch(error => {
-            workerPromise = null;
-            throw error;
-        });
+        workerPromise = createWorker('eng', 1, { cachePath })
+            .then(async worker => {
+                await worker.setParameters({ tessedit_pageseg_mode: '3' });
+                return worker;
+            })
+            .catch(error => {
+                workerPromise = null;
+                throw error;
+            });
     }
     return workerPromise;
 }
