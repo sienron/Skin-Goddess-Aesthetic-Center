@@ -166,7 +166,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const assignedTd = el('td', '', a.assignedTo);
 
     const statusTd = el('td');
-    const statusClass = a.status === 'no-show' ? 'cancelled' : a.status;
+    const statusClass = a.status;
     statusTd.appendChild(el('span', 'apt-status apt-status--' + statusClass, STATUS_LABELS[a.status] || a.status.toUpperCase()));
 
     const actionTd = el('td');
@@ -177,6 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
     viewBtn.dataset.ref = a.ref;
     const isClosed = a.status === 'completed' || a.status === 'cancelled' || a.status === 'no-show';
     const secondBtn = el('button', 'apt-action', isClosed ? 'Rebook' : 'Edit');
+    secondBtn.classList.add(isClosed ? 'apt-action--rebook' : 'apt-action--edit');
     secondBtn.type = 'button';
     secondBtn.dataset.action = isClosed ? 'rebook' : 'edit';
     secondBtn.dataset.ref = a.ref;
@@ -299,7 +300,11 @@ document.addEventListener('DOMContentLoaded', () => {
       timeline.textContent = '';
       const todaysAppointments = APPOINTMENTS.filter((appointment) => appointment.isToday);
       if (!todaysAppointments.length) {
-        timeline.appendChild(el('li', 'apt-timeline__item', 'No appointments today.'));
+        timeline.appendChild(el(
+          'li',
+          'apt-timeline__item apt-timeline__item--empty',
+          isLoading ? 'Loading appointments…' : 'No appointments today.'
+        ));
       } else {
         todaysAppointments.slice(0, 6).forEach((appointment) => {
           const timelineClass = appointment.status === 'completed' ? 'done'
@@ -325,18 +330,28 @@ document.addEventListener('DOMContentLoaded', () => {
       ];
       breakdown.textContent = '';
       if (!APPOINTMENTS.length) {
-        breakdown.appendChild(el('p', 'apt-sub', isLoading ? 'Loading appointment statuses…' : 'No appointments recorded.'));
+        breakdown.appendChild(el(
+          'p',
+          'apt-sub apt-insight-empty',
+          isLoading ? 'Loading appointment statuses…' : 'No appointments recorded.'
+        ));
       } else {
         statusRows.forEach(([status, label, color]) => {
           const count = APPOINTMENTS.filter((appointment) => appointment.status === status).length;
           if (!count) return;
+          const percent = Math.round((count / APPOINTMENTS.length) * 100);
           const row = el('div', 'apt-breakdown__row');
           const values = el('div');
           values.appendChild(el('span', '', label));
           values.appendChild(el('span', '', String(count)));
           const bar = el('div', 'apt-bar');
+          bar.setAttribute('role', 'progressbar');
+          bar.setAttribute('aria-label', label + ': ' + count + ' of ' + APPOINTMENTS.length + ' appointments');
+          bar.setAttribute('aria-valuemin', '0');
+          bar.setAttribute('aria-valuemax', '100');
+          bar.setAttribute('aria-valuenow', String(percent));
           const fill = el('i');
-          fill.style.width = Math.round((count / APPOINTMENTS.length) * 100) + '%';
+          fill.style.width = percent + '%';
           fill.style.background = color;
           bar.appendChild(fill);
           row.appendChild(values);
@@ -353,7 +368,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const leaders = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3);
       topServices.textContent = '';
       if (!leaders.length) {
-        topServices.appendChild(el('li', '', isLoading ? 'Loading services…' : 'No bookings this month.'));
+        topServices.appendChild(el(
+          'li',
+          'apt-insight-empty',
+          isLoading ? 'Loading services…' : 'No bookings this month.'
+        ));
       } else {
         leaders.forEach(([service, count], index) => {
           const row = el('li');

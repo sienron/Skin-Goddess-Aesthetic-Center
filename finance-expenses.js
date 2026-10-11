@@ -1,8 +1,7 @@
 (function () {
   const common = window.FinanceCommon;
   if (!common) return;
-  const categories = ['Inventory & Supplies', 'Salaries & Commissions', 'Rent', 'Utilities', 'Marketing', 'Equipment Maintenance', 'Other'];
-  const state = { from: common.monthStart(), to: common.manilaToday(), category: '', search: '', page: 1, limit: 25, total: 0, rows: [], purchaseSuggestions: [] };
+  const state = { from: common.monthStart(), to: common.manilaToday(), category: '', search: '', page: 1, limit: 25, total: 0, rows: [] };
   let expenseRequest = 0;
   const elements = Object.fromEntries([
     'expenseFrom', 'expenseTo', 'expenseCategory', 'expenseSearch', 'expenseTotal', 'expenseComparison', 'machineExpenseTotal', 'utilitiesExpenseTotal', 'expensePeriodLabel',
@@ -10,10 +9,7 @@
     'expensePageMessage', 'expenseModal', 'expenseForm', 'expenseId', 'expenseDate', 'expenseCategoryInput',
     'expenseDescription', 'expenseAmount', 'expenseSupplier', 'expenseReference', 'expenseFormMessage',
     'voidModal', 'voidForm', 'voidExpenseId', 'voidExpenseSummary', 'voidReason', 'voidFormMessage', 'addExpenseBtn',
-    'exportExpensesXlsx', 'purchaseSuggestionRows', 'purchaseSuggestionEmpty', 'purchaseSuggestionMessage',
-    'purchaseSuggestionModal', 'purchaseSuggestionForm', 'purchaseSuggestionId', 'purchaseSuggestionDate',
-    'purchaseSuggestionDescription', 'purchaseSuggestionAmount', 'purchaseSuggestionSupplier',
-    'purchaseSuggestionReference', 'purchaseSuggestionFormMessage',
+    'exportExpensesXlsx',
     'expenseHistoryModal', 'expenseHistoryMessage', 'expenseHistoryRows', 'expenseHistoryEmpty',
   ].map((id) => [id, document.getElementById(id)]));
 
@@ -89,11 +85,17 @@
       categoryTotals.find((item) => item.category === 'Utilities')?.amount || 0
     );
     elements.expensePeriodLabel.textContent = `${state.from} to ${state.to}`;
+    const hasCategoryChartData = categoryTotals.some((item) => Number.isFinite(item.amount) && item.amount !== 0);
+    document.getElementById('expenseCategoryChart').closest('.fin-chart-frame')
+      .classList.toggle('is-empty', !hasCategoryChartData);
     common.renderChart('expenseCategoryChart', {
       type: 'bar',
       data: { labels: categoryTotals.map((item) => item.category), datasets: [{ label: 'Expenses', data: categoryTotals.map((item) => item.amount), backgroundColor: '#B93C3C', borderRadius: 3 }] },
       options: { indexAxis: 'y', plugins: { legend: { display: false }, tooltip: { callbacks: { label: (item) => common.formatPeso(item.raw) } } } },
     });
+    const hasMachineChartData = machineTrend.some((item) => Number.isFinite(Number(item.amount)) && Number(item.amount) !== 0);
+    document.getElementById('machineExpenseChart').closest('.fin-chart-frame')
+      .classList.toggle('is-empty', !hasMachineChartData);
     common.renderChart('machineExpenseChart', {
       type: 'line',
       data: {
@@ -119,36 +121,6 @@
         },
       },
     });
-    loadPurchaseSuggestions().catch((error) => {
-      elements.purchaseSuggestionRows.replaceChildren();
-      elements.purchaseSuggestionEmpty.hidden = true;
-      elements.purchaseSuggestionMessage.textContent = error.message;
-      elements.purchaseSuggestionMessage.style.color = '#b93c3c';
-    });
-  }
-
-  async function loadPurchaseSuggestions() {
-    state.purchaseSuggestions = await common.fetchJson('/api/finance/inventory-purchase-suggestions');
-    elements.purchaseSuggestionRows.replaceChildren();
-    elements.purchaseSuggestionMessage.textContent = '';
-    for (const purchase of state.purchaseSuggestions) {
-      const row = node('tr');
-      [
-        purchase.purchase_date,
-        purchase.product_name,
-        purchase.quantity,
-        common.formatPeso(purchase.unit_price),
-        common.formatPeso(purchase.suggested_amount),
-      ].forEach((value) => row.append(node('td', '', value)));
-      const actionCell = node('td');
-      const reviewButton = node('button', 'fin-button fin-button-primary', 'Review & record');
-      reviewButton.type = 'button';
-      reviewButton.dataset.purchaseId = purchase.purchase_id;
-      actionCell.append(reviewButton);
-      row.append(actionCell);
-      elements.purchaseSuggestionRows.append(row);
-    }
-    elements.purchaseSuggestionEmpty.hidden = state.purchaseSuggestions.length > 0;
   }
 
   function serializeForm() {
@@ -231,19 +203,6 @@
     }
   }
 
-  function reviewPurchaseSuggestion(id) {
-    const purchase = state.purchaseSuggestions.find((item) => Number(item.purchase_id) === Number(id));
-    if (!purchase) return;
-    elements.purchaseSuggestionId.value = purchase.purchase_id;
-    elements.purchaseSuggestionDate.value = purchase.purchase_date;
-    elements.purchaseSuggestionDescription.value = `Inventory purchase: ${purchase.product_name} × ${purchase.quantity}`;
-    elements.purchaseSuggestionAmount.value = Number(purchase.suggested_amount).toFixed(2);
-    elements.purchaseSuggestionSupplier.value = '';
-    elements.purchaseSuggestionReference.value = purchase.reference_no;
-    elements.purchaseSuggestionFormMessage.textContent = '';
-    openModal(elements.purchaseSuggestionModal);
-  }
-
   function exportExpenses() {
     const params = common.rangeParams(state.from, state.to, {
       section: 'expenses',
@@ -281,10 +240,6 @@
     document.getElementById('expenseModalTitle').textContent = 'Add expense'; elements.expenseFormMessage.textContent = ''; openModal(elements.expenseModal);
   });
   elements.exportExpensesXlsx.addEventListener('click', exportExpenses);
-  elements.purchaseSuggestionRows.addEventListener('click', (event) => {
-    const button = event.target.closest('button[data-purchase-id]');
-    if (button) reviewPurchaseSuggestion(button.dataset.purchaseId);
-  });
   elements.expenseRows.addEventListener('click', (event) => {
     const button = event.target.closest('button[data-action]');
     if (!button) return;
@@ -302,9 +257,8 @@
   });
   document.querySelectorAll('[data-close-expense]').forEach((button) => button.addEventListener('click', () => closeModal(elements.expenseModal)));
   document.querySelectorAll('[data-close-void]').forEach((button) => button.addEventListener('click', () => closeModal(elements.voidModal)));
-  document.querySelectorAll('[data-close-purchase-suggestion]').forEach((button) => button.addEventListener('click', () => closeModal(elements.purchaseSuggestionModal)));
   document.querySelectorAll('[data-close-expense-history]').forEach((button) => button.addEventListener('click', () => closeModal(elements.expenseHistoryModal)));
-  [elements.expenseModal, elements.voidModal, elements.purchaseSuggestionModal, elements.expenseHistoryModal].forEach((modal) => {
+  [elements.expenseModal, elements.voidModal, elements.expenseHistoryModal].forEach((modal) => {
     common.bindAccessibleModal(modal);
     modal.addEventListener('click', (event) => { if (event.target === modal) closeModal(modal); });
   });
@@ -335,34 +289,5 @@
     finally { submitButton.disabled = false; }
   });
 
-  elements.purchaseSuggestionForm.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    if (!elements.purchaseSuggestionForm.reportValidity()) return;
-    const submitButton = elements.purchaseSuggestionForm.querySelector('button[type="submit"]');
-    submitButton.disabled = true;
-    elements.purchaseSuggestionFormMessage.textContent = '';
-    try {
-      const result = await common.fetchJson(`/api/finance/inventory-purchase-suggestions/${encodeURIComponent(elements.purchaseSuggestionId.value)}/expense`, {
-        method: 'POST',
-        body: JSON.stringify({
-          expense_date: elements.purchaseSuggestionDate.value,
-          description: elements.purchaseSuggestionDescription.value.trim(),
-          amount: Number(elements.purchaseSuggestionAmount.value),
-          supplier: elements.purchaseSuggestionSupplier.value.trim(),
-          reference_no: elements.purchaseSuggestionReference.value.trim(),
-        }),
-      });
-      closeModal(elements.purchaseSuggestionModal);
-      const refresh = loadExpenses();
-      showMessage(result.replayed ? 'This purchase was already recorded as an expense.' : 'Inventory & Supplies expense recorded.');
-      refresh.catch((error) => showMessage(`Expense recorded, but the page could not be refreshed: ${error.message}`, true));
-    } catch (error) {
-      elements.purchaseSuggestionFormMessage.textContent = error.message;
-    } finally {
-      submitButton.disabled = false;
-    }
-  });
-
-  if (!categories.length) return;
   loadExpenses().catch((error) => showMessage(error.message, true));
 })();

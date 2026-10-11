@@ -147,7 +147,10 @@
 
         try {
             let response;
-            if (appointment.clientId) {
+            if (document.body.dataset.treatmentNotesAdmin === "true") {
+                if (!appointment.id) throw new Error("This appointment has no valid ID.");
+                response = await fetch(`/api/appointments/admin/${encodeURIComponent(appointment.id)}/notes`);
+            } else if (appointment.clientId) {
                 response = await fetch(`/api/appointments/client/${encodeURIComponent(appointment.clientId)}/notes`);
             }
 
@@ -240,7 +243,7 @@
 
     async function loadAppointments() {
         try {
-            const response = await fetch("/api/appointments/mine");
+            const response = await fetch(document.body.dataset.appointmentsEndpoint || "/api/appointments/mine");
             if (!response.ok) throw new Error("Could not load appointments.");
             const data = await response.json();
             appointments = Array.isArray(data) ? data.map((appointment) => ({

@@ -34,9 +34,9 @@
         <section class="admin-nav-group is-active">
           <button class="admin-nav-group-toggle is-active" type="button" aria-expanded="true" aria-controls="adminAppointmentsMenu"><img src="icons/staff-appointments.svg" alt=""><span>Appointments</span><svg class="admin-nav-chevron" aria-hidden="true" viewBox="0 0 20 20"><path d="m5 7.5 5 5 5-5"/></svg></button>
           <ul class="admin-nav-submenu" id="adminAppointmentsMenu">
-            <li><a href="StaffUserManagement.html" class="um-nav-link admin-nav-child"><span>My Clients</span></a></li>
+            <li><a href="AdminClients.html" class="um-nav-link admin-nav-child"><span>Clients</span></a></li>
             <li><a href="AdminAppointment.html" class="um-nav-link admin-nav-child um-nav-link--active" aria-current="page"><span>Appointments</span></a></li>
-            <li><a href="StaffTreatmentHistory.html" class="um-nav-link admin-nav-child"><span>Treatment History</span></a></li>
+            <li><a href="AdminTreatmentHistory.html" class="um-nav-link admin-nav-child"><span>Treatment History</span></a></li>
           </ul>
         </section>
         <section class="admin-nav-group">
@@ -107,18 +107,21 @@
       <!-- Live appointment summary -->
       <section class="um-stats apt-stats" aria-label="Appointment summary">
         <article class="um-stat-card">
+          <span class="apt-stat-icon apt-stat-icon--today" aria-hidden="true"><img src="icons/calendar.svg" alt=""></span>
           <p class="um-stat-card__label">TODAY'S APPOINTMENTS</p>
           <button class="apt-stat-link" type="button" data-apt-filter="today">View</button>
           <p class="um-stat-card__value" id="aptTodayCount">0</p>
           <p class="um-stat-card__hint um-stat-card__hint--positive">Scheduled for today</p>
         </article>
         <article class="um-stat-card">
+          <span class="apt-stat-icon apt-stat-icon--confirmed" aria-hidden="true"><img src="icons/staff-appointments.svg" alt=""></span>
           <p class="um-stat-card__label">CONFIRMED</p>
           <button class="apt-stat-link" type="button" data-apt-filter="confirmed">View</button>
           <p class="um-stat-card__value" id="aptConfirmedCount">0</p>
           <p class="um-stat-card__hint um-stat-card__hint--positive">Current appointments</p>
         </article>
         <article class="um-stat-card">
+          <span class="apt-stat-icon apt-stat-icon--cancelled" aria-hidden="true"><img src="icons/calendar.svg" alt=""></span>
           <p class="um-stat-card__label">CANCELLED APPOINTMENTS</p>
           <button class="apt-stat-link" type="button" id="aptCancelledViewBtn" aria-haspopup="dialog">View</button>
           <p class="um-stat-card__value" id="aptCancelledCount">0</p>
@@ -144,7 +147,7 @@
               <button class="apt-chip" id="aptTodayChip" type="button" hidden>Today &times;</button>
               <button class="apt-date-range" id="aptDateRange" type="button">
                 <span id="aptDateRangeLabel"></span>
-                <span aria-hidden="true">▾</span>
+                <span aria-hidden="true"><svg viewBox="0 0 20 20"><path d="m5 7.5 5 5 5-5"/></svg></span>
               </button>
             </div>
           </div>
@@ -188,7 +191,7 @@
           <section class="apt-side-card">
             <div class="apt-side-head">
               <h2 class="apt-side-title">STATUS BREAKDOWN</h2>
-              <span class="apt-side-meta">This month</span>
+              <span class="apt-side-meta">All time</span>
             </div>
             <div class="apt-breakdown" id="aptBreakdown">
               <p class="apt-sub">Loading appointment statuses…</p>

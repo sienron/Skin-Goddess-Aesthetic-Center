@@ -83,7 +83,6 @@
                         data-period="today">Today</button><button type="button" data-period="month"
                         class="is-active">This month</button><button type="button" data-period="last-month">Last
                         month</button></div>
-                <span class="fin-range-or" aria-hidden="true">or</span>
                 <label>From<input id="reportFrom" type="date"></label>
                 <label>To<input id="reportTo" type="date"></label>
                 <button class="fin-button fin-report-toolbar-export" type="button"
@@ -91,8 +90,10 @@
             </div>
             <p class="fin-page-message" id="reportMessage" role="status"></p>
             <section class="fin-report-section" id="incomeStatementSection">
-                <div class="fin-report-band"><span class="fin-report-band-letter">A</span>
-                    <h2>Financial summary</h2><span id="reportPeriodLabel" class="fin-report-band-period"></span>
+                <div class="fin-report-section-heading">
+                    <span class="fin-report-band-letter">A</span>
+                    <h2>Financial summary</h2>
+                    <span id="reportPeriodLabel" class="fin-report-band-period"></span>
                 </div>
                 <div class="fin-report-stats">
                     <article class="fin-report-stat fin-report-stat--sales"><span>Sales earned</span><strong
@@ -107,9 +108,10 @@
                 </div>
             </section>
             <section class="fin-report-section" id="trendsSection">
-                <div class="fin-report-band"><span class="fin-report-band-letter">B</span>
-                    <h2>Sales earned vs expenses · online reservations</h2><span class="fin-report-band-period">Monthly
-                        and daily trends</span>
+                <div class="fin-report-section-heading">
+                    <span class="fin-report-band-letter">B</span>
+                    <div><h2>Sales and expenses</h2><p>Sales earned and online reservation trends</p></div>
+                    <span class="fin-report-band-period">Selected period</span>
                 </div>
                 <div class="fin-report-grid">
                     <article class="fin-report-panel fin-chart-section" id="salesExpensesSection">
@@ -131,9 +133,10 @@
                 </div>
             </section>
             <section class="fin-report-section" id="paymentsSection">
-                <div class="fin-report-band"><span class="fin-report-band-letter">C</span>
-                    <h2>Payments · deposits &amp; refunds</h2><span class="fin-report-band-period">Selected
-                        period</span>
+                <div class="fin-report-section-heading">
+                    <span class="fin-report-band-letter">C</span>
+                    <div><h2>Payments, deposits and refunds</h2><p>Collections and reservation deposit activity</p></div>
+                    <span class="fin-report-band-period">Selected period</span>
                 </div>
                 <div class="fin-report-grid">
                     <article class="fin-report-panel fin-chart-section" id="paymentMethodsSection">
@@ -175,8 +178,10 @@
                 </div>
             </section>
             <section class="fin-report-section" id="servicesExpensesSection">
-                <div class="fin-report-band"><span class="fin-report-band-letter">D</span>
-                    <h2>Top services · expenses</h2><span class="fin-report-band-period">Selected period</span>
+                <div class="fin-report-section-heading">
+                    <span class="fin-report-band-letter">D</span>
+                    <div><h2>Top services and expenses</h2><p>Revenue and expense composition</p></div>
+                    <span class="fin-report-band-period">Selected period</span>
                 </div>
                 <div class="fin-report-grid">
                     <article class="fin-report-panel fin-chart-section" id="topServicesSection">
@@ -234,6 +239,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
     <script src="finance-common.js"></script>
     <script src="finance-reports.js"></script>
+    <script src="admin-context-nav.js"></script>
 </body>
 
 </html>

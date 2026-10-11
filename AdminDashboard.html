@@ -34,9 +34,9 @@
         <section class="admin-nav-group">
           <button class="admin-nav-group-toggle" type="button" aria-expanded="false" aria-controls="adminAppointmentsMenu"><img src="icons/staff-appointments.svg" alt=""><span>Appointments</span><svg class="admin-nav-chevron" aria-hidden="true" viewBox="0 0 20 20"><path d="m5 7.5 5 5 5-5"/></svg></button>
           <ul class="admin-nav-submenu" id="adminAppointmentsMenu" hidden>
-            <li><a href="StaffUserManagement.html" class="um-nav-link admin-nav-child"><span>My Clients</span></a></li>
+            <li><a href="AdminClients.html" class="um-nav-link admin-nav-child"><span>Clients</span></a></li>
             <li><a href="AdminAppointment.html" class="um-nav-link admin-nav-child"><span>Appointments</span></a></li>
-            <li><a href="StaffTreatmentHistory.html" class="um-nav-link admin-nav-child"><span>Treatment History</span></a></li>
+            <li><a href="AdminTreatmentHistory.html" class="um-nav-link admin-nav-child"><span>Treatment History</span></a></li>
           </ul>
         </section>
         <section class="admin-nav-group">
@@ -95,57 +95,73 @@
         </div>
       </header>
 
-      <nav class="admin-dashboard-quick-actions" aria-label="Quick actions">
-        <a href="AdminAppointment.html?new=1">+ New appointment</a>
-        <a href="AdminInventoryManagement.html?new=1">+ Add product</a>
-        <a href="Usermanagement.html?new=1">+ Create user</a>
-      </nav>
-
-      <section class="admin-dashboard-section" aria-labelledby="todayOverviewTitle">
-        <div class="admin-dashboard-section__heading">
-          <div>
-            <p class="admin-dashboard-panel__eyebrow">YOUR CLINIC AT A GLANCE</p>
-            <h2 id="todayOverviewTitle">Today at a glance</h2>
-          </div>
-        </div>
-        <div class="admin-dashboard-stats" aria-live="polite">
-          <a class="admin-dashboard-stat" href="AdminAppointment.html">
-            <span class="admin-dashboard-stat__label">Appointments today</span>
-            <strong id="dashboardTodayAppointments">—</strong>
-            <span class="admin-dashboard-stat__hint">View schedule</span>
-          </a>
-          <a class="admin-dashboard-stat" href="AdminAppointment.html">
-            <span class="admin-dashboard-stat__label">Confirmed today</span>
-            <strong id="dashboardConfirmedAppointments">—</strong>
-            <span class="admin-dashboard-stat__hint">Ready for today</span>
-          </a>
-          <a class="admin-dashboard-stat" href="AdminAppointment.html">
-            <span class="admin-dashboard-stat__label">Requests to review</span>
-            <strong id="dashboardPendingRequests">—</strong>
-            <span class="admin-dashboard-stat__hint">Cancellation or reschedule</span>
-          </a>
-          <a class="admin-dashboard-stat" href="Usermanagement.html">
-            <span class="admin-dashboard-stat__label">Total users</span>
-            <strong id="dashboardTotalUsers">—</strong>
-            <span class="admin-dashboard-stat__hint">Manage accounts</span>
-          </a>
-        </div>
-      </section>
-
-      <div class="admin-dashboard-content-grid">
-        <section class="admin-dashboard-section" aria-labelledby="needsAttentionTitle">
+      <div class="admin-dashboard-overview-grid">
+        <section class="admin-dashboard-section" aria-labelledby="todayOverviewTitle">
           <div class="admin-dashboard-section__heading">
             <div>
-              <p class="admin-dashboard-panel__eyebrow">FOLLOW UP</p>
-              <h2 id="needsAttentionTitle">Needs attention</h2>
+              <p class="admin-dashboard-panel__eyebrow">YOUR CLINIC AT A GLANCE</p>
+              <h2 id="todayOverviewTitle">Today at a glance</h2>
             </div>
           </div>
-          <div class="admin-dashboard-attention" id="dashboardAttention" aria-live="polite">
-            <p class="admin-dashboard-state">Loading items that may need your attention…</p>
+          <div class="admin-dashboard-stats">
+            <a class="admin-dashboard-stat admin-dashboard-stat--appointments" href="AdminAppointment.html">
+              <span class="admin-dashboard-stat__top">
+                <span class="admin-dashboard-stat__label">Appointments today</span>
+                <span class="admin-dashboard-stat__icon" aria-hidden="true"><img src="icons/staff-appointments.svg" alt=""></span>
+              </span>
+              <strong id="dashboardTodayAppointments" aria-live="polite">—</strong>
+              <span class="admin-dashboard-stat__hint">View schedule <img src="icons/arrow-right.svg" alt=""></span>
+            </a>
+            <a class="admin-dashboard-stat admin-dashboard-stat--requests" href="AdminAppointment.html">
+              <span class="admin-dashboard-stat__top">
+                <span class="admin-dashboard-stat__label">Requests to review</span>
+                <span class="admin-dashboard-stat__icon" aria-hidden="true"><img src="icons/staff-inquiries.svg" alt=""></span>
+              </span>
+              <strong id="dashboardPendingRequests" aria-live="polite">—</strong>
+              <span class="admin-dashboard-stat__hint">Cancellation or reschedule <img src="icons/arrow-right.svg" alt=""></span>
+            </a>
+            <a class="admin-dashboard-stat admin-dashboard-stat--users" href="Usermanagement.html">
+              <span class="admin-dashboard-stat__top">
+                <span class="admin-dashboard-stat__label">Total users</span>
+                <span class="admin-dashboard-stat__icon" aria-hidden="true"><img src="icons/staff-users.svg" alt=""></span>
+              </span>
+              <strong id="dashboardTotalUsers" aria-live="polite">—</strong>
+              <span class="admin-dashboard-stat__hint">Manage accounts <img src="icons/arrow-right.svg" alt=""></span>
+            </a>
           </div>
         </section>
 
-        <section class="admin-dashboard-section" aria-labelledby="todayScheduleTitle">
+        <section class="admin-dashboard-section admin-dashboard-section--critical-stock" aria-labelledby="criticalStockTitle">
+          <div class="admin-dashboard-section__heading">
+            <div class="admin-dashboard-critical-stock__heading">
+              <p class="admin-dashboard-panel__eyebrow">RESTOCK ALERTS</p>
+              <h2 id="criticalStockTitle">Critical stock alerts</h2>
+            </div>
+            <span class="admin-dashboard-critical-stock__icon" id="dashboardCriticalStockSignal" role="img" aria-label="Products need restocking" hidden>!</span>
+          </div>
+          <p class="admin-dashboard-critical-stock__summary"><strong id="dashboardCriticalStockCount">—</strong><span id="dashboardCriticalStockSummaryText"> products need restocking</span></p>
+          <div class="admin-dashboard-critical-stock__list" id="dashboardCriticalStock" aria-live="polite">
+            <p class="admin-dashboard-state">Loading products that need restocking…</p>
+          </div>
+          <a class="admin-dashboard-section__link" href="AdminInventoryManagement.html">View inventory</a>
+        </section>
+      </div>
+
+      <div class="admin-dashboard-content-grid">
+        <section class="admin-dashboard-section admin-dashboard-section--recent" aria-labelledby="recentActivityTitle">
+          <div class="admin-dashboard-section__heading">
+            <div>
+              <p class="admin-dashboard-panel__eyebrow">LATEST UPDATES</p>
+              <h2 id="recentActivityTitle">Recent activity</h2>
+            </div>
+            <a class="admin-dashboard-section__link" href="AdminInquiries.html">View inquiries</a>
+          </div>
+          <div class="admin-dashboard-list admin-dashboard-activity" id="dashboardActivity" aria-live="polite">
+            <p class="admin-dashboard-state">Loading recent activity…</p>
+          </div>
+        </section>
+
+        <section class="admin-dashboard-section admin-dashboard-section--schedule" aria-labelledby="todayScheduleTitle">
           <div class="admin-dashboard-section__heading">
             <div>
               <p class="admin-dashboard-panel__eyebrow">TODAY</p>
@@ -157,20 +173,22 @@
             <p class="admin-dashboard-state">Loading today’s appointments…</p>
           </div>
         </section>
-      </div>
 
-      <section class="admin-dashboard-section admin-dashboard-section--recent" aria-labelledby="recentActivityTitle">
-        <div class="admin-dashboard-section__heading">
-          <div>
-            <p class="admin-dashboard-panel__eyebrow">LATEST UPDATES</p>
-            <h2 id="recentActivityTitle">Recent activity</h2>
+        <section class="admin-dashboard-section admin-dashboard-section--attention" aria-labelledby="needsAttentionTitle">
+          <div class="admin-dashboard-section__heading">
+            <div>
+              <p class="admin-dashboard-panel__eyebrow">FOLLOW UP</p>
+              <h2 id="needsAttentionTitle">Needs attention</h2>
+            </div>
+            <span class="admin-dashboard-attention__signal" id="dashboardAttentionSignal" hidden>
+              <span aria-hidden="true">!</span> Action needed
+            </span>
           </div>
-          <a class="admin-dashboard-section__link" href="AdminInquiries.html">View inquiries</a>
-        </div>
-        <div class="admin-dashboard-list admin-dashboard-activity" id="dashboardActivity" aria-live="polite">
-          <p class="admin-dashboard-state">Loading recent activity…</p>
-        </div>
-      </section>
+          <div class="admin-dashboard-attention" id="dashboardAttention" aria-live="polite">
+            <p class="admin-dashboard-state">Loading items that may need your attention…</p>
+          </div>
+        </section>
+      </div>
 
     </div>
   </div>

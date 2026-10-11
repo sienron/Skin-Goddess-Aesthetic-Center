@@ -309,8 +309,10 @@
 
   function setViewMenuExpanded(expanded) {
     const toggle = byId('transactionViewToggle');
-    toggle.setAttribute('aria-expanded', String(expanded));
-    toggle.setAttribute('aria-label', `${expanded ? 'Collapse' : 'Expand'} Sales & Transactions views`);
+    if (toggle) {
+      toggle.setAttribute('aria-expanded', String(expanded));
+      toggle.setAttribute('aria-label', `${expanded ? 'Collapse' : 'Expand'} Sales & Transactions views`);
+    }
     byId('transactionViewMenu').hidden = !expanded;
   }
 
@@ -353,7 +355,11 @@
     const expanded = byId('transactionViewToggle').getAttribute('aria-expanded') === 'true';
     setViewMenuExpanded(!expanded);
   });
-  document.querySelectorAll('.fin-nav-view-tab').forEach((button) => button.addEventListener('click', () => setTab(button.dataset.tab)));
+  document.addEventListener('click', (event) => {
+    if (!(event.target instanceof Element)) return;
+    const button = event.target.closest('.fin-nav-view-tab[data-tab]');
+    if (button) setTab(button.dataset.tab);
+  });
   refs.transactionPrev.addEventListener('click', () => { state.page -= 1; loadTransactions().catch((error) => message(error.message, true)); });
   refs.transactionNext.addEventListener('click', () => { state.page += 1; loadTransactions().catch((error) => message(error.message, true)); });
   refs.transactionRows.addEventListener('click', (event) => {

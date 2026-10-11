@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clients — Skin Goddess Aesthetic Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="um-shell">
+    <button class="um-sidebar-toggle um-sidebar-toggle--admin" id="umSidebarToggle" type="button" aria-label="Toggle menu" aria-expanded="false"><span></span><span></span><span></span></button>
+    <div class="um-sidebar-overlay" id="umSidebarOverlay"></div>
+    <aside class="um-sidebar" id="umSidebar">
+      <a href="index.html" class="um-sidebar__logo"><div class="logo-container"><img src="images/logo_horizontal.jpg" alt="Skin Goddess Aesthetic Center logo"></div></a>
+      <p class="um-sidebar__label">My Links</p>
+      <nav class="um-sidebar__nav" aria-label="Main navigation">
+        <a href="AdminDashboard.html" class="um-nav-link"><img src="icons/finance-dashboard.svg" alt=""><span>Dashboard</span></a>
+        <section class="admin-nav-group is-active">
+          <button class="admin-nav-group-toggle is-active" type="button" aria-expanded="true" aria-controls="adminAppointmentsMenu"><img src="icons/staff-appointments.svg" alt=""><span>Appointments</span><svg class="admin-nav-chevron" aria-hidden="true" viewBox="0 0 20 20"><path d="m5 7.5 5 5 5-5"/></svg></button>
+          <ul class="admin-nav-submenu" id="adminAppointmentsMenu">
+            <li><a href="AdminClients.html" class="um-nav-link admin-nav-child um-nav-link--active" aria-current="page"><span>Clients</span></a></li>
+            <li><a href="AdminAppointment.html" class="um-nav-link admin-nav-child"><span>Appointments</span></a></li>
+            <li><a href="AdminTreatmentHistory.html" class="um-nav-link admin-nav-child"><span>Treatment History</span></a></li>
+          </ul>
+        </section>
+        <section class="admin-nav-group"><button class="admin-nav-group-toggle" type="button" aria-expanded="false" aria-controls="adminInventoryMenu"><img src="icons/staff-inventory.svg" alt=""><span>Inventory</span><svg class="admin-nav-chevron" aria-hidden="true" viewBox="0 0 20 20"><path d="m5 7.5 5 5 5-5"/></svg></button><ul class="admin-nav-submenu" id="adminInventoryMenu" hidden><li><a href="AdminInventoryManagement.html" class="um-nav-link admin-nav-child"><span>Inventory</span></a></li><li><a href="InventoryTransactions.html" class="um-nav-link admin-nav-child"><span>Stock Transaction Log</span></a></li></ul></section>
+        <section class="admin-nav-group"><button class="admin-nav-group-toggle" type="button" aria-expanded="false" aria-controls="adminFinanceMenu"><img src="icons/finance-transactions.svg" alt=""><span>Finance</span><svg class="admin-nav-chevron" aria-hidden="true" viewBox="0 0 20 20"><path d="m5 7.5 5 5 5-5"/></svg></button><ul class="admin-nav-submenu" id="adminFinanceMenu" hidden><li><a href="FinancesTransactions.html" class="um-nav-link admin-nav-child"><span>Sales &amp; Transactions</span></a></li><li><a href="FinanceExpenses.html" class="um-nav-link admin-nav-child"><span>Expenses</span></a></li><li><a href="FinanceReports.html" class="um-nav-link admin-nav-child"><span>Reports</span></a></li></ul></section>
+        <a href="AdminInquiries.html" class="um-nav-link"><img src="icons/staff-inquiries.svg" alt=""><span>Inquiries</span></a>
+        <a href="Usermanagement.html" class="um-nav-link"><img src="icons/staff-users.svg" alt=""><span>User Management</span></a>
+        <a href="AdminContentManagement.html" class="um-nav-link"><img src="icons/staff-content.svg" alt=""><span>Content Management</span></a>
+      </nav>
+      <div class="um-sidebar__account">
+        <button class="um-sidebar__profile" id="adminProfileBtn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="adminProfileMenu"><span class="um-avatar">A</span><span class="um-sidebar__account-details"><span class="um-sidebar__account-name">Admin User</span><span class="um-sidebar__account-role">Owner</span></span></button>
+        <div class="um-sidebar__account-menu" id="adminProfileMenu" role="menu"><button class="um-sidebar__logout" id="adminLogoutBtn" type="button" role="menuitem">Log out</button></div>
+      </div>
+    </aside>
+    <main class="um-main admin-clients-main">
+      <header class="um-header"><div><h1 class="um-header__title">Clients</h1><p class="um-header__subtitle">Review client appointments across the clinic</p></div><div class="um-header__actions"><div class="admin-notification-wrap"><button class="admin-notification-btn" id="adminNotificationBtn" type="button" aria-label="View notifications" aria-haspopup="true" aria-expanded="false" aria-controls="adminNotificationDropdown"><img src="icons/notification-bell.svg" alt=""></button><div class="admin-notification-dropdown" id="adminNotificationDropdown"><strong>Notifications</strong><div class="admin-notification-list">No notifications yet</div></div></div></div></header>
+      <section class="clients-dashboard" aria-labelledby="clientsDashboardTitle">
+        <div class="clients-dashboard-heading"><div><p class="clients-eyebrow">CLIENT DIRECTORY</p><h2 id="clientsDashboardTitle">Client appointments</h2></div><p class="clients-dashboard-date" id="clientsDashboardDate"></p></div>
+        <div class="client-summary-grid" aria-label="Appointment summary">
+          <article class="client-summary-card"><p class="client-summary-label">TODAY'S APPOINTMENTS</p><p class="client-summary-value" id="todayAppointmentCount">—</p><p class="client-summary-hint">Scheduled for today</p></article>
+          <article class="client-summary-card"><p class="client-summary-label">RESCHEDULED</p><p class="client-summary-value" id="rescheduledCount">—</p><p class="client-summary-hint">Needs a new time</p></article>
+          <article class="client-summary-card"><p class="client-summary-label">CANCELLED</p><p class="client-summary-value client-summary-value--cancelled" id="cancelledCount">—</p><p class="client-summary-hint">Cancelled appointments</p></article>
+        </div>
+        <section class="clients-table-section" aria-labelledby="clientsTableTitle">
+          <div class="clients-table-heading"><div><p class="clients-eyebrow">CLIENT LIST</p><h2 id="clientsTableTitle">All client appointments</h2></div><p class="clients-table-count" id="clientsTableCount">Loading clients...</p></div>
+          <div class="clients-table-wrap"><table class="clients-table"><thead><tr><th scope="col">CLIENT</th><th scope="col">SERVICE</th><th scope="col">APPOINTMENT</th><th scope="col">STATUS</th><th scope="col">ACTIONS</th></tr></thead><tbody id="clientsTableBody"><tr><td class="clients-table-message" colspan="5">Loading client appointments...</td></tr></tbody></table></div>
+          <footer class="clients-table-footer"><p id="clientsTableSummary">Showing 0 of 0 clients</p><nav class="clients-pagination" id="clientsPagination" aria-label="Client list pages"></nav></footer>
+          <p class="clients-error" id="clientsError" role="alert" hidden></p>
+        </section>
+      </section>
+    </main>
+  </div>
+  <div class="client-modal-overlay" id="clientModalOverlay" aria-hidden="true">
+    <section class="client-detail-modal" role="dialog" aria-modal="true" aria-labelledby="clientModalTitle">
+      <div class="client-detail-topbar"></div><button class="client-detail-close" id="clientModalClose" type="button" aria-label="Close appointment details">&times;</button>
+      <div class="client-detail-header"><div class="client-detail-avatar" id="clientModalAvatar">--</div><div><p class="clients-eyebrow">APPOINTMENT DETAILS</p><h2 id="clientModalTitle">Client</h2><p id="clientModalNumber">Appointment #—</p></div></div>
+      <div class="client-detail-status-wrap"><span class="client-status" id="clientModalStatus"><span></span>STATUS</span></div>
+      <div class="client-detail-grid"><div><span>DATE</span><strong id="clientModalDate">—</strong></div><div><span>TIME</span><strong id="clientModalTime">—</strong></div><div><span>SERVICE</span><strong id="clientModalService">—</strong></div><div><span>DURATION</span><strong id="clientModalDuration">—</strong></div><div><span>SERVICE FEE</span><strong id="clientModalFee">—</strong></div><div><span>RESERVATION DEPOSIT</span><strong id="clientModalDeposit">—</strong></div><div><span>CONTACT</span><strong id="clientModalContact">—</strong></div><div><span>AESTHETICIAN</span><strong id="clientModalAesthetician">—</strong></div></div>
+      <div class="client-detail-footer"><button class="client-detail-action client-detail-action--primary" id="clientModalDone" type="button">Done</button></div>
+    </section>
+  </div>
+  <script src="admin-dashboard.js"></script>
+  <script src="admin-clients.js"></script>
+  <script src="admin-notifications.js"></script>
+</body>
+</html>

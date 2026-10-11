@@ -8,6 +8,8 @@ const browserScripts = [
   'account.js',
   'admin-dashboard.js',
   'admin-dashboard-overview.js',
+  'admin-clients.js',
+  'admin-context-nav.js',
   'admin-notifications.js',
   'AdminInventoryManagement.js',
   'batch-upload.js',

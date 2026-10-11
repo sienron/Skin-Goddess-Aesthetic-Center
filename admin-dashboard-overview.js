@@ -3,10 +3,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!dashboard) return;
 
   const todayAppointments = document.getElementById('dashboardTodayAppointments');
-  const confirmedAppointments = document.getElementById('dashboardConfirmedAppointments');
   const pendingRequests = document.getElementById('dashboardPendingRequests');
   const totalUsers = document.getElementById('dashboardTotalUsers');
+  const criticalStockCount = document.getElementById('dashboardCriticalStockCount');
+  const criticalStockSummary = document.querySelector('.admin-dashboard-critical-stock__summary');
+  const criticalStockSummaryText = document.getElementById('dashboardCriticalStockSummaryText');
+  const criticalStockSignal = document.getElementById('dashboardCriticalStockSignal');
+  const criticalStockList = document.getElementById('dashboardCriticalStock');
   const attention = document.getElementById('dashboardAttention');
+  const attentionSection = document.querySelector('.admin-dashboard-section--attention');
+  const attentionSignal = document.getElementById('dashboardAttentionSignal');
   const schedule = document.getElementById('dashboardSchedule');
   const activity = document.getElementById('dashboardActivity');
 
@@ -98,7 +104,18 @@ document.addEventListener('DOMContentLoaded', async () => {
       .sort((a, b) => String(a.start || '').localeCompare(String(b.start || '')));
 
     if (!todays.length) {
-      stateMessage(schedule, 'There are no appointments scheduled for today.');
+      const empty = element('div', 'admin-dashboard-empty-state');
+      const icon = element('img');
+      icon.src = 'icons/staff-appointments.svg';
+      icon.alt = '';
+      icon.setAttribute('aria-hidden', 'true');
+      const details = element('div', 'admin-dashboard-empty-state__details');
+      details.append(
+        element('strong', '', 'Your schedule is clear'),
+        element('span', '', 'No appointments are scheduled for today.')
+      );
+      empty.append(icon, details);
+      schedule.replaceChildren(empty);
       return;
     }
 
@@ -136,7 +153,57 @@ document.addEventListener('DOMContentLoaded', async () => {
     schedule.replaceChildren(list);
   }
 
-  function renderAttention({ requests, inventory, thresholds, inquiries, todayKey }) {
+  function renderCriticalStock(inventory, thresholds) {
+    if (inventory.error || thresholds.error) {
+      criticalStockCount.textContent = '—';
+      criticalStockSummaryText.textContent = ' restock status unavailable';
+      stateMessage(criticalStockList, inventory.error
+        ? 'Restock alerts could not be loaded.'
+        : 'Stock alert thresholds could not be loaded.', true);
+      return;
+    }
+
+    const alerts = inventory.data
+      .filter((product) => Number.isFinite(Number(product.stock_quantity))
+        && Number(product.stock_quantity) <= Number(thresholds.data.lowStock))
+      .sort((a, b) => Number(a.stock_quantity) - Number(b.stock_quantity)
+        || String(a.product_name || '').localeCompare(String(b.product_name || '')));
+
+    criticalStockCount.textContent = String(alerts.length);
+    criticalStockSummaryText.textContent = alerts.length === 1
+      ? ' product needs restocking'
+      : ' products need restocking';
+    const hasCriticalStock = alerts.some((product) => Number(product.stock_quantity) <= Number(thresholds.data.criticalStock));
+    criticalStockSummary.classList.toggle('admin-dashboard-critical-stock__summary--urgent', hasCriticalStock);
+    criticalStockSummary.classList.toggle('admin-dashboard-critical-stock__summary--warning', alerts.length > 0 && !hasCriticalStock);
+    criticalStockSignal.classList.toggle('admin-dashboard-critical-stock__icon--urgent', hasCriticalStock);
+    criticalStockSignal.classList.toggle('admin-dashboard-critical-stock__icon--warning', alerts.length > 0 && !hasCriticalStock);
+    criticalStockSignal.hidden = alerts.length === 0;
+    if (!alerts.length) {
+      stateMessage(criticalStockList, 'No products currently need restocking.');
+      return;
+    }
+
+    const list = element('ul', 'admin-dashboard-critical-stock__items');
+    alerts.forEach((product) => {
+      const stock = Number(product.stock_quantity);
+      const isCritical = stock <= Number(thresholds.data.criticalStock);
+      const item = element('li', `admin-dashboard-critical-stock__item${isCritical ? ' admin-dashboard-critical-stock__item--urgent' : ''}`);
+      const link = element('a', '');
+      link.href = 'AdminInventoryManagement.html';
+      const details = element('span', 'admin-dashboard-critical-stock__details');
+      details.append(
+        element('strong', '', product.product_name || 'Unnamed product'),
+        element('span', '', `${stock} ${stock === 1 ? 'unit' : 'units'} remaining`)
+      );
+      link.append(details, element('span', `admin-dashboard-critical-stock__status${isCritical ? ' admin-dashboard-critical-stock__status--urgent' : ''}`, isCritical ? 'Critical' : 'Low stock'));
+      item.append(link);
+      list.append(item);
+    });
+    criticalStockList.replaceChildren(list);
+  }
+
+  function renderAttention({ requests, inquiries }) {
     const items = [];
     if (requests.error) {
       items.push({
@@ -151,7 +218,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         href: 'AdminAppointment.html',
         title: 'Cancellation & reschedule requests',
         count: requests.data.length,
-        description: requests.data.length ? 'Waiting for your review.' : 'No requests waiting for review.',
+        description: requests.data.length ? 'Awaiting your review.' : 'No requests waiting for review.',
         urgent: requests.data.length > 0
       });
     }
@@ -170,40 +237,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         href: 'AdminInquiries.html',
         title: 'Unanswered inquiries',
         count: unanswered.length,
-        description: unanswered.length ? 'Customers are waiting for a reply.' : 'All inquiries have a reply.',
+        description: unanswered.length ? 'Customers are waiting for a reply.' : 'No unanswered inquiries.',
         urgent: unanswered.length > 0
       });
     }
 
-    if (inventory.error || thresholds.error) {
-      items.push({
-        href: 'AdminInventoryManagement.html',
-        title: 'Stock & expiry alerts',
-        count: 'Unavailable',
-        description: inventory.error
-          ? 'Could not load product stock and expiry dates.'
-          : 'Could not load the current stock alert thresholds.',
-        error: true
-      });
-    } else {
-      const lowStock = inventory.data.filter((product) => Number(product.stock_quantity) <= Number(thresholds.data.lowStock));
-      const expired = inventory.data.filter((product) => {
-        const expiry = String(product.expiry_date || '').slice(0, 10);
-        return /^\d{4}-\d{2}-\d{2}$/.test(expiry) && expiry < todayKey;
-      });
-      const expiringSoon = inventory.data.filter((product) => {
-        const expiry = String(product.expiry_date || '').slice(0, 10);
-        return /^\d{4}-\d{2}-\d{2}$/.test(expiry) && expiry >= todayKey && expiry <= addDays(todayKey, 30);
-      });
-      const attentionCount = lowStock.length + expired.length + expiringSoon.length;
-      items.push({
-        href: 'AdminInventoryManagement.html',
-        title: 'Stock & expiry alerts',
-        count: attentionCount,
-        description: `${lowStock.length} low/critical stock · ${expired.length} expired · ${expiringSoon.length} expiring within 30 days`,
-        urgent: attentionCount > 0
-      });
-    }
+    const hasUrgentItems = items.some((item) => item.urgent);
+    attentionSection.classList.toggle('admin-dashboard-section--attention-active', hasUrgentItems);
+    attentionSignal.hidden = !hasUrgentItems;
 
     const list = element('div', 'admin-dashboard-attention__items');
     items.forEach((item) => {
@@ -217,12 +258,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     attention.replaceChildren(list);
   }
 
-  function addDays(day, count) {
-    const date = new Date(`${day}T00:00:00Z`);
-    date.setUTCDate(date.getUTCDate() + count);
-    return date.toISOString().slice(0, 10);
-  }
-
   function renderActivity({ users, inquiries, transactions }) {
     const events = [];
     if (!users.error) {
@@ -232,6 +267,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           type: 'New account',
           title: user.fullName || user.email || 'New user',
           detail: user.roleLabel || user.role || 'Account created',
+          icon: 'icons/staff-users.svg',
           href: 'Usermanagement.html'
         });
       });
@@ -243,24 +279,26 @@ document.addEventListener('DOMContentLoaded', async () => {
           type: 'New inquiry',
           title: `${inquiry.first_name || ''} ${inquiry.last_name || ''}`.trim() || 'Customer inquiry',
           detail: String(inquiry.inquiry_type || 'other').replace(/-/g, ' '),
+          icon: 'icons/staff-inquiries.svg',
           href: 'AdminInquiries.html'
         });
       });
     }
     if (!transactions.error) {
-      transactions.data.slice(0, 8).forEach((transaction) => {
+      transactions.data.slice(0, 20).forEach((transaction) => {
         events.push({
           date: transaction.created_at,
           type: 'Inventory update',
           title: transaction.product_name || 'Product stock updated',
           detail: `${transaction.transaction_type || 'Stock change'} · ${transaction.quantity ?? 0} units`,
+          icon: 'icons/staff-inventory.svg',
           href: 'AdminInventoryManagement.html'
         });
       });
     }
 
     events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    const latest = events.filter((event) => !Number.isNaN(new Date(event.date).getTime())).slice(0, 6);
+    const latest = events.filter((event) => !Number.isNaN(new Date(event.date).getTime())).slice(0, 25);
     if (!latest.length) {
       const failed = [users, inquiries, transactions].some((result) => result.error);
       stateMessage(activity, failed
@@ -273,13 +311,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     latest.forEach((event) => {
       const link = element('a', 'admin-dashboard-activity-item');
       link.href = event.href;
+      const icon = element('span', 'admin-dashboard-activity-item__icon');
+      const image = element('img');
+      image.src = event.icon;
+      image.alt = '';
+      image.setAttribute('aria-hidden', 'true');
+      icon.append(image);
       const details = element('span', 'admin-dashboard-activity-item__details');
       details.append(
         element('span', 'admin-dashboard-activity-item__type', event.type),
         element('strong', '', event.title),
         element('span', '', event.detail)
       );
-      link.append(details, element('time', '', formatDateTime(event.date)));
+      const timestamp = element('time', '', formatDateTime(event.date));
+      timestamp.dateTime = String(event.date);
+      link.append(icon, details, timestamp);
       list.append(link);
     });
     activity.replaceChildren(list);
@@ -304,16 +350,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (appointments.error) {
     todayAppointments.textContent = '—';
-    confirmedAppointments.textContent = '—';
   } else {
     const todays = appointments.data.filter((appointment) => String(appointment.date || '').slice(0, 10) === todayKey);
     todayAppointments.textContent = String(todays.length);
-    confirmedAppointments.textContent = String(todays.filter((appointment) => appointment.status === 'confirmed').length);
   }
   pendingRequests.textContent = requests.error ? '—' : String(requests.data.length);
   totalUsers.textContent = userStats.error ? '—' : String(userStats.data.total);
 
+  renderCriticalStock(inventory, thresholds);
   renderSchedule(appointments, todayKey, nowMinutes);
-  renderAttention({ requests, inventory, thresholds, inquiries, todayKey });
+  renderAttention({ requests, inquiries });
   renderActivity({ users, inquiries, transactions });
 });

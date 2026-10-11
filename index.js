@@ -182,13 +182,15 @@ const protectedPages = [
 
   { path: '/AdminDashboard.html', roles: ['admin'] },
   { path: '/AdminAppointment.html', roles: ['admin'] },
+  { path: '/AdminClients.html', roles: ['admin'] },
+  { path: '/AdminTreatmentHistory.html', roles: ['admin'] },
   { path: '/AdminContentManagement.html', roles: ['admin'] },
   { path: '/AdminInquiries.html', roles: ['admin'] },
   { path: '/AdminInventoryManagement.html', roles: ['admin'] },
   { path: '/Usermanagement.html', roles: ['admin'] },
 
   { path: '/InventoryManagement.html', roles: ['inventory_officer'] },
-  { path: '/InventoryTransactions.html', roles: ['inventory_officer'] },
+  { path: '/InventoryTransactions.html', roles: ['inventory_officer', 'admin'] },
   { path: '/FinanceDashboard.html', roles: ['finance_officer', 'admin'] },
   { path: '/FinanceExpenses.html', roles: ['finance_officer', 'admin'] },
   { path: '/FinanceReports.html', roles: ['finance_officer', 'admin'] },

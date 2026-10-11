@@ -255,7 +255,9 @@ router.get('/admin', requireRole('admin'), async (req, res) => {
              a.cancellation_reason,
              a.cancellation_description,
              a.cancellation_requested_at,
+             a.user_id AS client_id,
              COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Client') AS client,
+             c.email AS client_email,
              c.gender,
              c.date_of_birth::text AS date_of_birth,
              c.contact_number AS contact,
@@ -423,6 +425,34 @@ function noteResponse(row) {
     updatedAt: row.updated_at,
   };
 }
+
+router.get('/admin/:id/notes', requireRole('admin'), async (req, res) => {
+  const appointmentId = validAppointmentId(req.params.id);
+  if (!appointmentId) return res.status(400).json({ message: 'Choose a valid appointment.' });
+
+  try {
+    const result = await db.query(`
+      SELECT tn.note_id, tn.note_text, tn.color, tn.updated_at,
+             a.appointment_id, a.appointment_date::text AS appointment_date,
+             a.appointment_status, s.service_name
+      FROM treatment_notes tn
+      JOIN appointments a ON a.appointment_id = tn.appointment_id
+      JOIN services s ON s.service_id = a.service_id
+      WHERE a.appointment_id = $1
+      ORDER BY tn.created_at ASC, tn.note_id ASC
+    `, [appointmentId]);
+    return res.json(result.rows.map((row) => ({
+      ...noteResponse(row),
+      appointmentId: row.appointment_id,
+      appointmentDate: row.appointment_date,
+      appointmentStatus: row.appointment_status,
+      service: row.service_name,
+    })));
+  } catch (error) {
+    console.error('Error fetching admin treatment notes:', error);
+    return res.status(500).json({ message: 'Could not load treatment notes.' });
+  }
+});
 
 router.get('/:id/notes', requireActiveAccount, async (req, res) => {
   const appointmentId = validAppointmentId(req.params.id);

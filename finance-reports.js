@@ -41,6 +41,15 @@
 
   function peso(value) { return common.formatPeso(value); }
 
+  function renderReportChart(canvasId, config) {
+    const hasData = config.data.datasets.some((dataset) =>
+      (dataset.data || []).some((value) => Number.isFinite(Number(value)) && Number(value) !== 0)
+    );
+    const panel = document.getElementById(canvasId).closest('.fin-report-panel');
+    panel.classList.toggle('is-empty', !hasData);
+    return common.renderChart(canvasId, config);
+  }
+
   async function load() {
     const requestId = ++reportRequest;
     const previous = common.previousRange(state.from, state.to);
@@ -83,31 +92,31 @@
     refs.reportForfeited.textContent = peso(forfeited.amount);
     refs.reportForfeitedCount.textContent = `${forfeited.count} payments`;
 
-    common.renderChart('reportSalesExpensesChart', {
+    renderReportChart('reportSalesExpensesChart', {
       type: 'bar', data: { labels: monthly.map((row) => row.month), datasets: [{ label: 'Sales earned', data: monthly.map((row) => Number(row.sales)), backgroundColor: '#C9A84C' }, { label: 'Recorded expenses', data: monthly.map((row) => Number(row.expenses)), backgroundColor: '#B93C3C' }] },
       options: { plugins: { tooltip: { callbacks: { label: (item) => `${item.dataset.label}: ${peso(item.raw)}` } } } },
     });
-    common.renderChart('reportOnlineReservationsChart', {
+    renderReportChart('reportOnlineReservationsChart', {
       type: 'line', data: { labels: report.online_reservations.map((row) => row.date), datasets: [{ label: 'Online reservations', data: report.online_reservations.map((row) => Number(row.count)), borderColor: '#228B46', backgroundColor: 'rgba(34,139,70,.12)', fill: true, tension: 0.22, pointRadius: 2 }] },
       options: { scales: { y: { ticks: { precision: 0 } } }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (item) => `${item.raw} online reservation${Number(item.raw) === 1 ? '' : 's'}` } } } },
     });
-    common.renderChart('reportServiceCategoryChart', {
+    renderReportChart('reportServiceCategoryChart', {
       type: 'pie', data: { labels: report.service_categories.map((row) => row.category), datasets: [{ data: report.service_categories.map((row) => Number(row.amount)), backgroundColor: colors, borderWidth: 1, borderColor: '#fff' }] },
       options: { plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: (item) => `${item.label}: ${peso(item.raw)}` } } } },
     });
-    common.renderChart('reportDepositsChart', {
+    renderReportChart('reportDepositsChart', {
       type: 'doughnut', data: { labels: report.deposits.map((row) => row.status), datasets: [{ data: report.deposits.map((row) => Number(row.amount)), backgroundColor: ['#228B46', '#B93C3C', '#929292'], borderColor: '#fff', borderWidth: 1 }] },
       options: { plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: (item) => `${item.label}: ${peso(item.raw)}` } } } },
     });
-    common.renderChart('reportMethodsChart', {
+    renderReportChart('reportMethodsChart', {
       type: 'bar', data: { labels: methods.map((row) => common.paymentMethodLabel(row.method)), datasets: [{ label: 'Collected', data: methods.map((row) => Number(row.amount)), backgroundColor: '#C9A84C', borderRadius: 3 }] },
       options: { indexAxis: 'y', plugins: { legend: { display: false }, tooltip: { callbacks: { label: (item) => peso(item.raw) } } } },
     });
-    common.renderChart('reportTopServicesChart', {
+    renderReportChart('reportTopServicesChart', {
       type: 'bar', data: { labels: report.top_services.map((row) => row.service), datasets: [{ label: 'Sales earned', data: report.top_services.map((row) => Number(row.amount)), backgroundColor: '#C9A84C', borderRadius: 3 }] },
       options: { indexAxis: 'y', plugins: { legend: { display: false }, tooltip: { callbacks: { label: (item) => peso(item.raw) } } } },
     });
-    common.renderChart('reportExpenseCategoryChart', {
+    renderReportChart('reportExpenseCategoryChart', {
       type: 'bar', data: { labels: report.expenses_by_category.map((row) => row.category), datasets: [{ label: 'Expenses', data: report.expenses_by_category.map((row) => Number(row.amount)), backgroundColor: '#B93C3C', borderRadius: 3 }] },
       options: { indexAxis: 'y', plugins: { legend: { display: false }, tooltip: { callbacks: { label: (item) => peso(item.raw) } } } },
     });
