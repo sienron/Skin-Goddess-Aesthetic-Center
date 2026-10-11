@@ -7814,6 +7814,16 @@ body.services {
   background: var(--um-bg);
 }
 
+.notification,
+.admin-notification-btn {
+  border-radius: 8px;
+  background-color: #fff;
+}
+
+.notification:hover,
+.admin-notification-btn:hover {
+  background-color: rgb(201, 168, 76);
+}
 
 .admin-notification-btn img {
   width: 16px;
@@ -14636,25 +14646,54 @@ textarea.cm-editor__input {
 }
 
 .fin-report-controls {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  display: flex;
+  flex-wrap: wrap;
   align-items: end;
+  gap: 8px;
   padding: 8px 0;
   border-top: 0;
 }
 
 .fin-report-controls .fin-segmented {
-  grid-column: 1 / -1;
-  margin: 0;
+  flex: 0 0 auto;
+  gap: 5px;
+  margin-right: 0;
+}
+
+.fin-report-controls .fin-range-or {
+  align-self: center;
+  color: #a29b90;
+  font-size: .7rem;
 }
 
 .fin-report-controls > label {
-  width: 100%;
+  flex: 0 1 148px;
   min-width: 0;
+  color: #655e56;
+  font-size: .7rem;
 }
 
 .fin-report-controls input {
   width: 100%;
+}
+
+.fin-report-controls .fin-report-toolbar-export {
+  min-height: 38px;
+  margin-left: auto;
+  border-color: #c9a84c;
+  background: #c9a84c;
+  color: #28231b;
+}
+
+.fin-report-controls .fin-report-toolbar-export:hover {
+  border-color: #b59655;
+  background: #b59655;
+}
+
+@media (max-width: 760px) {
+  .fin-report-controls .fin-segmented {
+    flex-basis: 100%;
+  }
 }
 
 .fin-report-section {
@@ -17935,5 +17974,955 @@ body.homepage .appointment-process__step p {
 @media (prefers-reduced-motion: reduce) {
   .homepage-scroll-progress__fill {
     transition: none;
+  }
+}
+
+section.sidebar[aria-label="Finance navigation"] {
+  width: 210px;
+  flex: 0 0 210px;
+  border-right: 1px solid #ebe6dc;
+  background-color: white;
+  box-shadow: none;
+  overflow-y: hidden;
+  padding: 0 8px 12px;
+}
+
+section.sidebar[aria-label="Finance navigation"] .sidebar-heading {
+  margin: 16px 0 10px;
+  padding: 0 10px;
+  color: #514b43;
+  font: 600 13px/1.35 "Raleway", sans-serif;
+}
+
+section.sidebar[aria-label="Finance navigation"] nav > ul {
+  display: grid;
+  gap: 4px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+section.sidebar[aria-label="Finance navigation"] .nav-item {
+  display: block;
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #514b43;
+  padding: 0;
+  transition: background-color .15s ease, color .15s ease;
+}
+
+section.sidebar[aria-label="Finance navigation"] .nav-item:hover {
+  border: 0;
+  background: #f8f6f1;
+}
+
+section.sidebar[aria-label="Finance navigation"] .nav-item.active:not(.fin-nav-dropdown) {
+  border: 0;
+  background: #f6f0e3;
+  color: #705725;
+}
+
+section.sidebar[aria-label="Finance navigation"] .fin-nav-dropdown.nav-item.active {
+  background: transparent;
+  color: #705725;
+}
+
+section.sidebar[aria-label="Finance navigation"] .fin-nav-dropdown-head {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 42px;
+  border-radius: 8px;
+  background: #f6f0e3;
+}
+
+section.sidebar[aria-label="Finance navigation"] .fin-nav-dropdown-head:hover {
+  background: #f2ecdf;
+}
+
+section.sidebar[aria-label="Finance navigation"] .nav-item > a,
+section.sidebar[aria-label="Finance navigation"] .fin-nav-parent-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  margin: 0;
+  border-radius: 8px;
+  color: inherit;
+  padding: 0 8px;
+  font: 500 14px/1.35 "Raleway", sans-serif;
+  text-decoration: none;
+}
+
+section.sidebar[aria-label="Finance navigation"] .nav-item > a:hover,
+section.sidebar[aria-label="Finance navigation"] .fin-nav-parent-link:hover {
+  color: #60491b;
+}
+
+section.sidebar[aria-label="Finance navigation"] .nav-item > a:focus-visible,
+section.sidebar[aria-label="Finance navigation"] .fin-nav-parent-link:focus-visible,
+section.sidebar[aria-label="Finance navigation"] .fin-nav-dropdown-toggle:focus-visible,
+section.sidebar[aria-label="Finance navigation"] .fin-nav-view-tab:focus-visible {
+  outline: 3px solid #3977b8;
+  outline-offset: 2px;
+}
+
+section.sidebar[aria-label="Finance navigation"] .finance-nav-icon {
+  display: block;
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+section.sidebar[aria-label="Finance navigation"] .fin-nav-dropdown {
+  display: block;
+}
+
+section.sidebar[aria-label="Finance navigation"] .fin-nav-parent-link {
+  flex: 1;
+  gap: 8px;
+  font-weight: 600;
+}
+
+section.sidebar[aria-label="Finance navigation"] .fin-nav-dropdown-toggle {
+  display: grid;
+  flex: 0 0 24px;
+  place-items: center;
+  width: 24px;
+  height: 28px;
+  margin-right: 2px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #756c62;
+  cursor: pointer;
+}
+
+section.sidebar[aria-label="Finance navigation"] .fin-nav-dropdown-toggle:hover {
+  background: rgba(0, 0, 0, .045);
+}
+
+section.sidebar[aria-label="Finance navigation"] .fin-nav-chevron {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform .16s ease;
+}
+
+section.sidebar[aria-label="Finance navigation"] .fin-nav-dropdown-toggle[aria-expanded="true"] .fin-nav-chevron {
+  transform: rotate(180deg);
+}
+
+section.sidebar[aria-label="Finance navigation"] .fin-nav-view-list {
+  display: grid;
+  gap: 3px;
+  box-sizing: border-box;
+  margin: 2px 9px 8px 21px;
+  border-left: 1px solid #e7e0d3;
+  padding: 3px 0 3px 11px;
+  list-style: none;
+}
+
+section.sidebar[aria-label="Finance navigation"] .fin-nav-view-list[hidden] {
+  display: none;
+}
+
+section.sidebar[aria-label="Finance navigation"] .fin-nav-view-list li {
+  min-width: 0;
+  list-style: none;
+}
+
+section.sidebar[aria-label="Finance navigation"] .fin-nav-view-tab {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 38px;
+  border: 0;
+  border-left: 2px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: #625b52;
+  padding: 8px 9px;
+  font: 500 13px/1.35 "Raleway", sans-serif;
+  text-align: left;
+  cursor: pointer;
+}
+
+section.sidebar[aria-label="Finance navigation"] .fin-nav-view-tab:hover {
+  background: #f8f6f1;
+}
+
+section.sidebar[aria-label="Finance navigation"] .fin-nav-view-tab.is-active {
+  border-left-color: #c9a84c;
+  background: #fbf8f1;
+  color: #60491b;
+  font-weight: 600;
+}
+
+@media (max-width: 860px) {
+  section.sidebar[aria-label="Finance navigation"].mobile-sidebar-open {
+    width: min(280px, 82vw);
+    flex: 0 0 auto;
+  }
+}
+
+.fin-transactions-page {
+  align-content: start;
+  gap: 16px;
+  min-width: 0;
+}
+
+.fin-transactions-page .fin-sales-header {
+  align-items: center;
+  gap: 16px;
+}
+
+.fin-transactions-page .fin-sales-header h1 {
+  color: #25211c;
+  font: 650 clamp(1.45rem, 2vw, 1.85rem)/1.2 "Raleway", sans-serif;
+  letter-spacing: -.035em;
+}
+
+.fin-transactions-page .fin-sales-header p {
+  margin-top: 4px;
+  color: #71685f;
+  font: 0.84rem/1.5 "Raleway", sans-serif;
+}
+
+.fin-transactions-page .fin-sales-header-action {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.fin-transactions-page .fin-sales-record-button {
+  min-height: 44px;
+  border-color: #9b7a35;
+  border-radius: 8px;
+  background: #9b7a35;
+  padding: 10px 18px;
+  font-size: .8rem;
+}
+
+.fin-transactions-page .fin-sales-record-button:hover {
+  border-color: #806124;
+  background: #806124;
+}
+
+.fin-transactions-page .fin-sales-summary {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.fin-transactions-page .fin-sales-summary article {
+  gap: 4px;
+  min-height: 0;
+  border: 1px solid #ece7dc;
+  border-left: 3px solid #c9a84c;
+  border-radius: 10px;
+  background: #fff;
+  padding: 12px 16px;
+}
+
+.fin-transactions-page .fin-sales-summary article strong {
+  color: #29251e;
+  font: 650 1.3rem/1.25 "Raleway", sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+.fin-transactions-page .fin-sales-summary article small {
+  line-height: 1.45;
+}
+
+.fin-transactions-page .fin-filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: end;
+  gap: 8px 12px;
+  border-top: 1px solid #eee9df;
+  border-bottom: 1px solid #eee9df;
+  padding: 8px 0;
+}
+
+.fin-transactions-page .fin-filter-period-controls {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: end;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+}
+
+.fin-transactions-page .fin-filter-period-controls .fin-segmented {
+  flex: 0 0 auto;
+  gap: 5px;
+  margin-right: 0;
+}
+
+.fin-transactions-page .fin-range-or {
+  align-self: center;
+  color: #a29b90;
+  font-size: .7rem;
+}
+
+.fin-transactions-page .fin-segmented button {
+  min-height: 38px;
+  border-color: #e6e1d7;
+  border-radius: 7px;
+  padding: 8px 12px;
+  font-size: .72rem;
+}
+
+.fin-transactions-page .fin-segmented button.is-active {
+  border-color: #b59655;
+  background: #f5f0e3;
+  color: #624b1e;
+}
+
+.fin-transactions-page .fin-filter-period-controls > label,
+.fin-transactions-page .fin-filters > label {
+  min-width: 0;
+  color: #655e56;
+  font-size: .7rem;
+}
+
+.fin-transactions-page .fin-filter-period-controls > label {
+  flex: 0 1 148px;
+}
+
+.fin-transactions-page .fin-filters input,
+.fin-transactions-page .fin-filters select {
+  min-height: 40px;
+  border-color: #e3ded4;
+  border-radius: 7px;
+  padding: 8px 10px;
+  font-size: .76rem;
+}
+
+.fin-transactions-page .fin-filters input:focus,
+.fin-transactions-page .fin-filters select:focus {
+  border-color: #b59655;
+  outline: 3px solid rgba(181, 150, 85, .18);
+  outline-offset: 1px;
+}
+
+.fin-transactions-page #transactionSearch {
+  padding-left: 36px;
+  background-image: url("icons/magnifying-glass.svg");
+  background-repeat: no-repeat;
+  background-position: 12px center;
+  background-size: 15px;
+}
+
+.fin-transactions-page #ledgerHelp {
+  margin: 0;
+  color: #71685f;
+  font: .75rem/1.5 "Raleway", sans-serif;
+}
+
+.fin-sales-analytics-row {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(260px, 1fr);
+  align-items: start;
+  gap: 16px;
+  min-width: 0;
+}
+
+.fin-transactions-page .staff-table-card {
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid #ece7dc;
+  border-radius: 11px;
+  background: #fff;
+  box-shadow: none;
+}
+
+.fin-transactions-page .fin-chart-section {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "heading"
+    "comparison"
+    "description"
+    "chart"
+    "legend";
+  align-items: center;
+  align-content: start;
+  gap: 8px;
+  min-height: 300px;
+  padding: 16px;
+}
+
+.fin-transactions-page #methodChartSection .fin-section-heading {
+  grid-area: heading;
+}
+
+.fin-transactions-page #methodChartSection > .fin-comparison {
+  grid-area: comparison;
+}
+
+.fin-transactions-page #methodChartSection > .fin-modal-copy {
+  grid-area: description;
+}
+
+.fin-transactions-page #methodChartSection .fin-section-heading {
+  margin: 0;
+}
+
+.fin-transactions-page #methodChartSection .fin-section-heading h2,
+.fin-transactions-page .staff-table-toolbar h2 {
+  color: #29251e;
+  font: 650 1rem/1.35 "Raleway", sans-serif;
+}
+
+.fin-transactions-page #methodChartSection > .fin-modal-copy {
+  margin: 0;
+  color: #71685f;
+  font: .75rem/1.5 "Raleway", sans-serif;
+}
+
+.fin-transactions-page #receivablesPanel > .fin-modal-copy,
+.fin-transactions-page #depositsPanel > .fin-modal-copy {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0 16px 12px;
+  color: #71685f;
+  font: .75rem/1.5 "Raleway", sans-serif;
+  overflow-wrap: anywhere;
+}
+
+.fin-transactions-page .fin-chart-frame--donut {
+  grid-area: chart;
+  width: 100%;
+  max-width: 180px;
+  height: 180px;
+  min-height: 0;
+  justify-self: center;
+  box-sizing: border-box;
+  padding: 8px;
+}
+
+.fin-transactions-page .fin-chart-frame--donut.is-empty {
+  height: 96px;
+  max-width: 100%;
+  aspect-ratio: auto;
+}
+
+.fin-transactions-page .fin-chart-loading {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, .9);
+  color: #71685f;
+  font: 600 .76rem "Raleway", sans-serif;
+}
+
+.fin-transactions-page .fin-chart-loading[hidden] {
+  display: none;
+}
+
+.fin-transactions-page .fin-chart-legend {
+  display: grid;
+  grid-area: legend;
+  align-content: center;
+  gap: 0;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fin-transactions-page .fin-chart-legend li {
+  display: grid;
+  grid-template-columns: 10px minmax(70px, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  border-bottom: 1px solid #f0ede7;
+  padding: 10px 0;
+  color: #514b43;
+  font: .73rem "Raleway", sans-serif;
+}
+
+.fin-transactions-page .fin-chart-legend li:last-child {
+  border-bottom: 0;
+}
+
+.fin-transactions-page .fin-chart-legend-swatch {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.fin-transactions-page .fin-chart-legend-method {
+  overflow-wrap: anywhere;
+}
+
+.fin-transactions-page .fin-chart-legend-amount {
+  color: #29251e;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.fin-transactions-page .fin-chart-legend-share {
+  min-width: 44px;
+  color: #71685f;
+  font-size: .68rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.fin-transactions-page .staff-table-toolbar {
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+}
+
+.fin-transactions-page .staff-table-toolbar > div,
+.fin-transactions-page .fin-row-actions {
+  align-items: center;
+  gap: 8px;
+}
+
+.fin-transactions-page .staff-table-toolbar #transactionCount {
+  color: #71685f;
+  font: 600 .72rem "Raleway", sans-serif;
+  white-space: nowrap;
+}
+
+.fin-transactions-page .fin-table {
+  min-width: 980px;
+  font-size: .75rem;
+}
+
+.fin-transactions-page .fin-table th {
+  background: #faf9f6;
+  letter-spacing: .035em;
+}
+
+.fin-transactions-page .fin-table td {
+  height: 44px;
+  line-height: 1.45;
+}
+
+.fin-transactions-page .fin-table tbody tr:hover {
+  background: #fcfbf8;
+}
+
+.fin-transactions-page #transactionsPanel .fin-table th:nth-child(7),
+.fin-transactions-page #transactionsPanel .fin-table td:nth-child(7),
+.fin-transactions-page #receivablesPanel .fin-table th:nth-child(4),
+.fin-transactions-page #receivablesPanel .fin-table th:nth-child(5),
+.fin-transactions-page #receivablesPanel .fin-table td:nth-child(4),
+.fin-transactions-page #receivablesPanel .fin-table td:nth-child(5),
+.fin-transactions-page #depositsPanel .fin-table th:nth-child(4),
+.fin-transactions-page #depositsPanel .fin-table td:nth-child(4) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.fin-transactions-page #transactionsPanel .fin-table th:nth-child(2),
+.fin-transactions-page #transactionsPanel .fin-table td:nth-child(2) {
+  white-space: nowrap;
+}
+
+.fin-transactions-page .fin-button {
+  border-radius: 7px;
+  font-size: .72rem;
+}
+
+.fin-transactions-page .fin-button-danger {
+  border-color: #b33b3b;
+  background: #fff;
+  color: #a43131;
+}
+
+.fin-transactions-page .fin-button-danger:hover {
+  background: #fbefef;
+}
+
+.fin-transactions-page .fin-pagination {
+  padding: 12px 16px;
+}
+
+.fin-transactions-page .staff-empty-state {
+  min-height: 0;
+  padding: 24px 16px;
+}
+
+.fin-transactions-page #depositsPanel .fin-table th:nth-child(7),
+.fin-transactions-page #depositsPanel .fin-table td:nth-child(7) {
+  min-width: 180px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.fin-transactions-page .fin-page-message:empty {
+  display: none;
+}
+
+.fin-transactions-page :focus-visible {
+  outline: 3px solid #3977b8;
+  outline-offset: 2px;
+}
+
+@media (max-width: 900px) {
+  .fin-sales-analytics-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .fin-transactions-page .fin-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .fin-transactions-page #transactionSearchWrap {
+    grid-column: 1 / -1;
+  }
+
+  .fin-transactions-page .fin-chart-section {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 850px) {
+  .fin-transactions-page .fin-chart-section {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "heading"
+      "comparison"
+      "description"
+      "chart"
+      "legend";
+  }
+}
+
+@media (max-width: 620px) {
+  .fin-transactions-page .fin-sales-header {
+    align-items: flex-start;
+  }
+
+  .fin-transactions-page .fin-sales-summary {
+    gap: 8px;
+  }
+
+  .fin-transactions-page .fin-sales-summary article {
+    padding: 12px;
+  }
+
+  .fin-transactions-page .fin-filter-period-controls {
+    flex-wrap: wrap;
+  }
+
+  .fin-transactions-page .fin-filter-period-controls .fin-segmented {
+    flex: 1 1 100%;
+  }
+
+  .fin-transactions-page .fin-segmented button {
+    flex: 1 1 auto;
+  }
+
+  .fin-transactions-page .staff-table-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .fin-transactions-page .staff-table-toolbar > div {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .fin-transactions-page .fin-sales-header {
+    flex-direction: column;
+  }
+
+  .fin-transactions-page .fin-sales-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .fin-transactions-page .fin-sales-summary article {
+    min-height: 0;
+  }
+
+  .fin-transactions-page .fin-filters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .fin-transactions-page .fin-filter-period-controls {
+    grid-column: 1;
+  }
+
+  .fin-transactions-page .fin-filter-period-controls > label {
+    flex: 1 1 120px;
+  }
+
+  .fin-transactions-page #transactionSearchWrap {
+    grid-column: 1;
+  }
+
+  .fin-transactions-page .fin-chart-legend li {
+    grid-template-columns: 10px minmax(0, 1fr) auto 42px;
+    gap: 7px;
+  }
+}
+
+section.sidebar[aria-label="Aesthetician navigation"] {
+  width: 210px;
+  flex: 0 0 210px;
+  border-right: 1px solid #ebe6dc;
+  background: #fff;
+  box-shadow: none;
+  overflow-y: hidden;
+  padding: 0 8px 12px;
+}
+
+section.sidebar[aria-label="Aesthetician navigation"] .sidebar-heading {
+  margin: 16px 0 10px;
+  padding: 0 10px;
+  color: #514b43;
+  font: 600 13px/1.35 "Raleway", sans-serif;
+}
+
+section.sidebar[aria-label="Aesthetician navigation"] nav > ul {
+  display: grid;
+  gap: 4px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+section.sidebar[aria-label="Aesthetician navigation"] .nav-item {
+  display: block;
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #514b43;
+  padding: 0;
+}
+
+section.sidebar[aria-label="Aesthetician navigation"] .nav-item:hover {
+  background: #f8f6f1;
+}
+
+section.sidebar[aria-label="Aesthetician navigation"] .nav-item.active {
+  background: #f6f0e3;
+  color: #705725;
+}
+
+section.sidebar[aria-label="Aesthetician navigation"] .nav-item > a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-sizing: border-box;
+  min-height: 42px;
+  border-radius: 8px;
+  color: inherit;
+  padding: 0 8px;
+  font: 500 14px/1.35 "Raleway", sans-serif;
+  text-decoration: none;
+}
+
+section.sidebar[aria-label="Aesthetician navigation"] .nav-item > a:focus-visible {
+  outline: 3px solid #3977b8;
+  outline-offset: 2px;
+}
+
+section.sidebar[aria-label="Aesthetician navigation"] .finance-nav-icon {
+  display: block;
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+.um-sidebar {
+  width: 210px;
+  flex: 0 0 210px;
+  overflow-y: hidden;
+  border-right: 1px solid #ebe6dc;
+  background: #fff;
+  padding: 0 8px 12px;
+}
+
+.um-sidebar__logo {
+  justify-content: center;
+  height: 64px;
+  border: 0;
+  margin: 0;
+  padding: 0 12px;
+}
+
+.um-sidebar__logo img {
+  display: block;
+  width: 142px;
+  max-width: 100%;
+  height: auto;
+}
+
+.um-sidebar__label {
+  margin: 16px 0 10px;
+  padding: 0 10px;
+  color: #514b43;
+  font: 600 13px/1.35 "Raleway", sans-serif;
+  letter-spacing: 0;
+}
+
+.um-sidebar__nav {
+  display: grid;
+  gap: 4px;
+}
+
+.um-sidebar__nav .um-nav-link,
+.admin-nav-group-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #514b43;
+  padding: 0 8px;
+  font: 500 14px/1.35 "Raleway", sans-serif;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.um-sidebar__nav .um-nav-link:hover,
+.admin-nav-group-toggle:hover {
+  background: #f8f6f1;
+  color: #60491b;
+}
+
+.um-sidebar__nav .um-nav-link--active {
+  border: 0;
+  background: #f6f0e3;
+  color: #705725;
+  font-weight: 600;
+}
+
+.um-sidebar__nav .um-nav-link:focus-visible,
+.admin-nav-group-toggle:focus-visible {
+  outline: 3px solid #3977b8;
+  outline-offset: 2px;
+}
+
+.um-sidebar__nav .um-nav-link img,
+.admin-nav-group-toggle img {
+  display: block;
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+.um-sidebar__nav .um-nav-link span,
+.admin-nav-group-toggle span {
+  min-width: 0;
+}
+
+.admin-nav-group {
+  min-width: 0;
+  border-radius: 8px;
+}
+
+.admin-nav-group.is-active > .admin-nav-group-toggle {
+  background: #f6f0e3;
+  color: #705725;
+  font-weight: 600;
+}
+
+.admin-nav-group-toggle .admin-nav-chevron {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  margin-left: auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform .16s ease;
+}
+
+.admin-nav-group-toggle[aria-expanded="true"] .admin-nav-chevron {
+  transform: rotate(180deg);
+}
+
+.admin-nav-submenu {
+  display: grid;
+  gap: 3px;
+  box-sizing: border-box;
+  margin: 2px 9px 8px 21px;
+  border-left: 1px solid #e7e0d3;
+  padding: 3px 0 3px 11px;
+  list-style: none;
+}
+
+.admin-nav-submenu[hidden] {
+  display: none;
+}
+
+.admin-nav-submenu li {
+  min-width: 0;
+  list-style: none;
+}
+
+.um-sidebar__nav .um-nav-link.admin-nav-child {
+  min-height: 38px;
+  border-left: 2px solid transparent;
+  border-radius: 6px;
+  padding: 7px 9px;
+  font-size: 13px;
+}
+
+.um-sidebar__nav .um-nav-link.admin-nav-child.um-nav-link--active {
+  border-left-color: #c9a84c;
+  background: #fbf8f1;
+  color: #60491b;
+}
+
+.um-sidebar__account {
+  margin-top: auto;
+  border-top: 1px solid #ebe6dc;
+  padding: 12px 8px;
+}
+
+@media (max-width: 1024px) {
+  .um-sidebar {
+    width: min(280px, 82vw);
+    flex: 0 0 min(280px, 82vw);
+    height: 100vh;
+    max-height: 100vh;
+  }
+}
+
+@media (max-width: 860px) {
+  section.sidebar[aria-label="Aesthetician navigation"].mobile-sidebar-open {
+    width: min(280px, 82vw);
+    flex: 0 0 auto;
   }
 }

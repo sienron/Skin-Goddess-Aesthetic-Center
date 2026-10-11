@@ -1,5 +1,6 @@
 const express = require('express');
 const multer = require('multer');
+const crypto = require('node:crypto');
 const router = express.Router();
 const db = require('../db');
 const { requireRole } = require('../middleware/auth');
@@ -123,7 +124,10 @@ router.post('/batch-upload/scan', handleInvoiceUpload, async (req, res) => {
                 : row;
         });
 
-        const response = { rows: reviewedRows };
+        const response = {
+            rows: reviewedRows,
+            source_hash: crypto.createHash('sha256').update(req.file.buffer).digest('hex')
+        };
         if (process.env.OCR_RETURN_RAW_TEXT !== 'false') response.rawText = rawText;
         return res.json(response);
     } catch (error) {
@@ -139,12 +143,71 @@ router.post('/batch-upload/confirm', async (req, res) => {
     if (validationError) {
         return res.status(400).json({ message: validationError });
     }
+    const requestKey = typeof req.body.request_key === 'string'
+        ? req.body.request_key.toLowerCase()
+        : '';
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(requestKey)) {
+        return res.status(400).json({ message: 'A valid batch request key is required.' });
+    }
+    const sourceHash = req.body.source_hash == null ? null : String(req.body.source_hash).toLowerCase();
+    if (sourceHash !== null && !/^[0-9a-f]{64}$/.test(sourceHash)) {
+        return res.status(400).json({ message: 'The invoice image fingerprint is invalid.' });
+    }
+    const normalizedRows = req.body.rows.map(row => ({
+        product_name: row.product_name.trim(),
+        quantity: Number(row.quantity),
+        unit_price: Number(row.unit_price).toFixed(2),
+        category: row.category.trim(),
+        expiry_date: row.expiry_date || null
+    }));
+    const payloadHash = crypto.createHash('sha256')
+        .update(JSON.stringify(normalizedRows))
+        .digest('hex');
 
     try {
-        const savedProducts = await db.transaction(async client => {
+        const result = await db.transaction(async client => {
+            await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`batch-request:${requestKey}`]);
+            if (sourceHash) {
+                await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`batch-image:${sourceHash}`]);
+            }
+            const existingBatches = await client.query(`
+                SELECT purchase_batch_id, request_key, source_hash, payload_hash
+                FROM inventory_purchase_batches
+                WHERE request_key = $1 OR ($2::char(64) IS NOT NULL AND source_hash = $2)
+                FOR UPDATE
+            `, [requestKey, sourceHash]);
+            const batchIds = new Set(existingBatches.rows.map(batch => batch.purchase_batch_id));
+            if (batchIds.size > 1) {
+                return { conflict: 'This request key and invoice image refer to different confirmed batches.' };
+            }
+            if (existingBatches.rows.length) {
+                const existingBatch = existingBatches.rows[0];
+                if (existingBatch.payload_hash.trim() !== payloadHash
+                    || (existingBatch.request_key === requestKey
+                        && (existingBatch.source_hash?.trim() || null) !== sourceHash)) {
+                    return { conflict: 'This request was already confirmed with different purchase details. Start a new reviewed batch.' };
+                }
+                const existingProducts = await client.query(`
+                    SELECT product.product_id, product.product_name, product.category,
+                        product.stock_quantity, product.expiry_date::text AS expiry_date,
+                        product.unit_price
+                    FROM inventory_purchase_records purchase
+                    JOIN inventory_products product ON product.product_id = purchase.product_id
+                    WHERE purchase.purchase_batch_id = $1
+                    ORDER BY purchase.row_number
+                `, [existingBatch.purchase_batch_id]);
+                return { products: existingProducts.rows, replayed: true };
+            }
+
+            const batch = await client.query(`
+                INSERT INTO inventory_purchase_batches
+                    (request_key, source_hash, payload_hash, created_by)
+                VALUES ($1, $2, $3, $4)
+                RETURNING purchase_batch_id
+            `, [requestKey, sourceHash, payloadHash, req.session.userId]);
             const savedRows = [];
 
-            for (const row of req.body.rows) {
+            for (const [index, row] of normalizedRows.entries()) {
                 const productName = row.product_name.trim();
                 const quantity = Number(row.quantity);
                 const unitPrice = Number(row.unit_price);
@@ -172,11 +235,12 @@ router.post('/batch-upload/confirm', async (req, res) => {
                         RETURNING product_id, product_name, category, stock_quantity,
                             expiry_date::text AS expiry_date, unit_price
                     `, [newStock, unitPrice, expiryDate, existing.product_id]);
-                    await client.query(`
+                    const transaction = await client.query(`
                         INSERT INTO inventory_transactions
                             (product_id, product_name, transaction_type, quantity,
                                 previous_stock, new_stock, created_by, created_at)
                         VALUES ($1, $2, 'Restock', $3, $4, $5, $6, NOW())
+                        RETURNING transaction_id
                     `, [
                         existing.product_id,
                         existing.product_name,
@@ -184,6 +248,20 @@ router.post('/batch-upload/confirm', async (req, res) => {
                         previousStock,
                         newStock,
                         req.session.userId
+                    ]);
+                    await client.query(`
+                        INSERT INTO inventory_purchase_records
+                            (purchase_batch_id, row_number, inventory_transaction_id,
+                                product_id, product_name, quantity, unit_price, purchase_date)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_DATE)
+                    `, [
+                        batch.rows[0].purchase_batch_id,
+                        index + 1,
+                        transaction.rows[0].transaction_id,
+                        existing.product_id,
+                        existing.product_name,
+                        quantity,
+                        unitPrice
                     ]);
                     savedRows.push(updated.rows[0]);
                     continue;
@@ -197,21 +275,43 @@ router.post('/batch-upload/confirm', async (req, res) => {
                         expiry_date::text AS expiry_date, unit_price
                 `, [productName, row.category.trim(), quantity, expiryDate, unitPrice]);
                 const product = inserted.rows[0];
-                await client.query(`
+                const transaction = await client.query(`
                     INSERT INTO inventory_transactions
                         (product_id, product_name, transaction_type, quantity,
                             previous_stock, new_stock, created_by, created_at)
                     VALUES ($1, $2, 'Adjustment', $3, 0, $3, $4, NOW())
+                    RETURNING transaction_id
                 `, [product.product_id, product.product_name, quantity, req.session.userId]);
+                await client.query(`
+                    INSERT INTO inventory_purchase_records
+                        (purchase_batch_id, row_number, inventory_transaction_id,
+                            product_id, product_name, quantity, unit_price, purchase_date)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_DATE)
+                `, [
+                    batch.rows[0].purchase_batch_id,
+                    index + 1,
+                    transaction.rows[0].transaction_id,
+                    product.product_id,
+                    product.product_name,
+                    quantity,
+                    unitPrice
+                ]);
                 savedRows.push(product);
             }
 
-            return savedRows;
+            return { products: savedRows, replayed: false };
         });
 
-        return res.status(201).json({ products: savedProducts });
+        if (result.conflict) return res.status(409).json({ message: result.conflict });
+        return res.status(result.replayed ? 200 : 201).json({ products: result.products });
     } catch (error) {
         console.error('Invoice batch confirmation failed:', error);
+        if (error.code === '42P01'
+            && ['inventory_purchase_batches', 'inventory_purchase_records'].includes(error.table)) {
+            return res.status(503).json({
+                message: 'Purchase tracking is not installed. Run npm run migrate:finance-sales-purchases against the database configured for this server, then try again.'
+            });
+        }
         if (error.code === '42703' && error.column === 'product_name') {
             return res.status(503).json({
                 message: 'The inventory transaction table is missing its product_name column. Run npm run migrate:inventory-transactions against the database configured for this server, then try again.'

@@ -45,6 +45,8 @@
     function getTransactionClass(type) {
         switch (type) {
             case "Restock": return "restock";
+            case "Sale": return "used";
+            case "Sale Reversed": return "restock";
             case "Used in Service": return "used";
             case "Adjustment": return "adjustment";
             case "Expired": return "disposed";

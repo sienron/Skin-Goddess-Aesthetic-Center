@@ -8,6 +8,7 @@ const { notifyRoles } = require('../utils/notifications');
 const router = express.Router();
 const PAYMENT_TYPES = ['reservation', 'balance', 'product_sale'];
 const METHODS = ['paymongo', 'cash', 'gcash', 'maya', 'card'];
+const PAYMENT_STATUSES = ['posted', 'refunded', 'reversed'];
 const EXPENSE_CATEGORIES = ['Inventory & Supplies', 'Salaries & Commissions', 'Rent', 'Utilities', 'Marketing', 'Equipment Maintenance', 'Other'];
 const RETAINED_DEPOSIT_REVENUE = `(
   (a.appointment_status = 'no_show' AND $3::boolean)
@@ -22,6 +23,20 @@ class ApiError extends Error {
 
 function manilaDate(date = new Date()) {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila', year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
+}
+
+function manilaTimestamp(date = new Date()) {
+  const formatted = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Manila',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
+  }).format(date);
+  return `${formatted} Asia/Manila`;
 }
 
 function validDate(value) {
@@ -104,13 +119,8 @@ async function lockCashBusinessDate(client, businessDate) {
   );
 }
 
-async function lockCurrentCashBusinessDateIfOpen(client) {
-  const dateResult = await client.query(`
-    SELECT (NOW() AT TIME ZONE 'Asia/Manila')::date::text AS business_date
-  `);
-  const businessDate = dateResult.rows[0].business_date;
+async function assertBusinessDateOpen(client, businessDate, recordType = 'Cash receipts') {
   await lockCashBusinessDate(client, businessDate);
-
   let closing;
   try {
     closing = await client.query(
@@ -121,8 +131,15 @@ async function lockCurrentCashBusinessDateIfOpen(client) {
     cashClosingSchemaError(error);
   }
   if (closing.rows.length) {
-    throw new ApiError(409, `Cash closing for ${businessDate} is already recorded. Cash receipts for this date are closed.`);
+    throw new ApiError(409, `Cash closing for ${businessDate} is already recorded. ${recordType} for this date are closed.`);
   }
+}
+
+async function lockCurrentCashBusinessDateIfOpen(client) {
+  const dateResult = await client.query(`
+    SELECT (NOW() AT TIME ZONE 'Asia/Manila')::date::text AS business_date
+  `);
+  await assertBusinessDateOpen(client, dateResult.rows[0].business_date);
 }
 
 function cashAmountValue(value) {
@@ -229,6 +246,10 @@ async function reportData(from, to) {
   const totalExpenses = Number(expenses.rows[0].amount || 0);
   return {
     from, to,
+    generated_at: manilaTimestamp(),
+    date_basis: 'Sales earned uses completed appointment dates, posted eligible product-sale payment dates, and retained deposits under the active finance rules. Cash collected includes posted payments across all methods by payment date in Asia/Manila. Expenses use expense_date.',
+    accounting_basis: 'Mixed operational metrics. Net cash after expenses is posted collections less non-voided recorded expenses; expense payment method is not stored, so this is not a complete cash-flow statement.',
+    active_filters: 'Date range only',
     income_statement: { sales: totalSales, collected: totalCollected, expenses: totalExpenses, net_income: totalCollected - totalExpenses, outstanding_balance: await outstandingBalance() },
     daily_cash: daily.rows.map((row) => ({ ...row, collected: Number(row.collected), expenses: Number(row.expenses) })),
     online_reservations: onlineReservations.rows.map((row) => ({ ...row, count: Number(row.count) })),
@@ -501,9 +522,9 @@ router.get('/by-method', endpoint(async (req, res) => {
   }
   if (req.query.q) {
     values.push(`%${String(req.query.q).slice(0, 100)}%`);
-    where.push(`(COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, '') ILIKE $${values.length} OR COALESCE(p.reference_no, '') ILIKE $${values.length} OR COALESCE(s.service_name, '') ILIKE $${values.length})`);
+    where.push(`(COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, '') ILIKE $${values.length} OR COALESCE(p.reference_no, '') ILIKE $${values.length} OR COALESCE(p.note, '') ILIKE $${values.length} OR COALESCE(s.service_name, '') ILIKE $${values.length} OR COALESCE(sale.product_name, '') ILIKE $${values.length})`);
   }
-  const result = await db.query(`SELECT p.method, SUM(p.amount)::float8 AS amount, COUNT(*)::int AS count FROM payments p LEFT JOIN appointments a ON a.appointment_id = p.appointment_id LEFT JOIN users c ON c.user_id = a.user_id LEFT JOIN services s ON s.service_id = a.service_id WHERE ${where.join(' AND ')} GROUP BY p.method ORDER BY amount DESC`, values);
+  const result = await db.query(`SELECT p.method, SUM(p.amount)::float8 AS amount, COUNT(*)::int AS count FROM payments p LEFT JOIN appointments a ON a.appointment_id = p.appointment_id LEFT JOIN users c ON c.user_id = a.user_id LEFT JOIN services s ON s.service_id = a.service_id LEFT JOIN product_sale_details sale ON sale.payment_id = p.payment_id WHERE ${where.join(' AND ')} GROUP BY p.method ORDER BY amount DESC`, values);
   res.json(result.rows);
 }));
 
@@ -634,6 +655,7 @@ router.get('/payments/:id/receipt', endpoint(async (req, res) => {
     SELECT payment.payment_id, payment.payment_type, payment.amount::float8 AS amount,
       payment.method, payment.reference_no, payment.note, payment.status,
       (payment.created_at AT TIME ZONE 'Asia/Manila')::date::text AS payment_date,
+      reversal.reason AS reversal_reason, reversal.reversed_by, reversal.reversed_at,
       COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(customer.first_name), ''),
         NULLIF(BTRIM(customer.last_name), '')), ''), appointment.walk_in_name,
         CASE WHEN payment.payment_type = 'product_sale' THEN 'Retail sale' ELSE 'Client' END) AS client,
@@ -644,6 +666,7 @@ router.get('/payments/:id/receipt', endpoint(async (req, res) => {
     LEFT JOIN users customer ON customer.user_id = appointment.user_id
     LEFT JOIN services service ON service.service_id = appointment.service_id
     LEFT JOIN product_sale_details sale ON sale.payment_id = payment.payment_id
+    LEFT JOIN payment_reversals reversal ON reversal.payment_id = payment.payment_id
     WHERE payment.payment_id = $1
   `, [paymentId]);
   if (!result.rows.length) throw new ApiError(404, 'Payment not found.');
@@ -662,12 +685,33 @@ router.get('/payments/:id/receipt', endpoint(async (req, res) => {
   const unitPrice = payment.product_name
     ? `<p>Unit price: <strong>${safe(money(payment.unit_price))}</strong></p>`
     : '';
+  const isPosted = payment.status === 'posted';
+  const documentTitle = isPosted
+    ? 'Payment receipt'
+    : payment.status === 'refunded'
+      ? 'Refund adjustment notice'
+      : payment.status === 'reversed'
+        ? 'Payment reversal notice'
+        : 'Payment status adjustment notice';
+  const refundAuditNote = String(payment.note || '').split(/\r?\n/)
+    .filter((line) => /^(Manual cash refund recorded|PayMongo refund completed)/.test(line.trim()))
+    .join('\n') || 'Not recorded';
+  let adjustmentDetails = '';
+  if (!isPosted) {
+    const adjustmentReason = payment.status === 'reversed'
+      ? `<p>Reversal reason: ${safe(payment.reversal_reason || 'Not recorded')}</p>
+         <p>Reversed at: ${safe(payment.reversed_at || 'Not recorded')} · user ID: ${safe(payment.reversed_by || 'Not recorded')}</p>`
+      : `<p>Refund audit note: <span style="white-space:pre-wrap">${safe(refundAuditNote)}</span></p>`;
+    adjustmentDetails = `
+      <p><strong>This is an adjustment notice, not proof of a current valid payment.</strong></p>
+      ${adjustmentReason}`;
+  }
   const receipt = `<!DOCTYPE html>
     <html lang="en">
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>Receipt ${safe(number)}</title>
+        <title>${safe(documentTitle)} ${safe(number)}</title>
         <style>
           body{font:16px/1.5 Arial,sans-serif;color:#242424;margin:0;padding:32px}
           main{max-width:680px;margin:0 auto;border:1px solid #ddd;padding:32px}
@@ -684,8 +728,9 @@ router.get('/payments/:id/receipt', endpoint(async (req, res) => {
       <body>
         <main>
           <h1>Skin Goddess Aesthetic Center</h1>
-          <p class="muted">Payment receipt</p>
-          <p class="receipt-number">Receipt no. ${safe(number)}</p>
+          <p class="muted">${safe(documentTitle)}</p>
+          <p class="receipt-number">${isPosted ? 'Receipt no.' : 'Original transaction reference:'} ${safe(number)}</p>
+          ${!isPosted ? '<p><strong>Original transaction; status is not posted.</strong></p>' : ''}
           <dl>
             <dt>Payment date</dt><dd>${safe(payment.payment_date)}</dd>
             <dt>Received from</dt><dd>${safe(payment.client)}</dd>
@@ -696,9 +741,10 @@ router.get('/payments/:id/receipt', endpoint(async (req, res) => {
           <h2>Transaction details</h2>
           <p>${safe(detail)}</p>
           ${payment.product_name ? `<p>Quantity: <strong>${safe(payment.quantity)}</strong></p>${unitPrice}` : ''}
-          <p class="total">Total paid: ${safe(money(payment.amount))}</p>
+          ${adjustmentDetails}
+          <p class="total">${isPosted ? 'Total received' : 'Original payment amount'}: ${safe(money(payment.amount))}</p>
         </main>
-        <div class="actions"><button type="button" onclick="window.print()">Print receipt</button></div>
+        <div class="actions"><button type="button" onclick="window.print()">${isPosted ? 'Print receipt' : 'Print adjustment notice'}</button></div>
       </body>
     </html>`;
   res.setHeader('Cache-Control', 'private, no-store');
@@ -730,6 +776,11 @@ router.get('/transactions', endpoint(async (req, res) => {
       values.push(req.query[key]);
       where.push(`${column} = $${values.length}`);
     }
+  }
+  if (req.query.status && req.query.status !== 'all') {
+    if (!PAYMENT_STATUSES.includes(req.query.status)) throw new ApiError(400, 'Invalid payment status.');
+    values.push(req.query.status);
+    where.push(`p.status = $${values.length}`);
   }
   if (req.query.q) {
     values.push(`%${String(req.query.q).slice(0, 100)}%`);
@@ -918,7 +969,7 @@ router.post('/payments/:id/refund', endpoint(async (req, res) => {
     if (row.method !== 'cash') {
       throw new ApiError(409, 'Online payments must be successfully refunded through PayMongo before they can be marked refunded.');
     }
-    await lockCashBusinessDate(client, row.business_date);
+    await assertBusinessDateOpen(client, row.business_date, 'Cash payments');
 
     const auditNote = await client.query(`
       UPDATE payments
@@ -960,7 +1011,7 @@ router.post('/payments/:id/reverse', endpoint(async (req, res) => {
       throw new ApiError(409, 'Only posted payments can be reversed. This payment may already be reversed or refunded.');
     }
     if (existing.rows[0].method === 'cash') {
-      await lockCashBusinessDate(client, existing.rows[0].business_date);
+      await assertBusinessDateOpen(client, existing.rows[0].business_date, 'Cash payments');
     }
     let saleDetails = null;
     if (existing.rows[0].payment_type === 'product_sale') {
@@ -1050,7 +1101,10 @@ router.get('/expenses', endpoint(async (req, res) => {
 
 router.post('/expenses', endpoint(async (req, res) => {
   const expense = expenseInput(req.body || {});
-  const result = await db.query(`INSERT INTO expenses (expense_date, category, description, amount, supplier, reference_no, recorded_by) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING expense_id, expense_date::text AS expense_date, category, description, amount::float8 AS amount, supplier, reference_no`, [expense.date, expense.category, expense.description, expense.amount, expense.supplier, expense.reference, req.session.userId || null]);
+  const result = await db.transaction(async (client) => {
+    await assertBusinessDateOpen(client, expense.date, 'Expense entries');
+    return client.query(`INSERT INTO expenses (expense_date, category, description, amount, supplier, reference_no, recorded_by) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING expense_id, expense_date::text AS expense_date, category, description, amount::float8 AS amount, supplier, reference_no`, [expense.date, expense.category, expense.description, expense.amount, expense.supplier, expense.reference, req.session.userId || null]);
+  });
   res.status(201).json(result.rows[0]);
 }));
 
@@ -1128,6 +1182,7 @@ router.post('/inventory-purchase-suggestions/:id/expense', endpoint(async (req, 
         return { expense: existing.rows[0], replayed: true };
       }
 
+      await assertBusinessDateOpen(client, body.expense_date, 'Expense entries');
       const expense = await client.query(`
         INSERT INTO expenses
           (expense_date, category, description, amount, supplier, reference_no, recorded_by)
@@ -1184,6 +1239,10 @@ router.patch('/expenses/:id', endpoint(async (req, res) => {
       };
     }
 
+    for (const businessDate of [...new Set([previousValues.expense_date, expense.date])].sort()) {
+      await assertBusinessDateOpen(client, businessDate, 'Expense records');
+    }
+
     const result = await client.query(`
       UPDATE expenses
       SET expense_date = $1, category = $2, description = $3, amount = $4,
@@ -1213,7 +1272,22 @@ router.post('/expenses/:id/void', endpoint(async (req, res) => {
   const expenseId = idValue(req.params.id, 'Expense ID');
   const reason = String(req.body?.reason || '').trim();
   if (!reason || reason.length > 2000) throw new ApiError(400, 'A void reason of 1 to 2000 characters is required.');
-  const result = await db.query(`UPDATE expenses SET voided_at = NOW(), voided_by = $1, void_reason = $2 WHERE expense_id = $3 AND voided_at IS NULL RETURNING expense_id, voided_at, void_reason`, [req.session.userId || null, reason, expenseId]);
+  const result = await db.transaction(async (client) => {
+    const expense = await client.query(`
+      SELECT expense_id, expense_date::text AS expense_date
+      FROM expenses
+      WHERE expense_id = $1 AND voided_at IS NULL
+      FOR UPDATE
+    `, [expenseId]);
+    if (!expense.rows.length) throw new ApiError(404, 'Active expense not found.');
+    await assertBusinessDateOpen(client, expense.rows[0].expense_date, 'Expense records');
+    return client.query(`
+      UPDATE expenses
+      SET voided_at = NOW(), voided_by = $1, void_reason = $2
+      WHERE expense_id = $3 AND voided_at IS NULL
+      RETURNING expense_id, voided_at, void_reason
+    `, [req.session.userId || null, reason, expenseId]);
+  });
   if (!result.rows.length) throw new ApiError(404, 'Active expense not found.');
   res.json(result.rows[0]);
 }));
@@ -1234,6 +1308,55 @@ function sendCsv(res, headers, rows, filename) {
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
   res.send(`\uFEFF${body}`);
+}
+
+function activeFilterSummary(section, query = {}) {
+  const filters = [];
+  if (section === 'transactions') {
+    filters.push(`Status: ${query.status || 'all'}`);
+    if (query.type) filters.push(`Payment type: ${query.type}`);
+    if (query.method) filters.push(`Payment method: ${paymentMethodLabel(query.method)}`);
+  }
+  if (section === 'expenses' && query.category) filters.push(`Category: ${query.category}`);
+  if (query.q && ['transactions', 'expenses'].includes(section)) filters.push('Search: applied');
+  return filters.length ? filters.join('; ') : 'None beyond selected date range';
+}
+
+function exportDateBasis(section) {
+  if (section === 'transactions') {
+    return 'Payment received date in Asia/Manila; amount is the original transaction amount, with refunded/reversed status shown separately.';
+  }
+  if (section === 'expenses') {
+    return 'Expense date (expense_date); active and voided records are included. Expense payment method is not stored.';
+  }
+  if (section === 'daily-cash') {
+    return 'Posted payments across all methods by received date in Asia/Manila and non-voided expense_date.';
+  }
+  return 'Sales earned: completed appointment date, eligible product-sale payment date, and retained-deposit rules. Cash collected: posted payment date. Expenses: expense_date.';
+}
+
+function exportAccountingBasis(section) {
+  if (section === 'transactions') {
+    return 'Payment ledger; amounts are gross original payment records, not a net cash adjustment total.';
+  }
+  if (section === 'expenses') {
+    return 'Expense register by expense_date; the current model does not record settlement method.';
+  }
+  return 'Mixed operational metrics. Net cash after expenses is posted collections less non-voided recorded expenses; expense payment method is not stored, so this is not a complete cash-flow statement.';
+}
+
+function exportMetadataRows(from, to, section, query = {}) {
+  return [
+    ['Generated at (Asia/Manila)', manilaTimestamp()],
+    ['Selected date range', `${from} to ${to}`],
+    ['Date basis', exportDateBasis(section)],
+    ['Calculation basis', exportAccountingBasis(section)],
+    ['Active filters', activeFilterSummary(section, query)],
+  ];
+}
+
+function sendCsvWithMetadata(res, headers, rows, filename, from, to, section, query = {}) {
+  sendCsv(res, [...exportMetadataRows(from, to, section, query), [], headers], rows, filename);
 }
 
 const peso = (value) => `PHP ${Number(value).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -1257,6 +1380,11 @@ async function transactionExportRows(from, to, query) {
       values.push(query[key]);
       where.push(`${column} = $${values.length}`);
     }
+  }
+  if (query.status && query.status !== 'all') {
+    if (!PAYMENT_STATUSES.includes(query.status)) throw new ApiError(400, 'Invalid payment status.');
+    values.push(query.status);
+    where.push(`payment.status = $${values.length}`);
   }
   if (query.q) {
     values.push(`%${String(query.q).slice(0, 100)}%`);
@@ -1322,8 +1450,11 @@ function spreadsheetDate(value) {
   return new Date(`${value}T00:00:00.000Z`);
 }
 
-async function sendFinanceWorkbook(res, section, from, to, records) {
+async function sendFinanceWorkbook(res, section, from, to, records, query = {}) {
   const workbook = new ExcelJS.Workbook();
+  const metadata = workbook.addWorksheet('Report metadata');
+  metadata.addRows(exportMetadataRows(from, to, section, query));
+  metadata.columns = [{ width: 30 }, { width: 100 }];
   const transactions = section === 'transactions';
   const headers = transactions
     ? ['Date', 'Receipt number', 'Client', 'Type', 'Details', 'Payment method', 'Amount (PHP)', 'Status', 'Reference', 'Note']
@@ -1360,15 +1491,138 @@ async function sendFinanceWorkbook(res, section, from, to, records) {
   res.send(Buffer.from(buffer));
 }
 
+async function sendIncomeStatementWorkbook(res, from, to, report, chartImages = {}) {
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'Skin Goddess Aesthetic Center';
+  workbook.subject = `Financial summary ${from} to ${to}`;
+  const worksheet = workbook.addWorksheet('Financial Summary', {
+    views: [{ state: 'frozen', ySplit: 6 }],
+    pageSetup: { orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 1 },
+  });
+  worksheet.columns = [{ key: 'metric', width: 34 }, { key: 'amount', width: 22 }];
+  worksheet.mergeCells('A1:B1');
+  worksheet.getCell('A1').value = 'Skin Goddess Aesthetic Center';
+  worksheet.mergeCells('A2:B2');
+  worksheet.getCell('A2').value = 'Financial Summary';
+  worksheet.addRow(['Reporting period', `${from} to ${to}`]);
+  worksheet.addRow(['Generated', report.generated_at]);
+  worksheet.addRow([]);
+  worksheet.addRow(['Metric', 'Amount (PHP)']);
+
+  const income = report.income_statement;
+  [
+    ['Sales earned', Number(income.sales)],
+    ['Cash collected', Number(income.collected)],
+    ['Recorded expenses', Number(income.expenses)],
+    ['Net cash after expenses', Number(income.net_income)],
+  ].forEach((row) => worksheet.addRow(row));
+
+  worksheet.getRow(1).height = 30;
+  worksheet.getRow(1).font = { bold: true, size: 16, color: { argb: 'FFFFFFFF' } };
+  worksheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF5E4A25' } };
+  worksheet.getRow(2).height = 24;
+  worksheet.getRow(2).font = { bold: true, size: 12, color: { argb: 'FF5E4A25' } };
+  worksheet.getRow(2).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F0E3' } };
+  [3, 4].forEach((rowNumber) => {
+    worksheet.getRow(rowNumber).getCell(1).font = { bold: true, color: { argb: 'FF655E56' } };
+  });
+  worksheet.getRow(6).height = 22;
+  worksheet.getRow(6).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+  worksheet.getRow(6).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF5E4A25' } };
+  worksheet.getRow(6).alignment = { vertical: 'middle' };
+  worksheet.autoFilter = {
+    from: { row: 6, column: 1 },
+    to: { row: 10, column: 2 },
+  };
+
+  for (let rowNumber = 7; rowNumber <= 10; rowNumber += 1) {
+    const row = worksheet.getRow(rowNumber);
+    row.height = 22;
+    row.getCell(2).numFmt = '"PHP" #,##0.00';
+    row.getCell(2).alignment = { horizontal: 'right' };
+    if (rowNumber % 2 === 0) {
+      row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFAF8F3' } };
+    }
+  }
+  worksheet.getRow(10).font = { bold: true, color: { argb: 'FF5E4A25' } };
+  worksheet.getRow(10).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F0E3' } };
+  worksheet.getRow(10).border = { top: { style: 'thin', color: { argb: 'FFC9A84C' } } };
+
+  const chartEntries = Object.entries(chartImages);
+  if (chartEntries.length) {
+    const chartSheet = workbook.addWorksheet('Charts', {
+      pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
+    });
+    chartSheet.columns = Array.from({ length: 16 }, () => ({ width: 12 }));
+    chartEntries.forEach(([title, base64], index) => {
+      const column = (index % 2) * 8;
+      const row = Math.floor(index / 2) * 20;
+      const heading = chartSheet.getCell(row + 1, column + 1);
+      heading.value = title;
+      heading.font = { bold: true, size: 12, color: { argb: 'FF5E4A25' } };
+      const imageId = workbook.addImage({ base64, extension: 'png' });
+      chartSheet.addImage(imageId, {
+        tl: { col: column, row: row + 1 },
+        ext: { width: 560, height: 310 },
+      });
+    });
+  }
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition', `attachment; filename="finance-income-statement-${from}-to-${to}.xlsx"`);
+  res.send(Buffer.from(buffer));
+}
+
 router.get('/export.xlsx', endpoint(async (req, res) => {
   const { from, to } = dateRange(req.query);
+  if (req.query.section === 'income-statement') {
+    const report = await reportData(from, to);
+    await sendIncomeStatementWorkbook(res, from, to, report);
+    return;
+  }
   if (!['transactions', 'expenses'].includes(req.query.section)) {
-    throw new ApiError(400, 'Excel export section must be transactions or expenses.');
+    throw new ApiError(400, 'Excel export section must be transactions, expenses, or income-statement.');
   }
   const result = req.query.section === 'transactions'
     ? await transactionExportRows(from, to, req.query)
     : await expenseExportRows(from, to, req.query);
-  await sendFinanceWorkbook(res, req.query.section, from, to, result.rows);
+  await sendFinanceWorkbook(res, req.query.section, from, to, result.rows, req.query);
+}));
+
+router.post('/export-report.xlsx', endpoint(async (req, res) => {
+  const { from, to } = dateRange(req.body || {});
+  const chartLabels = {
+    'Sales earned vs expenses': 'reportSalesExpensesChart',
+    'Online reservations': 'reportOnlineReservationsChart',
+    'Revenue by service category': 'reportServiceCategoryChart',
+    'Deposits by status': 'reportDepositsChart',
+    'Cash collected by payment method': 'reportMethodsChart',
+    'Top services': 'reportTopServicesChart',
+    'Expenses by category': 'reportExpenseCategoryChart',
+  };
+  const suppliedCharts = req.body?.charts;
+  if (!suppliedCharts || typeof suppliedCharts !== 'object' || Array.isArray(suppliedCharts)) {
+    throw new ApiError(400, 'Chart images are required for the report export.');
+  }
+  const chartImages = {};
+  for (const [title, dataUrl] of Object.entries(suppliedCharts)) {
+    if (!Object.hasOwn(chartLabels, title)
+      || typeof dataUrl !== 'string'
+      || !dataUrl.startsWith('data:image/png;base64,')) {
+      throw new ApiError(400, 'The report contains an invalid chart image.');
+    }
+    const base64 = dataUrl.slice('data:image/png;base64,'.length);
+    if (!/^[A-Za-z0-9+/]+={0,2}$/.test(base64)) {
+      throw new ApiError(400, 'The report contains an invalid chart image.');
+    }
+    chartImages[title] = dataUrl;
+  }
+  if (!Object.keys(chartImages).length) {
+    throw new ApiError(400, 'At least one chart image is required for the report export.');
+  }
+  const report = await reportData(from, to);
+  await sendIncomeStatementWorkbook(res, from, to, report, chartImages);
 }));
 
 router.get('/export.csv', endpoint(async (req, res) => {
@@ -1377,18 +1631,18 @@ router.get('/export.csv', endpoint(async (req, res) => {
   if (!['transactions', 'expenses', 'income-statement', 'daily-cash'].includes(section)) throw new ApiError(400, 'Invalid export section.');
   if (section === 'transactions') {
     const result = await transactionExportRows(from, to, req.query);
-    sendCsv(res, ['Date', 'Type', 'Method', 'Amount (PHP)', 'Status', 'Reference', 'Note', 'Client'], result.rows.map((row) => [row.date, row.payment_type, paymentMethodLabel(row.method), peso(row.amount), row.status, row.reference_no, row.note, row.client]), 'finance-transactions.csv'); return;
+    sendCsvWithMetadata(res, ['Date', 'Type', 'Method', 'Amount (PHP)', 'Status', 'Reference', 'Note', 'Client'], result.rows.map((row) => [row.date, row.payment_type, paymentMethodLabel(row.method), peso(row.amount), row.status, row.reference_no, row.note, row.client]), 'finance-transactions.csv', from, to, section, req.query); return;
   }
   if (section === 'expenses') {
     const result = await expenseExportRows(from, to, req.query);
-    sendCsv(res, ['Date', 'Category', 'Description', 'Amount (PHP)', 'Supplier', 'Reference', 'Status', 'Void reason'], result.rows.map((row) => [row.date, row.category, row.description, peso(row.amount), row.supplier, row.reference_no, row.status, row.void_reason]), 'finance-expenses.csv'); return;
+    sendCsvWithMetadata(res, ['Date', 'Category', 'Description', 'Amount (PHP)', 'Supplier', 'Reference', 'Status', 'Void reason'], result.rows.map((row) => [row.date, row.category, row.description, peso(row.amount), row.supplier, row.reference_no, row.status, row.void_reason]), 'finance-expenses.csv', from, to, section, req.query); return;
   }
   const report = await reportData(from, to);
   if (section === 'income-statement') {
     const income = report.income_statement;
-    sendCsv(res, ['Item', 'Amount (PHP)'], [['Sales', peso(income.sales)], ['Collected', peso(income.collected)], ['Expenses', peso(income.expenses)], ['Net income (collected less expenses)', peso(income.net_income)]], 'finance-income-statement.csv'); return;
+    sendCsvWithMetadata(res, ['Item', 'Amount (PHP)'], [['Sales earned', peso(income.sales)], ['Cash collected', peso(income.collected)], ['Expenses', peso(income.expenses)], ['Net cash after expenses', peso(income.net_income)]], 'finance-income-statement.csv', from, to, section, req.query); return;
   }
-  sendCsv(res, ['Date', 'Collected (PHP)', 'Expenses (PHP)'], report.daily_cash.map((row) => [row.date, peso(row.collected), peso(row.expenses)]), 'finance-daily-cash.csv');
+  sendCsvWithMetadata(res, ['Date', 'Cash collected (PHP)', 'Recorded expenses (PHP)'], report.daily_cash.map((row) => [row.date, peso(row.collected), peso(row.expenses)]), 'finance-daily-cash.csv', from, to, section, req.query);
 }));
 
 module.exports = router;

@@ -44,16 +44,16 @@ async function migrate() {
 
     await db.query('ALTER TABLE appointments ALTER COLUMN appointment_end_time SET NOT NULL');
 
-    const activeWithoutAesthetician = await db.query(`
+    const confirmedWithoutAesthetician = await db.query(`
       SELECT appointment_id
       FROM appointments
-      WHERE appointment_status IN (${ACTIVE_STATUSES})
+      WHERE appointment_status = 'confirmed'
         AND aesthetician_id IS NULL
       LIMIT 10
     `);
-    if (activeWithoutAesthetician.rows.length > 0) {
+    if (confirmedWithoutAesthetician.rows.length > 0) {
       console.error('Migration stopped: active appointments without an aesthetician would bypass overlap protection. Assign an aesthetician before trying again.');
-      console.error('Example appointment IDs:', activeWithoutAesthetician.rows.map((row) => row.appointment_id).join(', '));
+      console.error('Example appointment IDs:', confirmedWithoutAesthetician.rows.map((row) => row.appointment_id).join(', '));
       process.exitCode = 1;
       return;
     }

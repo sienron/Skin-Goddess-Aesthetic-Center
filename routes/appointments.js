@@ -99,32 +99,56 @@ async function refundAppointmentDeposit(appointmentId) {
   const config = getPayMongoConfig();
   if (!config) return { refunded: false };
 
-  const sessionResult = await db.query(`
-    SELECT reference_number, payment_id, amount_cents
-    FROM paymongo_checkout_sessions
-    WHERE appointment_id = $1 AND status = 'consumed' AND payment_id IS NOT NULL
-  `, [appointmentId]);
-  if (sessionResult.rows.length === 0) return { refunded: false };
-  const session = sessionResult.rows[0];
+  return db.transaction(async (client) => {
+    const sessionResult = await client.query(`
+      SELECT reference_number, payment_id, amount_cents
+      FROM paymongo_checkout_sessions
+      WHERE appointment_id = $1 AND status = 'consumed' AND payment_id IS NOT NULL
+      FOR UPDATE
+    `, [appointmentId]);
+    if (sessionResult.rows.length === 0) return { refunded: false };
+    const session = sessionResult.rows[0];
 
-  const refund = await refundPayMongoPayment({
-    paymentId: session.payment_id,
-    amountCents: session.amount_cents,
-    reason: 'requested_by_customer',
-    config
+    const paymentResult = await client.query(`
+      SELECT payment_id
+      FROM payments
+      WHERE appointment_id = $1 AND payment_type = 'reservation'
+        AND status = 'posted' AND method <> 'cash'
+      FOR UPDATE
+    `, [appointmentId]);
+    if (paymentResult.rows.length === 0) return { refunded: false };
+
+    const refund = await refundPayMongoPayment({
+      paymentId: session.payment_id,
+      amountCents: session.amount_cents,
+      reason: 'requested_by_customer',
+      config
+    });
+    if (!refund.ok) {
+      console.error('PayMongo refund failed for appointment', appointmentId, refund.message);
+      return { refunded: false };
+    }
+
+    const refundAuditNote = `PayMongo refund completed${refund.refundId ? ` (${refund.refundId})` : ''}`;
+    const paymentUpdate = await client.query(`
+      UPDATE payments
+      SET status = 'refunded',
+          note = CONCAT_WS(E'\\n', NULLIF(note, ''), $1)
+      WHERE payment_id = $2 AND status = 'posted'
+      RETURNING payment_id
+    `, [refundAuditNote, paymentResult.rows[0].payment_id]);
+    if (paymentUpdate.rows.length === 0) {
+      throw new Error(`PayMongo refunded appointment ${appointmentId}, but its posted reservation ledger entry could not be updated.`);
+    }
+
+    await client.query(`
+      UPDATE paymongo_checkout_sessions
+      SET status = 'refunded', refunded_at = NOW(), updated_at = NOW()
+      WHERE reference_number = $1 AND status = 'consumed'
+    `, [session.reference_number]);
+    await client.query(`UPDATE appointments SET payment_status = 'refunded' WHERE appointment_id = $1`, [appointmentId]);
+    return { refunded: true };
   });
-  if (!refund.ok) {
-    console.error('PayMongo refund failed for appointment', appointmentId, refund.message);
-    return { refunded: false };
-  }
-
-  await db.query(`
-    UPDATE paymongo_checkout_sessions
-    SET status = 'refunded', refunded_at = NOW(), updated_at = NOW()
-    WHERE reference_number = $1
-  `, [session.reference_number]);
-  await db.query(`UPDATE appointments SET payment_status = 'refunded' WHERE appointment_id = $1`, [appointmentId]);
-  return { refunded: true };
 }
 
 function isLeapYear(year) {
@@ -854,6 +878,14 @@ router.post('/:id/cancel', requireRole('admin'), async (req, res) => {
       refundMessage = refundOutcome.refunded
         ? ' The reservation fee was automatically refunded.'
         : ' The reservation fee could not be refunded automatically; process it manually.';
+    } else if (appointment.payment_status === 'paid') {
+      await db.query(`
+        UPDATE payments
+        SET note = CONCAT_WS(E'\\n', NULLIF(note, ''),
+          FORMAT('[DEPOSIT_FORFEITED] Late cancellation recorded by user %s at %s', $1, NOW()))
+        WHERE appointment_id = $2 AND payment_type = 'reservation' AND status = 'posted'
+          AND POSITION('[DEPOSIT_FORFEITED]' IN COALESCE(note, '')) = 0
+      `, [req.session.userId, appointmentId]);
     }
 
     const message = `Your ${appointment.service_name} appointment on ${appointment.appointment_date} at ${String(appointment.appointment_time).slice(0, 5)} was cancelled.${refundMessage}`;

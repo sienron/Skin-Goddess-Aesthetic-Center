@@ -45,18 +45,19 @@
         <section class="sidebar staff-sidebar" aria-label="Finance navigation">
             <div class="staff-sidebar-logo-wrap"><img src="images/logo_horizontal.jpg" alt="Skin Goddess logo"
                     class="staff-sidebar-logo"></div>
-            <hr>
             <h4 class="sidebar-heading">My Links</h4>
             <nav>
                 <ul>
-                    <li class="nav-item active"><img src="icons/circle.svg" alt="" class="nav-bullet"><a
-                            href="FinanceDashboard.html">Dashboard</a></li>
-                    <li class="nav-item"><img src="icons/circle.svg" alt="" class="nav-bullet"><a
-                            href="FinancesTransactions.html">Sales &amp; Transactions</a></li>
-                    <li class="nav-item"><img src="icons/circle.svg" alt="" class="nav-bullet"><a
-                            href="FinanceExpenses.html">Expenses</a></li>
-                    <li class="nav-item"><img src="icons/circle.svg" alt="" class="nav-bullet"><a
-                            href="FinanceReports.html">Reports</a></li>
+                    <li class="nav-item active"><a href="FinanceDashboard.html" aria-current="page"><img
+                                src="icons/finance-dashboard.svg" alt="" class="finance-nav-icon"><span>Dashboard</span></a>
+                    </li>
+                    <li class="nav-item"><a href="FinancesTransactions.html"><img
+                                src="icons/finance-transactions.svg" alt="" class="finance-nav-icon"><span>Sales &amp;
+                                Transactions</span></a></li>
+                    <li class="nav-item"><a href="FinanceExpenses.html"><img src="icons/finance-expenses.svg" alt=""
+                                class="finance-nav-icon"><span>Expenses</span></a></li>
+                    <li class="nav-item"><a href="FinanceReports.html"><img src="icons/finance-reports.svg" alt=""
+                                class="finance-nav-icon"><span>Reports</span></a></li>
                 </ul>
             </nav>
             <div class="profile-wrap">
@@ -88,13 +89,14 @@
                 <label>To<input id="dashboardTo" type="date"></label>
             </div>
             <div class="fin-summary-grid fin-summary-grid--dashboard">
-                <article><span>Total sales</span><strong id="dashSales">PHP 0.00</strong><small id="dashSalesComparison">Selected period by appointment date</small></article>
-                <article><span>Collected</span><strong id="dashCollected">PHP 0.00</strong><small id="dashCollectedComparison">Posted payments received</small></article>
+                <article><span>Sales earned</span><strong id="dashSales">PHP 0.00</strong><small id="dashSalesComparison">Completed appointment dates and eligible product sales</small></article>
+                <article><span>Cash collected</span><strong id="dashCollected">PHP 0.00</strong><small id="dashCollectedComparison">Posted payments by receipt date</small></article>
                 <article><span>Expenses</span><strong id="dashExpenses">PHP 0.00</strong><small id="dashExpensesComparison">Active expenses</small></article>
-                <article><span>Net income (collected less expenses)</span><strong id="dashNet">PHP 0.00</strong><small id="dashNetComparison">Collected less expenses</small></article>
+                <article><span>Net cash after expenses</span><strong id="dashNet">PHP 0.00</strong><small id="dashNetComparison">Posted collections less recorded active expenses</small></article>
                 <article><span>Outstanding balance</span><strong id="dashOutstanding">PHP 0.00</strong><small>Completed appointments</small></article>
                 <article><span>Today's collections</span><strong id="dashToday">PHP 0.00</strong><small>Manila date</small></article>
             </div>
+            <p class="fin-modal-copy">Sales earned uses completed appointment dates, eligible posted product sales, and retained-deposit rules. Cash collected includes posted payments across all methods by receipt date. Net cash after expenses subtracts recorded active expenses; expense payment method is not captured.</p>
             <div class="fin-alert-row"><a class="fin-alert-chip" href="FinancesTransactions.html#receivables"><span>Receivables</span><strong id="dashReceivables">0</strong></a><div class="fin-alert-chip"><span>No-shows this week</span><strong id="dashNoShows">0</strong></div></div>
             <section class="staff-table-card fin-chart-section fin-cash-closing" aria-labelledby="cashClosingTitle">
                 <div class="fin-section-heading"><h2 id="cashClosingTitle">End-of-day cash closing</h2><span>One immutable close per business date</span></div>
@@ -114,7 +116,7 @@
                 <div class="staff-empty-state" id="cashClosingHistoryEmpty" hidden><strong>No cash closings recorded</strong></div>
                 <p class="fin-page-message" id="cashClosingHistoryMessage" role="status" aria-live="polite">Loading cash closings...</p>
             </section>
-            <div class="fin-chart-grid"><section class="staff-table-card fin-chart-section"><div class="fin-section-heading"><h2>Sales vs Expenses</h2><span>Last six months</span></div><div class="fin-chart-frame"><canvas id="dashboardMonthlyChart" aria-label="Sales versus expenses for the last six months" role="img"></canvas></div></section><section class="staff-table-card fin-chart-section"><div class="fin-section-heading"><h2>Daily collections</h2><span id="dashboardMonthLabel"></span></div><div class="fin-chart-frame"><canvas id="dashboardDailyChart" aria-label="Daily collections for the selected period" role="img"></canvas></div></section></div>
+            <div class="fin-chart-grid"><section class="staff-table-card fin-chart-section"><div class="fin-section-heading"><h2>Sales earned vs recorded expenses</h2><span>Last six months</span></div><div class="fin-chart-frame"><canvas id="dashboardMonthlyChart" aria-label="Sales earned versus recorded expenses for the last six months" role="img"></canvas></div></section><section class="staff-table-card fin-chart-section"><div class="fin-section-heading"><h2>Posted collections</h2><span id="dashboardMonthLabel"></span></div><div class="fin-chart-frame"><canvas id="dashboardDailyChart" aria-label="Posted collections by received date for the selected period" role="img"></canvas></div></section></div>
             <div class="fin-chart-grid"><section class="staff-table-card fin-chart-section"><div class="fin-section-heading"><h2>Appointment trends</h2><span>Last six months by appointment date</span></div><div class="fin-chart-frame"><canvas id="appointmentTrendsChart" aria-label="Appointment counts by status for the last six months" role="img" hidden></canvas></div><p class="fin-page-message" id="appointmentTrendsMessage" role="status" aria-live="polite">Loading appointment trends...</p></section></div>
             <section class="staff-table-card"><div class="staff-table-toolbar"><h2>Recent finance activity</h2><a href="FinancesTransactions.html">View all transactions</a></div><div class="fin-table-scroll"><table class="fin-table"><thead><tr><th>Date</th><th>Activity</th><th>Category / method</th><th>Amount</th><th>Status</th></tr></thead><tbody id="dashboardRecentRows"></tbody></table></div><div class="staff-empty-state" id="dashboardRecentEmpty" hidden><strong>No data for this period</strong><p>Payments and expenses will appear here.</p></div><p class="fin-page-message" id="dashboardMessage" role="status" aria-live="polite">Loading finance overview...</p></section>
         </section>

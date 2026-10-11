@@ -57,15 +57,15 @@
       data: {
         labels: monthly.map((item) => item.month),
         datasets: [
-          { label: 'Sales', data: monthly.map((item) => Number(item.sales)), backgroundColor: '#C9A84C', borderRadius: 3 },
-          { label: 'Expenses', data: monthly.map((item) => Number(item.expenses)), backgroundColor: '#B93C3C', borderRadius: 3 },
+          { label: 'Sales earned', data: monthly.map((item) => Number(item.sales)), backgroundColor: '#C9A84C', borderRadius: 3 },
+          { label: 'Recorded expenses', data: monthly.map((item) => Number(item.expenses)), backgroundColor: '#B93C3C', borderRadius: 3 },
         ],
       },
       options: { scales: { x: { stacked: false }, y: { beginAtZero: true } }, plugins: { tooltip: { callbacks: { label: (item) => `${item.dataset.label}: ${common.formatPeso(item.raw)}` } } } },
     });
     common.renderChart('dashboardDailyChart', {
       type: 'line',
-      data: { labels: daily.map((item) => item.date.slice(5)), datasets: [{ label: 'Collected', data: daily.map((item) => Number(item.collected)), borderColor: '#228B46', backgroundColor: 'rgba(34,139,70,.12)', fill: true, tension: 0.25, pointRadius: 2 }] },
+      data: { labels: daily.map((item) => item.date.slice(5)), datasets: [{ label: 'Posted collections', data: daily.map((item) => Number(item.collected)), borderColor: '#228B46', backgroundColor: 'rgba(34,139,70,.12)', fill: true, tension: 0.25, pointRadius: 2 }] },
       options: { plugins: { legend: { display: false }, tooltip: { callbacks: { label: (item) => common.formatPeso(item.raw) } } } },
     });
 
@@ -202,6 +202,16 @@
   refs.cashClosingDate.addEventListener('change', loadCashClosing);
   refs.cashClosingForm.addEventListener('submit', async (event) => {
     event.preventDefault();
+    const actualAmount = Number(refs.cashClosingActual.value);
+    const variance = Math.round((actualAmount - expectedCash) * 100) / 100;
+    const confirmed = window.confirm([
+      `Close business date ${refs.cashClosingDate.value}?`,
+      `Expected cash receipts: ${common.formatPeso(expectedCash)}.`,
+      `Cash counted: ${common.formatPeso(actualAmount)}.`,
+      `Variance: ${common.formatPeso(variance)}.`,
+      'This closing is immutable. Additional cash receipts, refunds/reversals of cash payments, and expense changes for this date will be blocked.',
+    ].join('\n'));
+    if (!confirmed) return;
     refs.cashClosingSubmit.disabled = true;
     refs.cashClosingMessage.textContent = 'Recording cash closing...';
     try {
@@ -209,7 +219,7 @@
         method: 'POST',
         body: JSON.stringify({
           business_date: refs.cashClosingDate.value,
-          actual_amount: Number(refs.cashClosingActual.value).toFixed(2),
+          actual_amount: actualAmount.toFixed(2),
         }),
       });
       const variance = Number(result.closing.variance);

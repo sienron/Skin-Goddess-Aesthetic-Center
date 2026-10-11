@@ -315,16 +315,18 @@ async function createPayment(client, {
   amount,
   method = 'cash',
   status = 'posted',
+  paymentDate = businessDate,
+  referenceNo = null,
 }) {
   const result = await client.query(`
     INSERT INTO payments
-      (appointment_id, payment_type, amount, method, status, note, recorded_by, created_at)
+      (appointment_id, payment_type, amount, method, status, note, reference_no, recorded_by, created_at)
     VALUES (
-      $1, $2, $3, $4, $5, 'finance integration fixture', $6,
-      (($7::date + TIME '12:00:00') AT TIME ZONE 'Asia/Manila')
+      $1, $2, $3, $4, $5, 'finance integration fixture', $6, $7,
+      (($8::date + TIME '12:00:00') AT TIME ZONE 'Asia/Manila')
     )
     RETURNING payment_id
-  `, [appointmentId, paymentType, amount, method, status, financeUserId, businessDate]);
+  `, [appointmentId, paymentType, amount, method, status, referenceNo, financeUserId, paymentDate]);
   const paymentId = Number(result.rows[0].payment_id);
   tracked.paymentIds.push(paymentId);
   return paymentId;
@@ -332,8 +334,11 @@ async function createPayment(client, {
 
 async function createBusinessFixtures() {
   const ids = await db.transaction(async (client) => {
+    const statusTestReference = `FINANCE-IT-STATUS-${crypto.randomUUID()}`;
     const refundAppointmentId = await createAppointment(client, 'cancelled');
     const reversalAppointmentId = await createAppointment(client, 'completed');
+    const openRefundAppointmentId = await createAppointment(client, 'cancelled');
+    const openReversalAppointmentId = await createAppointment(client, 'completed');
     const initialCashAppointmentId = await createAppointment(client, 'completed');
     const racingCashAppointmentId = await createAppointment(client, 'completed');
     const blockedCashAppointmentId = await createAppointment(client, 'completed');
@@ -350,6 +355,20 @@ async function createBusinessFixtures() {
       paymentType: 'balance',
       amount: '30.00',
     });
+    const openRefundPaymentId = await createPayment(client, {
+      appointmentId: openRefundAppointmentId,
+      paymentType: 'reservation',
+      amount: '12.00',
+      paymentDate: offsetDate(businessDate, -1),
+      referenceNo: `${statusTestReference}-REFUND`,
+    });
+    const openReversalPaymentId = await createPayment(client, {
+      appointmentId: openReversalAppointmentId,
+      paymentType: 'balance',
+      amount: '13.00',
+      paymentDate: offsetDate(businessDate, -1),
+      referenceNo: `${statusTestReference}-REVERSAL`,
+    });
     const refundedCashId = await createPayment(client, { amount: '7.00', status: 'refunded' });
     const reversedCashId = await createPayment(client, { amount: '8.00', status: 'reversed' });
     const nonCashId = await createPayment(client, { amount: '99.00', method: 'card' });
@@ -362,10 +381,21 @@ async function createBusinessFixtures() {
     productId = Number(product.rows[0].product_id);
     tracked.productIds.push(productId);
     productStock = 10;
+    const closedExpense = await client.query(`
+      INSERT INTO expenses (expense_date, category, description, amount, recorded_by)
+      VALUES ($1, 'Other', 'Closed-period finance integration fixture', 45.00, $2)
+      RETURNING expense_id
+    `, [businessDate, financeUserId]);
+    const closedExpenseId = Number(closedExpense.rows[0].expense_id);
+    tracked.expenseIds.push(closedExpenseId);
 
     return {
       refundPaymentId,
       reversalPaymentId,
+      openRefundPaymentId,
+      openReversalPaymentId,
+      statusTestReference,
+      closedExpenseId,
       initialCashAppointmentId,
       racingCashAppointmentId,
       blockedCashAppointmentId,
@@ -572,6 +602,12 @@ describe('Finance dashboard and cash-closing integration', { concurrency: false 
     });
     assert.equal(cashPayment.status, 201);
     tracked.paymentIds.push(Number(cashPayment.data.payment_id));
+    const postedReceipt = await request(`/payments/${cashPayment.data.payment_id}/receipt`, {
+      userId: financeUserId,
+    });
+    assert.equal(postedReceipt.status, 200);
+    assert.match(postedReceipt.data, /Payment receipt/);
+    assert.match(postedReceipt.data, /Total received/);
 
     saleRequestKey = crypto.randomUUID();
     const sale = await request('/product-sales', {
@@ -706,7 +742,14 @@ describe('Finance dashboard and cash-closing integration', { concurrency: false 
     assert.equal(nonCashPayment.status, 201);
     tracked.paymentIds.push(Number(nonCashPayment.data.payment_id));
 
-    const refund = await request(`/payments/${fixtures.refundPaymentId}/refund`, {
+    const closedRefund = await request(`/payments/${fixtures.refundPaymentId}/refund`, {
+      method: 'POST',
+      userId: financeUserId,
+      body: { note: 'Finance integration cash refund' },
+    });
+    assert.equal(closedRefund.status, 409);
+
+    const refund = await request(`/payments/${fixtures.openRefundPaymentId}/refund`, {
       method: 'POST',
       userId: financeUserId,
       body: { note: 'Finance integration cash refund' },
@@ -714,13 +757,27 @@ describe('Finance dashboard and cash-closing integration', { concurrency: false 
     assert.equal(refund.status, 200);
     assert.equal(refund.data.status, 'refunded');
     assert.match(refund.data.note, /Finance integration cash refund/);
-    assert.equal((await request(`/payments/${fixtures.refundPaymentId}/refund`, {
+    const refundReceipt = await request(`/payments/${fixtures.openRefundPaymentId}/receipt`, {
+      userId: financeUserId,
+    });
+    assert.equal(refundReceipt.status, 200);
+    assert.match(refundReceipt.data, /Refund adjustment notice/);
+    assert.match(refundReceipt.data, /not proof of a current valid payment/);
+    assert.doesNotMatch(refundReceipt.data, /Total received/);
+    assert.equal((await request(`/payments/${fixtures.openRefundPaymentId}/refund`, {
       method: 'POST',
       userId: financeUserId,
       body: { note: 'duplicate refund' },
     })).status, 409);
 
-    const reversal = await request(`/payments/${fixtures.reversalPaymentId}/reverse`, {
+    const closedReversal = await request(`/payments/${fixtures.reversalPaymentId}/reverse`, {
+      method: 'POST',
+      userId: financeUserId,
+      body: { reason: 'Finance integration cash reversal' },
+    });
+    assert.equal(closedReversal.status, 409);
+
+    const reversal = await request(`/payments/${fixtures.openReversalPaymentId}/reverse`, {
       method: 'POST',
       userId: financeUserId,
       body: { reason: 'Finance integration cash reversal' },
@@ -728,11 +785,76 @@ describe('Finance dashboard and cash-closing integration', { concurrency: false 
     assert.equal(reversal.status, 200);
     assert.equal(reversal.data.status, 'reversed');
     assert.equal(reversal.data.reason, 'Finance integration cash reversal');
-    assert.equal((await request(`/payments/${fixtures.reversalPaymentId}/reverse`, {
+    const reversalReceipt = await request(`/payments/${fixtures.openReversalPaymentId}/receipt`, {
+      userId: financeUserId,
+    });
+    assert.equal(reversalReceipt.status, 200);
+    assert.match(reversalReceipt.data, /Payment reversal notice/);
+    assert.match(reversalReceipt.data, /Finance integration cash reversal/);
+    assert.doesNotMatch(reversalReceipt.data, /Total received/);
+    assert.equal((await request(`/payments/${fixtures.openReversalPaymentId}/reverse`, {
       method: 'POST',
       userId: financeUserId,
       body: { reason: 'duplicate reversal' },
     })).status, 409);
+
+    const priorDate = offsetDate(businessDate, -1);
+    const statusQuery = `q=${encodeURIComponent(fixtures.statusTestReference)}`;
+    const refundedTransactions = await request(
+      `/transactions?from=${priorDate}&to=${priorDate}&status=refunded&${statusQuery}`,
+      { userId: financeUserId }
+    );
+    assert.equal(refundedTransactions.status, 200);
+    assert.equal(refundedTransactions.data.total, 1);
+    assert.equal(Number(refundedTransactions.data.rows[0].payment_id), fixtures.openRefundPaymentId);
+    const reversedTransactions = await request(
+      `/transactions?from=${priorDate}&to=${priorDate}&status=reversed&${statusQuery}`,
+      { userId: financeUserId }
+    );
+    assert.equal(reversedTransactions.data.total, 1);
+    assert.equal(Number(reversedTransactions.data.rows[0].payment_id), fixtures.openReversalPaymentId);
+    const allTransactions = await request(
+      `/transactions?from=${priorDate}&to=${priorDate}&status=all&${statusQuery}`,
+      { userId: financeUserId }
+    );
+    assert.equal(allTransactions.data.total, 2);
+    const invalidStatus = await request(`/transactions?from=${businessDate}&to=${businessDate}&status=pending`, {
+      userId: financeUserId,
+    });
+    assert.equal(invalidStatus.status, 400);
+
+    const closedExpenseEdit = await request(`/expenses/${fixtures.closedExpenseId}`, {
+      method: 'PATCH',
+      userId: financeUserId,
+      body: {
+        expense_date: offsetDate(businessDate, -1),
+        category: 'Other',
+        description: 'Attempted closed-period edit',
+        amount: 99,
+      },
+    });
+    assert.equal(closedExpenseEdit.status, 409);
+    assert.equal((await request(`/expenses/${fixtures.closedExpenseId}/void`, {
+      method: 'POST',
+      userId: financeUserId,
+      body: { reason: 'Attempted closed-period void' },
+    })).status, 409);
+    assert.equal((await request('/expenses', {
+      method: 'POST',
+      userId: financeUserId,
+      body: {
+        expense_date: businessDate,
+        category: 'Other',
+        description: 'Attempted expense entry in a closed period',
+        amount: 1,
+      },
+    })).status, 409);
+    const closedExpenseState = await db.query(
+      'SELECT amount::text AS amount, voided_at FROM expenses WHERE expense_id = $1',
+      [fixtures.closedExpenseId]
+    );
+    assert.equal(closedExpenseState.rows[0].amount, '45.00');
+    assert.equal(closedExpenseState.rows[0].voided_at, null);
 
     const productState = await db.query(
       'SELECT stock_quantity FROM inventory_products WHERE product_id = $1',
@@ -775,8 +897,9 @@ describe('Finance dashboard and cash-closing integration', { concurrency: false 
   });
 
   it('records before-and-after expense edit history atomically and does not audit no-op edits', async () => {
+    const expenseDate = offsetDate(businessDate, -1);
     const expenseInput = {
-      expense_date: businessDate,
+      expense_date: expenseDate,
       category: 'Other',
       description: 'Finance integration expense audit fixture',
       amount: 123.45,

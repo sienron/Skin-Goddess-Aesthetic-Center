@@ -45,18 +45,19 @@
         <section class="sidebar staff-sidebar" aria-label="Finance navigation">
             <div class="staff-sidebar-logo-wrap"><img src="images/logo_horizontal.jpg" alt="Skin Goddess logo"
                     class="staff-sidebar-logo"></div>
-            <hr>
             <h4 class="sidebar-heading">My Links</h4>
             <nav>
                 <ul>
-                    <li class="nav-item"><img src="icons/circle.svg" alt="" class="nav-bullet"><a
-                            href="FinanceDashboard.html">Dashboard</a></li>
-                    <li class="nav-item"><img src="icons/circle.svg" alt="" class="nav-bullet"><a
-                            href="FinancesTransactions.html">Sales &amp; Transactions</a></li>
-                    <li class="nav-item active"><img src="icons/circle.svg" alt="" class="nav-bullet"><a
-                            href="FinanceExpenses.html">Expenses</a></li>
-                    <li class="nav-item"><img src="icons/circle.svg" alt="" class="nav-bullet"><a
-                            href="FinanceReports.html">Reports</a></li>
+                    <li class="nav-item"><a href="FinanceDashboard.html"><img src="icons/finance-dashboard.svg" alt=""
+                                class="finance-nav-icon"><span>Dashboard</span></a></li>
+                    <li class="nav-item"><a href="FinancesTransactions.html"><img
+                                src="icons/finance-transactions.svg" alt="" class="finance-nav-icon"><span>Sales &amp;
+                                Transactions</span></a></li>
+                    <li class="nav-item active"><a href="FinanceExpenses.html" aria-current="page"><img
+                                src="icons/finance-expenses.svg" alt="" class="finance-nav-icon"><span>Expenses</span></a>
+                    </li>
+                    <li class="nav-item"><a href="FinanceReports.html"><img src="icons/finance-reports.svg" alt=""
+                                class="finance-nav-icon"><span>Reports</span></a></li>
                 </ul>
             </nav>
             <div class="profile-wrap">
@@ -86,20 +87,19 @@
                 <label>Category<select id="expenseCategory"><option value="">All categories</option><option>Inventory &amp; Supplies</option><option>Salaries &amp; Commissions</option><option>Rent</option><option>Utilities</option><option>Marketing</option><option>Equipment Maintenance</option><option>Other</option></select></label>
             </div>
             <div class="fin-expense-overview">
-                <article class="fin-expense-summary-total"><span>Expenses for selected period</span><strong id="expenseTotal">PHP 0.00</strong><small id="expenseComparison">Active expenses + DEMO data</small></article>
+                <article class="fin-expense-summary-total"><span>Recorded active expenses</span><strong id="expenseTotal">PHP 0.00</strong><small id="expenseComparison">Active expenses in the selected period</small></article>
                 <div class="fin-expense-overview-side">
                     <article class="fin-expense-card fin-expense-card--machine">
-                        <strong>Machine Expenses</strong>
+                        <strong>Machine expenses</strong>
                         <span id="machineExpenseTotal">PHP 0.00</span>
-                        <small>Equipment Maintenance · includes DEMO data</small>
+                        <small>Recorded active Equipment Maintenance expenses</small>
                     </article>
                     <article class="fin-expense-card fin-expense-card--electricity">
                         <div class="fin-electricity-heading">
-                            <strong>Electricity Bill</strong>
-                            <button class="fin-expense-upload" type="button">Upload Bill</button>
+                            <strong>Utilities expenses</strong>
                         </div>
-                        <span>₱0.00</span>
-                        <small>No bill data available</small>
+                        <span id="utilitiesExpenseTotal">PHP 0.00</span>
+                        <small>Recorded active Utilities expenses</small>
                     </article>
                 </div>
             </div>
@@ -107,13 +107,13 @@
                 <section class="staff-table-card fin-chart-section fin-expense-category-chart">
                     <div class="fin-section-heading">
                         <h2>Expenses by category</h2>
-                        <div class="fin-expense-chart-meta"><span class="fin-demo-badge">DEMO DATA INCLUDED</span><span id="expensePeriodLabel"></span></div>
+                        <div class="fin-expense-chart-meta"><span id="expensePeriodLabel"></span></div>
                     </div>
                     <div class="fin-chart-frame"><canvas id="expenseCategoryChart" aria-label="Expenses by category" role="img"></canvas></div>
                 </section>
                 <section class="staff-table-card fin-chart-section fin-machine-expense-chart">
                     <div class="fin-section-heading"><h2>Machine Expenses</h2><span>Equipment Maintenance</span></div>
-                    <div class="fin-machine-expense-total"><small>Active expenses + DEMO data</small></div>
+                    <div class="fin-machine-expense-total"><small>Recorded active expenses</small></div>
                     <div class="fin-chart-frame"><canvas id="machineExpenseChart" aria-label="Weekly machine expenses" role="img"></canvas></div>
                 </section>
             </div>
@@ -137,7 +137,7 @@
                 </div>
                 <div class="fin-table-scroll"><table class="fin-table"><thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Supplier</th><th>Amount (PHP)</th><th>Status</th><th>Actions</th></tr></thead><tbody id="expenseRows"></tbody></table></div><div class="staff-empty-state" id="expenseEmpty"><strong>No data for this period</strong><p>Expenses will appear here when recorded.</p></div><div class="fin-pagination"><button class="fin-button" id="expensePrev" type="button">Previous</button><span id="expensePageLabel">Page 1</span><button class="fin-button" id="expenseNext" type="button">Next</button></div></section>
             <div class="fin-modal-overlay" id="expenseModal" hidden><section class="fin-modal" role="dialog" aria-modal="true" aria-labelledby="expenseModalTitle"><button class="fin-modal-close" type="button" data-close-expense aria-label="Close">&times;</button><h2 id="expenseModalTitle">Add expense</h2><form id="expenseForm" class="fin-form"><input type="hidden" id="expenseId"><label>Date<input id="expenseDate" name="expense_date" type="date" required></label><label>Category<select id="expenseCategoryInput" name="category" required><option value="">Choose category</option><option>Inventory &amp; Supplies</option><option>Salaries &amp; Commissions</option><option>Rent</option><option>Utilities</option><option>Marketing</option><option>Equipment Maintenance</option><option>Other</option></select></label><label>Description<input id="expenseDescription" name="description" maxlength="5000" required></label><label>Amount (PHP)<input id="expenseAmount" name="amount" type="number" min="0.01" step="0.01" required></label><label>Supplier<input id="expenseSupplier" name="supplier" maxlength="150"></label><label>Reference number<input id="expenseReference" name="reference_no" maxlength="100"></label><p class="fin-form-message" id="expenseFormMessage" role="alert"></p><div class="fin-modal-actions"><button class="fin-button" type="button" data-close-expense>Cancel</button><button class="fin-button fin-button-primary" type="submit">Save expense</button></div></form></section></div>
-            <div class="fin-modal-overlay" id="voidModal" hidden><section class="fin-modal fin-modal--compact" role="dialog" aria-modal="true" aria-labelledby="voidModalTitle"><button class="fin-modal-close" type="button" data-close-void aria-label="Close">&times;</button><h2 id="voidModalTitle">Void expense</h2><form id="voidForm" class="fin-form"><input type="hidden" id="voidExpenseId"><label>Reason<textarea id="voidReason" rows="4" maxlength="2000" required></textarea></label><p class="fin-form-message" id="voidFormMessage" role="alert"></p><div class="fin-modal-actions"><button class="fin-button" type="button" data-close-void>Cancel</button><button class="fin-button fin-button-danger" type="submit">Void expense</button></div></form></section></div>
+            <div class="fin-modal-overlay" id="voidModal" hidden><section class="fin-modal fin-modal--compact" role="dialog" aria-modal="true" aria-labelledby="voidModalTitle"><button class="fin-modal-close" type="button" data-close-void aria-label="Close">&times;</button><h2 id="voidModalTitle">Void expense</h2><p class="fin-modal-copy" id="voidExpenseSummary"></p><form id="voidForm" class="fin-form"><input type="hidden" id="voidExpenseId"><label>Reason<textarea id="voidReason" rows="4" maxlength="2000" required></textarea></label><p class="fin-form-message" id="voidFormMessage" role="alert"></p><div class="fin-modal-actions"><button class="fin-button" type="button" data-close-void>Cancel</button><button class="fin-button fin-button-danger" type="submit">Void expense</button></div></form></section></div>
             <div class="fin-modal-overlay" id="purchaseSuggestionModal" hidden><section class="fin-modal fin-modal--compact" role="dialog" aria-modal="true" aria-labelledby="purchaseSuggestionTitle"><button class="fin-modal-close" type="button" data-close-purchase-suggestion aria-label="Close">&times;</button><h2 id="purchaseSuggestionTitle">Review inventory expense</h2><p class="fin-modal-copy">Check the purchase details and confirm before this creates an expense record.</p><form id="purchaseSuggestionForm" class="fin-form"><input type="hidden" id="purchaseSuggestionId"><label>Expense date<input id="purchaseSuggestionDate" type="date" required></label><label>Category<input value="Inventory &amp; Supplies" readonly></label><label>Description<input id="purchaseSuggestionDescription" maxlength="5000" required></label><label>Amount (PHP)<input id="purchaseSuggestionAmount" type="number" min="0.01" step="0.01" required></label><label>Supplier (optional)<input id="purchaseSuggestionSupplier" maxlength="150"></label><label>Reference number<input id="purchaseSuggestionReference" maxlength="100"></label><p class="fin-form-message" id="purchaseSuggestionFormMessage" role="alert"></p><div class="fin-modal-actions"><button class="fin-button" type="button" data-close-purchase-suggestion>Cancel</button><button class="fin-button fin-button-primary" type="submit">Confirm expense</button></div></form></section></div>
             <div class="fin-modal-overlay" id="expenseHistoryModal" hidden><section class="fin-modal" role="dialog" aria-modal="true" aria-labelledby="expenseHistoryTitle" aria-describedby="expenseHistoryMessage"><button class="fin-modal-close" type="button" data-close-expense-history aria-label="Close">&times;</button><h2 id="expenseHistoryTitle">Expense edit history</h2><p id="expenseHistoryMessage" class="fin-modal-copy" role="status" aria-live="polite"></p><div class="fin-table-scroll"><table class="fin-table"><thead><tr><th>Edited at</th><th>Edited by</th><th>Previous values</th><th>Updated values</th></tr></thead><tbody id="expenseHistoryRows"></tbody></table></div><div class="staff-empty-state" id="expenseHistoryEmpty" hidden><strong>No edits recorded</strong></div></section></div>
             <p class="fin-page-message" id="expensePageMessage" role="status"></p>

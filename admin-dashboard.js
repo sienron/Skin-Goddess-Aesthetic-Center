@@ -63,6 +63,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const toggleBtn = document.getElementById('umSidebarToggle');
   const overlay = document.getElementById('umSidebarOverlay');
 
+  document.querySelectorAll('.admin-nav-group-toggle').forEach((button) => {
+    button.addEventListener('click', () => {
+      const expanded = button.getAttribute('aria-expanded') === 'true';
+      button.setAttribute('aria-expanded', String(!expanded));
+      document.getElementById(button.getAttribute('aria-controls')).hidden = expanded;
+    });
+  });
+
   if (!sidebar || !toggleBtn || !overlay) return;
 
   function openSidebar() {

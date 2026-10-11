@@ -20,9 +20,9 @@ function dateOffset(daysAgo) {
 
 async function clearDemo() {
   await db.transaction(async (client) => {
-    const appointments = await client.query(`SELECT DISTINCT appointment_id FROM payments WHERE note = 'DEMO' AND appointment_id IS NOT NULL`);
+    const appointments = await client.query(`SELECT DISTINCT appointment_id FROM payments WHERE note = 'DEMO' AND method <> 'cash' AND appointment_id IS NOT NULL`);
     const ids = appointments.rows.map((row) => row.appointment_id);
-    await client.query(`DELETE FROM payments WHERE note = 'DEMO'`);
+    await client.query(`DELETE FROM payments WHERE note = 'DEMO' AND method <> 'cash'`);
     await client.query(`DELETE FROM expenses WHERE description LIKE 'DEMO:%'`);
     if (ids.length) {
       await client.query(`DELETE FROM appointments a WHERE a.appointment_id = ANY($1::int[]) AND NOT EXISTS (SELECT 1 FROM payments p WHERE p.appointment_id = a.appointment_id)`, [ids]);

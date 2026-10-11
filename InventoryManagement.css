@@ -1579,6 +1579,83 @@ button{
     color: #99938A;
 }
 
+.inv-sidebar {
+    width: 210px;
+    min-width: 210px;
+    overflow-y: hidden;
+    border-right-color: #ebe6dc;
+    background: #fff;
+    padding: 0 8px 12px;
+}
+
+.inv-sidebar__logo {
+    justify-content: center;
+    height: 64px;
+    border: 0;
+    margin: 0;
+    padding: 0 12px;
+}
+
+.inv-sidebar__logo img {
+    width: 142px;
+}
+
+.inv-sidebar__label {
+    margin: 16px 0 10px;
+    padding: 0 10px;
+    color: #514b43;
+    font: 600 13px/1.35 "Raleway", sans-serif;
+    letter-spacing: 0;
+}
+
+.inv-sidebar__nav {
+    display: grid;
+    gap: 4px;
+}
+
+.inv-nav-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-sizing: border-box;
+    min-height: 42px;
+    border: 0;
+    border-radius: 8px;
+    color: #514b43;
+    padding: 0 8px;
+    font: 500 14px/1.35 "Raleway", sans-serif;
+    text-decoration: none;
+}
+
+.inv-nav-link img {
+    display: block;
+    flex: 0 0 18px;
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+}
+
+.inv-nav-link:hover {
+    background: #f8f6f1;
+    color: #60491b;
+}
+
+.inv-nav-link--active {
+    background: #f6f0e3;
+    color: #705725;
+    font-weight: 600;
+}
+
+.inv-nav-link:focus-visible {
+    outline: 3px solid #3977b8;
+    outline-offset: 2px;
+}
+
+.inv-sidebar__account {
+    border-top-color: #ebe6dc;
+    padding: 12px 8px;
+}
+
 /* =========================================================
    EDIT PRODUCT MODAL
    ========================================================= */
@@ -2053,5 +2130,4 @@ button{
         grid-template-columns: minmax(0, 1fr);
     }
 }
-
 

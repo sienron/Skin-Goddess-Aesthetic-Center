@@ -4,6 +4,7 @@
   const refs = Object.fromEntries(['reportPeriodLabel', 'reportFrom', 'reportTo', 'reportMessage', 'reportSales', 'reportCollected', 'reportExpenses', 'reportNet', 'reportSalesComparison', 'reportCollectedComparison', 'reportExpensesComparison', 'reportNetComparison', 'reportDepositsReceived', 'reportDepositsReceivedCount', 'reportRefunds', 'reportRefundsCount', 'reportForfeited', 'reportForfeitedCount', 'dailyCashRows', 'dailyCashEmpty'].map((id) => [id, document.getElementById(id)]));
   const state = { from: common.monthStart(), to: common.manilaToday(), data: null, monthly: [], methods: [] };
   const colors = ['#C9A84C', '#228B46', '#4388E8', '#929292', '#8a6e2f', '#B93C3C'];
+  const exportButtons = Array.from(document.querySelectorAll('[data-export]'));
   let reportRequest = 0;
 
   function addCell(row, value) {
@@ -18,8 +19,19 @@
     return `"${text.replace(/"/g, '""')}"`;
   }
 
-  function downloadCsv(name, headers, rows) {
-    const csv = [headers, ...rows].map((row) => row.map(csvCell).join(',')).join('\r\n');
+  function downloadCsv(name, headers, rows, section) {
+    const report = state.data;
+    const metadata = [
+      ['Report section', section],
+      ['Generated at (Asia/Manila)', report.generated_at],
+      ['Selected date range', `${state.from} to ${state.to}`],
+      ['Date basis', report.date_basis],
+      ['Calculation basis', report.accounting_basis],
+      ['Active filters', 'None beyond selected date range'],
+      [],
+      headers,
+    ];
+    const csv = [...metadata, ...rows].map((row) => row.map(csvCell).join(',')).join('\r\n');
     const link = document.createElement('a');
     const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' }));
     link.href = url;
@@ -32,6 +44,8 @@
   async function load() {
     const requestId = ++reportRequest;
     const previous = common.previousRange(state.from, state.to);
+    state.data = null;
+    exportButtons.forEach((button) => { button.disabled = true; });
     refs.reportMessage.textContent = '';
     refs.reportPeriodLabel.textContent = `${state.from} to ${state.to}`;
     const monthCount = (Number(state.to.slice(0, 4)) - Number(state.from.slice(0, 4))) * 12 + Number(state.to.slice(5, 7)) - Number(state.from.slice(5, 7)) + 1;
@@ -46,6 +60,7 @@
     state.data = report;
     state.monthly = monthly;
     state.methods = methods;
+    exportButtons.forEach((button) => { button.disabled = false; });
     const income = report.income_statement;
     refs.reportSales.textContent = peso(income.sales);
     refs.reportCollected.textContent = peso(income.collected);
@@ -69,7 +84,7 @@
     refs.reportForfeitedCount.textContent = `${forfeited.count} payments`;
 
     common.renderChart('reportSalesExpensesChart', {
-      type: 'bar', data: { labels: monthly.map((row) => row.month), datasets: [{ label: 'Sales', data: monthly.map((row) => Number(row.sales)), backgroundColor: '#C9A84C' }, { label: 'Expenses', data: monthly.map((row) => Number(row.expenses)), backgroundColor: '#B93C3C' }] },
+      type: 'bar', data: { labels: monthly.map((row) => row.month), datasets: [{ label: 'Sales earned', data: monthly.map((row) => Number(row.sales)), backgroundColor: '#C9A84C' }, { label: 'Recorded expenses', data: monthly.map((row) => Number(row.expenses)), backgroundColor: '#B93C3C' }] },
       options: { plugins: { tooltip: { callbacks: { label: (item) => `${item.dataset.label}: ${peso(item.raw)}` } } } },
     });
     common.renderChart('reportOnlineReservationsChart', {
@@ -89,7 +104,7 @@
       options: { indexAxis: 'y', plugins: { legend: { display: false }, tooltip: { callbacks: { label: (item) => peso(item.raw) } } } },
     });
     common.renderChart('reportTopServicesChart', {
-      type: 'bar', data: { labels: report.top_services.map((row) => row.service), datasets: [{ label: 'Sales', data: report.top_services.map((row) => Number(row.amount)), backgroundColor: '#C9A84C', borderRadius: 3 }] },
+      type: 'bar', data: { labels: report.top_services.map((row) => row.service), datasets: [{ label: 'Sales earned', data: report.top_services.map((row) => Number(row.amount)), backgroundColor: '#C9A84C', borderRadius: 3 }] },
       options: { indexAxis: 'y', plugins: { legend: { display: false }, tooltip: { callbacks: { label: (item) => peso(item.raw) } } } },
     });
     common.renderChart('reportExpenseCategoryChart', {
@@ -109,19 +124,73 @@
   async function exportSection(section) {
     if (!state.data) return;
     const report = state.data;
-    const income = report.income_statement;
-    if (section === 'income-statement' || section === 'daily-cash') {
+    if (section === 'income-statement') {
+      const charts = [
+        ['Sales earned vs expenses', 'reportSalesExpensesChart'],
+        ['Online reservations', 'reportOnlineReservationsChart'],
+        ['Revenue by service category', 'reportServiceCategoryChart'],
+        ['Deposits by status', 'reportDepositsChart'],
+        ['Cash collected by payment method', 'reportMethodsChart'],
+        ['Top services', 'reportTopServicesChart'],
+        ['Expenses by category', 'reportExpenseCategoryChart'],
+      ].reduce((images, [title, id]) => {
+        const canvas = document.getElementById(id);
+        if (canvas && !canvas.hidden && canvas.width && canvas.height) {
+          images[title] = canvas.toDataURL('image/png');
+        }
+        return images;
+      }, {});
+      refs.reportMessage.textContent = 'Preparing Excel workbook with charts…';
+      const exportButton = exportButtons.find((button) => button.dataset.export === section);
+      if (exportButton) exportButton.disabled = true;
+      try {
+        let response;
+        try {
+          response = await fetch('/api/finance/export-report.xlsx', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ from: state.from, to: state.to, charts }),
+          });
+        } catch {
+          throw new Error('Unable to reach the server. Check your connection and try again.');
+        }
+        if (!response.ok) {
+          const body = await response.text();
+          let message = `Request failed (${response.status}).`;
+          try {
+            message = JSON.parse(body).message || message;
+          } catch {
+            if (body) message = body;
+          }
+          throw new Error(message);
+        }
+        const url = URL.createObjectURL(await response.blob());
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `finance-income-statement-${state.from}-to-${state.to}.xlsx`;
+        document.body.append(link);
+        link.click();
+        link.remove();
+        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+        refs.reportMessage.textContent = 'Excel workbook exported.';
+      } finally {
+        if (exportButton) exportButton.disabled = false;
+      }
+      return;
+    }
+    if (section === 'daily-cash') {
       window.location.href = `/api/finance/export.csv?${common.rangeParams(state.from, state.to, { section })}`;
       return;
     }
-    if (section === 'payment-methods') downloadCsv('finance-payment-methods.csv', ['Method', 'Payment count', 'Collected (PHP)'], state.methods.map((row) => [common.paymentMethodLabel(row.method), row.count, peso(row.amount)]));
-    if (section === 'online-reservations') downloadCsv('finance-online-reservations.csv', ['Payment date', 'Online reservations'], report.online_reservations.map((row) => [row.date, row.count]));
-    if (section === 'sales-expenses') downloadCsv('finance-sales-vs-expenses.csv', ['Month', 'Sales (PHP)', 'Expenses (PHP)'], state.monthly.map((row) => [row.month, peso(row.sales), peso(row.expenses)]));
-    if (section === 'collections') downloadCsv('finance-collections-trend.csv', ['Date', 'Collected (PHP)'], report.daily_cash.map((row) => [row.date, peso(row.collected)]));
-    if (section === 'service-categories') downloadCsv('finance-service-categories.csv', ['Category', 'Sales (PHP)'], report.service_categories.map((row) => [row.category, peso(row.amount)]));
-    if (section === 'deposits') downloadCsv('finance-deposit-summary.csv', ['Status', 'Count', 'Amount (PHP)'], report.deposits.map((row) => [row.status, row.count, peso(row.amount)]));
-    if (section === 'top-services') downloadCsv('finance-top-services.csv', ['Service', 'Appointment count', 'Sales (PHP)'], report.top_services.map((row) => [row.service, row.count, peso(row.amount)]));
-    if (section === 'expense-categories') downloadCsv('finance-expenses-by-category.csv', ['Category', 'Expenses (PHP)'], report.expenses_by_category.map((row) => [row.category, peso(row.amount)]));
+    if (section === 'payment-methods') downloadCsv('finance-payment-methods.csv', ['Method', 'Payment count', 'Cash collected (PHP)'], state.methods.map((row) => [common.paymentMethodLabel(row.method), row.count, peso(row.amount)]), section);
+    if (section === 'online-reservations') downloadCsv('finance-online-reservations.csv', ['Payment date', 'Online reservations'], report.online_reservations.map((row) => [row.date, row.count]), section);
+    if (section === 'sales-expenses') downloadCsv('finance-sales-vs-expenses.csv', ['Month', 'Sales earned (PHP)', 'Recorded expenses (PHP)'], state.monthly.map((row) => [row.month, peso(row.sales), peso(row.expenses)]), section);
+    if (section === 'collections') downloadCsv('finance-collections-trend.csv', ['Date', 'Cash collected (PHP)'], report.daily_cash.map((row) => [row.date, peso(row.collected)]), section);
+    if (section === 'service-categories') downloadCsv('finance-service-categories.csv', ['Category', 'Sales earned (PHP)'], report.service_categories.map((row) => [row.category, peso(row.amount)]), section);
+    if (section === 'deposits') downloadCsv('finance-deposit-summary.csv', ['Status', 'Count', 'Amount (PHP)'], report.deposits.map((row) => [row.status, row.count, peso(row.amount)]), section);
+    if (section === 'top-services') downloadCsv('finance-top-services.csv', ['Service', 'Appointment count', 'Sales earned (PHP)'], report.top_services.map((row) => [row.service, row.count, peso(row.amount)]), section);
+    if (section === 'expense-categories') downloadCsv('finance-expenses-by-category.csv', ['Category', 'Expenses (PHP)'], report.expenses_by_category.map((row) => [row.category, peso(row.amount)]), section);
   }
 
   refs.reportFrom.value = state.from;
@@ -137,7 +206,8 @@
     },
     onInvalid: (error) => { refs.reportMessage.textContent = error; },
   });
-  document.getElementById('printReport').addEventListener('click', () => window.print());
-  document.querySelectorAll('[data-export]').forEach((button) => button.addEventListener('click', () => exportSection(button.dataset.export)));
+  exportButtons.forEach((button) => button.addEventListener('click', () => {
+    exportSection(button.dataset.export).catch((error) => { refs.reportMessage.textContent = error.message; });
+  }));
   load().catch((error) => { refs.reportMessage.textContent = error.message; });
 })();

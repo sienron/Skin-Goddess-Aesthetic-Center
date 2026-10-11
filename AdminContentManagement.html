@@ -22,21 +22,41 @@
 
     <!-- ============ SIDEBAR ============ -->
     <aside class="um-sidebar" id="umSidebar">
-      <a href="index.html" class="um-sidebar__logo">
+      <a href="AdminDashboard.html" class="um-sidebar__logo">
         <div class="logo-container">
           <img id="logo" src="images/logo_horizontal.jpg" alt="Skin Goddess Aesthetic Center logo">
         </div>
       </a>
 
-      <p class="um-sidebar__label">MAIN MENU</p>
-      <nav class="um-sidebar__nav">
-        <a href="AdminDashboard.html" class="um-nav-link">Dashboard</a>
-        <a href="AdminAppointment.html" class="um-nav-link">Appointments</a>
-        <a href="AdminInquiries.html" class="um-nav-link">Inquiries</a>
-        <a href="AdminInventoryManagement.html" class="um-nav-link">Inventory</a>
-        <a href="Reports.html" class="um-nav-link">Reports</a>
-        <a href="Usermanagement.html" class="um-nav-link">User Management</a>
-        <a href="AdminContentManagement.html" class="um-nav-link um-nav-link--active">Content Management</a>
+      <p class="um-sidebar__label">My Links</p>
+      <nav class="um-sidebar__nav" aria-label="Main navigation">
+        <a href="AdminDashboard.html" class="um-nav-link"><img src="icons/finance-dashboard.svg" alt=""><span>Dashboard</span></a>
+        <section class="admin-nav-group">
+          <button class="admin-nav-group-toggle" type="button" aria-expanded="false" aria-controls="adminAppointmentsMenu"><img src="icons/staff-appointments.svg" alt=""><span>Appointments</span><svg class="admin-nav-chevron" aria-hidden="true" viewBox="0 0 20 20"><path d="m5 7.5 5 5 5-5"/></svg></button>
+          <ul class="admin-nav-submenu" id="adminAppointmentsMenu" hidden>
+            <li><a href="StaffUserManagement.html" class="um-nav-link admin-nav-child"><span>My Clients</span></a></li>
+            <li><a href="AdminAppointment.html" class="um-nav-link admin-nav-child"><span>Appointments</span></a></li>
+            <li><a href="StaffTreatmentHistory.html" class="um-nav-link admin-nav-child"><span>Treatment History</span></a></li>
+          </ul>
+        </section>
+        <section class="admin-nav-group">
+          <button class="admin-nav-group-toggle" type="button" aria-expanded="false" aria-controls="adminInventoryMenu"><img src="icons/staff-inventory.svg" alt=""><span>Inventory</span><svg class="admin-nav-chevron" aria-hidden="true" viewBox="0 0 20 20"><path d="m5 7.5 5 5 5-5"/></svg></button>
+          <ul class="admin-nav-submenu" id="adminInventoryMenu" hidden>
+            <li><a href="AdminInventoryManagement.html" class="um-nav-link admin-nav-child"><span>Inventory</span></a></li>
+            <li><a href="InventoryTransactions.html" class="um-nav-link admin-nav-child"><span>Stock Transaction Log</span></a></li>
+          </ul>
+        </section>
+        <section class="admin-nav-group">
+          <button class="admin-nav-group-toggle" type="button" aria-expanded="false" aria-controls="adminFinanceMenu"><img src="icons/finance-transactions.svg" alt=""><span>Finance</span><svg class="admin-nav-chevron" aria-hidden="true" viewBox="0 0 20 20"><path d="m5 7.5 5 5 5-5"/></svg></button>
+          <ul class="admin-nav-submenu" id="adminFinanceMenu" hidden>
+            <li><a href="FinancesTransactions.html" class="um-nav-link admin-nav-child"><span>Sales &amp; Transactions</span></a></li>
+            <li><a href="FinanceExpenses.html" class="um-nav-link admin-nav-child"><span>Expenses</span></a></li>
+            <li><a href="FinanceReports.html" class="um-nav-link admin-nav-child"><span>Reports</span></a></li>
+          </ul>
+        </section>
+        <a href="AdminInquiries.html" class="um-nav-link"><img src="icons/staff-inquiries.svg" alt=""><span>Inquiries</span></a>
+        <a href="Usermanagement.html" class="um-nav-link"><img src="icons/staff-users.svg" alt=""><span>User Management</span></a>
+        <a href="AdminContentManagement.html" class="um-nav-link um-nav-link--active" aria-current="page"><img src="icons/staff-content.svg" alt=""><span>Content Management</span></a>
       </nav>
 
       <div class="um-sidebar__account">

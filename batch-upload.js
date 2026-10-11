@@ -84,6 +84,17 @@
     let previewUrl = "";
     let cameraStream = null;
     let rows = [];
+    let confirmationRequestKey = null;
+    let sourceHash = null;
+
+    function createRequestKey() {
+        if (window.crypto.randomUUID) return window.crypto.randomUUID();
+        const bytes = window.crypto.getRandomValues(new Uint8Array(16));
+        bytes[6] = (bytes[6] & 0x0f) | 0x40;
+        bytes[8] = (bytes[8] & 0x3f) | 0x80;
+        const hex = [...bytes].map(value => value.toString(16).padStart(2, "0")).join("");
+        return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+    }
 
     function validRow(row) {
         return Boolean(row.product_name.trim())
@@ -128,6 +139,8 @@
         confirmButton.hidden = true;
         scanButton.hidden = false;
         rows = [];
+        confirmationRequestKey = null;
+        sourceHash = null;
         tableBody.replaceChildren();
         if (previewUrl) URL.revokeObjectURL(previewUrl);
         previewUrl = URL.createObjectURL(file);
@@ -458,6 +471,8 @@
                 category: row.category || "",
                 expiry_date: row.expiry_date || null
             }));
+            confirmationRequestKey = createRequestKey();
+            sourceHash = result.source_hash;
             if (!rows.length) {
                 throw new Error("No item rows were recognized. Please retake the photo with clearer lighting and framing.");
             }
@@ -478,6 +493,7 @@
     });
 
     modal.querySelector(".batch-add-row").addEventListener("click", () => {
+        if (!confirmationRequestKey) confirmationRequestKey = createRequestKey();
         rows.push({
             product_name: "",
             quantity: "",
@@ -500,11 +516,14 @@
         }
         confirmButton.disabled = true;
         setStatus("Saving reviewed inventory...");
+        if (!confirmationRequestKey) confirmationRequestKey = createRequestKey();
         try {
             const response = await fetch("/api/inventory/batch-upload/confirm", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
+                    request_key: confirmationRequestKey,
+                    source_hash: sourceHash,
                     rows: rows.map(row => ({
                         product_name: row.product_name.trim(),
                         quantity: Number(row.quantity),
@@ -518,6 +537,8 @@
             if (!response.ok) throw new Error(result.message || "The reviewed items could not be saved.");
 
             const savedCount = result.products.length;
+            confirmationRequestKey = null;
+            sourceHash = null;
             closeModal();
             showToast(`${savedCount} inventory row${savedCount === 1 ? "" : "s"} saved successfully.`);
             const refreshFunctions = [

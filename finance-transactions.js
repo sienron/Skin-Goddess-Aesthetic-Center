@@ -1,10 +1,22 @@
 (function () {
   const common = window.FinanceCommon;
   if (!common) return;
-  const state = { tab: 'transactions', from: common.monthStart(), to: common.manilaToday(), type: '', method: '', search: '', page: 1, limit: 25, rows: [], receivables: [], deposits: [] };
+  const state = { tab: 'transactions', from: common.monthStart(), to: common.manilaToday(), type: '', method: '', status: 'posted', search: '', page: 1, limit: 25, rows: [], receivables: [], deposits: [] };
   let transactionRequest = 0;
   const byId = (id) => document.getElementById(id);
-  const refs = Object.fromEntries(['transactionFrom', 'transactionTo', 'transactionType', 'transactionMethod', 'transactionSearch', 'transactionMessage', 'transactionRows', 'transactionCount', 'transactionEmpty', 'transactionPrev', 'transactionNext', 'transactionPageLabel', 'transactionPeriodLabel', 'transactionComparison', 'receivablesPanel', 'transactionsPanel', 'depositsPanel', 'methodChartSection', 'receivableRows', 'receivableEmpty', 'receivableCount', 'depositRows', 'depositEmpty', 'depositCount', 'recordPaymentModal', 'recordPaymentForm', 'balanceAppointmentId', 'balanceAmount', 'balanceMethod', 'balanceReference', 'balanceNote', 'paymentBalanceText', 'paymentFormMessage', 'saleModal', 'saleForm', 'saleProduct', 'saleQuantity', 'salePrice', 'saleTotal', 'saleMethod', 'saleReference', 'saleMessage', 'saleSubmit', 'recordSaleBtn', 'exportTransactionsXlsx', 'refundModal', 'refundForm', 'refundPaymentId', 'refundNote', 'refundFormMessage', 'reverseModal', 'reverseForm', 'reversePaymentId', 'reverseReason', 'reverseFormMessage', 'paymentDetailsModal', 'paymentDetails', 'paymentHistoryRows'].map((id) => [id, byId(id)]));
+  const refs = Object.fromEntries(['transactionFrom', 'transactionTo', 'transactionType', 'transactionMethod', 'transactionStatus', 'transactionSearch', 'transactionMessage', 'transactionRows', 'transactionCount', 'transactionEmpty', 'transactionPrev', 'transactionNext', 'transactionPageLabel', 'transactionPeriodLabel', 'transactionComparison', 'ledgerHelp', 'transactionSummary', 'postedCollectionsSummary', 'paymentCountSummary', 'receivablesPanel', 'transactionsPanel', 'depositsPanel', 'methodChartSection', 'receivableRows', 'receivableEmpty', 'receivableCount', 'depositRows', 'depositEmpty', 'depositCount', 'recordPaymentModal', 'recordPaymentForm', 'balanceAppointmentId', 'balanceAmount', 'balanceMethod', 'balanceReference', 'balanceNote', 'paymentBalanceText', 'paymentFormMessage', 'saleModal', 'saleForm', 'saleProduct', 'saleQuantity', 'salePrice', 'saleTotal', 'saleMethod', 'saleReference', 'saleMessage', 'saleSubmit', 'recordSaleBtn', 'exportTransactionsXlsx', 'refundModal', 'refundForm', 'refundPaymentId', 'refundPaymentSummary', 'refundNote', 'refundFormMessage', 'reverseModal', 'reverseForm', 'reversePaymentId', 'reversePaymentSummary', 'reverseReason', 'reverseFormMessage', 'paymentDetailsModal', 'paymentDetails', 'paymentHistoryRows'].map((id) => [id, byId(id)]));
+  const chartColors = ['#c9a84c', '#267447', '#3977b8', '#8c8c8c', '#8a6e2f'];
+  refs.recordSaleBtn.classList.add('fin-sales-record-button');
+  byId('salesHeaderAction').append(refs.recordSaleBtn);
+  refs.methodChartLegend = element('ul', '', 'fin-chart-legend');
+  refs.methodChartLegend.setAttribute('aria-label', 'Payment methods, amounts, and share of posted collections');
+  const methodChartFrame = byId('methodChart').closest('.fin-chart-frame');
+  refs.methodChartLoading = element('div', 'Updating chart…', 'fin-chart-loading');
+  refs.methodChartLoading.hidden = true;
+  refs.methodChartLoading.setAttribute('role', 'status');
+  refs.methodChartLoading.setAttribute('aria-live', 'polite');
+  methodChartFrame.append(refs.methodChartLoading);
+  methodChartFrame.after(refs.methodChartLegend);
   let saleRequestKey = null;
   let saleProducts = [];
 
@@ -42,7 +54,7 @@
       row.append(status);
       const action = element('td');
       const actionButtons = element('div', '', 'fin-row-actions');
-      const receiptLink = element('a', 'Receipt', 'fin-button');
+      const receiptLink = element('a', payment.status === 'posted' ? 'Receipt' : 'Adjustment notice', 'fin-button');
       receiptLink.href = `/api/finance/payments/${encodeURIComponent(payment.payment_id)}/receipt`;
       receiptLink.target = '_blank';
       receiptLink.rel = 'noopener noreferrer';
@@ -58,7 +70,7 @@
       refs.transactionRows.append(row);
     });
     refs.transactionEmpty.hidden = state.rows.length > 0;
-    refs.transactionCount.textContent = `${state.total} records`;
+    refs.transactionCount.textContent = `${state.total} payments`;
     refs.transactionPageLabel.textContent = `Page ${state.page}`;
     refs.transactionPrev.disabled = state.page <= 1;
     refs.transactionNext.disabled = state.page * state.limit >= state.total;
@@ -67,26 +79,81 @@
   async function loadTransactions() {
     const requestId = ++transactionRequest;
     const previous = common.previousRange(state.from, state.to);
-    const filters = { page: state.page, limit: state.limit, type: state.type, method: state.method, q: state.search };
+    const filters = { page: state.page, limit: state.limit, type: state.type, method: state.method, status: state.status, q: state.search };
     const previousFilters = { type: state.type, method: state.method, q: state.search };
-    const [result, chartRows, previousChartRows] = await Promise.all([
-      common.fetchJson(`/api/finance/transactions?${params(filters)}`),
-      common.fetchJson(`/api/finance/by-method?${params({ type: state.type, method: state.method, q: state.search })}`),
-      common.fetchJson(`/api/finance/by-method?${common.rangeParams(previous.from, previous.to, previousFilters)}`),
-    ]);
-    if (requestId !== transactionRequest) return;
-    state.rows = result.rows;
-    state.total = result.total;
-    renderTransactions();
     refs.transactionPeriodLabel.textContent = `${state.from} to ${state.to}`;
-    const collected = chartRows.reduce((sum, row) => sum + Number(row.amount), 0);
-    const previousCollected = previousChartRows.reduce((sum, row) => sum + Number(row.amount), 0);
-    refs.transactionComparison.textContent = `Posted collections: ${common.formatComparison(collected, previousCollected)} · previous ${previous.from} to ${previous.to}`;
-    common.renderChart('methodChart', {
-      type: 'doughnut',
-      data: { labels: chartRows.map((row) => common.paymentMethodLabel(row.method)), datasets: [{ data: chartRows.map((row) => Number(row.amount)), backgroundColor: ['#C9A84C', '#228B46', '#4388E8', '#929292', '#8a6e2f'], borderWidth: 1, borderColor: '#fff' }] },
-      options: { plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: (item) => `${item.label}: ${common.formatPeso(item.raw)}` } } } },
-    });
+    refs.postedCollectionsSummary.textContent = 'Loading…';
+    refs.paymentCountSummary.textContent = 'Loading…';
+    refs.transactionComparison.textContent = '';
+    refs.methodChartLegend.replaceChildren();
+    refs.methodChartLoading.hidden = false;
+    refs.methodChartSection.setAttribute('aria-busy', 'true');
+    refs.transactionSummary.setAttribute('aria-busy', 'true');
+    refs.transactionsPanel.setAttribute('aria-busy', 'true');
+    try {
+      const [result, chartRows, previousChartRows] = await Promise.all([
+        common.fetchJson(`/api/finance/transactions?${params(filters)}`),
+        common.fetchJson(`/api/finance/by-method?${params({ type: state.type, method: state.method, q: state.search })}`),
+        common.fetchJson(`/api/finance/by-method?${common.rangeParams(previous.from, previous.to, previousFilters)}`),
+      ]);
+      if (requestId !== transactionRequest) return;
+      state.rows = result.rows;
+      state.total = result.total;
+      renderTransactions();
+      const collected = chartRows.reduce((sum, row) => sum + Number(row.amount), 0);
+      const previousCollected = previousChartRows.reduce((sum, row) => sum + Number(row.amount), 0);
+      methodChartFrame.classList.toggle('is-empty', collected <= 0);
+      refs.postedCollectionsSummary.textContent = common.formatPeso(collected);
+      refs.paymentCountSummary.textContent = Number(result.total).toLocaleString('en-PH');
+      refs.transactionComparison.textContent = `Posted collections: ${common.formatComparison(collected, previousCollected)} · previous ${previous.from} to ${previous.to}`;
+      refs.methodChartLegend.replaceChildren();
+      if (collected > 0) {
+        chartRows.forEach((row, index) => {
+          const item = element('li');
+          const swatch = element('span', '', 'fin-chart-legend-swatch');
+          swatch.style.backgroundColor = chartColors[index % chartColors.length];
+          swatch.setAttribute('aria-hidden', 'true');
+          const method = element('span', common.paymentMethodLabel(row.method), 'fin-chart-legend-method');
+          const amount = element('strong', common.formatPeso(row.amount), 'fin-chart-legend-amount');
+          const share = element('span', `${(Number(row.amount) / collected * 100).toFixed(1)}%`, 'fin-chart-legend-share');
+          item.append(swatch, method, amount, share);
+          refs.methodChartLegend.append(item);
+        });
+      }
+      common.renderChart('methodChart', {
+        type: 'doughnut',
+        data: { labels: chartRows.map((row) => common.paymentMethodLabel(row.method)), datasets: [{ data: chartRows.map((row) => Number(row.amount)), backgroundColor: chartColors, borderWidth: 2, borderColor: '#fff', hoverOffset: 4 }] },
+        options: {
+          cutout: '70%',
+          radius: '92%',
+          layout: { padding: 8 },
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: (item) => `${item.label}: ${common.formatPeso(item.raw)}` } },
+          },
+        },
+      });
+    } catch (error) {
+      if (requestId === transactionRequest) {
+        state.rows = [];
+        state.total = 0;
+        renderTransactions();
+        refs.postedCollectionsSummary.textContent = '—';
+        refs.paymentCountSummary.textContent = '—';
+        refs.transactionComparison.textContent = 'Posted collections could not be loaded.';
+        refs.methodChartLegend.replaceChildren();
+        methodChartFrame.classList.add('is-empty');
+        common.renderChart('methodChart', { type: 'doughnut', data: { labels: [], datasets: [{ data: [] }] } });
+      }
+      throw error;
+    } finally {
+      if (requestId === transactionRequest) {
+        refs.methodChartLoading.hidden = true;
+        refs.methodChartSection.removeAttribute('aria-busy');
+        refs.transactionSummary.removeAttribute('aria-busy');
+        refs.transactionsPanel.removeAttribute('aria-busy');
+      }
+    }
   }
 
   function createSaleRequestKey() {
@@ -134,6 +201,7 @@
       section: 'transactions',
       type: state.type,
       method: state.method,
+      status: state.status,
       q: state.search,
     });
     window.location.assign(`/api/finance/export.xlsx?${query}`);
@@ -182,12 +250,16 @@
 
   async function loadCurrentTab() {
     message('');
+    byId('transactionAnalyticsRow').hidden = state.tab !== 'transactions';
     refs.transactionsPanel.hidden = state.tab !== 'transactions';
     refs.receivablesPanel.hidden = state.tab !== 'receivables';
     refs.depositsPanel.hidden = state.tab !== 'deposits';
     refs.methodChartSection.hidden = state.tab !== 'transactions';
+    refs.transactionSummary.hidden = state.tab !== 'transactions';
+    refs.ledgerHelp.hidden = state.tab !== 'transactions';
     byId('typeFilterWrap').hidden = state.tab !== 'transactions';
     byId('methodFilterWrap').hidden = state.tab !== 'transactions';
+    byId('statusFilterWrap').hidden = state.tab !== 'transactions';
     byId('transactionSearchWrap').hidden = state.tab !== 'transactions';
     if (state.tab === 'transactions') await loadTransactions();
     if (state.tab === 'receivables') await loadReceivables();
@@ -235,15 +307,25 @@
     renderPaymentDetails(await common.fetchJson(`/api/finance/appointments/${encodeURIComponent(appointmentId)}`));
   }
 
+  function setViewMenuExpanded(expanded) {
+    const toggle = byId('transactionViewToggle');
+    toggle.setAttribute('aria-expanded', String(expanded));
+    toggle.setAttribute('aria-label', `${expanded ? 'Collapse' : 'Expand'} Sales & Transactions views`);
+    byId('transactionViewMenu').hidden = !expanded;
+  }
+
   function setTab(tab) {
     state.tab = tab;
     state.page = 1;
-    document.querySelectorAll('.fin-tab').forEach((button) => {
+    setViewMenuExpanded(true);
+    document.querySelectorAll('.fin-nav-view-tab').forEach((button) => {
       const active = button.dataset.tab === tab;
       button.classList.toggle('is-active', active);
       button.setAttribute('aria-selected', String(active));
     });
     loadCurrentTab().catch((error) => message(error.message, true));
+    const mobileNavOverlay = byId('mobileNavOverlay');
+    if (mobileNavOverlay.classList.contains('show')) mobileNavOverlay.click();
   }
 
   refs.transactionFrom.value = state.from;
@@ -262,17 +344,28 @@
   });
   refs.transactionType.addEventListener('change', () => { state.type = refs.transactionType.value; state.page = 1; loadTransactions().catch((error) => message(error.message, true)); });
   refs.transactionMethod.addEventListener('change', () => { state.method = refs.transactionMethod.value; state.page = 1; loadTransactions().catch((error) => message(error.message, true)); });
+  refs.transactionStatus.addEventListener('change', () => { state.status = refs.transactionStatus.value; state.page = 1; loadTransactions().catch((error) => message(error.message, true)); });
   let searchTimer;
   refs.transactionSearch.addEventListener('input', () => {
     clearTimeout(searchTimer); searchTimer = setTimeout(() => { state.search = refs.transactionSearch.value.trim(); state.page = 1; loadTransactions().catch((error) => message(error.message, true)); }, 250);
   });
-  document.querySelectorAll('.fin-tab').forEach((button) => button.addEventListener('click', () => setTab(button.dataset.tab)));
+  byId('transactionViewToggle').addEventListener('click', () => {
+    const expanded = byId('transactionViewToggle').getAttribute('aria-expanded') === 'true';
+    setViewMenuExpanded(!expanded);
+  });
+  document.querySelectorAll('.fin-nav-view-tab').forEach((button) => button.addEventListener('click', () => setTab(button.dataset.tab)));
   refs.transactionPrev.addEventListener('click', () => { state.page -= 1; loadTransactions().catch((error) => message(error.message, true)); });
   refs.transactionNext.addEventListener('click', () => { state.page += 1; loadTransactions().catch((error) => message(error.message, true)); });
   refs.transactionRows.addEventListener('click', (event) => {
     const reverseButton = event.target.closest('button[data-reverse-id]');
     if (reverseButton) {
+      const payment = state.rows.find((row) => Number(row.payment_id) === Number(reverseButton.dataset.reverseId));
+      if (!payment) return;
       refs.reversePaymentId.value = reverseButton.dataset.reverseId;
+      const consequence = payment.payment_type === 'product_sale'
+        ? 'This changes the ledger and restores the tracked inventory quantity; it does not return money to the customer.'
+        : 'This changes the payment ledger only; it does not return money to the customer.';
+      refs.reversePaymentSummary.textContent = `${payment.payment_date} · ${payment.receipt_number} · ${payment.reference_no || 'No external reference'} · ${common.formatPeso(payment.amount)}. ${consequence}`;
       refs.reverseReason.value = '';
       refs.reverseFormMessage.textContent = '';
       modalOpen(refs.reverseModal);
@@ -304,7 +397,14 @@
   refs.depositRows.addEventListener('click', (event) => {
     const refundButton = event.target.closest('button[data-refund-id]');
     if (refundButton) {
-      refs.refundPaymentId.value = refundButton.dataset.refundId; refs.refundNote.value = ''; refs.refundFormMessage.textContent = ''; modalOpen(refs.refundModal); return;
+      const deposit = state.deposits.find((row) => Number(row.payment_id) === Number(refundButton.dataset.refundId));
+      if (!deposit) return;
+      refs.refundPaymentId.value = deposit.payment_id;
+      refs.refundPaymentSummary.textContent = `${deposit.payment_date} · Payment #${deposit.payment_id} · ${deposit.reference_no || 'No external reference'} · ${common.formatPeso(deposit.amount)}. Marking this posted cash deposit as refunded removes it from posted collections and updates its payment status.`;
+      refs.refundNote.value = '';
+      refs.refundFormMessage.textContent = '';
+      modalOpen(refs.refundModal);
+      return;
     }
     const row = event.target.closest('tr[data-payment-id]');
     if (row) showPaymentDetails(row.dataset.paymentId).catch((error) => message(error.message, true));
@@ -318,14 +418,19 @@
   });
   refs.refundForm.addEventListener('submit', async (event) => {
     event.preventDefault(); if (!refs.refundForm.reportValidity()) return;
+    const submitButton = refs.refundForm.querySelector('button[type="submit"]');
+    submitButton.disabled = true;
     try {
       await common.fetchJson(`/api/finance/payments/${encodeURIComponent(refs.refundPaymentId.value)}/refund`, { method: 'POST', body: JSON.stringify({ note: refs.refundNote.value.trim() }) });
       modalClose(refs.refundModal); await loadDeposits(); message('Reservation marked as refunded.');
     } catch (error) { refs.refundFormMessage.textContent = error.message; }
+    finally { submitButton.disabled = false; }
   });
   refs.reverseForm.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (!refs.reverseForm.reportValidity()) return;
+    const submitButton = refs.reverseForm.querySelector('button[type="submit"]');
+    submitButton.disabled = true;
     try {
       await common.fetchJson(`/api/finance/payments/${encodeURIComponent(refs.reversePaymentId.value)}/reverse`, {
         method: 'POST',
@@ -336,7 +441,7 @@
       message('Payment reversed in the ledger. No customer refund was issued.');
     } catch (error) {
       refs.reverseFormMessage.textContent = error.message;
-    }
+    } finally { submitButton.disabled = false; }
   });
   refs.recordSaleBtn.addEventListener('click', () => openSaleModal());
   refs.exportTransactionsXlsx.addEventListener('click', exportTransactions);

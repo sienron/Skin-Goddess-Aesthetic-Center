@@ -1,29 +1,15 @@
 (function () {
   const common = window.FinanceCommon;
   if (!common) return;
-
   const categories = ['Inventory & Supplies', 'Salaries & Commissions', 'Rent', 'Utilities', 'Marketing', 'Equipment Maintenance', 'Other'];
-  function dateOffset(daysAgo) {
-    const date = new Date(`${common.manilaToday()}T00:00:00Z`);
-    const firstOfMonth = new Date(`${common.monthStart()}T00:00:00Z`).getUTCDate();
-    date.setUTCDate(Math.max(firstOfMonth, date.getUTCDate() - daysAgo));
-    return date.toISOString().slice(0, 10);
-  }
-  const demoExpenses = [
-    { expense_date: dateOffset(1), category: 'Equipment Maintenance', description: 'DEMO: Machine servicing', amount: 8200, supplier: 'Demo Equipment Service', reference_no: 'DEMO-MACHINE-01' },
-    { expense_date: dateOffset(5), category: 'Equipment Maintenance', description: 'DEMO: Replacement handpiece', amount: 5400, supplier: 'Demo Equipment Supply', reference_no: 'DEMO-MACHINE-02' },
-    { expense_date: dateOffset(9), category: 'Equipment Maintenance', description: 'DEMO: Device calibration', amount: 2350, supplier: 'Demo Calibration Center', reference_no: 'DEMO-MACHINE-03' },
-    { expense_date: dateOffset(3), category: 'Utilities', description: 'DEMO: Utility usage sample', amount: 3800, supplier: 'Demo Utility Provider', reference_no: 'DEMO-UTILITIES-01' },
-    { expense_date: dateOffset(7), category: 'Inventory & Supplies', description: 'DEMO: Treatment supplies sample', amount: 2600, supplier: 'Demo Supplies', reference_no: 'DEMO-SUPPLIES-01' },
-  ];
   const state = { from: common.monthStart(), to: common.manilaToday(), category: '', search: '', page: 1, limit: 25, total: 0, rows: [], purchaseSuggestions: [] };
   let expenseRequest = 0;
   const elements = Object.fromEntries([
-    'expenseFrom', 'expenseTo', 'expenseCategory', 'expenseSearch', 'expenseTotal', 'expenseComparison', 'machineExpenseTotal', 'expensePeriodLabel',
+    'expenseFrom', 'expenseTo', 'expenseCategory', 'expenseSearch', 'expenseTotal', 'expenseComparison', 'machineExpenseTotal', 'utilitiesExpenseTotal', 'expensePeriodLabel',
     'expenseRows', 'expenseEmpty', 'expensePrev', 'expenseNext', 'expensePageLabel',
     'expensePageMessage', 'expenseModal', 'expenseForm', 'expenseId', 'expenseDate', 'expenseCategoryInput',
     'expenseDescription', 'expenseAmount', 'expenseSupplier', 'expenseReference', 'expenseFormMessage',
-    'voidModal', 'voidForm', 'voidExpenseId', 'voidReason', 'voidFormMessage', 'addExpenseBtn',
+    'voidModal', 'voidForm', 'voidExpenseId', 'voidExpenseSummary', 'voidReason', 'voidFormMessage', 'addExpenseBtn',
     'exportExpensesXlsx', 'purchaseSuggestionRows', 'purchaseSuggestionEmpty', 'purchaseSuggestionMessage',
     'purchaseSuggestionModal', 'purchaseSuggestionForm', 'purchaseSuggestionId', 'purchaseSuggestionDate',
     'purchaseSuggestionDescription', 'purchaseSuggestionAmount', 'purchaseSuggestionSupplier',
@@ -77,52 +63,12 @@
     elements.expenseNext.disabled = state.page * state.limit >= state.total;
   }
 
-  function getVisibleDemoExpenses(range = state) {
-    const search = state.search.toLowerCase();
-    return demoExpenses.filter((expense) => (
-      expense.expense_date >= range.from
-      && expense.expense_date <= range.to
-      && (!state.category || expense.category === state.category)
-      && (!search || [expense.category, expense.description, expense.supplier, expense.reference_no]
-        .some((value) => value.toLowerCase().includes(search)))
-    ));
-  }
-
-  function combineCategoryTotals(chartData, demoRows) {
-    const totals = new Map(chartData.map((item) => [item.category, Number(item.amount)]));
-    for (const expense of demoRows) {
-      totals.set(expense.category, (totals.get(expense.category) || 0) + expense.amount);
-    }
-    return [...totals]
-      .map(([category, amount]) => ({ category, amount }))
-      .filter((item) => item.amount > 0)
-      .sort((a, b) => b.amount - a.amount);
-  }
-
-  function weekStart(dateString) {
-    const date = new Date(`${dateString}T00:00:00Z`);
-    date.setUTCDate(date.getUTCDate() - (date.getUTCDay() + 6) % 7);
-    return date.toISOString().slice(0, 10);
-  }
-
-  function combineMachineTrend(machineTrend, demoRows) {
-    const totals = new Map(machineTrend.map((item) => [item.week, Number(item.amount)]));
-    for (const expense of demoRows) {
-      if (expense.category !== 'Equipment Maintenance') continue;
-      const week = weekStart(expense.expense_date);
-      totals.set(week, (totals.get(week) || 0) + expense.amount);
-    }
-    return [...totals]
-      .map(([week, amount]) => ({ week, amount }))
-      .sort((a, b) => a.week.localeCompare(b.week));
-  }
-
   async function loadExpenses() {
     const requestId = ++expenseRequest;
     const previous = common.previousRange(state.from, state.to);
     showMessage('');
     const params = common.rangeParams(state.from, state.to, { page: state.page, limit: state.limit, category: state.category, q: state.search });
-    const [data, chartData, rawMachineTrend, previousChartData] = await Promise.all([
+    const [data, chartData, machineTrend, previousChartData] = await Promise.all([
       common.fetchJson(`/api/finance/expenses?${params}`),
       common.fetchJson(`/api/finance/expenses/by-category?${common.rangeParams(state.from, state.to, { category: state.category, q: state.search })}`),
       common.fetchJson(`/api/finance/expenses/machine-trend?${common.rangeParams(state.from, state.to, { category: state.category, q: state.search })}`),
@@ -132,16 +78,16 @@
     state.rows = data.rows;
     state.total = data.total;
     renderRows();
-    const demoRows = getVisibleDemoExpenses();
-    const categoryTotals = combineCategoryTotals(chartData, demoRows);
-    const machineTrend = combineMachineTrend(rawMachineTrend, demoRows);
+    const categoryTotals = chartData.map((item) => ({ ...item, amount: Number(item.amount) }));
     const total = categoryTotals.reduce((sum, item) => sum + item.amount, 0);
-    const recordedTotal = chartData.reduce((sum, item) => sum + Number(item.amount), 0);
     const previousRecordedTotal = previousChartData.reduce((sum, item) => sum + Number(item.amount), 0);
     elements.expenseTotal.textContent = common.formatPeso(total);
-    elements.expenseComparison.textContent = `Includes DEMO data. Recorded expenses only: ${common.formatComparison(recordedTotal, previousRecordedTotal)} · previous ${previous.from} to ${previous.to}`;
-    const machineTotal = machineTrend.reduce((sum, item) => sum + item.amount, 0);
+    elements.expenseComparison.textContent = `Recorded active expenses · ${common.formatComparison(total, previousRecordedTotal)} · previous ${previous.from} to ${previous.to}`;
+    const machineTotal = machineTrend.reduce((sum, item) => sum + Number(item.amount), 0);
     elements.machineExpenseTotal.textContent = common.formatPeso(machineTotal);
+    elements.utilitiesExpenseTotal.textContent = common.formatPeso(
+      categoryTotals.find((item) => item.category === 'Utilities')?.amount || 0
+    );
     elements.expensePeriodLabel.textContent = `${state.from} to ${state.to}`;
     common.renderChart('expenseCategoryChart', {
       type: 'bar',
@@ -345,7 +291,13 @@
     if (button.dataset.action === 'edit') editExpense(button.dataset.id);
     if (button.dataset.action === 'history') showExpenseHistory(button.dataset.id);
     if (button.dataset.action === 'void') {
-      elements.voidExpenseId.value = button.dataset.id; elements.voidReason.value = ''; elements.voidFormMessage.textContent = ''; openModal(elements.voidModal);
+      const expense = state.rows.find((item) => Number(item.expense_id) === Number(button.dataset.id));
+      if (!expense) return;
+      elements.voidExpenseId.value = expense.expense_id;
+      elements.voidReason.value = '';
+      elements.voidExpenseSummary.textContent = `${expense.expense_date} · ${expense.reference_no || `Expense #${expense.expense_id}`} · ${common.formatPeso(expense.amount)}. Voiding keeps the record and reason in the ledger but excludes it from active totals. Expenses in closed cash-closing periods cannot be voided.`;
+      elements.voidFormMessage.textContent = '';
+      openModal(elements.voidModal);
     }
   });
   document.querySelectorAll('[data-close-expense]').forEach((button) => button.addEventListener('click', () => closeModal(elements.expenseModal)));
@@ -362,19 +314,25 @@
     if (!elements.expenseForm.reportValidity()) return;
     const id = elements.expenseId.value;
     const url = id ? `/api/finance/expenses/${encodeURIComponent(id)}` : '/api/finance/expenses';
+    const submitButton = elements.expenseForm.querySelector('button[type="submit"]');
+    submitButton.disabled = true;
     try {
       await common.fetchJson(url, { method: id ? 'PATCH' : 'POST', body: JSON.stringify(serializeForm()) });
       closeModal(elements.expenseModal); await loadExpenses(); showMessage(id ? 'Expense updated.' : 'Expense recorded.');
     } catch (error) { elements.expenseFormMessage.textContent = error.message; }
+    finally { submitButton.disabled = false; }
   });
 
   elements.voidForm.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (!elements.voidForm.reportValidity()) return;
+    const submitButton = elements.voidForm.querySelector('button[type="submit"]');
+    submitButton.disabled = true;
     try {
       await common.fetchJson(`/api/finance/expenses/${encodeURIComponent(elements.voidExpenseId.value)}/void`, { method: 'POST', body: JSON.stringify({ reason: elements.voidReason.value.trim() }) });
       closeModal(elements.voidModal); await loadExpenses(); showMessage('Expense voided. It remains in the ledger but is excluded from totals.');
     } catch (error) { elements.voidFormMessage.textContent = error.message; }
+    finally { submitButton.disabled = false; }
   });
 
   elements.purchaseSuggestionForm.addEventListener('submit', async (event) => {
