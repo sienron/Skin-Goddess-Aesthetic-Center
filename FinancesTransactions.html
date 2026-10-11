@@ -191,8 +191,6 @@
                 <div class="staff-table-toolbar">
                     <h2>Outstanding balances</h2><span id="receivableCount">0 appointments</span>
                 </div>
-                <p class="fin-modal-copy">Receivables are completed appointment prices less posted payments. Reservation
-                    deposits reduce the balance under the current finance rules.</p>
                 <div class="fin-table-scroll">
                     <table class="fin-table">
                         <thead>
@@ -217,10 +215,6 @@
                 <div class="staff-table-toolbar">
                     <h2>Reservation deposits</h2><span id="depositCount">0 deposits</span>
                 </div>
-                <p class="fin-modal-copy">Posted deposits, including forfeited deposits, count as cash collected when
-                    received. Sales earned follows the configured deposit rules: completed services use the booked
-                    service price, forfeited no-show deposits are included, and canceled deposits count only when marked
-                    forfeited. Refunded and reversed payments are excluded.</p>
                 <div class="fin-table-scroll">
                     <table class="fin-table">
                         <thead>
@@ -345,6 +339,15 @@
                             <tbody id="paymentHistoryRows"></tbody>
                         </table>
                     </div>
+                </section>
+            </div>
+            <div class="fin-modal-overlay" id="receiptModal" hidden>
+                <section class="fin-modal fin-modal--receipt" role="dialog" aria-modal="true"
+                    aria-labelledby="receiptModalTitle">
+                    <button class="fin-modal-close" type="button" data-close-receipt aria-label="Close">&times;</button>
+                    <h2 id="receiptModalTitle">Payment receipt</h2>
+                    <iframe id="receiptFrame" title="Payment receipt or adjustment notice"
+                        sandbox="allow-scripts allow-modals" src="about:blank"></iframe>
                 </section>
             </div>
         </section>

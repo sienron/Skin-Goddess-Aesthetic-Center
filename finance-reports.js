@@ -1,8 +1,10 @@
 (function () {
   const common = window.FinanceCommon;
   if (!common) return;
-  const refs = Object.fromEntries(['reportPeriodLabel', 'reportFrom', 'reportTo', 'reportMessage', 'reportSales', 'reportCollected', 'reportExpenses', 'reportNet', 'reportSalesComparison', 'reportCollectedComparison', 'reportExpensesComparison', 'reportNetComparison', 'reportDepositsReceived', 'reportDepositsReceivedCount', 'reportRefunds', 'reportRefundsCount', 'reportForfeited', 'reportForfeitedCount', 'dailyCashRows', 'dailyCashEmpty'].map((id) => [id, document.getElementById(id)]));
+  const refs = Object.fromEntries(['reportPeriodLabel', 'reportFrom', 'reportTo', 'reportMessage', 'reportSales', 'reportCollected', 'reportExpenses', 'reportNet', 'reportSalesComparison', 'reportCollectedComparison', 'reportExpensesComparison', 'reportNetComparison', 'reportDepositsReceived', 'reportDepositsReceivedCount', 'reportRefunds', 'reportRefundsCount', 'reportForfeited', 'reportForfeitedCount', 'dailyCashRows', 'dailyCashEmpty', 'dailyCashPagination', 'dailyCashPrev', 'dailyCashNext', 'dailyCashPageLabel'].map((id) => [id, document.getElementById(id)]));
   const state = { from: common.monthStart(), to: common.manilaToday(), data: null, monthly: [], methods: [] };
+  const dailyCashPageSize = 8;
+  let dailyCashPage = 0;
   const colors = ['#C9A84C', '#228B46', '#4388E8', '#929292', '#8a6e2f', '#B93C3C'];
   const exportButtons = Array.from(document.querySelectorAll('[data-export]'));
   let reportRequest = 0;
@@ -40,6 +42,26 @@
   }
 
   function peso(value) { return common.formatPeso(value); }
+
+  function renderDailyCash() {
+    const rows = state.data.daily_cash;
+    const pageCount = Math.max(1, Math.ceil(rows.length / dailyCashPageSize));
+    dailyCashPage = Math.min(dailyCashPage, pageCount - 1);
+    refs.dailyCashRows.replaceChildren();
+    rows.slice(dailyCashPage * dailyCashPageSize, (dailyCashPage + 1) * dailyCashPageSize).forEach((row) => {
+      const tr = document.createElement('tr');
+      addCell(tr, row.date);
+      addCell(tr, peso(row.collected));
+      addCell(tr, peso(row.expenses));
+      addCell(tr, peso(Number(row.collected) - Number(row.expenses)));
+      refs.dailyCashRows.append(tr);
+    });
+    refs.dailyCashEmpty.hidden = rows.length > 0;
+    refs.dailyCashPagination.hidden = rows.length <= dailyCashPageSize;
+    refs.dailyCashPrev.disabled = dailyCashPage === 0;
+    refs.dailyCashNext.disabled = dailyCashPage >= pageCount - 1;
+    refs.dailyCashPageLabel.textContent = `Page ${dailyCashPage + 1} of ${pageCount}`;
+  }
 
   function renderReportChart(canvasId, config) {
     const hasData = config.data.datasets.some((dataset) =>
@@ -121,13 +143,8 @@
       options: { indexAxis: 'y', plugins: { legend: { display: false }, tooltip: { callbacks: { label: (item) => peso(item.raw) } } } },
     });
 
-    refs.dailyCashRows.replaceChildren();
-    report.daily_cash.forEach((row) => {
-      const tr = document.createElement('tr');
-      addCell(tr, row.date); addCell(tr, peso(row.collected)); addCell(tr, peso(row.expenses)); addCell(tr, peso(Number(row.collected) - Number(row.expenses)));
-      refs.dailyCashRows.append(tr);
-    });
-    refs.dailyCashEmpty.hidden = report.daily_cash.length > 0;
+    dailyCashPage = 0;
+    renderDailyCash();
   }
 
   async function exportSection(section) {
@@ -218,5 +235,17 @@
   exportButtons.forEach((button) => button.addEventListener('click', () => {
     exportSection(button.dataset.export).catch((error) => { refs.reportMessage.textContent = error.message; });
   }));
+  refs.dailyCashPrev.addEventListener('click', () => {
+    if (dailyCashPage > 0) {
+      dailyCashPage -= 1;
+      renderDailyCash();
+    }
+  });
+  refs.dailyCashNext.addEventListener('click', () => {
+    if (state.data && (dailyCashPage + 1) * dailyCashPageSize < state.data.daily_cash.length) {
+      dailyCashPage += 1;
+      renderDailyCash();
+    }
+  });
   load().catch((error) => { refs.reportMessage.textContent = error.message; });
 })();

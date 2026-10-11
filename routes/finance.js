@@ -1401,7 +1401,9 @@ async function transactionExportRows(from, to, query) {
     )`);
   }
   return financeQuery(`
-    SELECT (payment.created_at AT TIME ZONE 'Asia/Manila')::date::text AS date,
+    SELECT payment.payment_id,
+      appointment.appointment_date::text AS appointment_date,
+      (payment.created_at AT TIME ZONE 'Asia/Manila')::date::text AS date,
       CONCAT('SG-RCT-', TO_CHAR(payment.created_at AT TIME ZONE 'Asia/Manila', 'YYYY'),
         '-', LPAD(payment.payment_id::text, 8, '0')) AS receipt_number,
       payment.payment_type, payment.method, payment.amount::float8 AS amount,
@@ -1426,6 +1428,101 @@ async function transactionExportRows(from, to, query) {
   `, values);
 }
 
+async function salesEarnedExportRows(from, to) {
+  return financeQuery(`
+    SELECT sale_date::text AS date, source, record_id, receipt_number, appointment_id,
+      client, details, payment_status, appointment_status, amount::float8 AS amount,
+      recognition_rule
+    FROM (
+      SELECT appointment.appointment_date AS sale_date,
+        'Completed appointment'::text AS source,
+        CONCAT('APT-', appointment.appointment_id)::text AS record_id,
+        NULL::text AS receipt_number,
+        appointment.appointment_id::text AS appointment_id,
+        COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(customer.first_name), ''),
+          NULLIF(BTRIM(customer.last_name), '')), ''), appointment.walk_in_name, 'Client') AS client,
+        service.service_name::text AS details,
+        'not applicable'::text AS payment_status,
+        appointment.appointment_status::text AS appointment_status,
+        appointment.booked_service_price::numeric AS amount,
+        'Booked service price on completed appointment date'::text AS recognition_rule
+      FROM appointments appointment
+      LEFT JOIN users customer ON customer.user_id = appointment.user_id
+      JOIN services service ON service.service_id = appointment.service_id
+      WHERE appointment.appointment_status = 'completed'
+        AND appointment.appointment_date BETWEEN $1::date AND $2::date
+
+      UNION ALL
+
+      SELECT (payment.created_at AT TIME ZONE 'Asia/Manila')::date,
+        'Posted product sale'::text,
+        CONCAT('PAY-', payment.payment_id)::text,
+        CONCAT('SG-RCT-', TO_CHAR(payment.created_at AT TIME ZONE 'Asia/Manila', 'YYYY'),
+          '-', LPAD(payment.payment_id::text, 8, '0')),
+        appointment.appointment_id::text,
+        COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(customer.first_name), ''),
+          NULLIF(BTRIM(customer.last_name), '')), ''), appointment.walk_in_name, 'Product sale'),
+        CASE WHEN sale.payment_id IS NOT NULL
+          THEN CONCAT(sale.product_name, ' × ', sale.quantity)
+          ELSE COALESCE(payment.note, payment.reference_no, 'Product sale')
+        END,
+        payment.status::text,
+        COALESCE(appointment.appointment_status::text, 'not applicable'),
+        payment.amount::numeric,
+        'Posted product-sale amount on payment receipt date'
+      FROM payments payment
+      LEFT JOIN appointments appointment ON appointment.appointment_id = payment.appointment_id
+      LEFT JOIN users customer ON customer.user_id = appointment.user_id
+      LEFT JOIN product_sale_details sale ON sale.payment_id = payment.payment_id
+      WHERE payment.payment_type = 'product_sale' AND payment.status = 'posted'
+        AND (payment.created_at AT TIME ZONE 'Asia/Manila')::date BETWEEN $1::date AND $2::date
+
+      UNION ALL
+
+      SELECT appointment.appointment_date,
+        CASE WHEN appointment.appointment_status = 'no_show'
+          THEN 'Retained no-show deposit'
+          ELSE 'Forfeited cancellation deposit'
+        END,
+        CONCAT('PAY-', payment.payment_id)::text,
+        CONCAT('SG-RCT-', TO_CHAR(payment.created_at AT TIME ZONE 'Asia/Manila', 'YYYY'),
+          '-', LPAD(payment.payment_id::text, 8, '0')),
+        appointment.appointment_id::text,
+        COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(customer.first_name), ''),
+          NULLIF(BTRIM(customer.last_name), '')), ''), appointment.walk_in_name, 'Client'),
+        service.service_name::text,
+        payment.status::text,
+        appointment.appointment_status::text,
+        payment.amount::numeric,
+        CASE WHEN appointment.appointment_status = 'no_show'
+          THEN 'Retained under the configured no-show deposit rule'
+          ELSE 'Cancellation deposit explicitly marked forfeited'
+        END
+      FROM appointments appointment
+      JOIN payments payment ON payment.appointment_id = appointment.appointment_id
+      LEFT JOIN users customer ON customer.user_id = appointment.user_id
+      JOIN services service ON service.service_id = appointment.service_id
+      WHERE payment.payment_type = 'reservation' AND payment.status = 'posted'
+        AND (
+          (appointment.appointment_status = 'no_show' AND $3::boolean)
+          OR (appointment.appointment_status = 'cancelled'
+            AND POSITION('[DEPOSIT_FORFEITED]' IN COALESCE(payment.note, '')) > 0)
+        )
+        AND appointment.appointment_date BETWEEN $1::date AND $2::date
+    ) earned
+    ORDER BY sale_date, record_id
+  `, [from, to, NO_SHOW_DEPOSIT_IS_INCOME]);
+}
+
+async function incomeStatementDetailRows(from, to) {
+  const [sales, payments, expenses] = await Promise.all([
+    salesEarnedExportRows(from, to),
+    transactionExportRows(from, to, { status: 'all' }),
+    expenseExportRows(from, to, {}),
+  ]);
+  return { sales: sales.rows, payments: payments.rows, expenses: expenses.rows };
+}
+
 async function expenseExportRows(from, to, query) {
   const values = [from, to];
   const where = ['expense_date BETWEEN $1::date AND $2::date'];
@@ -1439,7 +1536,7 @@ async function expenseExportRows(from, to, query) {
     where.push(`(description ILIKE $${values.length} OR COALESCE(supplier, '') ILIKE $${values.length} OR COALESCE(reference_no, '') ILIKE $${values.length})`);
   }
   return db.query(`
-    SELECT expense_date::text AS date, category, description, amount::float8 AS amount,
+    SELECT expense_id, expense_date::text AS date, category, description, amount::float8 AS amount,
       supplier, reference_no,
       CASE WHEN voided_at IS NULL THEN 'active' ELSE 'voided' END AS status,
       void_reason
@@ -1453,40 +1550,79 @@ function spreadsheetDate(value) {
   return new Date(`${value}T00:00:00.000Z`);
 }
 
+// Keep exported workbooks visually distinct from the warm website palette.
+// Neutral slate with a restrained blue accent stays readable in print and on screen.
+const EXCEL_STYLE = {
+  navy: 'FF1F2937',
+  blue: 'FF2563EB',
+  slate: 'FF475569',
+  band: 'FFF8FAFC',
+  total: 'FFEFF6FF',
+  border: 'FF93C5FD',
+};
+
 async function sendFinanceWorkbook(res, section, from, to, records, query = {}) {
   const workbook = new ExcelJS.Workbook();
-  const metadata = workbook.addWorksheet('Report metadata');
-  metadata.addRows(exportMetadataRows(from, to, section, query));
-  metadata.columns = [{ width: 30 }, { width: 100 }];
+  workbook.creator = 'Skin Goddess Aesthetic Center';
+  workbook.subject = `${section === 'transactions' ? 'Payment ledger' : 'Expense register'} ${from} to ${to}`;
+  workbook.title = `Finance ${section} export ${from} to ${to}`;
   const transactions = section === 'transactions';
   const headers = transactions
     ? ['Date', 'Receipt number', 'Client', 'Type', 'Details', 'Payment method', 'Amount (PHP)', 'Status', 'Reference', 'Note']
     : ['Date', 'Category', 'Description', 'Amount (PHP)', 'Supplier', 'Reference', 'Status', 'Void reason'];
-  const worksheet = workbook.addWorksheet(transactions ? 'Transactions' : 'Expenses', {
-    views: [{ state: 'frozen', ySplit: 1 }]
-  });
-  worksheet.addRow(headers);
-  records.forEach((record) => {
-    worksheet.addRow(transactions
+  const amounts = records.reduce((total, record) => total + Number(record.amount || 0), 0);
+  const worksheet = addReportDetailSheet(workbook, {
+    name: transactions ? 'Payment Ledger' : 'Expense Register',
+    title: transactions ? 'Payment Ledger' : 'Expense Register',
+    from,
+    to,
+    description: transactions
+      ? 'Payment records by Manila receipt date. Amounts are original transaction amounts; use the Status column when reconciling posted collections.'
+      : 'Expense records by expense date. Voided entries remain available for audit context and should be excluded from active expense totals.',
+    headers,
+    widths: transactions
+      ? [15, 22, 26, 18, 36, 20, 18, 15, 26, 42]
+      : [15, 24, 42, 18, 26, 24, 15, 42],
+    dateColumns: [1],
+    amountColumns: [transactions ? 7 : 4],
+    records: records.map((record) => (transactions
       ? [spreadsheetDate(record.date), record.receipt_number, record.client, record.payment_type,
         record.details, paymentMethodLabel(record.method), Number(record.amount), record.status,
-        record.reference_no, record.note]
+        record.reference_no || '', record.note || '']
       : [spreadsheetDate(record.date), record.category, record.description, Number(record.amount),
-        record.supplier, record.reference_no, record.status, record.void_reason]);
+        record.supplier || '', record.reference_no || '', record.status, record.void_reason || ''])),
+    total: {
+      label: transactions ? 'Total listed payment amount' : 'Total listed expense amount',
+      column: transactions ? 7 : 4,
+      value: amounts,
+    },
   });
-  worksheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
-  worksheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF5E4A25' } };
-  worksheet.autoFilter = {
-    from: { row: 1, column: 1 },
-    to: { row: 1, column: headers.length }
-  };
-  worksheet.getColumn(1).numFmt = 'dd mmm yyyy';
-  worksheet.getColumn(transactions ? 7 : 4).numFmt = '"PHP" #,##0.00';
-  worksheet.columns.forEach((column) => {
-    const longest = Math.max(...column.values.filter((value) => value != null)
-      .map((value) => String(value).length), 12);
-    column.width = Math.min(longest + 2, 48);
-  });
+  worksheet.properties.tabColor = { argb: EXCEL_STYLE.navy };
+
+  const metadata = workbook.addWorksheet('Report Information');
+  metadata.columns = [{ width: 29 }, { width: 100 }];
+  metadata.mergeCells('A1:B1');
+  metadata.getCell('A1').value = 'Skin Goddess Aesthetic Center';
+  metadata.getCell('A1').font = { bold: true, size: 15, color: { argb: 'FFFFFFFF' } };
+  metadata.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: EXCEL_STYLE.navy } };
+  metadata.getCell('A1').alignment = { vertical: 'middle' };
+  metadata.getRow(1).height = 28;
+  metadata.mergeCells('A2:B2');
+  metadata.getCell('A2').value = transactions ? 'Payment Ledger Export Information' : 'Expense Register Export Information';
+  metadata.getCell('A2').font = { bold: true, size: 12, color: { argb: EXCEL_STYLE.navy } };
+  metadata.getRow(2).height = 24;
+  exportMetadataRows(from, to, section, query).forEach(([label, value]) => metadata.addRow([label, value]));
+  for (let rowNumber = 3; rowNumber <= metadata.lastRow.number; rowNumber += 1) {
+    const row = metadata.getRow(rowNumber);
+    row.height = 28;
+    row.getCell(1).font = { bold: true, color: { argb: EXCEL_STYLE.slate } };
+    row.getCell(1).alignment = { vertical: 'top', wrapText: true };
+    row.getCell(2).alignment = { vertical: 'top', wrapText: true };
+    if (rowNumber % 2 === 0) row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: EXCEL_STYLE.band } };
+  }
+  metadata.views = [{ state: 'frozen', ySplit: 2 }];
+  metadata.pageSetup = { fitToPage: true, fitToWidth: 1, fitToHeight: 1 };
+  metadata.properties.tabColor = { argb: EXCEL_STYLE.blue };
 
   const buffer = await workbook.xlsx.writeBuffer();
   res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -1494,75 +1630,343 @@ async function sendFinanceWorkbook(res, section, from, to, records, query = {}) 
   res.send(Buffer.from(buffer));
 }
 
-async function sendIncomeStatementWorkbook(res, from, to, report, chartImages = {}) {
+function configurePrintableTable(worksheet, headerRow, dataEndRow, lastRow, columnCount, totalRow) {
+  worksheet.views = [{ state: 'frozen', ySplit: headerRow }];
+  worksheet.pageSetup = {
+    paperSize: 9,
+    orientation: 'landscape',
+    fitToPage: true,
+    fitToWidth: 1,
+    fitToHeight: 0,
+    printTitlesRow: `${headerRow}:${headerRow}`,
+    margins: { left: 0.25, right: 0.25, top: 0.5, bottom: 0.5, header: 0.2, footer: 0.25 },
+    printArea: `A1:${worksheet.getColumn(columnCount).letter}${lastRow}`,
+  };
+  worksheet.headerFooter.oddFooter = '&LSkin Goddess Aesthetic Center&CFinance report&RPage &P of &N';
+  worksheet.autoFilter = {
+    from: { row: headerRow, column: 1 },
+    to: { row: Math.max(headerRow, dataEndRow), column: columnCount },
+  };
+  const header = worksheet.getRow(headerRow);
+  header.height = 44;
+  header.eachCell({ includeEmpty: true }, (cell) => {
+    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: EXCEL_STYLE.navy } };
+    cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+  });
+  for (let rowNumber = headerRow + 1; rowNumber <= dataEndRow; rowNumber += 1) {
+    const row = worksheet.getRow(rowNumber);
+    let lineCount = 1;
+    row.eachCell({ includeEmpty: true }, (cell, columnNumber) => {
+      cell.alignment = { vertical: 'top', wrapText: true };
+      const value = cell.value instanceof Date ? cell.value.toISOString().slice(0, 10) : String(cell.value ?? '');
+      const width = Math.max(10, worksheet.getColumn(columnNumber).width || 12);
+      lineCount = Math.max(lineCount, value.split(/\r?\n/).reduce(
+        (count, line) => count + Math.max(1, Math.ceil(line.length / width)),
+        0
+      ));
+    });
+    row.height = Math.min(390, Math.max(32, lineCount * 16 + 10));
+    if ((rowNumber - headerRow) % 2 === 0) {
+      row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: EXCEL_STYLE.band } };
+    }
+  }
+  if (totalRow) {
+    const row = worksheet.getRow(totalRow);
+    row.height = 30;
+    row.font = { bold: true, color: { argb: EXCEL_STYLE.navy } };
+    row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: EXCEL_STYLE.total } };
+    row.border = { top: { style: 'thin', color: { argb: EXCEL_STYLE.border } } };
+  }
+}
+
+function addReportDetailSheet(workbook, options) {
+  const {
+    name, title, from, to, description, headers, widths, records,
+    dateColumns = [], amountColumns = [], total = null,
+  } = options;
+  const worksheet = workbook.addWorksheet(name);
+  worksheet.columns = widths.map((width) => ({ width }));
+  const columnCount = headers.length;
+  [[1, 'Skin Goddess Aesthetic Center'], [2, title], [3, `Reporting period: ${from} to ${to}`], [4, description]]
+    .forEach(([rowNumber, value]) => {
+      worksheet.mergeCells(rowNumber, 1, rowNumber, columnCount);
+      const cell = worksheet.getCell(rowNumber, 1);
+      cell.value = value;
+      cell.alignment = { vertical: 'middle', wrapText: true };
+    });
+  worksheet.getCell(1, 1).font = { bold: true, size: 15, color: { argb: 'FFFFFFFF' } };
+  worksheet.getCell(1, 1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: EXCEL_STYLE.navy } };
+  worksheet.getRow(1).height = 28;
+  worksheet.getCell(2, 1).font = { bold: true, size: 13, color: { argb: EXCEL_STYLE.navy } };
+  worksheet.getRow(2).height = 23;
+  worksheet.getCell(3, 1).font = { bold: true, color: { argb: EXCEL_STYLE.slate } };
+  worksheet.getRow(3).height = 20;
+  worksheet.getCell(4, 1).font = { italic: true, color: { argb: EXCEL_STYLE.slate } };
+  worksheet.getRow(4).height = 30;
+  const headerRow = 6;
+  headers.forEach((header, index) => {
+    worksheet.getCell(headerRow, index + 1).value = header;
+  });
+  const firstDataRow = headerRow + 1;
+  records.forEach((record) => worksheet.addRow(record));
+  const dataEndRow = records.length ? worksheet.lastRow.number : headerRow;
+  dateColumns.forEach((column) => { worksheet.getColumn(column).numFmt = 'dd mmm yyyy'; });
+  amountColumns.forEach((column) => {
+    worksheet.getColumn(column).numFmt = '"PHP" #,##0.00;[Red]-"PHP" #,##0.00';
+  });
+  let totalRow = null;
+  if (total) {
+    totalRow = worksheet.lastRow.number + 1;
+    const row = worksheet.addRow([]);
+    row.getCell(1).value = total.label;
+    const totalCell = row.getCell(total.column);
+    if (records.length) {
+      const letter = worksheet.getColumn(total.column).letter;
+      totalCell.value = {
+        formula: total.formula
+          ? total.formula(firstDataRow, dataEndRow, worksheet)
+          : `SUM(${letter}${firstDataRow}:${letter}${dataEndRow})`,
+        result: Number(total.value),
+      };
+    } else {
+      totalCell.value = Number(total.value);
+    }
+    totalCell.numFmt = '"PHP" #,##0.00;[Red]-"PHP" #,##0.00';
+    totalCell.alignment = { horizontal: 'right' };
+  }
+  configurePrintableTable(worksheet, headerRow, dataEndRow, worksheet.lastRow.number, columnCount, totalRow);
+  amountColumns.forEach((column) => {
+    for (let rowNumber = firstDataRow; rowNumber <= (totalRow || dataEndRow); rowNumber += 1) {
+      worksheet.getCell(rowNumber, column).alignment = { horizontal: 'right', vertical: 'middle', wrapText: true };
+    }
+  });
+  return worksheet;
+}
+
+async function sendIncomeStatementWorkbook(res, from, to, report, chartImages = {}, details) {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'Skin Goddess Aesthetic Center';
   workbook.subject = `Financial summary ${from} to ${to}`;
-  const worksheet = workbook.addWorksheet('Financial Summary', {
-    views: [{ state: 'frozen', ySplit: 6 }],
-    pageSetup: { orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 1 },
+  workbook.title = `Finance report ${from} to ${to}`;
+  const summary = workbook.addWorksheet('Financial Summary', {
+    pageSetup: {
+      paperSize: 9,
+      orientation: 'landscape',
+      fitToPage: true,
+      fitToWidth: 1,
+      fitToHeight: 1,
+      margins: { left: 0.35, right: 0.35, top: 0.5, bottom: 0.5, header: 0.2, footer: 0.25 },
+    },
   });
-  worksheet.columns = [{ key: 'metric', width: 34 }, { key: 'amount', width: 22 }];
-  worksheet.mergeCells('A1:B1');
-  worksheet.getCell('A1').value = 'Skin Goddess Aesthetic Center';
-  worksheet.mergeCells('A2:B2');
-  worksheet.getCell('A2').value = 'Financial Summary';
-  worksheet.addRow(['Reporting period', `${from} to ${to}`]);
-  worksheet.addRow(['Generated', report.generated_at]);
-  worksheet.addRow([]);
-  worksheet.addRow(['Metric', 'Amount (PHP)']);
-
+  summary.columns = [{ width: 25 }, { width: 20 }, { width: 82 }];
+  summary.mergeCells('A1:C1');
+  summary.getCell('A1').value = 'Skin Goddess Aesthetic Center';
+  summary.getCell('A1').font = { bold: true, size: 16, color: { argb: 'FFFFFFFF' } };
+  summary.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: EXCEL_STYLE.navy } };
+  summary.getCell('A1').alignment = { vertical: 'middle' };
+  summary.getRow(1).height = 30;
+  summary.mergeCells('A2:C2');
+  summary.getCell('A2').value = 'Financial Summary';
+  summary.getCell('A2').font = { bold: true, size: 13, color: { argb: EXCEL_STYLE.navy } };
+  summary.getRow(2).height = 24;
+  summary.addRow(['Reporting period', `${from} to ${to}`]);
+  summary.addRow(['Generated (Asia/Manila)', report.generated_at]);
+  [3, 4].forEach((rowNumber) => {
+    summary.getRow(rowNumber).getCell(1).font = { bold: true, color: { argb: EXCEL_STYLE.slate } };
+  });
+  summary.mergeCells('A6:C6');
+  summary.getCell('A6').value = 'Key financial measures';
+  summary.getCell('A6').font = { bold: true, color: { argb: 'FFFFFFFF' } };
+  summary.getCell('A6').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: EXCEL_STYLE.navy } };
+  ['Metric', 'Amount (PHP)', 'Interpretation'].forEach((header, index) => {
+    summary.getCell(7, index + 1).value = header;
+  });
+  summary.getRow(7).height = 25;
+  summary.getRow(7).eachCell({ includeEmpty: true }, (cell) => {
+    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: EXCEL_STYLE.blue } };
+    cell.alignment = { vertical: 'middle', wrapText: true };
+  });
   const income = report.income_statement;
   [
-    ['Sales earned', Number(income.sales)],
-    ['Cash collected', Number(income.collected)],
-    ['Recorded expenses', Number(income.expenses)],
-    ['Net cash after expenses', Number(income.net_income)],
-  ].forEach((row) => worksheet.addRow(row));
-
-  worksheet.getRow(1).height = 30;
-  worksheet.getRow(1).font = { bold: true, size: 16, color: { argb: 'FFFFFFFF' } };
-  worksheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF5E4A25' } };
-  worksheet.getRow(2).height = 24;
-  worksheet.getRow(2).font = { bold: true, size: 12, color: { argb: 'FF5E4A25' } };
-  worksheet.getRow(2).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F0E3' } };
-  [3, 4].forEach((rowNumber) => {
-    worksheet.getRow(rowNumber).getCell(1).font = { bold: true, color: { argb: 'FF655E56' } };
+    ['Sales earned', Number(income.sales), 'Recognized revenue shown item-by-item on Sales Earned Detail. It is not the same as cash received.'],
+    ['Cash collected', Number(income.collected), 'Posted payments by Manila receipt date. Refunded and reversed payments are excluded.'],
+    ['Recorded expenses', Number(income.expenses), 'Non-voided expenses by expense date. Voided records remain visible on Expense Register but are excluded.'],
+    ['Net cash after expenses', Number(income.net_income), 'Cash collected less recorded expenses; this is not a complete cash-flow statement.'],
+  ].forEach((values, index) => {
+    const row = summary.addRow(values);
+    row.height = 38;
+    row.getCell(2).numFmt = '"PHP" #,##0.00;[Red]-"PHP" #,##0.00';
+    row.getCell(2).alignment = { horizontal: 'right', vertical: 'middle' };
+    row.getCell(3).alignment = { vertical: 'top', wrapText: true };
+    if (index % 2 === 1) row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: EXCEL_STYLE.band } };
   });
-  worksheet.getRow(6).height = 22;
-  worksheet.getRow(6).font = { bold: true, color: { argb: 'FFFFFFFF' } };
-  worksheet.getRow(6).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF5E4A25' } };
-  worksheet.getRow(6).alignment = { vertical: 'middle' };
-  worksheet.autoFilter = {
-    from: { row: 6, column: 1 },
-    to: { row: 10, column: 2 },
-  };
+  summary.getRow(11).font = { bold: true, color: { argb: EXCEL_STYLE.navy } };
+  summary.getRow(11).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: EXCEL_STYLE.total } };
+  summary.getRow(11).border = { top: { style: 'thin', color: { argb: EXCEL_STYLE.border } } };
+  summary.addRow([]);
+  summary.mergeCells('A13:C13');
+  summary.getCell('A13').value = 'Calculation and date basis';
+  summary.getCell('A13').font = { bold: true, color: { argb: 'FFFFFFFF' } };
+  summary.getCell('A13').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: EXCEL_STYLE.navy } };
+  [
+    ['Sales earned', 'Completed services use booked service price on appointment date; posted product sales use receipt date; retained no-show and explicitly forfeited cancellation deposits follow the configured deposit rules.'],
+    ['Cash collected', 'All payment methods are included when posted. Reservation deposits and balances are counted on payment receipt date; refunds and reversals are excluded.'],
+    ['Expenses', 'Active expense records are counted by expense date. The application does not record an expense settlement method.'],
+    ['Reconciliation', 'See Payment Ledger, Payment References, Expense Register, and Daily Reconciliation for source records and status treatment.'],
+  ].forEach((values, index) => {
+    const row = summary.addRow([values[0], '', values[1]]);
+    row.height = 38;
+    row.getCell(1).font = { bold: true, color: { argb: EXCEL_STYLE.slate } };
+    row.getCell(3).alignment = { vertical: 'top', wrapText: true };
+    if (index % 2 === 1) row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: EXCEL_STYLE.band } };
+  });
+  summary.mergeCells('A18:C18');
+  summary.getCell('A18').value = report.accounting_basis;
+  summary.getCell('A18').font = { italic: true, size: 9, color: { argb: EXCEL_STYLE.slate } };
+  summary.getCell('A18').alignment = { vertical: 'top', wrapText: true };
+  summary.getRow(18).height = 42;
+  summary.views = [{ state: 'frozen', ySplit: 7 }];
+  summary.headerFooter.oddFooter = '&LSkin Goddess Aesthetic Center&CFinance report&RPage &P of &N';
+  summary.pageSetup.printArea = 'A1:C18';
 
-  for (let rowNumber = 7; rowNumber <= 10; rowNumber += 1) {
-    const row = worksheet.getRow(rowNumber);
-    row.height = 22;
-    row.getCell(2).numFmt = '"PHP" #,##0.00';
-    row.getCell(2).alignment = { horizontal: 'right' };
-    if (rowNumber % 2 === 0) {
-      row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFAF8F3' } };
-    }
-  }
-  worksheet.getRow(10).font = { bold: true, color: { argb: 'FF5E4A25' } };
-  worksheet.getRow(10).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F0E3' } };
-  worksheet.getRow(10).border = { top: { style: 'thin', color: { argb: 'FFC9A84C' } } };
+  const salesColumns = [
+    'Date', 'Revenue source', 'Record ID', 'Receipt number',
+    'Client', 'Service / product details', 'Payment / appointment status', 'Sales earned (PHP)',
+  ];
+  addReportDetailSheet(workbook, {
+    name: 'Sales Earned Detail',
+    title: 'Sales Earned Detail',
+    from, to,
+    description: 'Recognized revenue rows that reconcile to Financial Summary. Completed services use booked price; product sales use receipt date; retained deposits follow the configured forfeiture rules.',
+    headers: salesColumns,
+    widths: [15, 25, 16, 22, 26, 38, 25, 20],
+    dateColumns: [1],
+    amountColumns: [8],
+    records: details.sales.map((row) => [
+      spreadsheetDate(row.date), row.source, row.record_id, row.receipt_number || '',
+      row.client, row.details,
+      [row.payment_status !== 'not applicable' ? row.payment_status : '',
+        row.appointment_status !== 'not applicable' ? row.appointment_status : ''].filter(Boolean).join(' / '),
+      Number(row.amount),
+    ]),
+    total: { label: 'Total sales earned', column: 8, value: income.sales },
+  });
+
+  addReportDetailSheet(workbook, {
+    name: 'Payment Ledger',
+    title: 'Payment Ledger — All Statuses',
+    from, to,
+    description: 'All payment records by Manila receipt date. Amounts are original gross transaction amounts; only posted rows count as cash collected.',
+    headers: ['Payment ID', 'Payment date', 'Receipt number', 'Client', 'Payment type',
+      'Service / product details', 'Payment method', 'Original amount (PHP)', 'Status'],
+    widths: [12, 15, 23, 25, 18, 34, 19, 20, 16],
+    dateColumns: [2],
+    amountColumns: [8],
+    records: details.payments.map((row) => [
+      row.payment_id, spreadsheetDate(row.date), row.receipt_number, row.client,
+      row.payment_type, row.details, paymentMethodLabel(row.method), Number(row.amount), row.status,
+    ]),
+    total: {
+      label: 'Posted cash collected (ties to summary)',
+      column: 8,
+      value: income.collected,
+      formula: (first, last) => `SUMIF(I${first}:I${last},"posted",H${first}:H${last})`,
+    },
+  });
+
+  addReportDetailSheet(workbook, {
+    name: 'Payment References',
+    title: 'Payment Reference and Notes',
+    from, to,
+    description: 'Cross-reference by Payment ID or receipt number to review appointment dates, external references, and recorded notes.',
+    headers: ['Payment ID', 'Receipt number', 'Appointment date', 'External reference', 'Recorded note'],
+    widths: [14, 24, 18, 30, 66],
+    dateColumns: [3],
+    records: details.payments.map((row) => [
+      row.payment_id, row.receipt_number,
+      row.appointment_date ? spreadsheetDate(row.appointment_date) : '',
+      row.reference_no || '', row.note || '',
+    ]),
+  });
+
+  addReportDetailSheet(workbook, {
+    name: 'Expense Register',
+    title: 'Expense Register — Active and Voided',
+    from, to,
+    description: 'All expenses by expense date. Voided records are retained for audit context and excluded from recorded expenses.',
+    headers: ['Expense ID', 'Expense date', 'Category', 'Description', 'Amount (PHP)', 'Supplier',
+      'Reference', 'Status', 'Void reason'],
+    widths: [14, 14, 27, 42, 18, 25, 24, 14, 42],
+    dateColumns: [2],
+    amountColumns: [5],
+    records: details.expenses.map((row) => [
+      row.expense_id, spreadsheetDate(row.date), row.category, row.description,
+      Number(row.amount), row.supplier || '', row.reference_no || '', row.status, row.void_reason || '',
+    ]),
+    total: {
+      label: 'Active recorded expenses (ties to summary)',
+      column: 5,
+      value: income.expenses,
+      formula: (first, last, worksheet) => `SUMIF(H${first}:H${last},"active",E${first}:E${last})`,
+    },
+  });
+
+  addReportDetailSheet(workbook, {
+    name: 'Daily Reconciliation',
+    title: 'Daily Collection and Expense Reconciliation',
+    from, to,
+    description: 'Daily totals use posted payments by Manila receipt date and non-voided expenses by expense date.',
+    headers: ['Date', 'Posted collections (PHP)', 'Recorded expenses (PHP)', 'Net after expenses (PHP)'],
+    widths: [18, 28, 28, 28],
+    dateColumns: [1],
+    amountColumns: [2, 3, 4],
+    records: report.daily_cash.map((row) => [
+      spreadsheetDate(row.date), Number(row.collected), Number(row.expenses),
+      Number(row.collected) - Number(row.expenses),
+    ]),
+    total: {
+      label: 'Period total',
+      column: 2,
+      value: income.collected,
+    },
+  });
+  const dailySheet = workbook.getWorksheet('Daily Reconciliation');
+  const dailyTotalRow = dailySheet.lastRow;
+  const dailyFirstDataRow = 7;
+  const dailyLastDataRow = dailyTotalRow.number - 1;
+  [3, 4].forEach((column) => {
+    const letter = dailySheet.getColumn(column).letter;
+    const sourceColumn = letter;
+    const totalCell = dailyTotalRow.getCell(column);
+    totalCell.value = report.daily_cash.length
+      ? { formula: `SUM(${sourceColumn}${dailyFirstDataRow}:${sourceColumn}${dailyLastDataRow})`,
+        result: column === 3 ? Number(income.expenses) : Number(income.net_income) }
+      : 0;
+    totalCell.numFmt = '"PHP" #,##0.00;[Red]-"PHP" #,##0.00';
+  });
 
   const chartEntries = Object.entries(chartImages);
   if (chartEntries.length) {
     const chartSheet = workbook.addWorksheet('Charts', {
-      pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
+      pageSetup: {
+        paperSize: 9,
+        orientation: 'landscape',
+        fitToPage: true,
+        fitToWidth: 1,
+        fitToHeight: 0,
+        margins: { left: 0.25, right: 0.25, top: 0.5, bottom: 0.5, header: 0.2, footer: 0.25 },
+      },
     });
     chartSheet.columns = Array.from({ length: 16 }, () => ({ width: 12 }));
+    chartSheet.headerFooter.oddFooter = '&LSkin Goddess Aesthetic Center&CFinance report&RPage &P of &N';
     chartEntries.forEach(([title, base64], index) => {
       const column = (index % 2) * 8;
       const row = Math.floor(index / 2) * 20;
       const heading = chartSheet.getCell(row + 1, column + 1);
       heading.value = title;
-      heading.font = { bold: true, size: 12, color: { argb: 'FF5E4A25' } };
+      heading.font = { bold: true, size: 12, color: { argb: EXCEL_STYLE.navy } };
       const imageId = workbook.addImage({ base64, extension: 'png' });
       chartSheet.addImage(imageId, {
         tl: { col: column, row: row + 1 },
@@ -1580,8 +1984,11 @@ async function sendIncomeStatementWorkbook(res, from, to, report, chartImages = 
 router.get('/export.xlsx', endpoint(async (req, res) => {
   const { from, to } = dateRange(req.query);
   if (req.query.section === 'income-statement') {
-    const report = await reportData(from, to);
-    await sendIncomeStatementWorkbook(res, from, to, report);
+    const [report, details] = await Promise.all([
+      reportData(from, to),
+      incomeStatementDetailRows(from, to),
+    ]);
+    await sendIncomeStatementWorkbook(res, from, to, report, {}, details);
     return;
   }
   if (!['transactions', 'expenses'].includes(req.query.section)) {
@@ -1624,8 +2031,11 @@ router.post('/export-report.xlsx', endpoint(async (req, res) => {
   if (!Object.keys(chartImages).length) {
     throw new ApiError(400, 'At least one chart image is required for the report export.');
   }
-  const report = await reportData(from, to);
-  await sendIncomeStatementWorkbook(res, from, to, report, chartImages);
+  const [report, details] = await Promise.all([
+    reportData(from, to),
+    incomeStatementDetailRows(from, to),
+  ]);
+  await sendIncomeStatementWorkbook(res, from, to, report, chartImages, details);
 }));
 
 router.get('/export.csv', endpoint(async (req, res) => {

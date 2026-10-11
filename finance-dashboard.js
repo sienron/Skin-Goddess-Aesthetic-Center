@@ -8,14 +8,9 @@
     'dashOutstanding', 'dashToday', 'dashReceivables', 'dashNoShows',
     'dashboardRecentRows', 'dashboardRecentEmpty', 'dashboardMessage',
     'appointmentTrendsChart', 'appointmentTrendsMessage',
-    'cashClosingDate', 'cashClosingExpected', 'cashClosingVariance', 'cashClosingActual',
-    'cashClosingForm', 'cashClosingSubmit', 'cashClosingMessage',
-    'cashClosingHistoryRows', 'cashClosingHistoryEmpty', 'cashClosingHistoryMessage',
   ];
   const refs = Object.fromEntries(ids.map((id) => [id, document.getElementById(id)]));
   const state = { from: common.monthStart(today), to: today };
-  let expectedCash = null;
-  let cashDateRequest = 0;
   let overviewRequest = 0;
 
   function cell(row, value) {
@@ -43,10 +38,10 @@
     refs.dashCollected.textContent = common.formatPeso(summary.collected);
     refs.dashExpenses.textContent = common.formatPeso(summary.expenses);
     refs.dashNet.textContent = common.formatPeso(summary.net_income);
-    refs.dashSalesComparison.textContent = `${common.formatComparison(summary.sales, previousSummary.sales)} · previous ${previous.from} to ${previous.to}`;
-    refs.dashCollectedComparison.textContent = `${common.formatComparison(summary.collected, previousSummary.collected)} · previous ${previous.from} to ${previous.to}`;
-    refs.dashExpensesComparison.textContent = `${common.formatComparison(summary.expenses, previousSummary.expenses)} · previous ${previous.from} to ${previous.to}`;
-    refs.dashNetComparison.textContent = `${common.formatComparison(summary.net_income, previousSummary.net_income)} · previous ${previous.from} to ${previous.to}`;
+    refs.dashSalesComparison.textContent = common.formatComparison(summary.sales, previousSummary.sales);
+    refs.dashCollectedComparison.textContent = common.formatComparison(summary.collected, previousSummary.collected);
+    refs.dashExpensesComparison.textContent = common.formatComparison(summary.expenses, previousSummary.expenses);
+    refs.dashNetComparison.textContent = common.formatComparison(summary.net_income, previousSummary.net_income);
     refs.dashOutstanding.textContent = common.formatPeso(summary.outstanding_balance);
     refs.dashToday.textContent = common.formatPeso(summary.today_collections);
     refs.dashReceivables.textContent = String(receivables.length);
@@ -117,119 +112,11 @@
         },
       });
       refs.appointmentTrendsChart.hidden = !hasAppointments;
-      refs.appointmentTrendsMessage.textContent = hasAppointments
-        ? `Appointments by date from ${result.from} to ${result.to}. Completed counts include completed appointments only.`
-        : 'No appointments recorded for this period.';
+      refs.appointmentTrendsMessage.textContent = hasAppointments ? '' : 'No appointments recorded for this period.';
     } catch (error) {
       refs.appointmentTrendsMessage.textContent = `Could not load appointment trends: ${error.message}`;
     }
   }
-
-  function renderCashVariance() {
-    const entered = refs.cashClosingActual.value;
-    if (expectedCash === null || entered === '' || !Number.isFinite(Number(entered))) {
-      refs.cashClosingVariance.textContent = '—';
-      return;
-    }
-    const variance = Math.round((Number(entered) - expectedCash) * 100) / 100;
-    const sign = variance > 0 ? '+' : variance < 0 ? '-' : '';
-    refs.cashClosingVariance.textContent = `${sign}${common.formatPeso(Math.abs(variance))}`;
-  }
-
-  async function loadCashClosing() {
-    const requestId = ++cashDateRequest;
-    const businessDate = refs.cashClosingDate.value;
-    refs.cashClosingMessage.textContent = 'Loading cash closing...';
-    refs.cashClosingSubmit.disabled = true;
-    refs.cashClosingActual.disabled = true;
-    try {
-      const result = await common.fetchJson(`/api/finance/cash-closing?date=${encodeURIComponent(businessDate)}`);
-      if (requestId !== cashDateRequest) return;
-      expectedCash = Number(result.expected_amount);
-      refs.cashClosingExpected.textContent = common.formatPeso(expectedCash);
-      if (result.closing) {
-        refs.cashClosingActual.value = Number(result.closing.actual_amount).toFixed(2);
-        refs.cashClosingActual.disabled = true;
-        refs.cashClosingSubmit.disabled = true;
-        refs.cashClosingMessage.textContent = `Closed by ${result.closing.closed_by_name || 'authorized user'}. This date cannot be revised.`;
-      } else {
-        refs.cashClosingActual.value = '';
-        refs.cashClosingActual.disabled = false;
-        refs.cashClosingSubmit.disabled = false;
-        refs.cashClosingMessage.textContent = 'No closing recorded for this date.';
-      }
-      renderCashVariance();
-    } catch (error) {
-      if (requestId !== cashDateRequest) return;
-      expectedCash = null;
-      refs.cashClosingExpected.textContent = '—';
-      refs.cashClosingVariance.textContent = '—';
-      refs.cashClosingActual.disabled = true;
-      refs.cashClosingSubmit.disabled = true;
-      refs.cashClosingMessage.textContent = error.message;
-    }
-  }
-
-  async function loadCashClosingHistory() {
-    refs.cashClosingHistoryMessage.textContent = 'Loading cash closings…';
-    try {
-      const result = await common.fetchJson('/api/finance/cash-closing/history?limit=10');
-      const rows = result.rows || [];
-      refs.cashClosingHistoryRows.replaceChildren();
-      rows.forEach((item) => {
-        const row = document.createElement('tr');
-        cell(row, item.business_date);
-        cell(row, common.formatPeso(item.expected_amount));
-        cell(row, common.formatPeso(item.actual_amount));
-        const variance = Number(item.variance);
-        const sign = variance > 0 ? '+' : variance < 0 ? '-' : '';
-        cell(row, `${sign}${common.formatPeso(Math.abs(variance))}`);
-        cell(row, item.closed_by_name);
-        refs.cashClosingHistoryRows.append(row);
-      });
-      refs.cashClosingHistoryEmpty.hidden = rows.length > 0;
-      refs.cashClosingHistoryMessage.textContent = '';
-    } catch (error) {
-      refs.cashClosingHistoryRows.replaceChildren();
-      refs.cashClosingHistoryEmpty.hidden = true;
-      refs.cashClosingHistoryMessage.textContent = `Could not load cash closings: ${error.message}`;
-    }
-  }
-
-  refs.cashClosingDate.max = today;
-  refs.cashClosingDate.value = today;
-  refs.cashClosingActual.addEventListener('input', renderCashVariance);
-  refs.cashClosingDate.addEventListener('change', loadCashClosing);
-  refs.cashClosingForm.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const actualAmount = Number(refs.cashClosingActual.value);
-    const variance = Math.round((actualAmount - expectedCash) * 100) / 100;
-    const confirmed = window.confirm([
-      `Close business date ${refs.cashClosingDate.value}?`,
-      `Expected cash receipts: ${common.formatPeso(expectedCash)}.`,
-      `Cash counted: ${common.formatPeso(actualAmount)}.`,
-      `Variance: ${common.formatPeso(variance)}.`,
-      'This closing is immutable. Additional cash receipts, refunds/reversals of cash payments, and expense changes for this date will be blocked.',
-    ].join('\n'));
-    if (!confirmed) return;
-    refs.cashClosingSubmit.disabled = true;
-    refs.cashClosingMessage.textContent = 'Recording cash closing...';
-    try {
-      const result = await common.fetchJson('/api/finance/cash-closing', {
-        method: 'POST',
-        body: JSON.stringify({
-          business_date: refs.cashClosingDate.value,
-          actual_amount: actualAmount.toFixed(2),
-        }),
-      });
-      const variance = Number(result.closing.variance);
-      refs.cashClosingMessage.textContent = `Cash closing recorded. Variance: ${common.formatPeso(variance)}.`;
-      await Promise.all([loadCashClosing(), loadCashClosingHistory()]);
-    } catch (error) {
-      refs.cashClosingMessage.textContent = error.message;
-      refs.cashClosingSubmit.disabled = false;
-    }
-  });
 
   refs.dashboardFrom.value = state.from;
   refs.dashboardTo.value = state.to;
@@ -249,6 +136,4 @@
     refs.dashboardMessage.textContent = `Could not load finance overview: ${error.message}`;
   });
   loadAppointmentTrends();
-  loadCashClosing();
-  loadCashClosingHistory();
 })();

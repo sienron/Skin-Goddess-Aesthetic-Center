@@ -4,7 +4,7 @@
   const state = { tab: 'transactions', from: common.monthStart(), to: common.manilaToday(), type: '', method: '', status: 'posted', search: '', page: 1, limit: 25, rows: [], receivables: [], deposits: [] };
   let transactionRequest = 0;
   const byId = (id) => document.getElementById(id);
-  const refs = Object.fromEntries(['transactionFrom', 'transactionTo', 'transactionType', 'transactionMethod', 'transactionStatus', 'transactionSearch', 'transactionMessage', 'transactionRows', 'transactionCount', 'transactionEmpty', 'transactionPrev', 'transactionNext', 'transactionPageLabel', 'transactionPeriodLabel', 'transactionComparison', 'ledgerHelp', 'transactionSummary', 'postedCollectionsSummary', 'paymentCountSummary', 'receivablesPanel', 'transactionsPanel', 'depositsPanel', 'methodChartSection', 'receivableRows', 'receivableEmpty', 'receivableCount', 'depositRows', 'depositEmpty', 'depositCount', 'recordPaymentModal', 'recordPaymentForm', 'balanceAppointmentId', 'balanceAmount', 'balanceMethod', 'balanceReference', 'balanceNote', 'paymentBalanceText', 'paymentFormMessage', 'saleModal', 'saleForm', 'saleProduct', 'saleQuantity', 'salePrice', 'saleTotal', 'saleMethod', 'saleReference', 'saleMessage', 'saleSubmit', 'recordSaleBtn', 'exportTransactionsXlsx', 'refundModal', 'refundForm', 'refundPaymentId', 'refundPaymentSummary', 'refundNote', 'refundFormMessage', 'reverseModal', 'reverseForm', 'reversePaymentId', 'reversePaymentSummary', 'reverseReason', 'reverseFormMessage', 'paymentDetailsModal', 'paymentDetails', 'paymentHistoryRows'].map((id) => [id, byId(id)]));
+  const refs = Object.fromEntries(['transactionFrom', 'transactionTo', 'transactionType', 'transactionMethod', 'transactionStatus', 'transactionSearch', 'transactionMessage', 'transactionRows', 'transactionCount', 'transactionEmpty', 'transactionPrev', 'transactionNext', 'transactionPageLabel', 'transactionPeriodLabel', 'transactionComparison', 'ledgerHelp', 'transactionSummary', 'postedCollectionsSummary', 'paymentCountSummary', 'receivablesPanel', 'transactionsPanel', 'depositsPanel', 'methodChartSection', 'receivableRows', 'receivableEmpty', 'receivableCount', 'depositRows', 'depositEmpty', 'depositCount', 'recordPaymentModal', 'recordPaymentForm', 'balanceAppointmentId', 'balanceAmount', 'balanceMethod', 'balanceReference', 'balanceNote', 'paymentBalanceText', 'paymentFormMessage', 'saleModal', 'saleForm', 'saleProduct', 'saleQuantity', 'salePrice', 'saleTotal', 'saleMethod', 'saleReference', 'saleMessage', 'saleSubmit', 'recordSaleBtn', 'exportTransactionsXlsx', 'refundModal', 'refundForm', 'refundPaymentId', 'refundPaymentSummary', 'refundNote', 'refundFormMessage', 'reverseModal', 'reverseForm', 'reversePaymentId', 'reversePaymentSummary', 'reverseReason', 'reverseFormMessage', 'paymentDetailsModal', 'paymentDetails', 'paymentHistoryRows', 'receiptModal', 'receiptModalTitle', 'receiptFrame'].map((id) => [id, byId(id)]));
   const chartColors = ['#c9a84c', '#267447', '#3977b8', '#8c8c8c', '#8a6e2f'];
   refs.recordSaleBtn.classList.add('fin-sales-record-button');
   byId('salesHeaderAction').append(refs.recordSaleBtn);
@@ -54,11 +54,11 @@
       row.append(status);
       const action = element('td');
       const actionButtons = element('div', '', 'fin-row-actions');
-      const receiptLink = element('a', payment.status === 'posted' ? 'Receipt' : 'Adjustment notice', 'fin-button');
-      receiptLink.href = `/api/finance/payments/${encodeURIComponent(payment.payment_id)}/receipt`;
-      receiptLink.target = '_blank';
-      receiptLink.rel = 'noopener noreferrer';
-      actionButtons.append(receiptLink);
+      const receiptButton = element('button', payment.status === 'posted' ? 'Receipt' : 'Adjustment notice', 'fin-button');
+      receiptButton.type = 'button';
+      receiptButton.dataset.receiptId = payment.payment_id;
+      receiptButton.dataset.receiptTitle = payment.status === 'posted' ? 'Payment receipt' : 'Payment adjustment notice';
+      actionButtons.append(receiptButton);
       if (payment.status === 'posted') {
         const reverseButton = element('button', 'Reverse', 'fin-button fin-button-danger');
         reverseButton.type = 'button';
@@ -363,6 +363,13 @@
   refs.transactionPrev.addEventListener('click', () => { state.page -= 1; loadTransactions().catch((error) => message(error.message, true)); });
   refs.transactionNext.addEventListener('click', () => { state.page += 1; loadTransactions().catch((error) => message(error.message, true)); });
   refs.transactionRows.addEventListener('click', (event) => {
+    const receiptButton = event.target.closest('button[data-receipt-id]');
+    if (receiptButton) {
+      refs.receiptModalTitle.textContent = receiptButton.dataset.receiptTitle;
+      refs.receiptFrame.src = `/api/finance/payments/${encodeURIComponent(receiptButton.dataset.receiptId)}/receipt`;
+      modalOpen(refs.receiptModal);
+      return;
+    }
     const reverseButton = event.target.closest('button[data-reverse-id]');
     if (reverseButton) {
       const payment = state.rows.find((row) => Number(row.payment_id) === Number(reverseButton.dataset.reverseId));
@@ -479,8 +486,8 @@
       refs.saleSubmit.disabled = false;
     }
   });
-  [['[data-close-payment]', refs.recordPaymentModal], ['[data-close-sale]', refs.saleModal], ['[data-close-refund]', refs.refundModal], ['[data-close-reverse]', refs.reverseModal], ['[data-close-details]', refs.paymentDetailsModal]].forEach(([selector, modal]) => document.querySelectorAll(selector).forEach((button) => button.addEventListener('click', () => modalClose(modal))));
-  [refs.recordPaymentModal, refs.saleModal, refs.refundModal, refs.reverseModal, refs.paymentDetailsModal].forEach((modal) => {
+  [['[data-close-payment]', refs.recordPaymentModal], ['[data-close-sale]', refs.saleModal], ['[data-close-refund]', refs.refundModal], ['[data-close-reverse]', refs.reverseModal], ['[data-close-details]', refs.paymentDetailsModal], ['[data-close-receipt]', refs.receiptModal]].forEach(([selector, modal]) => document.querySelectorAll(selector).forEach((button) => button.addEventListener('click', () => modalClose(modal))));
+  [refs.recordPaymentModal, refs.saleModal, refs.refundModal, refs.reverseModal, refs.paymentDetailsModal, refs.receiptModal].forEach((modal) => {
     common.bindAccessibleModal(modal);
     modal.addEventListener('click', (event) => { if (event.target === modal) modalClose(modal); });
   });
