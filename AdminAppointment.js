@@ -92,7 +92,8 @@ document.addEventListener('DOMContentLoaded', () => {
       contact: String(record.contact || record.contact_number || '—'),
       cancellationRequestStatus: record.cancellation_request_status || null,
       cancellationReason: record.cancellation_reason || '',
-      cancellationDescription: record.cancellation_description || ''
+      cancellationDescription: record.cancellation_description || '',
+      inventoryDeductionConfirmedAt: record.inventory_deduction_confirmed_at || null
     };
   }
 
@@ -136,6 +137,372 @@ document.addEventListener('DOMContentLoaded', () => {
       return [a.ref, a.client, a.service, a.assignedTo].some((v) => v.toLowerCase().includes(query));
     });
   }
+
+  const detailsModal = document.getElementById('appointmentDetailsModal');
+  const productsModal = document.getElementById('appointmentProductsModal');
+  let selectedAppointment = null;
+  let productReview = null;
+  let productSelection = new Map();
+  let productSearchTerm = '';
+  let draftSaveTimer = null;
+
+  function setAppointmentModalOpen(modal, isOpen) {
+    modal?.classList.toggle('apt-modal-overlay--open', isOpen);
+    document.body.classList.toggle('modal-open', Boolean(
+      detailsModal?.classList.contains('apt-modal-overlay--open')
+      || productsModal?.classList.contains('apt-modal-overlay--open')
+    ));
+  }
+
+  function openAppointmentDetails(appointment) {
+    selectedAppointment = appointment;
+    document.getElementById('appointmentDetailsSubtitle').textContent = appointment.ref;
+    document.getElementById('appointmentDetailsReference').textContent = appointment.ref;
+    document.getElementById('appointmentDetailsClient').textContent = appointment.client;
+    document.getElementById('appointmentDetailsService').textContent = appointment.service;
+    document.getElementById('appointmentDetailsDate').textContent = `${appointment.date} · ${appointment.time}`;
+    document.getElementById('appointmentDetailsStaff').textContent = appointment.assignedTo;
+    document.getElementById('appointmentDetailsStatus').textContent = STATUS_LABELS[appointment.status] || appointment.status.toUpperCase();
+    const message = document.getElementById('appointmentDetailsMessage');
+    const reviewButton = document.getElementById('appointmentProductsReviewBtn');
+    reviewButton.hidden = appointment.status !== 'in-progress';
+    if (appointment.status === 'in-progress') {
+      message.textContent = 'This appointment is In Progress. Review and confirm products used to deduct inventory and complete it.';
+      message.classList.remove('appointment-inventory-message--error');
+    } else if (appointment.inventoryDeductionConfirmedAt) {
+      message.textContent = `Inventory was deducted and confirmed at ${new Date(appointment.inventoryDeductionConfirmedAt).toLocaleString()}.`;
+      message.classList.remove('appointment-inventory-message--error');
+    } else if (appointment.status === 'completed') {
+      message.textContent = 'This appointment was completed before the product-review workflow was enabled. It cannot be deducted again through this workflow.';
+      message.classList.add('appointment-inventory-message--error');
+    } else {
+      message.textContent = 'Product review is available only after the assigned staff member starts the service.';
+      message.classList.remove('appointment-inventory-message--error');
+    }
+    setAppointmentModalOpen(detailsModal, true);
+  }
+
+  async function requestJson(url, options = {}) {
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        Accept: 'application/json',
+        ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+        ...options.headers
+      }
+    });
+    const result = await readApiResponse(response);
+    if (!response.ok) throw new Error(result.message || `Request failed (${response.status}).`);
+    return result;
+  }
+
+  function selectedProductItems() {
+    return [...productSelection.entries()].map(([productId, selection]) => ({
+      productId,
+      quantity: selection.quantity === '' || selection.quantity === null ? null : Number(selection.quantity),
+      isSuggested: Boolean(selection.isSuggested)
+    }));
+  }
+
+  function getProductSelectionProblem() {
+    for (const product of productReview?.products || []) {
+      const selection = productSelection.get(Number(product.product_id));
+      if (!selection) continue;
+      if (!Number.isSafeInteger(Number(selection.quantity)) || selection.quantity === '' || Number(selection.quantity) < 1) {
+        return `Enter a positive whole-number quantity for ${product.product_name}.`;
+      }
+      if (Number(selection.quantity) > Number(product.stock_quantity)) {
+        return `${product.product_name} has only ${product.stock_quantity} units available.`;
+      }
+    }
+    return '';
+  }
+
+  async function saveProductReviewDraft(showSavedMessage = false, reviewed = false) {
+    if (!selectedAppointment || !productReview) return;
+    const selectedItems = selectedProductItems();
+    await requestJson(`/api/appointments/admin/${selectedAppointment.id}/inventory-review-draft`, {
+      method: 'PUT',
+      body: JSON.stringify({ selectedItems, reviewed })
+    });
+    if (showSavedMessage) {
+      document.getElementById('appointmentProductsMessage').textContent = 'Your selection has been saved as a draft. No stock has been changed.';
+    }
+  }
+
+  function scheduleProductDraftSave() {
+    window.clearTimeout(draftSaveTimer);
+    draftSaveTimer = window.setTimeout(async () => {
+      try {
+        await saveProductReviewDraft();
+      } catch (error) {
+        document.getElementById('appointmentProductsMessage').textContent = `Draft could not be saved: ${error.message}`;
+        document.getElementById('appointmentProductsMessage').classList.add('appointment-inventory-message--error');
+      }
+    }, 300);
+  }
+
+  function updateProductSelectionStatus() {
+    const message = document.getElementById('appointmentProductsMessage');
+    const issue = getProductSelectionProblem();
+    message.textContent = issue || '';
+    message.classList.toggle('appointment-inventory-message--error', Boolean(issue));
+    document.getElementById('appointmentProductsReview').disabled = Boolean(issue);
+  }
+
+  function renderProductSelection() {
+    if (!productReview) return;
+    const list = document.getElementById('appointmentProductsList');
+    const query = productSearchTerm.trim().toLowerCase();
+    const products = productReview.products.filter((product) => (
+      !query || `${product.product_name} ${product.category}`.toLowerCase().includes(query)
+    ));
+    list.textContent = '';
+    if (!products.length) {
+      list.appendChild(el('p', 'cm-empty', 'No inventory products match your search.'));
+      return;
+    }
+    products.forEach((product) => {
+      const productId = Number(product.product_id);
+      const selection = productSelection.get(productId);
+      const row = el('article', 'appointment-product-row');
+      const checkbox = el('input');
+      checkbox.type = 'checkbox';
+      checkbox.checked = Boolean(selection);
+      checkbox.setAttribute('aria-label', `Select ${product.product_name}`);
+      const details = el('div', 'appointment-product-row__details');
+      details.appendChild(el('strong', '', product.product_name));
+      details.appendChild(el('span', '', `${product.category} · Current stock: ${product.stock_quantity}`));
+      if (product.is_suggested) {
+        details.appendChild(el('span', 'appointment-product-tag', `Suggested default${product.default_quantity ? ` · Default quantity ${product.default_quantity}` : ''}`));
+      } else if (selection) {
+        details.appendChild(el('span', 'appointment-product-tag appointment-product-tag--manual', 'Manually added'));
+      }
+      const quantityLabel = el('label', 'appointment-product-row__quantity', 'Quantity to deduct');
+      const quantityInput = el('input');
+      quantityInput.type = 'number';
+      quantityInput.min = '1';
+      quantityInput.step = '1';
+      quantityInput.value = selection?.quantity ?? '';
+      quantityInput.disabled = !selection;
+      quantityInput.setAttribute('aria-label', `Quantity to deduct for ${product.product_name}`);
+      quantityLabel.appendChild(quantityInput);
+      row.append(checkbox, details, quantityLabel);
+      list.appendChild(row);
+
+      checkbox.addEventListener('change', () => {
+        if (checkbox.checked) {
+          productSelection.set(productId, {
+            quantity: product.is_suggested && product.default_quantity
+              ? Number(product.default_quantity)
+              : '',
+            isSuggested: Boolean(product.is_suggested)
+          });
+        } else {
+          productSelection.delete(productId);
+        }
+        renderProductSelection();
+        updateProductSelectionStatus();
+        scheduleProductDraftSave();
+      });
+      quantityInput.addEventListener('input', () => {
+        const current = productSelection.get(productId);
+        if (!current) return;
+        current.quantity = quantityInput.value;
+        updateProductSelectionStatus();
+        scheduleProductDraftSave();
+      });
+    });
+    updateProductSelectionStatus();
+  }
+
+  function showProductReviewStep() {
+    const reviewList = document.getElementById('appointmentProductsReviewList');
+    reviewList.textContent = '';
+    const selected = selectedProductItems();
+    if (!selected.length) {
+      reviewList.appendChild(el('li', '', 'No products selected. The appointment will be completed without changing inventory.'));
+    } else {
+      selected.forEach((item) => {
+        const product = productReview.products.find((entry) => Number(entry.product_id) === item.productId);
+        reviewList.appendChild(el('li', '', `${product?.product_name || 'Inventory product'} — ${item.quantity} unit(s)${item.isSuggested ? ' (suggested)' : ' (manually added)'}`));
+      });
+    }
+    document.getElementById('appointmentProductsList').hidden = true;
+    document.querySelector('.appointment-products-toolbar').hidden = true;
+    document.querySelector('.appointment-inventory-note').hidden = true;
+    document.getElementById('appointmentProductsReviewStep').hidden = false;
+    document.getElementById('appointmentProductsReview').hidden = true;
+    document.getElementById('appointmentProductsBack').hidden = false;
+    document.getElementById('appointmentProductsConfirm').hidden = false;
+  }
+
+  function showProductEditorStep() {
+    document.getElementById('appointmentProductsList').hidden = false;
+    document.querySelector('.appointment-products-toolbar').hidden = false;
+    document.querySelector('.appointment-inventory-note').hidden = false;
+    document.getElementById('appointmentProductsReviewStep').hidden = true;
+    document.getElementById('appointmentProductsReview').hidden = false;
+    document.getElementById('appointmentProductsBack').hidden = true;
+    document.getElementById('appointmentProductsConfirm').hidden = true;
+  }
+
+  async function openProductReview() {
+    if (!selectedAppointment || selectedAppointment.status !== 'in-progress') return;
+    try {
+      const result = await requestJson(`/api/appointments/admin/${selectedAppointment.id}/inventory-review`);
+      productReview = result;
+      productSelection = new Map();
+      result.products.forEach((product) => {
+        if (product.is_selected) {
+          productSelection.set(Number(product.product_id), {
+            quantity: product.selected_quantity ?? '',
+            isSuggested: Boolean(product.is_suggested)
+          });
+        }
+      });
+      productSearchTerm = '';
+      document.getElementById('appointmentProductsSearch').value = '';
+      document.getElementById('appointmentProductsSubtitle').textContent = `${result.appointment.client} · ${result.appointment.service}`;
+      document.getElementById('appointmentProductsMessage').textContent = '';
+      document.getElementById('appointmentProductsMessage').classList.remove('appointment-inventory-message--error');
+      showProductEditorStep();
+      renderProductSelection();
+      setAppointmentModalOpen(productsModal, true);
+    } catch (error) {
+      document.getElementById('appointmentDetailsMessage').textContent = error.message;
+      document.getElementById('appointmentDetailsMessage').classList.add('appointment-inventory-message--error');
+    }
+  }
+
+  async function closeProductReview() {
+    window.clearTimeout(draftSaveTimer);
+    draftSaveTimer = null;
+    try {
+      await saveProductReviewDraft();
+      document.getElementById('appointmentProductsMessage').classList.remove('appointment-inventory-message--error');
+    } catch (error) {
+      document.getElementById('appointmentDetailsMessage').textContent = `Product selections may not be saved: ${error.message}`;
+      document.getElementById('appointmentDetailsMessage').classList.add('appointment-inventory-message--error');
+    }
+    setAppointmentModalOpen(productsModal, false);
+  }
+
+  tbody.addEventListener('click', (event) => {
+    const viewButton = event.target.closest('[data-action="view"]');
+    if (!viewButton) return;
+    const appointment = APPOINTMENTS.find((item) => item.ref === viewButton.dataset.ref);
+    if (appointment) openAppointmentDetails(appointment);
+  });
+
+  document.getElementById('appointmentDetailsClose').addEventListener('click', () => {
+    setAppointmentModalOpen(detailsModal, false);
+  });
+  document.getElementById('appointmentDetailsDone').addEventListener('click', () => {
+    setAppointmentModalOpen(detailsModal, false);
+  });
+  detailsModal.addEventListener('click', (event) => {
+    if (event.target === detailsModal) setAppointmentModalOpen(detailsModal, false);
+  });
+  document.getElementById('appointmentProductsReviewBtn').addEventListener('click', openProductReview);
+  document.getElementById('appointmentProductsClose').addEventListener('click', closeProductReview);
+  document.getElementById('appointmentProductsCancel').addEventListener('click', closeProductReview);
+  productsModal.addEventListener('click', (event) => {
+    if (event.target === productsModal) closeProductReview();
+  });
+  document.getElementById('appointmentProductsSearch').addEventListener('input', (event) => {
+    productSearchTerm = event.target.value;
+    renderProductSelection();
+  });
+  document.getElementById('appointmentProductsRefreshSuggestions').addEventListener('click', async () => {
+    if (!window.confirm('Replace this appointment’s saved selection with the latest enabled service suggestions?')) return;
+    const button = document.getElementById('appointmentProductsRefreshSuggestions');
+    button.disabled = true;
+    try {
+      const result = await requestJson(`/api/appointments/admin/${selectedAppointment.id}/inventory-review/refresh-suggestions`, {
+        method: 'POST'
+      });
+      productSelection = new Map(result.selectedItems.map((item) => [
+        Number(item.productId),
+        { quantity: Number(item.quantity), isSuggested: true }
+      ]));
+      renderProductSelection();
+      scheduleProductDraftSave();
+    } catch (error) {
+      document.getElementById('appointmentProductsMessage').textContent = error.message;
+      document.getElementById('appointmentProductsMessage').classList.add('appointment-inventory-message--error');
+    } finally {
+      button.disabled = false;
+    }
+  });
+  document.getElementById('appointmentProductsReview').addEventListener('click', async () => {
+    const issue = getProductSelectionProblem();
+    if (issue) {
+      updateProductSelectionStatus();
+      return;
+    }
+    const button = document.getElementById('appointmentProductsReview');
+    button.disabled = true;
+    window.clearTimeout(draftSaveTimer);
+    draftSaveTimer = null;
+    try {
+      await saveProductReviewDraft(false, true);
+      showProductReviewStep();
+    } catch (error) {
+      document.getElementById('appointmentProductsMessage').textContent = error.message;
+      document.getElementById('appointmentProductsMessage').classList.add('appointment-inventory-message--error');
+    } finally {
+      button.disabled = false;
+    }
+  });
+  document.getElementById('appointmentProductsBack').addEventListener('click', async (event) => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    try {
+      await saveProductReviewDraft();
+      showProductEditorStep();
+    } catch (error) {
+      document.getElementById('appointmentProductsMessage').textContent = error.message;
+      document.getElementById('appointmentProductsMessage').classList.add('appointment-inventory-message--error');
+    } finally {
+      button.disabled = false;
+    }
+  });
+  document.getElementById('appointmentProductsConfirm').addEventListener('click', async () => {
+    const issue = getProductSelectionProblem();
+    if (issue) {
+      document.getElementById('appointmentProductsMessage').textContent = issue;
+      document.getElementById('appointmentProductsMessage').classList.add('appointment-inventory-message--error');
+      showProductEditorStep();
+      return;
+    }
+    const button = document.getElementById('appointmentProductsConfirm');
+    button.disabled = true;
+    try {
+      const result = await requestJson(`/api/appointments/admin/${selectedAppointment.id}/complete-with-inventory`, {
+        method: 'POST',
+        body: JSON.stringify({ selectedItems: selectedProductItems() })
+      });
+      window.clearTimeout(draftSaveTimer);
+      setAppointmentModalOpen(productsModal, false);
+      setAppointmentModalOpen(detailsModal, false);
+      await loadAppointments();
+      window.alert(result.message);
+    } catch (error) {
+      document.getElementById('appointmentProductsMessage').textContent = error.message;
+      document.getElementById('appointmentProductsMessage').classList.add('appointment-inventory-message--error');
+    } finally {
+      button.disabled = false;
+    }
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+    if (productsModal.classList.contains('apt-modal-overlay--open')) {
+      closeProductReview();
+    } else if (detailsModal.classList.contains('apt-modal-overlay--open')) {
+      setAppointmentModalOpen(detailsModal, false);
+    }
+  });
 
   // ---------- rendering ----------
 
@@ -373,24 +740,27 @@ document.addEventListener('DOMContentLoaded', () => {
           headers: { Accept: 'application/json' },
           cache: 'no-store'
         });
-        if (!response.ok) {
-          let message = 'Could not load appointments.';
-          try {
-            const body = await response.json();
-            message = body.message || message;
-          } catch (error) {
-            const body = await response.text();
-            if (body) message = body;
-          }
-          throw new Error(message);
+        const responseText = await response.text();
+        let body;
+        try {
+          body = responseText ? JSON.parse(responseText) : {};
+        } catch (error) {
+          console.error('Admin appointments endpoint returned a non-JSON response.', {
+            status: response.status,
+            body: responseText
+          });
+          throw new Error(`Could not load appointments (HTTP ${response.status}; invalid response).`);
         }
-
-        const records = await response.json();
+        if (!response.ok) {
+          throw new Error(body?.message || `Could not load appointments (HTTP ${response.status}).`);
+        }
+        const records = body;
         if (!Array.isArray(records)) throw new Error('The appointments response was invalid.');
         APPOINTMENTS = records.map(normalizeAppointment);
         loadError = '';
       } catch (error) {
         loadError = error.message || 'Could not load appointments.';
+        console.error('Could not load admin appointments:', error);
       } finally {
         isLoading = false;
         render();

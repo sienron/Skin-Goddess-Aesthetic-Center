@@ -24,6 +24,23 @@ router.get('/', async (req, res) => {
   }
 });
 
+router.patch('/read', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ message: 'You must be logged in.' });
+
+  try {
+    const result = await db.query(`
+      UPDATE notifications
+      SET is_read = TRUE
+      WHERE user_id = $1 AND is_read = FALSE
+      RETURNING notification_id
+    `, [req.session.userId]);
+    return res.json({ message: 'Notifications marked as read.', updatedCount: result.rowCount });
+  } catch (error) {
+    console.error('Error marking notifications as read:', error.message);
+    return res.status(500).json({ message: 'Could not mark notifications as read.' });
+  }
+});
+
 router.patch('/:id/read', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ message: 'You must be logged in.' });
   const notificationId = Number(req.params.id);

@@ -182,6 +182,29 @@
     </form>
   </dialog>
 
+  <dialog class="cm-editor cm-service-defaults-dialog" id="cmServiceDefaultsDialog" aria-labelledby="cmServiceDefaultsTitle">
+    <form class="cm-editor__form" id="cmServiceDefaultsForm">
+      <header class="cm-editor__header">
+        <div>
+          <h2 id="cmServiceDefaultsTitle">Service Product Defaults</h2>
+          <p id="cmServiceDefaultsSubtitle"></p>
+        </div>
+        <button class="cm-editor__close" id="cmServiceDefaultsClose" type="button" aria-label="Close product defaults">&times;</button>
+      </header>
+      <p class="cm-service-defaults-note">Enabled defaults are preselected for future In Progress appointments. Provisional candidates remain disabled until the clinic confirms the product and quantity. Existing appointment review drafts are not changed.</p>
+      <label class="cm-search-field" for="cmServiceDefaultsSearch">
+        <span>Search inventory</span>
+        <input id="cmServiceDefaultsSearch" type="search" placeholder="Search product or category">
+      </label>
+      <div class="cm-service-defaults-list" id="cmServiceDefaultsList"></div>
+      <p class="cm-editor__error" id="cmServiceDefaultsError" role="alert" hidden></p>
+      <footer class="cm-editor__footer">
+        <button class="um-btn um-btn--ghost" id="cmServiceDefaultsCancel" type="button">Cancel</button>
+        <button class="um-btn um-btn--primary" id="cmServiceDefaultsSave" type="submit">Save Product Defaults</button>
+      </footer>
+    </form>
+  </dialog>
+
   <script src="admin-dashboard.js"></script>
   <script src="AdminContentManagement.js"></script>
 </body>

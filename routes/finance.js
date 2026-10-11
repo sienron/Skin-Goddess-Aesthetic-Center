@@ -319,6 +319,7 @@ router.get('/appointment-trends', endpoint(async (req, res) => {
     )
     SELECT to_char(months.month_start, 'YYYY-MM') AS month,
       COUNT(appointment.appointment_id) FILTER (WHERE appointment.appointment_status = 'confirmed')::int AS confirmed,
+      COUNT(appointment.appointment_id) FILTER (WHERE appointment.appointment_status = 'in_progress')::int AS in_progress,
       COUNT(appointment.appointment_id) FILTER (WHERE appointment.appointment_status = 'completed')::int AS completed,
       COUNT(appointment.appointment_id) FILTER (WHERE appointment.appointment_status = 'cancelled')::int AS cancelled,
       COUNT(appointment.appointment_id) FILTER (WHERE appointment.appointment_status = 'no_show')::int AS no_show
@@ -327,7 +328,7 @@ router.get('/appointment-trends', endpoint(async (req, res) => {
       ON appointment.appointment_date >= months.month_start
       AND appointment.appointment_date < months.month_start + INTERVAL '1 month'
       AND appointment.appointment_date <= $2::date
-      AND appointment.appointment_status IN ('confirmed', 'completed', 'cancelled', 'no_show')
+      AND appointment.appointment_status IN ('confirmed', 'in_progress', 'completed', 'cancelled', 'no_show')
     GROUP BY months.month_start
     ORDER BY months.month_start
   `, [from, to]);
@@ -336,16 +337,18 @@ router.get('/appointment-trends', endpoint(async (req, res) => {
     to,
     rows: result.rows.map((row) => {
       const confirmed = Number(row.confirmed);
+      const inProgress = Number(row.in_progress);
       const completed = Number(row.completed);
       const cancelled = Number(row.cancelled);
       const noShow = Number(row.no_show);
       return {
         month: row.month,
         confirmed,
+        in_progress: inProgress,
         completed,
         cancelled,
         no_show: noShow,
-        total: confirmed + completed + cancelled + noShow,
+        total: confirmed + inProgress + completed + cancelled + noShow,
       };
     }),
   });
