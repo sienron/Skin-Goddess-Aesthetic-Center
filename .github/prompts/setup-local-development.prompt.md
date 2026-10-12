@@ -25,7 +25,7 @@ If the local database does not exist or PostgreSQL is unavailable, explain how t
 
 After confirming the local database target, run `npm run migrate` from the workspace root and report the migration result. This runs the repository's established migration chain, including the local-development access migration.
 
-Then run `node scripts/seed-local-dev-user.js` to create or refresh the dedicated `local-dev@skingoddess.test` admin. The script generates a password unless `LOCAL_DEV_PASSWORD` is supplied and prints it once; tell the user to store it locally and not share it. Its all-role access and MFA bypass must remain local-only: they are honored only when `NODE_ENV` is not `production`.
+Then run `node scripts/seed-local-dev-user.js` to create or refresh the dedicated `local-dev@skingoddess.test` admin. The script generates a password unless `LOCAL_DEV_PASSWORD` is supplied and prints it once; tell the user to store it locally and not share it. Its all-role access and development MFA bypass must remain local-only: they are honored only when `NODE_ENV` is not `production`. Production staff roles skip the login email OTP by design; do not extend that exemption to clients or use it to grant extra roles or access.
 
 For finance sample data, first count rows tagged with `note = 'DEMO'` and expenses whose description starts with `DEMO:`. If tagged demo data already exists, ask whether to keep it or clear it before reseeding. If the user chooses to seed and no existing demo set would be duplicated, run `node scripts/seed-finance-demo.js`. The seed script must refuse production. Never run `--clear` without the user's confirmation.
 

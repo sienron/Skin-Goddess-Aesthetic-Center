@@ -8,4 +8,8 @@ const DASHBOARD_PER_ROLE = Object.freeze({
   staff: '/StaffDashboard.html',
 });
 
-module.exports = { DASHBOARD_PER_ROLE };
+const STAFF_ROLES = Object.freeze(
+  Object.keys(DASHBOARD_PER_ROLE).filter((role) => role !== 'client')
+);
+
+module.exports = { DASHBOARD_PER_ROLE, STAFF_ROLES };

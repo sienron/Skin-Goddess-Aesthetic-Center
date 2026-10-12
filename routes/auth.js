@@ -18,7 +18,7 @@ const router = express.Router();
 const db = require('../db'); // used to query the database
 const { sendOtpEmail, sendPasswordResetEmail } = require('../utils/mailer'); // for sending actual emails
 const isValidPassword = require('../utils/password');
-const { DASHBOARD_PER_ROLE } = require('../utils/roleRoutes');
+const { DASHBOARD_PER_ROLE, STAFF_ROLES } = require('../utils/roleRoutes');
 
 const registerLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 5, message: { message: 'Too many registration attempts. Try again later.' } });
 const verifyOtpLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, message: { message: 'Too many verification attempts. Try again later.' } });
@@ -413,6 +413,16 @@ router.post('/login', loginLimiter, async (req, res) => {
       await establishAuthenticatedSession(req, user, Boolean(staysignedin));
       return res.status(200).json({
         message: 'Successful local development login.',
+        userId: user.user_id,
+        role: user.role,
+        redirectUrl,
+      });
+    }
+
+    if (STAFF_ROLES.includes(user.role)) {
+      await establishAuthenticatedSession(req, user, Boolean(staysignedin));
+      return res.status(200).json({
+        message: 'Successful login.',
         userId: user.user_id,
         role: user.role,
         redirectUrl,
