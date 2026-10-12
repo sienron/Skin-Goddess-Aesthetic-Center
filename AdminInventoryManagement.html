@@ -357,52 +357,6 @@
         </section>
 
 
-        <section class="transaction-section" id="transactionLog" aria-labelledby="transactionLogTitle">
-            <div class="transaction-header">
-                <div>
-                    <h2 id="transactionLogTitle">Stock Transaction Log</h2>
-                    <p>All stock movements recorded here</p>
-                </div>
-                <div class="transaction-filters">
-                    <select id="transactionPeriodFilter" aria-label="Filter transactions by date">
-                        <option value="all">All Time</option>
-                        <option value="today">Today</option>
-                        <option value="week">This Week</option>
-                        <option value="month">This Month</option>
-                    </select>
-                    <select id="transactionTypeFilter" aria-label="Filter transactions by type">
-                        <option value="all">All Types</option>
-                        <option value="Restock">Restock</option>
-                        <option value="deduct-stock">Deduct Stock</option>
-                        <option value="Used in Service">Used in Service</option>
-                        <option value="Expired">Expired</option>
-                        <option value="Deleted">Deleted</option>
-                    </select>
-                    <button class="btn btn-export" id="exportTransactions" type="button">Export</button>
-                </div>
-            </div>
-
-            <div class="transaction-table-wrapper">
-                <table class="transaction-table">
-                    <thead>
-                        <tr>
-                            <th>DATE &amp; TIME</th>
-                            <th>PRODUCT</th>
-                            <th>ACTION</th>
-                            <th>QTY CHANGE</th>
-                            <th>STOCK AFTER</th>
-                            <th>PERFORMED BY</th>
-                        </tr>
-                    </thead>
-                    <tbody id="transactionBody">
-                        <tr><td colspan="6">Loading transaction history...</td></tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="table-footer" id="transactionFooter">Loading transaction history...</div>
-        </section>
-
     </main>
         <!-- Delete Confirmation Modal -->
         <div class="delete-modal-overlay" id="deleteModal">
@@ -750,7 +704,6 @@
         <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js" integrity="sha384-Pqp51FUN2/qzfxZxBCtF0stpc9ONI6MYZpVqmo8m20SoaQCzf+arZvACkLkirlPz" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
         <script src="InventoryManagement.js"></script>
     <script src="batch-upload.js"></script>
-    <script src="InventoryTransactions.js"></script>
         <script src="admin-dashboard.js"></script>
     <script src="admin-notifications.js"></script>
 
