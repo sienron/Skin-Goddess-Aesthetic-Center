@@ -234,7 +234,7 @@ async function seedDemo(client) {
         payment_status, appointment_date, appointment_time, appointment_end_time,
         appointment_status, aesthetician_id
       )
-      VALUES ($1, $2, $3, $4, 'unpaid', $5::date, $6::time, $7::time, 'pending', NULL)
+      VALUES ($1, $2, $3, $4, 'unpaid', $5::date, $6::time, $7::time, 'confirmed', NULL)
       RETURNING appointment_id
     `, [
       clients[(HISTORICAL_APPOINTMENT_COUNT + index) % clients.length],
