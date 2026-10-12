@@ -8,6 +8,24 @@ async function recordInventoryTransaction(client, {
   userId,
   appointmentId = null,
 }) {
+  if (appointmentId === null) {
+    await client.query(`
+      INSERT INTO inventory_transactions
+        (product_id, product_name, transaction_type, quantity, previous_stock,
+         new_stock, created_by, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+    `, [
+      productId,
+      productName,
+      transactionType,
+      quantity,
+      previousStock,
+      newStock,
+      userId,
+    ]);
+    return;
+  }
+
   await client.query(`
     INSERT INTO inventory_transactions
       (product_id, product_name, transaction_type, quantity, previous_stock,
