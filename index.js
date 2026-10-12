@@ -154,7 +154,7 @@ app.use(async (req, res, next) => {
     }
 
     req.session.role = user.role;
-    if (requestedPage === '/' || requestedPage === '/index.html') {
+    if (requestedPage === '/' || (requestedPage === '/index.html' && user.role !== 'admin')) {
       const dashboardPath = DASHBOARD_PER_ROLE[user.role];
       if (!dashboardPath) {
         return res.status(403).send('Your account role does not have an assigned destination.');
