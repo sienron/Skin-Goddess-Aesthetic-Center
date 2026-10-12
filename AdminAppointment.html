@@ -362,6 +362,72 @@
     </section>
   </div>
 
+  <div class="apt-modal-overlay" id="appointmentEditModal">
+    <section class="apt-modal appointment-inventory-modal appointment-edit-modal" role="dialog" aria-modal="true" aria-labelledby="appointmentEditTitle">
+      <header class="apt-modal__head">
+        <span class="apt-modal__accent"></span>
+        <div class="apt-modal__titles">
+          <h2 class="apt-modal__title" id="appointmentEditTitle">Edit Appointment</h2>
+          <p class="apt-modal__subtitle" id="appointmentEditSubtitle"></p>
+        </div>
+        <button class="apt-modal__close" id="appointmentEditClose" type="button" aria-label="Close appointment editor">&times;</button>
+      </header>
+      <form id="appointmentEditForm">
+        <dl class="appointment-details-grid appointment-edit-summary">
+          <div><dt>Reference</dt><dd id="appointmentEditReference"></dd></div>
+          <div><dt>Client / Walk-in</dt><dd id="appointmentEditClient"></dd></div>
+        </dl>
+        <div class="appointment-edit-fields">
+          <div class="form-group">
+            <label for="appointmentEditDate">APPOINTMENT DATE</label>
+            <input id="appointmentEditDate" name="date" type="date" required>
+          </div>
+          <div class="form-group">
+            <label for="appointmentEditTime">APPOINTMENT TIME</label>
+            <select id="appointmentEditTime" name="time" required>
+              <option value="">Choose a time</option>
+              <option>9:00 AM</option>
+              <option>10:00 AM</option>
+              <option>11:00 AM</option>
+              <option>1:00 PM</option>
+              <option>2:00 PM</option>
+              <option>3:00 PM</option>
+              <option>4:00 PM</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="appointmentEditService">SERVICE</label>
+            <select id="appointmentEditService" name="serviceId" required>
+              <option value="">Choose a service</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="appointmentEditStaff">ASSIGNED STAFF</label>
+            <select id="appointmentEditStaff" name="staffId" required disabled>
+              <option value="">Choose a service, date, and time first</option>
+            </select>
+          </div>
+          <div class="form-group appointment-edit-fields__status">
+            <label for="appointmentEditStatus">APPOINTMENT STATUS</label>
+            <select id="appointmentEditStatus" name="status" required>
+              <option value="pending">Pending</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="in-progress">In Progress</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+              <option value="no-show">No Show</option>
+            </select>
+          </div>
+        </div>
+        <p class="appointment-inventory-message" id="appointmentEditMessage" role="status" aria-live="polite"></p>
+        <footer class="appointment-inventory-actions">
+          <button class="um-btn um-btn--ghost" id="appointmentEditCancel" type="button">Cancel</button>
+          <button class="um-btn um-btn--primary" id="appointmentEditSave" type="submit">Save Changes</button>
+        </footer>
+      </form>
+    </section>
+  </div>
+
   <div class="apt-modal-overlay" id="appointmentProductsModal">
     <section class="apt-modal appointment-inventory-modal appointment-products-modal" role="dialog" aria-modal="true" aria-labelledby="appointmentProductsTitle">
       <header class="apt-modal__head">

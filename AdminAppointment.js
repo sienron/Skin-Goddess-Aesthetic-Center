@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const PAGE_SIZE = 7;
 
   const STATUS_LABELS = {
+    'pending': 'PENDING',
     'confirmed': 'CONFIRMED',
     'in-progress': 'IN PROGRESS',
     'completed': 'COMPLETED',
@@ -79,6 +80,8 @@ document.addEventListener('DOMContentLoaded', () => {
       client: String(record.client || `${record.first_name || ''} ${record.last_name || ''}`.trim() || 'Client'),
       profile,
       service: String(record.service || record.service_name || 'Service unavailable'),
+      serviceId: String(record.service_id || ''),
+      staffId: String(record.assigned_staff_id || ''),
       duration: (Number(record.duration_minutes) || 0) + ' min',
       dateKey,
       date: displayDate(dateKey),
@@ -139,8 +142,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   const detailsModal = document.getElementById('appointmentDetailsModal');
+  const editModal = document.getElementById('appointmentEditModal');
   const productsModal = document.getElementById('appointmentProductsModal');
   let selectedAppointment = null;
+  let editingAppointment = null;
+  let editStaffRequestId = 0;
   let productReview = null;
   let productSelection = new Map();
   let productSearchTerm = '';
@@ -150,6 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
     modal?.classList.toggle('apt-modal-overlay--open', isOpen);
     document.body.classList.toggle('modal-open', Boolean(
       detailsModal?.classList.contains('apt-modal-overlay--open')
+      || editModal?.classList.contains('apt-modal-overlay--open')
       || productsModal?.classList.contains('apt-modal-overlay--open')
     ));
   }
@@ -180,6 +187,150 @@ document.addEventListener('DOMContentLoaded', () => {
       message.classList.remove('appointment-inventory-message--error');
     }
     setAppointmentModalOpen(detailsModal, true);
+  }
+
+  async function loadEditServices(selectedServiceId) {
+    const serviceSelect = document.getElementById('appointmentEditService');
+    const response = await fetch('/api/services', {
+      headers: { Accept: 'application/json' },
+      cache: 'no-store'
+    });
+    const services = await readApiResponse(response);
+    if (!response.ok) throw new Error(services.message || services.error || 'Could not load services.');
+    if (!Array.isArray(services)) throw new Error('The services response was invalid.');
+
+    serviceSelect.replaceChildren(el('option', '', 'Choose a service'));
+    services.forEach((service) => {
+      const option = el('option', '', `${service.service_name} (${service.duration_minutes} min)`);
+      option.value = String(service.service_id);
+      serviceSelect.appendChild(option);
+    });
+    if (selectedServiceId && !services.some((service) => String(service.service_id) === selectedServiceId)) {
+      const currentService = el('option', '', 'Current service (unavailable)');
+      currentService.value = selectedServiceId;
+      serviceSelect.appendChild(currentService);
+    }
+    serviceSelect.value = selectedServiceId;
+  }
+
+  async function updateEditStaff(preferredStaffId = '') {
+    const requestId = ++editStaffRequestId;
+    const serviceSelect = document.getElementById('appointmentEditService');
+    const dateInput = document.getElementById('appointmentEditDate');
+    const timeSelect = document.getElementById('appointmentEditTime');
+    const staffSelect = document.getElementById('appointmentEditStaff');
+    const message = document.getElementById('appointmentEditMessage');
+    const serviceId = serviceSelect.value;
+    const date = dateInput.value;
+    const time = timeSelect.value;
+    staffSelect.replaceChildren(el('option', '', 'Choose a service, date, and time first'));
+    staffSelect.disabled = true;
+
+    if (!editingAppointment || !serviceId || !date || !time) return;
+    staffSelect.replaceChildren(el('option', '', 'Loading available staff…'));
+    message.textContent = 'Checking qualified staff availability…';
+    message.classList.remove('appointment-inventory-message--error');
+    try {
+      const params = new URLSearchParams({
+        serviceId,
+        date,
+        time,
+        appointmentId: editingAppointment.id
+      });
+      const response = await fetch(`/api/appointments/admin/walk-in-options?${params.toString()}`, {
+        headers: { Accept: 'application/json' },
+        cache: 'no-store'
+      });
+      const staff = await readApiResponse(response);
+      if (requestId !== editStaffRequestId) return;
+      if (!response.ok) throw new Error(staff.message || 'Could not check staff availability.');
+      if (!Array.isArray(staff)) throw new Error('The available staff response was invalid.');
+
+      staffSelect.replaceChildren(el('option', '', staff.length ? 'Choose available staff' : 'No staff available for this slot'));
+      staff.forEach((person) => {
+        const option = el('option', '', person.full_name || 'Staff member');
+        option.value = String(person.user_id);
+        staffSelect.appendChild(option);
+      });
+      const isOriginalSchedule = serviceId === editingAppointment.serviceId
+        && date === editingAppointment.dateKey
+        && time === editingAppointment.time;
+      if (isOriginalSchedule && preferredStaffId
+        && !staff.some((person) => String(person.user_id) === preferredStaffId)) {
+        const currentStaff = el('option', '', editingAppointment.assignedTo);
+        currentStaff.value = preferredStaffId;
+        staffSelect.appendChild(currentStaff);
+      }
+      staffSelect.disabled = staff.length === 0;
+      if (staff.some((person) => String(person.user_id) === preferredStaffId)
+        || (isOriginalSchedule && preferredStaffId)) {
+        staffSelect.value = preferredStaffId;
+      }
+      message.textContent = staff.length
+        ? 'Only qualified staff available for this service and time are listed.'
+        : 'No qualified staff are available for this time. Choose another date or time.';
+      message.classList.toggle('appointment-inventory-message--error', staff.length === 0);
+    } catch (error) {
+      if (requestId !== editStaffRequestId) return;
+      staffSelect.replaceChildren(el('option', '', 'Current staff (availability could not be checked)'));
+      if (preferredStaffId) {
+        staffSelect.options[0].value = preferredStaffId;
+        staffSelect.value = preferredStaffId;
+        staffSelect.disabled = false;
+      }
+      message.textContent = error.message || 'Could not check staff availability.';
+      message.classList.add('appointment-inventory-message--error');
+    }
+  }
+
+  async function openAppointmentEdit(appointment) {
+    editStaffRequestId += 1;
+    editingAppointment = appointment;
+    const dateInput = document.getElementById('appointmentEditDate');
+    const timeSelect = document.getElementById('appointmentEditTime');
+    const serviceSelect = document.getElementById('appointmentEditService');
+    const staffSelect = document.getElementById('appointmentEditStaff');
+    const statusSelect = document.getElementById('appointmentEditStatus');
+    const message = document.getElementById('appointmentEditMessage');
+    const saveButton = document.getElementById('appointmentEditSave');
+    document.getElementById('appointmentEditSubtitle').textContent = appointment.ref;
+    document.getElementById('appointmentEditReference').textContent = appointment.ref;
+    document.getElementById('appointmentEditClient').textContent = appointment.client;
+    dateInput.value = appointment.dateKey;
+    timeSelect.value = appointment.time;
+    statusSelect.value = appointment.status;
+    statusSelect.querySelector('option[value="completed"]').disabled = true;
+    message.textContent = '';
+    message.classList.remove('appointment-inventory-message--error');
+    saveButton.disabled = true;
+    serviceSelect.replaceChildren(el('option', '', 'Loading services…'));
+    staffSelect.replaceChildren(el('option', '', 'Choose a service, date, and time first'));
+    staffSelect.disabled = true;
+    [dateInput, timeSelect, serviceSelect].forEach((field) => { field.disabled = true; });
+    setAppointmentModalOpen(editModal, true);
+
+    const isInProgress = appointment.status === 'in-progress';
+    if (isInProgress) {
+      message.textContent = 'Schedule, service, and staff cannot be changed while this appointment is In Progress.';
+    }
+
+    try {
+      await loadEditServices(appointment.serviceId);
+      if (isInProgress) {
+        serviceSelect.disabled = true;
+        staffSelect.replaceChildren(el('option', '', appointment.assignedTo));
+        staffSelect.options[0].value = appointment.staffId;
+        staffSelect.value = appointment.staffId;
+        staffSelect.disabled = true;
+      } else {
+        [dateInput, timeSelect, serviceSelect].forEach((field) => { field.disabled = false; });
+        await updateEditStaff(appointment.staffId);
+      }
+      saveButton.disabled = false;
+    } catch (error) {
+      message.textContent = error.message || 'Could not prepare the appointment editor.';
+      message.classList.add('appointment-inventory-message--error');
+    }
   }
 
   async function requestJson(url, options = {}) {
@@ -390,9 +541,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   tbody.addEventListener('click', (event) => {
     const viewButton = event.target.closest('[data-action="view"]');
-    if (!viewButton) return;
-    const appointment = APPOINTMENTS.find((item) => item.ref === viewButton.dataset.ref);
-    if (appointment) openAppointmentDetails(appointment);
+    const editButton = event.target.closest('[data-action="edit"]');
+    const target = viewButton || editButton;
+    if (!target) return;
+    const appointment = APPOINTMENTS.find((item) => item.ref === target.dataset.ref);
+    if (!appointment) return;
+    if (viewButton) openAppointmentDetails(appointment);
+    else openAppointmentEdit(appointment);
   });
 
   document.getElementById('appointmentDetailsClose').addEventListener('click', () => {
@@ -403,6 +558,78 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   detailsModal.addEventListener('click', (event) => {
     if (event.target === detailsModal) setAppointmentModalOpen(detailsModal, false);
+  });
+  const appointmentEditForm = document.getElementById('appointmentEditForm');
+  const appointmentEditDate = document.getElementById('appointmentEditDate');
+  const appointmentEditTime = document.getElementById('appointmentEditTime');
+  const appointmentEditService = document.getElementById('appointmentEditService');
+  const appointmentEditStaff = document.getElementById('appointmentEditStaff');
+  const appointmentEditStatus = document.getElementById('appointmentEditStatus');
+  const appointmentEditMessage = document.getElementById('appointmentEditMessage');
+  const appointmentEditSave = document.getElementById('appointmentEditSave');
+
+  [appointmentEditService, appointmentEditDate, appointmentEditTime].forEach((field) => {
+    field.addEventListener('change', () => updateEditStaff(editingAppointment?.staffId || ''));
+  });
+  document.getElementById('appointmentEditClose').addEventListener('click', () => {
+    editStaffRequestId += 1;
+    setAppointmentModalOpen(editModal, false);
+  });
+  document.getElementById('appointmentEditCancel').addEventListener('click', () => {
+    editStaffRequestId += 1;
+    setAppointmentModalOpen(editModal, false);
+  });
+  editModal.addEventListener('click', (event) => {
+    if (event.target === editModal) {
+      editStaffRequestId += 1;
+      setAppointmentModalOpen(editModal, false);
+    }
+  });
+  appointmentEditForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!editingAppointment || !appointmentEditForm.reportValidity()) return;
+    const scheduleFieldsChanged = appointmentEditDate.value !== editingAppointment.dateKey
+      || appointmentEditTime.value !== editingAppointment.time
+      || appointmentEditService.value !== editingAppointment.serviceId;
+    const staffId = appointmentEditStaff.value || (!scheduleFieldsChanged ? editingAppointment.staffId : '');
+    const scheduleChanged = scheduleFieldsChanged || staffId !== editingAppointment.staffId;
+    const statusChanged = appointmentEditStatus.value !== editingAppointment.status;
+    if (!scheduleChanged && !statusChanged) {
+      appointmentEditMessage.textContent = 'There are no changes to save.';
+      appointmentEditMessage.classList.remove('appointment-inventory-message--error');
+      return;
+    }
+
+    appointmentEditSave.disabled = true;
+    appointmentEditMessage.textContent = 'Saving appointment…';
+    appointmentEditMessage.classList.remove('appointment-inventory-message--error');
+    try {
+      if (appointmentEditStatus.value === 'cancelled') {
+        if (scheduleChanged) {
+          throw new Error('Save schedule, service, or staff changes before cancelling the appointment.');
+        }
+        await requestJson(`/api/appointments/${editingAppointment.id}/cancel`, { method: 'POST' });
+      } else {
+        if (!staffId) throw new Error('Choose an available staff member.');
+        await requestJson(`/api/appointments/admin/${editingAppointment.id}/edit`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            date: appointmentEditDate.value,
+            time: appointmentEditTime.value,
+            serviceId: appointmentEditService.value,
+            staffId,
+            status: appointmentEditStatus.value
+          })
+        });
+      }
+      await loadAppointments();
+      setAppointmentModalOpen(editModal, false);
+    } catch (error) {
+      appointmentEditMessage.textContent = error.message || 'Could not update the appointment.';
+      appointmentEditMessage.classList.add('appointment-inventory-message--error');
+    } finally {
+      appointmentEditSave.disabled = false;
+    }
   });
   document.getElementById('appointmentProductsReviewBtn').addEventListener('click', openProductReview);
   document.getElementById('appointmentProductsClose').addEventListener('click', closeProductReview);
@@ -499,6 +726,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (event.key !== 'Escape') return;
     if (productsModal.classList.contains('apt-modal-overlay--open')) {
       closeProductReview();
+    } else if (editModal.classList.contains('apt-modal-overlay--open')) {
+      setAppointmentModalOpen(editModal, false);
     } else if (detailsModal.classList.contains('apt-modal-overlay--open')) {
       setAppointmentModalOpen(detailsModal, false);
     }

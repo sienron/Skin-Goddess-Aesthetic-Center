@@ -245,6 +245,7 @@ router.get('/admin', requireRole('admin'), async (req, res) => {
     const result = await db.query(`
       SELECT a.appointment_id,
              a.service_id,
+             a.aesthetician_id AS assigned_staff_id,
              a.appointment_date::text AS date,
              a.appointment_time::text AS start,
              a.appointment_end_time::text AS end,
@@ -287,6 +288,190 @@ router.get('/admin', requireRole('admin'), async (req, res) => {
         ? 'Could not load appointments.'
         : error.message
     });
+  }
+});
+
+router.put('/admin/:id/edit', requireRole('admin'), async (req, res) => {
+  const appointmentId = validAppointmentId(req.params.id);
+  if (!appointmentId) return res.status(400).json({ message: 'Choose a valid appointment.' });
+
+  const body = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
+  const serviceId = validServiceId(body.serviceId);
+  const staffId = validServiceId(body.staffId);
+  const requestedDate = normalizeDate(body.date);
+  const requestedTime = typeof body.time === 'string' && VALID_SLOTS.includes(body.time) ? to24h(body.time) : null;
+  const nextStatus = typeof body.status === 'string' ? body.status.replace(/-/g, '_') : '';
+  if (!serviceId) return res.status(400).json({ message: 'Choose a valid service.' });
+  if (!staffId) return res.status(400).json({ message: 'Choose an available staff member.' });
+  if (!requestedDate || !requestedTime) return res.status(400).json({ message: 'Choose a valid appointment date and time.' });
+  if (!['pending', 'confirmed', 'in_progress', 'no_show'].includes(nextStatus)) {
+    return res.status(400).json({ message: 'Choose a valid appointment status. Cancellation and completion use their dedicated workflows.' });
+  }
+
+  try {
+    const updatedAppointment = await db.transaction(async (client) => {
+      const result = await client.query(`
+        SELECT appointment_status, service_id, aesthetician_id, appointment_date::text AS appointment_date,
+               appointment_time::text AS appointment_time, appointment_end_time::text AS appointment_end_time,
+               user_id
+        FROM appointments
+        WHERE appointment_id = $1
+        FOR UPDATE
+      `, [appointmentId]);
+      if (!result.rows.length) {
+        const error = new Error('Appointment not found.');
+        error.statusCode = 404;
+        throw error;
+      }
+
+      const appointment = result.rows[0];
+      const currentStatus = appointment.appointment_status;
+      if (['completed', 'cancelled', 'no_show'].includes(currentStatus)) {
+        const error = new Error('This appointment can no longer be edited.');
+        error.statusCode = 409;
+        throw error;
+      }
+
+      const scheduleChanged = serviceId !== appointment.service_id
+        || requestedDate !== appointment.appointment_date
+        || requestedTime !== appointment.appointment_time.slice(0, 5)
+        || String(staffId) !== String(appointment.aesthetician_id);
+      const scheduleTimeChanged = requestedDate !== appointment.appointment_date
+        || requestedTime !== appointment.appointment_time.slice(0, 5);
+      if (currentStatus === 'in_progress' && scheduleChanged) {
+        const error = new Error('Schedule, service, and staff cannot be changed while this appointment is In Progress.');
+        error.statusCode = 409;
+        throw error;
+      }
+      if (currentStatus === 'in_progress' && nextStatus === 'confirmed') {
+        const error = new Error('In-progress appointments cannot be changed to Confirmed.');
+        error.statusCode = 409;
+        throw error;
+      }
+
+      let booking = {
+        service: { service_id: appointment.service_id },
+        appointmentDate: appointment.appointment_date,
+        appointmentTime: appointment.appointment_time.slice(0, 5),
+        appointmentEndTime: appointment.appointment_end_time.slice(0, 5)
+      };
+      if (scheduleChanged) {
+        const validatedSchedule = await getValidatedSchedule(client, body, res, !scheduleTimeChanged);
+        if (!validatedSchedule) return null;
+        booking = validatedSchedule;
+      }
+      if (nextStatus === 'in_progress'
+        && (currentStatus !== 'confirmed' || booking.appointmentDate !== manilaNow().dateStr)) {
+        const error = new Error('Only confirmed appointments scheduled for today can be marked In Progress.');
+        error.statusCode = 409;
+        throw error;
+      }
+      if (nextStatus === 'confirmed' && isSlotInPast(booking.appointmentDate, booking.appointmentTime)) {
+        const error = new Error('An appointment in the past cannot be confirmed.');
+        error.statusCode = 409;
+        throw error;
+      }
+      if (nextStatus === 'no_show'
+        && (currentStatus !== 'confirmed' || booking.appointmentDate !== manilaNow().dateStr
+          || booking.appointmentTime > manilaNow().timeStr)) {
+        const error = new Error('Only a confirmed appointment that has started today can be marked No Show.');
+        error.statusCode = 409;
+        throw error;
+      }
+      if (nextStatus === 'pending' && currentStatus !== 'confirmed') {
+        const error = new Error('Only confirmed appointments can be moved back to Pending.');
+        error.statusCode = 409;
+        throw error;
+      }
+      if (scheduleChanged) {
+        const availability = await findAvailableAestheticians(client, {
+          ...booking,
+          serviceId: booking.service.service_id
+        }, appointmentId);
+        if (!availability.rows.some((staff) => String(staff.user_id) === String(staffId))) {
+          const error = new Error('That staff member is not available for this service and time. Choose another slot or staff member.');
+          error.statusCode = 409;
+          throw error;
+        }
+      }
+
+      const update = await client.query(`
+        UPDATE appointments
+        SET appointment_status = $1,
+            appointment_date = $2,
+            appointment_time = $3,
+            appointment_end_time = $4,
+            service_id = $5,
+            aesthetician_id = $6,
+            reminder_24h_sent = CASE WHEN appointment_date <> $2 OR appointment_time <> $3 THEN FALSE ELSE reminder_24h_sent END,
+            reminder_3h_sent = CASE WHEN appointment_date <> $2 OR appointment_time <> $3 THEN FALSE ELSE reminder_3h_sent END,
+            reminder_email_24h_sent = CASE
+              WHEN appointment_date <> $2 OR appointment_time <> $3
+              THEN $2::date + $3::time <= (NOW() AT TIME ZONE 'Asia/Manila') + INTERVAL '24 hours'
+              ELSE reminder_email_24h_sent
+            END,
+            reminder_email_1h_sent = CASE
+              WHEN appointment_date <> $2 OR appointment_time <> $3
+              THEN $2::date + $3::time <= (NOW() AT TIME ZONE 'Asia/Manila') + INTERVAL '1 hour'
+              ELSE reminder_email_1h_sent
+            END,
+            updated_at = NOW()
+        WHERE appointment_id = $7
+        RETURNING appointment_status, user_id
+      `, [
+        nextStatus,
+        booking.appointmentDate,
+        booking.appointmentTime,
+        booking.appointmentEndTime,
+        booking.service.service_id,
+        staffId,
+        appointmentId
+      ]);
+      return {
+        ...update.rows[0],
+        changed: nextStatus !== currentStatus || scheduleChanged,
+        statusChanged: nextStatus !== currentStatus,
+        scheduleChanged,
+        previousStaffId: appointment.aesthetician_id,
+        staffId,
+        appointmentDate: booking.appointmentDate,
+        appointmentTime: booking.appointmentTime
+      };
+    });
+
+    if (!updatedAppointment) return;
+    if (updatedAppointment.scheduleChanged) {
+      try {
+        await notifyUsers(
+          [updatedAppointment.user_id, updatedAppointment.previousStaffId, updatedAppointment.staffId].filter(Boolean),
+          'appointment_rescheduled',
+          `Appointment ${appointmentId} was updated by the admin. New schedule: ${updatedAppointment.appointmentDate} at ${from24h(updatedAppointment.appointmentTime)}. Status: ${updatedAppointment.appointment_status.replace(/_/g, ' ')}.`,
+        );
+      } catch (error) {
+        console.error(`Appointment update notification failed for appointment ${appointmentId}:`, error);
+      }
+    } else if (updatedAppointment.statusChanged && updatedAppointment.user_id) {
+      try {
+        await notifyUser(
+          updatedAppointment.user_id,
+          'appointment_status_changed',
+          `Appointment ${appointmentId} status changed to ${updatedAppointment.appointment_status.replace(/_/g, ' ')}.`,
+        );
+      } catch (error) {
+        console.error(`Appointment status notification failed for appointment ${appointmentId}:`, error);
+      }
+    }
+    return res.json({
+      message: updatedAppointment.changed ? 'Appointment updated successfully.' : 'No appointment changes to save.',
+      status: updatedAppointment.appointment_status
+    });
+  } catch (error) {
+    if (error.statusCode) return res.status(error.statusCode).json({ message: error.message });
+    if (error.code === '23P01' || error.code === '23505') {
+      return res.status(409).json({ message: 'That time is no longer available. Choose another slot or staff member.' });
+    }
+    console.error('Error editing admin appointment:', error);
+    return res.status(500).json({ message: 'Could not update appointment.' });
   }
 });
 
@@ -727,6 +912,12 @@ router.post('/admin/:id/complete-with-inventory', requireRole('admin'), async (r
 
 router.get('/admin/walk-in-options', requireRole('admin'), async (req, res) => {
   try {
+    const excludeAppointmentId = req.query.appointmentId
+      ? validAppointmentId(String(req.query.appointmentId))
+      : null;
+    if (req.query.appointmentId && !excludeAppointmentId) {
+      return res.status(400).json({ message: 'Choose a valid appointment.' });
+    }
     const booking = await getValidatedSchedule(db, {
       serviceId: req.query.serviceId,
       date: req.query.date,
@@ -737,7 +928,7 @@ router.get('/admin/walk-in-options', requireRole('admin'), async (req, res) => {
     const availableStaff = await findAvailableAestheticians(db, {
       ...booking,
       serviceId: booking.service.service_id
-    });
+    }, excludeAppointmentId);
     return res.json(availableStaff.rows.map((staff) => ({
       user_id: staff.user_id,
       full_name: [staff.first_name, staff.last_name].filter(Boolean).join(' ').trim()
@@ -1050,7 +1241,7 @@ function minutesUntil(dateStr, timeStr, now) {
   return (calendarDayNumber(dateStr) - calendarDayNumber(now.dateStr)) * 1440 + (hour * 60 + minute) - (nowHour * 60 + nowMinute);
 }
 
-async function getValidatedSchedule(queryClient, body, res) {
+async function getValidatedSchedule(queryClient, body, res, allowShortLead = false) {
   const serviceId = validServiceId(body.serviceId);
   const appointmentDate = normalizeDate(body.date);
   if (!serviceId) {
@@ -1095,7 +1286,7 @@ async function getValidatedSchedule(queryClient, body, res) {
     res.status(400).json({ message: 'Appointments cannot be booked in the past.' });
     return null;
   }
-  if (isSlotTooSoon(appointmentDate, appointmentTime)) {
+  if (!allowShortLead && isSlotTooSoon(appointmentDate, appointmentTime)) {
     res.status(400).json({ message: `Please choose a time at least ${MIN_BOOKING_LEAD_MINUTES} minutes from now.` });
     return null;
   }
@@ -1125,7 +1316,7 @@ async function getValidatedBooking(userId, body, res) {
   return schedule ? { user, ...schedule } : null;
 }
 
-async function findAvailableAestheticians(queryClient, booking) {
+async function findAvailableAestheticians(queryClient, booking, excludeAppointmentId = null) {
   const serviceResult = await queryClient.query('SELECT category FROM services WHERE service_id = $1', [booking.serviceId]);
   const staffRole = roleForCategory(serviceResult.rows[0]?.category);
   return queryClient.query(`
@@ -1134,11 +1325,12 @@ async function findAvailableAestheticians(queryClient, booking) {
       AND NOT EXISTS (
         SELECT 1 FROM appointments a
         WHERE a.aesthetician_id = u.user_id
+          AND ($5::integer IS NULL OR a.appointment_id <> $5)
           AND a.appointment_status IN ('confirmed', 'in_progress', 'completed')
           AND tsrange(a.appointment_date + a.appointment_time, a.appointment_date + a.appointment_end_time) && tsrange($1::date + $2::time, $1::date + $3::time)
       )
     ORDER BY u.user_id
-  `, [booking.appointmentDate, booking.appointmentTime, booking.appointmentEndTime, staffRole]);
+  `, [booking.appointmentDate, booking.appointmentTime, booking.appointmentEndTime, staffRole, excludeAppointmentId]);
 }
 
 async function createAppointmentFromPaidCheckout(client, payment, referenceNumber, paymentId = null, paymentMethod = null) {

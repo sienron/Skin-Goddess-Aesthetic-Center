@@ -13693,6 +13693,42 @@ textarea.cm-editor__input {
   width: min(900px, 100%);
 }
 
+.appointment-edit-modal {
+  width: min(720px, 100%);
+}
+
+.appointment-edit-modal form {
+  margin: 0;
+}
+
+.appointment-edit-summary {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding-bottom: 0;
+}
+
+.appointment-edit-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 16px;
+  padding: 16px 20px 8px;
+}
+
+.appointment-edit-fields .form-group {
+  min-width: 0;
+  margin-bottom: 8px;
+}
+
+.appointment-edit-fields input,
+.appointment-edit-fields select {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+}
+
+.appointment-edit-fields__status {
+  grid-column: 1 / -1;
+}
+
 .appointment-details-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -13926,6 +13962,19 @@ textarea.cm-editor__input {
   .appointment-details-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     padding: 14px;
+  }
+
+  .appointment-edit-summary {
+    padding: 14px 14px 0;
+  }
+
+  .appointment-edit-fields {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 14px 14px 6px;
+  }
+
+  .appointment-edit-fields__status {
+    grid-column: auto;
   }
 
   .appointment-products-toolbar {
