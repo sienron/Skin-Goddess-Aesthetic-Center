@@ -89,6 +89,28 @@ async function ensureNoExistingDemo(client) {
   }
 }
 
+async function paymentMethodsAllowedByDatabase(client) {
+  const result = await client.query(`
+    SELECT pg_get_constraintdef(oid) AS definition
+    FROM pg_constraint
+    WHERE conrelid = 'public.payments'::regclass
+      AND contype = 'c'
+      AND pg_get_constraintdef(oid) ILIKE '%method%'
+  `);
+  const constraints = result.rows.map((row) => row.definition);
+  if (!constraints.length) {
+    throw new Error('Could not verify the production payment-method constraint.');
+  }
+
+  const accepted = PAYMENT_METHODS.filter((method) => constraints.every((definition) => (
+    definition.includes(`'${method}'`)
+  )));
+  if (!accepted.length) {
+    throw new Error('The production payment-method constraint does not allow any supported demo payment methods.');
+  }
+  return accepted;
+}
+
 async function seedDemo(client) {
   await ensureTrackingTable(client);
   await ensureNoExistingDemo(client);
@@ -117,6 +139,7 @@ async function seedDemo(client) {
   if (!todayServices.length) {
     throw new Error('No active service is 120 minutes or shorter, so a non-overlapping demo schedule cannot be created.');
   }
+  const paymentMethods = await paymentMethodsAllowedByDatabase(client);
 
   const clients = [];
   for (let index = 0; index < CLIENT_COUNT; index += 1) {
@@ -172,7 +195,7 @@ async function seedDemo(client) {
     `, [
       appointmentId,
       deposit,
-      PAYMENT_METHODS[index % PAYMENT_METHODS.length],
+      paymentMethods[index % paymentMethods.length],
       `DEMO-LIVE-DEP-${String(index + 1).padStart(4, '0')}`,
       date,
     ]);
@@ -190,7 +213,7 @@ async function seedDemo(client) {
       `, [
         appointmentId,
         Math.round((price - deposit) * 100) / 100,
-        PAYMENT_METHODS[(index + 1) % PAYMENT_METHODS.length],
+        paymentMethods[(index + 1) % paymentMethods.length],
         `DEMO-LIVE-BAL-${String(index + 1).padStart(4, '0')}`,
         date,
       ]);
@@ -236,7 +259,7 @@ async function seedDemo(client) {
       RETURNING payment_id
     `, [
       250 + index * 85,
-      PAYMENT_METHODS[index % PAYMENT_METHODS.length],
+      paymentMethods[index % paymentMethods.length],
       `DEMO-LIVE-PROD-${String(index + 1).padStart(4, '0')}`,
       date,
     ]);
@@ -265,7 +288,8 @@ async function seedDemo(client) {
 
   console.log(
     `Seeded ${CLIENT_COUNT} demo clients, ${HISTORICAL_APPOINTMENT_COUNT + TODAY_APPOINTMENT_COUNT} demo appointments, ` +
-    `${PRODUCT_SALE_COUNT} product sales, and ${EXPENSE_COUNT} expenses.`
+    `${PRODUCT_SALE_COUNT} product sales, and ${EXPENSE_COUNT} expenses. ` +
+    `Payment methods allowed by this database: ${paymentMethods.join(', ')}.`
   );
 }
 

@@ -1,6 +1,6 @@
 # Live Render admin demo data
 
-The live admin demo seed is an explicit, reversible database operation. It creates eight unmistakably named demo client accounts, historical and today's demo appointments, tagged finance payments, and tagged expenses. Demo accounts use reserved `.invalid` email addresses and random passwords that are not saved.
+The live admin demo seed is an explicit, reversible database operation. It creates eight unmistakably named demo client accounts, historical and today's demo appointments, tagged finance payments, and tagged expenses. Demo accounts use reserved `.invalid` email addresses and random passwords that are not saved. The seeder supports GCash, Maya, and card as sample payment methods, then uses only methods accepted by the connected database's payment constraint. This compatibility check does not change the app's supported payment methods or modify the database schema.
 
 **These rows appear in production admin pages and finance totals while present.** Do not use the resulting finance reports as actual business figures until the demo data is cleared. The script does not change inventory stock, send messages, or create PayMongo transactions.
 
