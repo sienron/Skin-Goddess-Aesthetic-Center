@@ -82,6 +82,9 @@
             fillProfile(profileBtn, fullName, initials, roleLabel);
             fillProfile(mobileProfile, fullName, initials, roleLabel);
             if (String(data.role || '').toLowerCase() === 'admin' && profileDropdown) {
+                profileDropdown.querySelectorAll(
+                    'a[href="UserAccount.html"], a[href="MyAppointments.html"]'
+                ).forEach((link) => link.remove());
                 const dashboardLink = document.createElement('a');
                 dashboardLink.href = '/AdminDashboard.html';
                 dashboardLink.className = 'profile-dropdown-item';
