@@ -1,616 +1,799 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Skin Goddess Aesthetic Center Index</title>
-<link rel="preload" as="font" type="font/ttf" href="fonts/Raleway/Raleway-VariableFont_wght.ttf" crossorigin>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" media="print" onload="this.media='all'">
-<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600&display=swap"></noscript>
-<link rel="stylesheet" href="style.css?v=appointment-process-20261016">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Skin Goddess Aesthetic Center Index</title>
+  <link rel="preload" as="font" type="font/ttf" href="fonts/Raleway/Raleway-VariableFont_wght.ttf" crossorigin>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&family=Poppins:wght@500;600;700&display=swap"
+    media="print" onload="this.media='all'">
+  <noscript>
+    <link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&family=Poppins:wght@500;600;700&display=swap">
+  </noscript>
+  <link rel="stylesheet" href="style.css?v=homepage-editorial-20261013">
 </head>
+
 <body class="homepage">
 
-    <header class="public-header">
+  <header class="public-header">
 
-        <div class="header-left">
-          <div class="logo-container glass-pill">
-            <a href="index.html"><img id="logo" src="images/logo_horizontal-removebg.png" alt="Skin Goddess Aesthetic Center logo" width="250" height="82"></a>
-          </div>
-          <button type="button" class="theme-toggle glass-pill" id="themeToggle" aria-label="Toggle light/dark mode">
-            <img src="icons/light-mode.svg" alt="" class="theme-toggle-icon" width="800" height="800">
-          </button>
-          <button type="button" class="theme-toggle halo-toggle glass-pill" id="haloToggle" aria-label="Toggle cursor halo" aria-pressed="true" title="Cursor halo: on">
-            <img src="icons/cursor.svg" alt="" class="theme-toggle-icon" width="800" height="800">
-          </button>
-        </div>
+    <div class="header-left">
+      <div class="logo-container glass-pill">
+        <a href="index.html"><img id="logo" src="images/logo_horizontal-removebg.png"
+            alt="Skin Goddess Aesthetic Center logo" width="250" height="82"></a>
+      </div>
+      <button type="button" class="theme-toggle glass-pill" id="themeToggle" aria-label="Toggle light/dark mode">
+        <img src="icons/light-mode.svg" alt="" class="theme-toggle-icon" width="800" height="800">
+      </button>
+      <button type="button" class="theme-toggle halo-toggle glass-pill" id="haloToggle" aria-label="Toggle cursor halo"
+        aria-pressed="true" title="Cursor halo: on">
+        <img src="icons/cursor.svg" alt="" class="theme-toggle-icon" width="800" height="800">
+      </button>
+    </div>
 
-        <div class="header-pill glass-pill">
-        <nav class="public-nav">
-            <ul class="public-nav-links">
-                <li><a href="index.html" class="active">Home</a></li>
-                <li><a href="ServicesPage.html">Services</a></li>
-                <li><a href="AboutUsPage.html">About</a></li>
-                <li><a href="ContactUsPage.html">Contact</a></li>
-            </ul>
-        </nav>
-
-        <div class="public-header-actions">
-
-            <div class="notification-wrap" id="notificationWrap">
-                <div class="notification" id="notificationBtn">
-                    <img src="icons/notification-bell.svg" alt="Notifications" class="notification-bell" width="800" height="800">
-                </div>
-
-                <div class="notification-dropdown" id="notificationDropdown">
-                    <div class="notification-dropdown-header">Notifications</div>
-                    <div class="notification-list">
-                        <!-- Notification items would be populated here -->
-                    </div>
-                </div>
-            </div>
-
-            <button class="book-now-btn" type="button" onclick="window.location.href='UserAppointment.html'">BOOK NOW</button>
-
-            <div class="header-profile-wrap" id="profileWrap">
-              <button type="button" class="profile-row" id="profileBtn" aria-haspopup="true" aria-expanded="false">
-                  <div class="profile-avatar">AR</div>
-                  <div class="profile-info">
-                      <span class="profile-name">Anna Reyes</span>
-                  </div>
-              </button>
-          
-              <div class="profile-dropdown" id="profileDropdown">
-                  <a href="UserAccount.html" class="profile-dropdown-item">My Account</a>
-                  <a href="MyAppointments.html" class="profile-dropdown-item">My Appointments</a>
-                  <div class="profile-dropdown-divider"></div>
-                  <button type="button" class="profile-dropdown-item profile-dropdown-item--signout" id="signOutBtn">Sign out</button>
-              </div>
-          </div>
-
-        </div>
-        </div>
-
-        <button type="button" class="hamburger-btn" id="hamburgerBtn" aria-label="Open menu" aria-expanded="false" aria-controls="mobileNavDrawer">
-            <img src="icons/hamburger.svg" alt="" class="hamburger-icon">
-        </button>
-
-    </header>
-
-    <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
-
-    <aside class="mobile-nav-drawer" id="mobileNavDrawer" aria-hidden="true" inert>
-
-        <div class="mobile-nav-top">
-            <img src="images/logo_horizontal.jpg" alt="Skin Goddess Aesthetic Center logo" class="mobile-nav-logo">
-            <button type="button" class="mobile-nav-close" id="mobileNavClose" aria-label="Close menu">&times;</button>
-        </div>
-
-        <ul class="mobile-nav-links">
-            <li><a href="index.html" class="active">Home</a></li>
-            <li><a href="ServicesPage.html">Services</a></li>
-            <li><a href="AboutUsPage.html">About</a></li>
-            <li><a href="ContactUsPage.html">Contact</a></li>
+    <div class="header-pill glass-pill">
+      <nav class="public-nav">
+        <ul class="public-nav-links">
+          <li><a href="index.html" class="active">Home</a></li>
+          <li><a href="ServicesPage.html">Services</a></li>
+          <li><a href="AboutUsPage.html">About</a></li>
+          <li><a href="ContactUsPage.html">Contact</a></li>
         </ul>
+      </nav>
 
-        <button class="book-now-btn mobile-nav-book-btn" type="button" onclick="window.location.href='UserAppointment.html'">BOOK NOW</button>
+      <div class="public-header-actions">
 
-        <div class="mobile-nav-profile">
+        <div class="notification-wrap" id="notificationWrap">
+          <div class="notification" id="notificationBtn">
+            <img src="icons/notification-bell.svg" alt="Notifications" class="notification-bell" width="800"
+              height="800">
+          </div>
+
+          <div class="notification-dropdown" id="notificationDropdown">
+            <div class="notification-dropdown-header">Notifications</div>
+            <div class="notification-list">
+              <!-- Notification items would be populated here -->
+            </div>
+          </div>
+        </div>
+
+        <button class="book-now-btn" type="button" onclick="window.location.href='UserAppointment.html'">BOOK
+          NOW</button>
+
+        <div class="header-profile-wrap" id="profileWrap">
+          <button type="button" class="profile-row" id="profileBtn" aria-haspopup="true" aria-expanded="false">
             <div class="profile-avatar">AR</div>
             <div class="profile-info">
-                <span class="profile-name">Anna Reyes</span>
+              <span class="profile-name">Anna Reyes</span>
             </div>
+          </button>
+
+          <div class="profile-dropdown" id="profileDropdown">
+            <a href="UserAccount.html" class="profile-dropdown-item">My Account</a>
+            <a href="MyAppointments.html" class="profile-dropdown-item">My Appointments</a>
+            <div class="profile-dropdown-divider"></div>
+            <button type="button" class="profile-dropdown-item profile-dropdown-item--signout" id="signOutBtn">Sign
+              out</button>
+          </div>
         </div>
 
-    </aside>
-
-<section class="hero">
-  <div class="hero-copy">
-    <p class="eyebrow">EXPERT CARE. GLOWING RESULTS.</p>
-    <h1 class="headline">Healthy Skin.<br>Confident You.</h1>
-    <p class="lede">Trusted skincare and aesthetic treatments, tailored to you at Skin-Goddess Aesthetic Center.</p>
-  </div>
-  <div class="hero-band" aria-hidden="true"></div>
-
-<section class="homepage-service-panels-section" id="featuredServices" aria-labelledby="featuredServicesHeading">
-  <div class="homepage-service-panels">
-    <header class="homepage-service-panels__header">
-      <p class="homepage-service-panels__eyebrow">SKIN GODDESS SIGNATURES</p>
-      <h2 id="featuredServicesHeading">Care for Every Skin Story</h2>
-    </header>
-    <div class="homepage-service-panels__grid">
-      <a class="homepage-service-panel" href="ServicesPage.html#facials">
-        <img src="images/HydratingFacialImg.webp" alt="" width="640" height="287" loading="lazy" decoding="async">
-        <span class="homepage-service-panel__content">
-          <span class="homepage-service-panel__number">01</span>
-          <span class="homepage-service-panel__title">Hydrating Facial</span>
-          <span class="homepage-service-panel__description">A deep-cleansing, moisture-rich facial that restores radiance and softness. Suitable for all skin types.</span>
-          <span class="homepage-service-panel__link">EXPLORE SERVICE <span aria-hidden="true">&#8599;</span></span>
-        </span>
-      </a>
-      <a class="homepage-service-panel" href="ServicesPage.html#facials">
-        <img src="images/SkinWhiteningImg.webp" alt="" width="640" height="280" loading="lazy" decoding="async">
-        <span class="homepage-service-panel__content">
-          <span class="homepage-service-panel__number">02</span>
-          <span class="homepage-service-panel__title">Skin Whitening</span>
-          <span class="homepage-service-panel__description">Science-backed brightening that targets dark spots and uneven tone for a luminous, radiant finish.</span>
-          <span class="homepage-service-panel__link">EXPLORE SERVICE <span aria-hidden="true">&#8599;</span></span>
-        </span>
-      </a>
-      <a class="homepage-service-panel" href="ServicesPage.html#facials">
-        <img src="images/AntiAgingTherapyImg.webp" alt="" width="640" height="287" loading="lazy" decoding="async">
-        <span class="homepage-service-panel__content">
-          <span class="homepage-service-panel__number">03</span>
-          <span class="homepage-service-panel__title">Anti-Aging Therapy</span>
-          <span class="homepage-service-panel__description">Advanced collagen-stimulating treatments that reduce fine lines and restore your skin's natural youthfulness.</span>
-          <span class="homepage-service-panel__link">EXPLORE SERVICE <span aria-hidden="true">&#8599;</span></span>
-        </span>
-      </a>
-      <a class="homepage-service-panel" href="ServicesPage.html#eyelash-extension">
-        <img src="images/EyelashExtension.webp" alt="" width="640" height="426" loading="lazy" decoding="async">
-        <span class="homepage-service-panel__content">
-          <span class="homepage-service-panel__number">04</span>
-          <span class="homepage-service-panel__title">Eyelash Extension</span>
-          <span class="homepage-service-panel__description">Full lash sets from classic to mega volume for a fuller, more dramatic lash look.</span>
-          <span class="homepage-service-panel__link">EXPLORE SERVICE <span aria-hidden="true">&#8599;</span></span>
-        </span>
-      </a>
+      </div>
     </div>
-  </div>
-</section>
 
-<section class="treatments-section" id="treatments" aria-labelledby="treatmentsHeading">
-  <header class="treatments-section__header">
-    <h2 class="treatments-heading" id="treatmentsHeading">Tailored Care for <span class="accent">Every Skin Story</span></h2>
-  </header>
-  <div class="appointment-process" aria-label="How to book your appointment">
-    <ol class="appointment-process__steps">
-      <li class="appointment-process__step appointment-process__step--gold">
-        <span class="appointment-process__icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>
-        </span>
-        <h3>Choose Your Treatment</h3>
-        <p>Explore treatments and select one suited to your skincare needs.</p>
-      </li>
-      <li class="appointment-process__step appointment-process__step--amber">
-        <span class="appointment-process__icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>
-        </span>
-        <h3>Book Your Appointment</h3>
-        <p>Choose your preferred date and available time.</p>
-      </li>
-      <li class="appointment-process__step appointment-process__step--bronze">
-        <span class="appointment-process__icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.8 2.8L16.3 9.5"/></svg>
-        </span>
-        <h3>Confirm Your Booking</h3>
-        <p>Review your appointment details and pay the reservation fee.</p>
-      </li>
-      <li class="appointment-process__step appointment-process__step--ink">
-        <span class="appointment-process__icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.5s-7.5-4.4-7.5-10A4.3 4.3 0 0 1 12 7.8a4.3 4.3 0 0 1 7.5 2.7c0 5.6-7.5 10-7.5 10z"/></svg>
-        </span>
-        <h3>Enjoy Your Treatment</h3>
-        <p>Visit Skin Goddess for your scheduled appointment.</p>
-      </li>
-    </ol>
-  </div>
-  <div class="treatments-carousel-wrap">
-
-    <button type="button" class="carousel-nav carousel-nav--prev" id="carouselPrev" aria-label="Rewind treatments">
-      <img src="icons/arrow-left.svg" alt="" class="carousel-nav-icon">
+    <button type="button" class="hamburger-btn" id="hamburgerBtn" aria-label="Open menu" aria-expanded="false"
+      aria-controls="mobileNavDrawer">
+      <img src="icons/hamburger.svg" alt="" class="hamburger-icon">
     </button>
 
-    <div class="treatments-carousel" id="treatmentsCarousel">
-      <div class="treatments-track" id="treatmentsTrack">
+  </header>
 
-        <!-- Card set (16) — repeated once below so the scroll loops seamlessly -->
+  <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
 
-      <a class="treatment-card" href="ServicesPage.html#facials">
-        <picture><source srcset="images/HydratingFacialImg.webp" type="image/webp"><img class="card-bg" src="images/HydratingFacialImg.png" alt="" width="640" height="287" loading="lazy" decoding="async"></picture>
-        <div class="card-body">
-          <h3>Hydrating Facial</h3>
-          <div class="card-meta">60 MIN &middot; FROM &#8369;1,200</div>
-          <p>A deep-cleansing, moisture-rich facial that restores radiance and softness. Suitable for all skin types.</p>
+  <aside class="mobile-nav-drawer" id="mobileNavDrawer" aria-hidden="true" inert>
+
+    <div class="mobile-nav-top">
+      <img src="images/logo_horizontal.jpg" alt="Skin Goddess Aesthetic Center logo" class="mobile-nav-logo">
+      <button type="button" class="mobile-nav-close" id="mobileNavClose" aria-label="Close menu">&times;</button>
+    </div>
+
+    <ul class="mobile-nav-links">
+      <li><a href="index.html" class="active">Home</a></li>
+      <li><a href="ServicesPage.html">Services</a></li>
+      <li><a href="AboutUsPage.html">About</a></li>
+      <li><a href="ContactUsPage.html">Contact</a></li>
+    </ul>
+
+    <button class="book-now-btn mobile-nav-book-btn" type="button"
+      onclick="window.location.href='UserAppointment.html'">BOOK NOW</button>
+
+    <div class="mobile-nav-profile">
+      <div class="profile-avatar">AR</div>
+      <div class="profile-info">
+        <span class="profile-name">Anna Reyes</span>
+      </div>
+    </div>
+
+  </aside>
+
+  <section class="hero">
+    <div class="hero-visual" aria-hidden="true">
+      <img class="hero-photo-img" src="images/GSAP%20Hero-cropped.webp" alt="" width="1157" height="1350" fetchpriority="high"
+        decoding="async">
+    </div>
+    <div class="hero-copy">
+      <p class="eyebrow">EXPERT CARE. GLOWING RESULTS.</p>
+      <h1 class="headline">Healthy Skin.<br>Confident You.</h1>
+      <p class="lede">Personalized skincare and aesthetic treatments designed around you.</p>
+      <div class="hero-cta-row">
+        <a class="hero-cta hero-cta--primary" href="UserAppointment.html">BOOK NOW</a>
+        <a class="hero-cta hero-cta--secondary" href="ServicesPage.html">VIEW TREATMENTS</a>
+      </div>
+    </div>
+    <div class="hero-band" aria-hidden="true"></div>
+
+    <section class="homepage-service-panels-section" id="featuredServices" aria-labelledby="featuredServicesHeading">
+      <div class="homepage-service-panels">
+        <header class="homepage-service-panels__header">
+          <p class="homepage-service-panels__eyebrow">SKIN GODDESS SIGNATURES</p>
+          <h2 id="featuredServicesHeading">Care for Every Skin Story</h2>
+        </header>
+        <div class="homepage-service-panels__grid">
+          <a class="homepage-service-panel" href="ServicesPage.html#facials">
+            <img src="images/HydratingFacialImg.webp" alt="" width="640" height="287" loading="lazy" decoding="async">
+            <span class="homepage-service-panel__content">
+              <span class="homepage-service-panel__number">01</span>
+              <span class="homepage-service-panel__title">Hydrating Facial</span>
+              <span class="homepage-service-panel__description">A deep-cleansing, moisture-rich facial that restores
+                radiance and softness. Suitable for all skin types.</span>
+              <span class="homepage-service-panel__link">EXPLORE SERVICE <span aria-hidden="true">&#8599;</span></span>
+            </span>
+          </a>
+          <a class="homepage-service-panel" href="ServicesPage.html#facials">
+            <img src="images/SkinWhiteningImg.webp" alt="" width="640" height="280" loading="lazy" decoding="async">
+            <span class="homepage-service-panel__content">
+              <span class="homepage-service-panel__number">02</span>
+              <span class="homepage-service-panel__title">Skin Whitening</span>
+              <span class="homepage-service-panel__description">Science-backed brightening that targets dark spots and
+                uneven tone for a luminous, radiant finish.</span>
+              <span class="homepage-service-panel__link">EXPLORE SERVICE <span aria-hidden="true">&#8599;</span></span>
+            </span>
+          </a>
+          <a class="homepage-service-panel" href="ServicesPage.html#facials">
+            <img src="images/AntiAgingTherapyImg.webp" alt="" width="640" height="287" loading="lazy" decoding="async">
+            <span class="homepage-service-panel__content">
+              <span class="homepage-service-panel__number">03</span>
+              <span class="homepage-service-panel__title">Anti-Aging Therapy</span>
+              <span class="homepage-service-panel__description">Advanced collagen-stimulating treatments that reduce
+                fine lines and restore your skin's natural youthfulness.</span>
+              <span class="homepage-service-panel__link">EXPLORE SERVICE <span aria-hidden="true">&#8599;</span></span>
+            </span>
+          </a>
+          <a class="homepage-service-panel" href="ServicesPage.html#eyelash-extension">
+            <img src="images/EyelashExtension.webp" alt="" width="640" height="426" loading="lazy" decoding="async">
+            <span class="homepage-service-panel__content">
+              <span class="homepage-service-panel__number">04</span>
+              <span class="homepage-service-panel__title">Eyelash Extension</span>
+              <span class="homepage-service-panel__description">Full lash sets from classic to mega volume for a fuller,
+                more dramatic lash look.</span>
+              <span class="homepage-service-panel__link">EXPLORE SERVICE <span aria-hidden="true">&#8599;</span></span>
+            </span>
+          </a>
         </div>
-      </a>
+      </div>
+    </section>
 
-      <a class="treatment-card" href="ServicesPage.html#facials">
-        <picture><source srcset="images/SkinWhiteningImg.webp" type="image/webp"><img class="card-bg" src="images/SkinWhiteningImg.png" alt="" width="640" height="280" loading="lazy" decoding="async"></picture>
-        <div class="card-body">
-          <h3>Skin Whitening</h3>
-          <div class="card-meta">90 MIN &middot; FROM &#8369;1,800</div>
-          <p>Science-backed brightening that targets dark spots and uneven tone for a luminous, radiant finish.</p>
-        </div>
-      </a>
+    <section class="treatments-section" id="treatments" aria-labelledby="treatmentsHeading">
+      <header class="treatments-section__header">
+        <h2 class="treatments-heading" id="treatmentsHeading">Tailored Care for <span class="accent">Every Skin
+            Story</span></h2>
+      </header>
+      <div class="appointment-process" aria-label="How to book your appointment">
+        <ol class="appointment-process__steps">
+          <li class="appointment-process__step appointment-process__step--gold">
+            <span class="appointment-process__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                stroke-linejoin="round">
+                <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z" />
+                <path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z" />
+              </svg>
+            </span>
+            <h3>Choose Your Treatment</h3>
+            <p>Explore treatments and select one suited to your skincare needs.</p>
+          </li>
+          <li class="appointment-process__step appointment-process__step--amber">
+            <span class="appointment-process__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                stroke-linejoin="round">
+                <rect x="3.5" y="5" width="17" height="15.5" rx="2.5" />
+                <path d="M3.5 10h17M8 3v4M16 3v4" />
+              </svg>
+            </span>
+            <h3>Book Your Appointment</h3>
+            <p>Choose your preferred date and available time.</p>
+          </li>
+          <li class="appointment-process__step appointment-process__step--bronze">
+            <span class="appointment-process__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                stroke-linejoin="round">
+                <circle cx="12" cy="12" r="9" />
+                <path d="M8 12.5l2.8 2.8L16.3 9.5" />
+              </svg>
+            </span>
+            <h3>Confirm Your Booking</h3>
+            <p>Review your appointment details and pay the reservation fee.</p>
+          </li>
+          <li class="appointment-process__step appointment-process__step--ink">
+            <span class="appointment-process__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                stroke-linejoin="round">
+                <path d="M12 20.5s-7.5-4.4-7.5-10A4.3 4.3 0 0 1 12 7.8a4.3 4.3 0 0 1 7.5 2.7c0 5.6-7.5 10-7.5 10z" />
+              </svg>
+            </span>
+            <h3>Enjoy Your Treatment</h3>
+            <p>Visit Skin Goddess for your scheduled appointment.</p>
+          </li>
+        </ol>
+      </div>
+      <div class="treatments-carousel-wrap">
 
-      <a class="treatment-card" href="ServicesPage.html#facials">
-        <picture><source srcset="images/AntiAgingTherapyImg.webp" type="image/webp"><img class="card-bg" src="images/AntiAgingTherapyImg.png" alt="" width="640" height="287" loading="lazy" decoding="async"></picture>
-        <div class="card-body">
-          <h3>Anti-Aging Therapy</h3>
-          <div class="card-meta">75 MIN &middot; FROM &#8369;2,500</div>
-          <p>Advanced collagen-stimulating treatments that reduce fine lines and restore your skin's natural youthfulness.</p>
-        </div>
-      </a>
+        <button type="button" class="carousel-nav carousel-nav--prev" id="carouselPrev" aria-label="Rewind treatments">
+          <img src="icons/arrow-left.svg" alt="" class="carousel-nav-icon">
+        </button>
 
-      <a class="treatment-card" href="ServicesPage.html#eyelash-extension">
-        <picture><source srcset="images/EyelashExtension.webp" type="image/webp"><img class="card-bg" src="images/EyelashExtension.png" alt="" width="640" height="426" loading="lazy" decoding="async"></picture>
-        <div class="card-body">
-          <h3>Eyelash Extension</h3>
-          <div class="card-meta">90 MIN &middot; FROM &#8369;350</div>
-          <p>Full lash sets from classic to mega volume for a fuller, more dramatic lash look. Infill and removal services are also available for maintenance.</p>
-        </div>
-      </a>
+        <div class="treatments-carousel" id="treatmentsCarousel">
+          <div class="treatments-track" id="treatmentsTrack">
 
-      <a class="treatment-card" href="ServicesPage.html#paraffin-therapy">
-        <picture><source srcset="images/ParaffinTherapy.webp" type="image/webp"><img class="card-bg" src="images/ParaffinTherapy.png" alt="" width="640" height="426" loading="lazy" decoding="async"></picture>
-        <div class="card-body">
-          <h3>Paraffin Therapy</h3>
-          <div class="card-meta">30 MIN &middot; FROM &#8369;299</div>
-          <p>A warm paraffin wax treatment for hands and feet that softens skin and soothes joints. Great as a quick add-on or standalone relaxation service.</p>
-        </div>
-      </a>
+            <!-- Card set (16) — repeated once below so the scroll loops seamlessly -->
 
-      <a class="treatment-card" href="ServicesPage.html#hand-treatment">
-        <picture><source srcset="images/Manicure.webp" type="image/webp"><img class="card-bg" src="images/Manicure.png" alt="" width="640" height="426" loading="lazy" decoding="async"></picture>
-        <div class="card-body">
-          <h3>Hand Treatment</h3>
-          <div class="card-meta">45 MIN &middot; FROM &#8369;199</div>
-          <p>Classic and soft gel manicure services to keep nails clean and well-groomed. Ideal for regular upkeep or special occasions.</p>
-        </div>
-      </a>
+            <a class="treatment-card" href="ServicesPage.html#facials">
+              <picture>
+                <source srcset="images/HydratingFacialImg.webp" type="image/webp"><img class="card-bg"
+                  src="images/HydratingFacialImg.png" alt="" width="640" height="287" loading="lazy" decoding="async">
+              </picture>
+              <div class="card-body">
+                <h3>Hydrating Facial</h3>
+                <div class="card-meta">60 MIN &middot; FROM &#8369;1,200</div>
+                <p>A deep-cleansing, moisture-rich facial that restores radiance and softness. Suitable for all skin
+                  types.</p>
+              </div>
+            </a>
 
-      <a class="treatment-card" href="ServicesPage.html#chemical-peeling">
-        <picture><source srcset="images/ChemicalPeel.webp" type="image/webp"><img class="card-bg" src="images/ChemicalPeel.png" alt="" width="640" height="426" loading="lazy" decoding="async"></picture>
-        <div class="card-body">
-          <h3>Chemical Peeling (TCA)</h3>
-          <div class="card-meta">60 MIN &middot; FROM &#8369;2,000</div>
-          <p>TCA peels that target uneven skin tone and texture across the face and body. Areas range from small zones like elbows to full-body treatments.</p>
-        </div>
-      </a>
+            <a class="treatment-card" href="ServicesPage.html#facials">
+              <picture>
+                <source srcset="images/SkinWhiteningImg.webp" type="image/webp"><img class="card-bg"
+                  src="images/SkinWhiteningImg.png" alt="" width="640" height="280" loading="lazy" decoding="async">
+              </picture>
+              <div class="card-body">
+                <h3>Skin Whitening</h3>
+                <div class="card-meta">90 MIN &middot; FROM &#8369;1,800</div>
+                <p>Science-backed brightening that targets dark spots and uneven tone for a luminous, radiant finish.
+                </p>
+              </div>
+            </a>
 
-      <a class="treatment-card" href="ServicesPage.html#threading-services">
-        <picture><source srcset="images/ThreadingService.webp" type="image/webp"><img class="card-bg" src="images/ThreadingService.png" alt="" width="612" height="408" loading="lazy" decoding="async"></picture>
-        <div class="card-body">
-          <h3>Threading Services</h3>
-          <div class="card-meta">15 MIN &middot; FROM &#8369;200</div>
-          <p>Precise hair removal for eyebrows, upper lip, and lower lip using traditional threading. A quick, low-irritation option for facial hair grooming.</p>
-        </div>
-      </a>
+            <a class="treatment-card" href="ServicesPage.html#facials">
+              <picture>
+                <source srcset="images/AntiAgingTherapyImg.webp" type="image/webp"><img class="card-bg"
+                  src="images/AntiAgingTherapyImg.png" alt="" width="640" height="287" loading="lazy" decoding="async">
+              </picture>
+              <div class="card-body">
+                <h3>Anti-Aging Therapy</h3>
+                <div class="card-meta">75 MIN &middot; FROM &#8369;2,500</div>
+                <p>Advanced collagen-stimulating treatments that reduce fine lines and restore your skin's natural
+                  youthfulness.</p>
+              </div>
+            </a>
 
-      <a class="treatment-card" href="ServicesPage.html#foot-treatment">
-        <picture><source srcset="images/FootTreatment.webp" type="image/webp"><img class="card-bg" src="images/FootTreatment.png" alt="" width="640" height="429" loading="lazy" decoding="async"></picture>
-        <div class="card-body">
-          <h3>Foot Treatment</h3>
-          <div class="card-meta">45 MIN &middot; FROM &#8369;299</div>
-          <p>Foot spa and pedicure services designed to relax and refresh tired feet. Add-on foot spa options are available for a more indulgent experience.</p>
-        </div>
-      </a>
+            <a class="treatment-card" href="ServicesPage.html#eyelash-extension">
+              <picture>
+                <source srcset="images/EyelashExtension.webp" type="image/webp"><img class="card-bg"
+                  src="images/EyelashExtension.png" alt="" width="640" height="426" loading="lazy" decoding="async">
+              </picture>
+              <div class="card-body">
+                <h3>Eyelash Extension</h3>
+                <div class="card-meta">90 MIN &middot; FROM &#8369;350</div>
+                <p>Full lash sets from classic to mega volume for a fuller, more dramatic lash look. Infill and removal
+                  services are also available for maintenance.</p>
+              </div>
+            </a>
 
-      <a class="treatment-card" href="ServicesPage.html#soft-gel-nail-extensions">
-        <picture><source srcset="images/NailExtension.webp" type="image/webp"><img class="card-bg" src="images/NailExtension.png" alt="" width="640" height="480" loading="lazy" decoding="async"></picture>
-        <div class="card-body">
-          <h3>Soft Gel Nail Extensions</h3>
-          <div class="card-meta">75 MIN &middot; FROM &#8369;1,300</div>
-          <p>Durable soft gel extensions available in short, medium, and long lengths. Nail art, rhinestones, and other add-ons can enhance the final look.</p>
-        </div>
-      </a>
+            <a class="treatment-card" href="ServicesPage.html#paraffin-therapy">
+              <picture>
+                <source srcset="images/ParaffinTherapy.webp" type="image/webp"><img class="card-bg"
+                  src="images/ParaffinTherapy.png" alt="" width="640" height="426" loading="lazy" decoding="async">
+              </picture>
+              <div class="card-body">
+                <h3>Paraffin Therapy</h3>
+                <div class="card-meta">30 MIN &middot; FROM &#8369;299</div>
+                <p>A warm paraffin wax treatment for hands and feet that softens skin and soothes joints. Great as a
+                  quick add-on or standalone relaxation service.</p>
+              </div>
+            </a>
 
-      <a class="treatment-card" href="ServicesPage.html#hair-removal">
-        <picture><source srcset="images/HairRemoval.webp" type="image/webp"><img class="card-bg" src="images/HairRemoval.png" alt="" width="640" height="480" loading="lazy" decoding="async"></picture>
-        <div class="card-body">
-          <h3>Hair Removal (IPL-HR)</h3>
-          <div class="card-meta">30 MIN &middot; FROM &#8369;2,000</div>
-          <p>IPL-based hair removal for targeted areas like underarms and bikini line up to full-body sessions. A long-term solution for smoother, hair-free skin.</p>
-        </div>
-      </a>
+            <a class="treatment-card" href="ServicesPage.html#hand-treatment">
+              <picture>
+                <source srcset="images/Manicure.webp" type="image/webp"><img class="card-bg" src="images/Manicure.png"
+                  alt="" width="640" height="426" loading="lazy" decoding="async">
+              </picture>
+              <div class="card-body">
+                <h3>Hand Treatment</h3>
+                <div class="card-meta">45 MIN &middot; FROM &#8369;199</div>
+                <p>Classic and soft gel manicure services to keep nails clean and well-groomed. Ideal for regular upkeep
+                  or special occasions.</p>
+              </div>
+            </a>
 
-      <a class="treatment-card" href="ServicesPage.html#drip-shot">
-        <picture><source srcset="images/DripShot.webp" type="image/webp"><img class="card-bg" src="images/DripShot.png" alt="" width="640" height="426" loading="lazy" decoding="async"></picture>
-        <div class="card-body">
-          <h3>Drip / Shot (ED/GS)</h3>
-          <div class="card-meta">45 MIN &middot; FROM &#8369;1,000</div>
-          <p>IV drips and shots formulated for anti-aging, immune support, slimming, and whitening. Delivers nutrients directly for faster, noticeable results.</p>
-        </div>
-      </a>
+            <a class="treatment-card" href="ServicesPage.html#chemical-peeling">
+              <picture>
+                <source srcset="images/ChemicalPeel.webp" type="image/webp"><img class="card-bg"
+                  src="images/ChemicalPeel.png" alt="" width="640" height="426" loading="lazy" decoding="async">
+              </picture>
+              <div class="card-body">
+                <h3>Chemical Peeling (TCA)</h3>
+                <div class="card-meta">60 MIN &middot; FROM &#8369;2,000</div>
+                <p>TCA peels that target uneven skin tone and texture across the face and body. Areas range from small
+                  zones like elbows to full-body treatments.</p>
+              </div>
+            </a>
 
-      <a class="treatment-card" href="ServicesPage.html#facials">
-        <picture><source srcset="images/HydratingFacialImg.webp" type="image/webp"><img class="card-bg" src="images/HydratingFacialImg.png" alt="" width="640" height="287" loading="lazy" decoding="async"></picture>
-        <div class="card-body">
-          <h3>Facials</h3>
-          <div class="card-meta">60 MIN &middot; FROM &#8369;1,000</div>
-          <p>A range of facials from basic cleansing to advanced treatments like diamond peel and acne programs. Customizable based on skin concerns and goals.</p>
-        </div>
-      </a>
+            <a class="treatment-card" href="ServicesPage.html#threading-services">
+              <picture>
+                <source srcset="images/ThreadingService.webp" type="image/webp"><img class="card-bg"
+                  src="images/ThreadingService.png" alt="" width="612" height="408" loading="lazy" decoding="async">
+              </picture>
+              <div class="card-body">
+                <h3>Threading Services</h3>
+                <div class="card-meta">15 MIN &middot; FROM &#8369;200</div>
+                <p>Precise hair removal for eyebrows, upper lip, and lower lip using traditional threading. A quick,
+                  low-irritation option for facial hair grooming.</p>
+              </div>
+            </a>
 
-      <a class="treatment-card" href="ServicesPage.html#body-tightening">
-        <picture><source srcset="images/BodyTightening.webp" type="image/webp"><img class="card-bg" src="images/BodyTightening.png" alt="" width="640" height="438" loading="lazy" decoding="async"></picture>
-        <div class="card-body">
-          <h3>Tightening (BT) / Body Fat Reduction</h3>
-          <div class="card-meta">60 MIN &middot; FROM &#8369;1,300</div>
-          <p>Body tightening and fat reduction treatments for the tummy, arms, and thighs. Can be combined with BFR for enhanced contouring results.</p>
-        </div>
-      </a>
+            <a class="treatment-card" href="ServicesPage.html#foot-treatment">
+              <picture>
+                <source srcset="images/FootTreatment.webp" type="image/webp"><img class="card-bg"
+                  src="images/FootTreatment.png" alt="" width="640" height="429" loading="lazy" decoding="async">
+              </picture>
+              <div class="card-body">
+                <h3>Foot Treatment</h3>
+                <div class="card-meta">45 MIN &middot; FROM &#8369;299</div>
+                <p>Foot spa and pedicure services designed to relax and refresh tired feet. Add-on foot spa options are
+                  available for a more indulgent experience.</p>
+              </div>
+            </a>
 
-      <a class="treatment-card" href="ServicesPage.html#electrocautery">
-        <picture><source srcset="images/Electrocautery.webp" type="image/webp"><img class="card-bg" src="images/Electrocautery.png" alt="" width="640" height="426" loading="lazy" decoding="async"></picture>
-        <div class="card-body">
-          <h3>Electrocautery (ECT)</h3>
-          <div class="card-meta">30 MIN &middot; FROM &#8369;3,000</div>
-          <p>A precise method for removing warts and milia using controlled heat. A quick, in-clinic procedure with minimal downtime.</p>
-        </div>
-      </a>
+            <a class="treatment-card" href="ServicesPage.html#soft-gel-nail-extensions">
+              <picture>
+                <source srcset="images/NailExtension.webp" type="image/webp"><img class="card-bg"
+                  src="images/NailExtension.png" alt="" width="640" height="480" loading="lazy" decoding="async">
+              </picture>
+              <div class="card-body">
+                <h3>Soft Gel Nail Extensions</h3>
+                <div class="card-meta">75 MIN &middot; FROM &#8369;1,300</div>
+                <p>Durable soft gel extensions available in short, medium, and long lengths. Nail art, rhinestones, and
+                  other add-ons can enhance the final look.</p>
+              </div>
+            </a>
 
-      <a class="treatment-card" href="ServicesPage.html#mesotherapy">
-        <picture><source srcset="images/Mesotherapy.webp" type="image/webp"><img class="card-bg" src="images/Mesotherapy.png" alt="" width="640" height="359" loading="lazy" decoding="async"></picture>
-        <div class="card-body">
-          <h3>Mesotherapy (MT)</h3>
-          <div class="card-meta">60 MIN &middot; FROM &#8369;3,000</div>
-          <p>Injectable treatments targeting the face, arms, tummy, thighs, or full body for tightening and rejuvenation. Includes BFR-enhanced whole-body options for deeper results.</p>
-        </div>
-      </a>
+            <a class="treatment-card" href="ServicesPage.html#hair-removal">
+              <picture>
+                <source srcset="images/HairRemoval.webp" type="image/webp"><img class="card-bg"
+                  src="images/HairRemoval.png" alt="" width="640" height="480" loading="lazy" decoding="async">
+              </picture>
+              <div class="card-body">
+                <h3>Hair Removal (IPL-HR)</h3>
+                <div class="card-meta">30 MIN &middot; FROM &#8369;2,000</div>
+                <p>IPL-based hair removal for targeted areas like underarms and bikini line up to full-body sessions. A
+                  long-term solution for smoother, hair-free skin.</p>
+              </div>
+            </a>
+
+            <a class="treatment-card" href="ServicesPage.html#drip-shot">
+              <picture>
+                <source srcset="images/DripShot.webp" type="image/webp"><img class="card-bg" src="images/DripShot.png"
+                  alt="" width="640" height="426" loading="lazy" decoding="async">
+              </picture>
+              <div class="card-body">
+                <h3>Drip / Shot (ED/GS)</h3>
+                <div class="card-meta">45 MIN &middot; FROM &#8369;1,000</div>
+                <p>IV drips and shots formulated for anti-aging, immune support, slimming, and whitening. Delivers
+                  nutrients directly for faster, noticeable results.</p>
+              </div>
+            </a>
+
+            <a class="treatment-card" href="ServicesPage.html#facials">
+              <picture>
+                <source srcset="images/HydratingFacialImg.webp" type="image/webp"><img class="card-bg"
+                  src="images/HydratingFacialImg.png" alt="" width="640" height="287" loading="lazy" decoding="async">
+              </picture>
+              <div class="card-body">
+                <h3>Facials</h3>
+                <div class="card-meta">60 MIN &middot; FROM &#8369;1,000</div>
+                <p>A range of facials from basic cleansing to advanced treatments like diamond peel and acne programs.
+                  Customizable based on skin concerns and goals.</p>
+              </div>
+            </a>
+
+            <a class="treatment-card" href="ServicesPage.html#body-tightening">
+              <picture>
+                <source srcset="images/BodyTightening.webp" type="image/webp"><img class="card-bg"
+                  src="images/BodyTightening.png" alt="" width="640" height="438" loading="lazy" decoding="async">
+              </picture>
+              <div class="card-body">
+                <h3>Tightening (BT) / Body Fat Reduction</h3>
+                <div class="card-meta">60 MIN &middot; FROM &#8369;1,300</div>
+                <p>Body tightening and fat reduction treatments for the tummy, arms, and thighs. Can be combined with
+                  BFR for enhanced contouring results.</p>
+              </div>
+            </a>
+
+            <a class="treatment-card" href="ServicesPage.html#electrocautery">
+              <picture>
+                <source srcset="images/Electrocautery.webp" type="image/webp"><img class="card-bg"
+                  src="images/Electrocautery.png" alt="" width="640" height="426" loading="lazy" decoding="async">
+              </picture>
+              <div class="card-body">
+                <h3>Electrocautery (ECT)</h3>
+                <div class="card-meta">30 MIN &middot; FROM &#8369;3,000</div>
+                <p>A precise method for removing warts and milia using controlled heat. A quick, in-clinic procedure
+                  with minimal downtime.</p>
+              </div>
+            </a>
+
+            <a class="treatment-card" href="ServicesPage.html#mesotherapy">
+              <picture>
+                <source srcset="images/Mesotherapy.webp" type="image/webp"><img class="card-bg"
+                  src="images/Mesotherapy.png" alt="" width="640" height="359" loading="lazy" decoding="async">
+              </picture>
+              <div class="card-body">
+                <h3>Mesotherapy (MT)</h3>
+                <div class="card-meta">60 MIN &middot; FROM &#8369;3,000</div>
+                <p>Injectable treatments targeting the face, arms, tummy, thighs, or full body for tightening and
+                  rejuvenation. Includes BFR-enhanced whole-body options for deeper results.</p>
+              </div>
+            </a>
 
 
-      <!-- Duplicate of the 16 cards above, hidden from assistive tech, so the
+            <!-- Duplicate of the 16 cards above, hidden from assistive tech, so the
            translateX(-50%) loop in style.css has no visible seam. Keep this
            block identical to the one above if you add/remove treatments. -->
-      <div class="treatments-track-dupe" aria-hidden="true">
+            <div class="treatments-track-dupe" aria-hidden="true">
 
-        <a class="treatment-card" href="ServicesPage.html#facials" tabindex="-1">
-          <picture><source srcset="images/HydratingFacialImg.webp" type="image/webp"><img class="card-bg" src="images/HydratingFacialImg.png" alt="" width="640" height="287" loading="lazy" decoding="async"></picture>
-          <div class="card-body">
-            <h3>Hydrating Facial</h3>
-            <div class="card-meta">60 MIN &middot; FROM &#8369;1,200</div>
-            <p>A deep-cleansing, moisture-rich facial that restores radiance and softness. Suitable for all skin types.</p>
+              <a class="treatment-card" href="ServicesPage.html#facials" tabindex="-1">
+                <picture>
+                  <source srcset="images/HydratingFacialImg.webp" type="image/webp"><img class="card-bg"
+                    src="images/HydratingFacialImg.png" alt="" width="640" height="287" loading="lazy" decoding="async">
+                </picture>
+                <div class="card-body">
+                  <h3>Hydrating Facial</h3>
+                  <div class="card-meta">60 MIN &middot; FROM &#8369;1,200</div>
+                  <p>A deep-cleansing, moisture-rich facial that restores radiance and softness. Suitable for all skin
+                    types.</p>
+                </div>
+              </a>
+
+              <a class="treatment-card" href="ServicesPage.html#facials" tabindex="-1">
+                <picture>
+                  <source srcset="images/SkinWhiteningImg.webp" type="image/webp"><img class="card-bg"
+                    src="images/SkinWhiteningImg.png" alt="" width="640" height="280" loading="lazy" decoding="async">
+                </picture>
+                <div class="card-body">
+                  <h3>Skin Whitening</h3>
+                  <div class="card-meta">90 MIN &middot; FROM &#8369;1,800</div>
+                  <p>Science-backed brightening that targets dark spots and uneven tone for a luminous, radiant finish.
+                  </p>
+                </div>
+              </a>
+
+              <a class="treatment-card" href="ServicesPage.html#facials" tabindex="-1">
+                <picture>
+                  <source srcset="images/AntiAgingTherapyImg.webp" type="image/webp"><img class="card-bg"
+                    src="images/AntiAgingTherapyImg.png" alt="" width="640" height="287" loading="lazy"
+                    decoding="async">
+                </picture>
+                <div class="card-body">
+                  <h3>Anti-Aging Therapy</h3>
+                  <div class="card-meta">75 MIN &middot; FROM &#8369;2,500</div>
+                  <p>Advanced collagen-stimulating treatments that reduce fine lines and restore your skin's natural
+                    youthfulness.</p>
+                </div>
+              </a>
+
+              <a class="treatment-card" href="ServicesPage.html#eyelash-extension" tabindex="-1">
+                <picture>
+                  <source srcset="images/EyelashExtension.webp" type="image/webp"><img class="card-bg"
+                    src="images/EyelashExtension.png" alt="" width="640" height="426" loading="lazy" decoding="async">
+                </picture>
+                <div class="card-body">
+                  <h3>Eyelash Extension</h3>
+                  <div class="card-meta">90 MIN &middot; FROM &#8369;350</div>
+                  <p>Full lash sets from classic to mega volume for a fuller, more dramatic lash look. Infill and
+                    removal services are also available for maintenance.</p>
+                </div>
+              </a>
+
+              <a class="treatment-card" href="ServicesPage.html#paraffin-therapy" tabindex="-1">
+                <picture>
+                  <source srcset="images/ParaffinTherapy.webp" type="image/webp"><img class="card-bg"
+                    src="images/ParaffinTherapy.png" alt="" width="640" height="426" loading="lazy" decoding="async">
+                </picture>
+                <div class="card-body">
+                  <h3>Paraffin Therapy</h3>
+                  <div class="card-meta">30 MIN &middot; FROM &#8369;299</div>
+                  <p>A warm paraffin wax treatment for hands and feet that softens skin and soothes joints. Great as a
+                    quick add-on or standalone relaxation service.</p>
+                </div>
+              </a>
+
+              <a class="treatment-card" href="ServicesPage.html#hand-treatment" tabindex="-1">
+                <picture>
+                  <source srcset="images/Manicure.webp" type="image/webp"><img class="card-bg" src="images/Manicure.png"
+                    alt="" width="640" height="426" loading="lazy" decoding="async">
+                </picture>
+                <div class="card-body">
+                  <h3>Hand Treatment</h3>
+                  <div class="card-meta">45 MIN &middot; FROM &#8369;199</div>
+                  <p>Classic and soft gel manicure services to keep nails clean and well-groomed. Ideal for regular
+                    upkeep or special occasions.</p>
+                </div>
+              </a>
+
+              <a class="treatment-card" href="ServicesPage.html#chemical-peeling" tabindex="-1">
+                <picture>
+                  <source srcset="images/ChemicalPeel.webp" type="image/webp"><img class="card-bg"
+                    src="images/ChemicalPeel.png" alt="" width="640" height="426" loading="lazy" decoding="async">
+                </picture>
+                <div class="card-body">
+                  <h3>Chemical Peeling (TCA)</h3>
+                  <div class="card-meta">60 MIN &middot; FROM &#8369;2,000</div>
+                  <p>TCA peels that target uneven skin tone and texture across the face and body. Areas range from small
+                    zones like elbows to full-body treatments.</p>
+                </div>
+              </a>
+
+              <a class="treatment-card" href="ServicesPage.html#threading-services" tabindex="-1">
+                <picture>
+                  <source srcset="images/ThreadingService.webp" type="image/webp"><img class="card-bg"
+                    src="images/ThreadingService.png" alt="" width="612" height="408" loading="lazy" decoding="async">
+                </picture>
+                <div class="card-body">
+                  <h3>Threading Services</h3>
+                  <div class="card-meta">15 MIN &middot; FROM &#8369;200</div>
+                  <p>Precise hair removal for eyebrows, upper lip, and lower lip using traditional threading. A quick,
+                    low-irritation option for facial hair grooming.</p>
+                </div>
+              </a>
+
+              <a class="treatment-card" href="ServicesPage.html#foot-treatment" tabindex="-1">
+                <picture>
+                  <source srcset="images/FootTreatment.webp" type="image/webp"><img class="card-bg"
+                    src="images/FootTreatment.png" alt="" width="640" height="429" loading="lazy" decoding="async">
+                </picture>
+                <div class="card-body">
+                  <h3>Foot Treatment</h3>
+                  <div class="card-meta">45 MIN &middot; FROM &#8369;299</div>
+                  <p>Foot spa and pedicure services designed to relax and refresh tired feet. Add-on foot spa options
+                    are available for a more indulgent experience.</p>
+                </div>
+              </a>
+
+              <a class="treatment-card" href="ServicesPage.html#soft-gel-nail-extensions" tabindex="-1">
+                <picture>
+                  <source srcset="images/NailExtension.webp" type="image/webp"><img class="card-bg"
+                    src="images/NailExtension.png" alt="" width="640" height="480" loading="lazy" decoding="async">
+                </picture>
+                <div class="card-body">
+                  <h3>Soft Gel Nail Extensions</h3>
+                  <div class="card-meta">75 MIN &middot; FROM &#8369;1,300</div>
+                  <p>Durable soft gel extensions available in short, medium, and long lengths. Nail art, rhinestones,
+                    and other add-ons can enhance the final look.</p>
+                </div>
+              </a>
+
+              <a class="treatment-card" href="ServicesPage.html#hair-removal" tabindex="-1">
+                <picture>
+                  <source srcset="images/HairRemoval.webp" type="image/webp"><img class="card-bg"
+                    src="images/HairRemoval.png" alt="" width="640" height="480" loading="lazy" decoding="async">
+                </picture>
+                <div class="card-body">
+                  <h3>Hair Removal (IPL-HR)</h3>
+                  <div class="card-meta">30 MIN &middot; FROM &#8369;2,000</div>
+                  <p>IPL-based hair removal for targeted areas like underarms and bikini line up to full-body sessions.
+                    A long-term solution for smoother, hair-free skin.</p>
+                </div>
+              </a>
+
+              <a class="treatment-card" href="ServicesPage.html#drip-shot" tabindex="-1">
+                <picture>
+                  <source srcset="images/DripShot.webp" type="image/webp"><img class="card-bg" src="images/DripShot.png"
+                    alt="" width="640" height="426" loading="lazy" decoding="async">
+                </picture>
+                <div class="card-body">
+                  <h3>Drip / Shot (ED/GS)</h3>
+                  <div class="card-meta">45 MIN &middot; FROM &#8369;1,000</div>
+                  <p>IV drips and shots formulated for anti-aging, immune support, slimming, and whitening. Delivers
+                    nutrients directly for faster, noticeable results.</p>
+                </div>
+              </a>
+
+              <a class="treatment-card" href="ServicesPage.html#facials" tabindex="-1">
+                <picture>
+                  <source srcset="images/HydratingFacialImg.webp" type="image/webp"><img class="card-bg"
+                    src="images/HydratingFacialImg.png" alt="" width="640" height="287" loading="lazy" decoding="async">
+                </picture>
+                <div class="card-body">
+                  <h3>Facials</h3>
+                  <div class="card-meta">60 MIN &middot; FROM &#8369;1,000</div>
+                  <p>A range of facials from basic cleansing to advanced treatments like diamond peel and acne programs.
+                    Customizable based on skin concerns and goals.</p>
+                </div>
+              </a>
+
+              <a class="treatment-card" href="ServicesPage.html#body-tightening" tabindex="-1">
+                <picture>
+                  <source srcset="images/BodyTightening.webp" type="image/webp"><img class="card-bg"
+                    src="images/BodyTightening.png" alt="" width="640" height="438" loading="lazy" decoding="async">
+                </picture>
+                <div class="card-body">
+                  <h3>Tightening (BT) / Body Fat Reduction</h3>
+                  <div class="card-meta">60 MIN &middot; FROM &#8369;1,300</div>
+                  <p>Body tightening and fat reduction treatments for the tummy, arms, and thighs. Can be combined with
+                    BFR for enhanced contouring results.</p>
+                </div>
+              </a>
+
+              <a class="treatment-card" href="ServicesPage.html#electrocautery" tabindex="-1">
+                <picture>
+                  <source srcset="images/Electrocautery.webp" type="image/webp"><img class="card-bg"
+                    src="images/Electrocautery.png" alt="" width="640" height="426" loading="lazy" decoding="async">
+                </picture>
+                <div class="card-body">
+                  <h3>Electrocautery (ECT)</h3>
+                  <div class="card-meta">30 MIN &middot; FROM &#8369;3,000</div>
+                  <p>A precise method for removing warts and milia using controlled heat. A quick, in-clinic procedure
+                    with minimal downtime.</p>
+                </div>
+              </a>
+
+              <a class="treatment-card" href="ServicesPage.html#mesotherapy" tabindex="-1">
+                <picture>
+                  <source srcset="images/Mesotherapy.webp" type="image/webp"><img class="card-bg"
+                    src="images/Mesotherapy.png" alt="" width="640" height="359" loading="lazy" decoding="async">
+                </picture>
+                <div class="card-body">
+                  <h3>Mesotherapy (MT)</h3>
+                  <div class="card-meta">60 MIN &middot; FROM &#8369;3,000</div>
+                  <p>Injectable treatments targeting the face, arms, tummy, thighs, or full body for tightening and
+                    rejuvenation. Includes BFR-enhanced whole-body options for deeper results.</p>
+                </div>
+              </a>
+
+
+            </div>
+
           </div>
-        </a>
+        </div>
 
-        <a class="treatment-card" href="ServicesPage.html#facials" tabindex="-1">
-          <picture><source srcset="images/SkinWhiteningImg.webp" type="image/webp"><img class="card-bg" src="images/SkinWhiteningImg.png" alt="" width="640" height="280" loading="lazy" decoding="async"></picture>
-          <div class="card-body">
-            <h3>Skin Whitening</h3>
-            <div class="card-meta">90 MIN &middot; FROM &#8369;1,800</div>
-            <p>Science-backed brightening that targets dark spots and uneven tone for a luminous, radiant finish.</p>
-          </div>
-        </a>
-
-        <a class="treatment-card" href="ServicesPage.html#facials" tabindex="-1">
-          <picture><source srcset="images/AntiAgingTherapyImg.webp" type="image/webp"><img class="card-bg" src="images/AntiAgingTherapyImg.png" alt="" width="640" height="287" loading="lazy" decoding="async"></picture>
-          <div class="card-body">
-            <h3>Anti-Aging Therapy</h3>
-            <div class="card-meta">75 MIN &middot; FROM &#8369;2,500</div>
-            <p>Advanced collagen-stimulating treatments that reduce fine lines and restore your skin's natural youthfulness.</p>
-          </div>
-        </a>
-
-        <a class="treatment-card" href="ServicesPage.html#eyelash-extension" tabindex="-1">
-          <picture><source srcset="images/EyelashExtension.webp" type="image/webp"><img class="card-bg" src="images/EyelashExtension.png" alt="" width="640" height="426" loading="lazy" decoding="async"></picture>
-          <div class="card-body">
-            <h3>Eyelash Extension</h3>
-            <div class="card-meta">90 MIN &middot; FROM &#8369;350</div>
-            <p>Full lash sets from classic to mega volume for a fuller, more dramatic lash look. Infill and removal services are also available for maintenance.</p>
-          </div>
-        </a>
-
-        <a class="treatment-card" href="ServicesPage.html#paraffin-therapy" tabindex="-1">
-          <picture><source srcset="images/ParaffinTherapy.webp" type="image/webp"><img class="card-bg" src="images/ParaffinTherapy.png" alt="" width="640" height="426" loading="lazy" decoding="async"></picture>
-          <div class="card-body">
-            <h3>Paraffin Therapy</h3>
-            <div class="card-meta">30 MIN &middot; FROM &#8369;299</div>
-            <p>A warm paraffin wax treatment for hands and feet that softens skin and soothes joints. Great as a quick add-on or standalone relaxation service.</p>
-          </div>
-        </a>
-
-        <a class="treatment-card" href="ServicesPage.html#hand-treatment" tabindex="-1">
-          <picture><source srcset="images/Manicure.webp" type="image/webp"><img class="card-bg" src="images/Manicure.png" alt="" width="640" height="426" loading="lazy" decoding="async"></picture>
-          <div class="card-body">
-            <h3>Hand Treatment</h3>
-            <div class="card-meta">45 MIN &middot; FROM &#8369;199</div>
-            <p>Classic and soft gel manicure services to keep nails clean and well-groomed. Ideal for regular upkeep or special occasions.</p>
-          </div>
-        </a>
-
-        <a class="treatment-card" href="ServicesPage.html#chemical-peeling" tabindex="-1">
-          <picture><source srcset="images/ChemicalPeel.webp" type="image/webp"><img class="card-bg" src="images/ChemicalPeel.png" alt="" width="640" height="426" loading="lazy" decoding="async"></picture>
-          <div class="card-body">
-            <h3>Chemical Peeling (TCA)</h3>
-            <div class="card-meta">60 MIN &middot; FROM &#8369;2,000</div>
-            <p>TCA peels that target uneven skin tone and texture across the face and body. Areas range from small zones like elbows to full-body treatments.</p>
-          </div>
-        </a>
-
-        <a class="treatment-card" href="ServicesPage.html#threading-services" tabindex="-1">
-          <picture><source srcset="images/ThreadingService.webp" type="image/webp"><img class="card-bg" src="images/ThreadingService.png" alt="" width="612" height="408" loading="lazy" decoding="async"></picture>
-          <div class="card-body">
-            <h3>Threading Services</h3>
-            <div class="card-meta">15 MIN &middot; FROM &#8369;200</div>
-            <p>Precise hair removal for eyebrows, upper lip, and lower lip using traditional threading. A quick, low-irritation option for facial hair grooming.</p>
-          </div>
-        </a>
-
-        <a class="treatment-card" href="ServicesPage.html#foot-treatment" tabindex="-1">
-          <picture><source srcset="images/FootTreatment.webp" type="image/webp"><img class="card-bg" src="images/FootTreatment.png" alt="" width="640" height="429" loading="lazy" decoding="async"></picture>
-          <div class="card-body">
-            <h3>Foot Treatment</h3>
-            <div class="card-meta">45 MIN &middot; FROM &#8369;299</div>
-            <p>Foot spa and pedicure services designed to relax and refresh tired feet. Add-on foot spa options are available for a more indulgent experience.</p>
-          </div>
-        </a>
-
-        <a class="treatment-card" href="ServicesPage.html#soft-gel-nail-extensions" tabindex="-1">
-          <picture><source srcset="images/NailExtension.webp" type="image/webp"><img class="card-bg" src="images/NailExtension.png" alt="" width="640" height="480" loading="lazy" decoding="async"></picture>
-          <div class="card-body">
-            <h3>Soft Gel Nail Extensions</h3>
-            <div class="card-meta">75 MIN &middot; FROM &#8369;1,300</div>
-            <p>Durable soft gel extensions available in short, medium, and long lengths. Nail art, rhinestones, and other add-ons can enhance the final look.</p>
-          </div>
-        </a>
-
-        <a class="treatment-card" href="ServicesPage.html#hair-removal" tabindex="-1">
-          <picture><source srcset="images/HairRemoval.webp" type="image/webp"><img class="card-bg" src="images/HairRemoval.png" alt="" width="640" height="480" loading="lazy" decoding="async"></picture>
-          <div class="card-body">
-            <h3>Hair Removal (IPL-HR)</h3>
-            <div class="card-meta">30 MIN &middot; FROM &#8369;2,000</div>
-            <p>IPL-based hair removal for targeted areas like underarms and bikini line up to full-body sessions. A long-term solution for smoother, hair-free skin.</p>
-          </div>
-        </a>
-
-        <a class="treatment-card" href="ServicesPage.html#drip-shot" tabindex="-1">
-          <picture><source srcset="images/DripShot.webp" type="image/webp"><img class="card-bg" src="images/DripShot.png" alt="" width="640" height="426" loading="lazy" decoding="async"></picture>
-          <div class="card-body">
-            <h3>Drip / Shot (ED/GS)</h3>
-            <div class="card-meta">45 MIN &middot; FROM &#8369;1,000</div>
-            <p>IV drips and shots formulated for anti-aging, immune support, slimming, and whitening. Delivers nutrients directly for faster, noticeable results.</p>
-          </div>
-        </a>
-
-        <a class="treatment-card" href="ServicesPage.html#facials" tabindex="-1">
-          <picture><source srcset="images/HydratingFacialImg.webp" type="image/webp"><img class="card-bg" src="images/HydratingFacialImg.png" alt="" width="640" height="287" loading="lazy" decoding="async"></picture>
-          <div class="card-body">
-            <h3>Facials</h3>
-            <div class="card-meta">60 MIN &middot; FROM &#8369;1,000</div>
-            <p>A range of facials from basic cleansing to advanced treatments like diamond peel and acne programs. Customizable based on skin concerns and goals.</p>
-          </div>
-        </a>
-
-        <a class="treatment-card" href="ServicesPage.html#body-tightening" tabindex="-1">
-          <picture><source srcset="images/BodyTightening.webp" type="image/webp"><img class="card-bg" src="images/BodyTightening.png" alt="" width="640" height="438" loading="lazy" decoding="async"></picture>
-          <div class="card-body">
-            <h3>Tightening (BT) / Body Fat Reduction</h3>
-            <div class="card-meta">60 MIN &middot; FROM &#8369;1,300</div>
-            <p>Body tightening and fat reduction treatments for the tummy, arms, and thighs. Can be combined with BFR for enhanced contouring results.</p>
-          </div>
-        </a>
-
-        <a class="treatment-card" href="ServicesPage.html#electrocautery" tabindex="-1">
-          <picture><source srcset="images/Electrocautery.webp" type="image/webp"><img class="card-bg" src="images/Electrocautery.png" alt="" width="640" height="426" loading="lazy" decoding="async"></picture>
-          <div class="card-body">
-            <h3>Electrocautery (ECT)</h3>
-            <div class="card-meta">30 MIN &middot; FROM &#8369;3,000</div>
-            <p>A precise method for removing warts and milia using controlled heat. A quick, in-clinic procedure with minimal downtime.</p>
-          </div>
-        </a>
-
-        <a class="treatment-card" href="ServicesPage.html#mesotherapy" tabindex="-1">
-          <picture><source srcset="images/Mesotherapy.webp" type="image/webp"><img class="card-bg" src="images/Mesotherapy.png" alt="" width="640" height="359" loading="lazy" decoding="async"></picture>
-          <div class="card-body">
-            <h3>Mesotherapy (MT)</h3>
-            <div class="card-meta">60 MIN &middot; FROM &#8369;3,000</div>
-            <p>Injectable treatments targeting the face, arms, tummy, thighs, or full body for tightening and rejuvenation. Includes BFR-enhanced whole-body options for deeper results.</p>
-          </div>
-        </a>
-
+        <button type="button" class="carousel-nav carousel-nav--next" id="carouselNext"
+          aria-label="Fast forward treatments">
+          <img src="icons/arrow-right.svg" alt="" class="carousel-nav-icon">
+        </button>
 
       </div>
+    </section>
+  </section>
 
+
+
+  <div class="homepage-closing">
+    <div class="homepage-closing__background" aria-hidden="true">
+      <img src="images/CenterOutsideImg.webp" alt="" loading="lazy" decoding="async">
     </div>
-    </div>
-
-    <button type="button" class="carousel-nav carousel-nav--next" id="carouselNext" aria-label="Fast forward treatments">
-      <img src="icons/arrow-right.svg" alt="" class="carousel-nav-icon">
-    </button>
-
-  </div>
-</section>
-</section>
-
-
-
-<div class="homepage-closing">
-  <div class="homepage-closing__background" aria-hidden="true">
-    <img src="images/CenterOutsideImg.webp" alt="" loading="lazy" decoding="async">
-  </div>
-  <div class="homepage-scroll-story" id="homepageScrollStory">
-    <section class="testimonials-section" id="testimonials" aria-labelledby="testimonialsHeading">
-      <div class="testimonials-section__surface" aria-hidden="true"></div>
-      <div class="testimonials-section__inner">
-        <div class="testimonials-viewport" id="testimonialsViewport">
-          <div class="testimonials-track" id="testimonialsTrack">
-            <header class="testimonials-section__header">
-              <h2 class="testimonials-section__heading" id="testimonialsHeading">Real Results, <span>Real Confidence</span></h2>
-              <p class="testimonials-section__subheading">See what the community is saying about Skin Goddess</p>
-            </header>
-            <div class="testimonials-list" id="testimonialsList" aria-live="polite"></div>
-            <div class="testimonials-brand" aria-hidden="true">
-              <img src="images/Logo.png" alt="" width="512" height="512" loading="lazy" decoding="async">
+    <div class="homepage-scroll-story" id="homepageScrollStory">
+      <section class="testimonials-section" id="testimonials" aria-labelledby="testimonialsHeading">
+        <div class="testimonials-section__surface" aria-hidden="true"></div>
+        <div class="testimonials-section__inner">
+          <div class="testimonials-viewport" id="testimonialsViewport">
+            <div class="testimonials-track" id="testimonialsTrack">
+              <header class="testimonials-section__header">
+                <h2 class="testimonials-section__heading" id="testimonialsHeading">Real Results, <span>Real
+                    Confidence</span></h2>
+                <p class="testimonials-section__subheading">See what the community is saying about Skin Goddess</p>
+              </header>
+              <div class="testimonials-list" id="testimonialsList" aria-live="polite"></div>
+              <div class="testimonials-brand" aria-hidden="true">
+                <img src="images/Logo.png" alt="" width="512" height="512" loading="lazy" decoding="async">
+              </div>
             </div>
           </div>
         </div>
-      </div>
     </div>
     <section class="homepage-signup" aria-labelledby="signupHeading">
       <div class="homepage-signup__logo">
-        <img src="images/Logo.png" alt="Skin Goddess Aesthetic Center" width="512" height="512" loading="lazy" decoding="async">
+        <img src="images/Logo.png" alt="Skin Goddess Aesthetic Center" width="512" height="512" loading="lazy"
+          decoding="async">
       </div>
       <div class="homepage-signup__content">
         <p class="homepage-signup__eyebrow"><span></span> STAY IN THE GLOW <span></span></p>
         <h2 id="signupHeading">Join Our Newsletter</h2>
-        <p class="homepage-signup__lede">Skincare tips, exclusive offers, and clinic updates delivered straight to your inbox. No spam, ever.</p>
+        <p class="homepage-signup__lede">Skincare tips, exclusive offers, and clinic updates delivered straight to your
+          inbox. No spam, ever.</p>
         <form class="homepage-signup__form">
           <label class="faq-chat-sr-only" for="newsletterEmail">Email address</label>
-          <input id="newsletterEmail" name="email" type="email" placeholder="your@email.com" autocomplete="email" required>
+          <input id="newsletterEmail" name="email" type="email" placeholder="your@email.com" autocomplete="email"
+            required>
           <button type="submit">SUBSCRIBE</button>
         </form>
-        <p class="homepage-signup__permission">By subscribing, you agree to receive occasional emails from Skin Goddess Aesthetic Center. Unsubscribe anytime.</p>
+        <p class="homepage-signup__permission">By subscribing, you agree to receive occasional emails from Skin Goddess
+          Aesthetic Center. Unsubscribe anytime.</p>
       </div>
     </section>
 
-<section class="index-footer">
-    <div class="index-footer-grid">
-      <div class="footer-col-1">
-        <div class="footer-sg-label">
-          <img src="images/logo_horizontal-removebg.png" alt="Skin Goddess Aesthetic Center" class="footer-logo">
+    <section class="index-footer">
+      <div class="index-footer-grid">
+        <div class="footer-col-1">
+          <div class="footer-sg-label">
+            <img src="images/logo_horizontal-removebg.png" alt="Skin Goddess Aesthetic Center" class="footer-logo">
+          </div>
+          <p class="footer-lede">Skin Care Clinic that performs non-surgical treatments based on the needs of an
+            individual.</p>
+
+
         </div>
-        <p class="footer-lede">Skin Care Clinic that performs non-surgical treatments based on the needs of an individual.</p>
 
-        
-      </div>
-    
-      <div class="footer-col-3">
-        <p class="footer-col-title">PORTAL</p>
-        <div class="footer-col-3-body">
-          <a href="#" class="footer-portals">Book Online</a>
-          <a href="#" class="footer-portals">View Services</a>
-        </div>  
-      </div>
+        <div class="footer-col-3">
+          <p class="footer-col-title">PORTAL</p>
+          <div class="footer-col-3-body">
+            <a href="#" class="footer-portals">Book Online</a>
+            <a href="#" class="footer-portals">View Services</a>
+          </div>
+        </div>
 
-      <div class="footer-col-4">
-        <p class="footer-col-title">CONTACT</p>
-        <p class="footer-col-body">2nd floor KW Plaza Building, 
-                                  Pasong Buaya 2 Imus, Cavite, 
-                                  Philippines 4103
-        </p>
-        <p class="footer-col-body">+63 945 611 9436</p>
-        <p class="footer-col-body">info@skingoddess.ph</p>
-        <p class="footer-col-body">Mon - Sat</p>
-        <p class="footer-col-body-time">9am - 6pm  </p>
-        
-      </div>
+        <div class="footer-col-4">
+          <p class="footer-col-title">CONTACT</p>
+          <p class="footer-col-body">2nd floor KW Plaza Building,
+            Pasong Buaya 2 Imus, Cavite,
+            Philippines 4103
+          </p>
+          <p class="footer-col-body">+63 945 611 9436</p>
+          <p class="footer-col-body">info@skingoddess.ph</p>
+          <p class="footer-col-body">Mon - Sat</p>
+          <p class="footer-col-body-time">9am - 6pm </p>
 
-    
-    </div>
-    <div>
-    <p class="footer-copyright">@2025 Skin Goddess Aesthetic Center. All rights reserved</p>
-    <p class="footer-col-body-location">Imus - Philippines</p>
+        </div>
+
+
+      </div>
+      <div>
+        <p class="footer-copyright">@2025 Skin Goddess Aesthetic Center. All rights reserved</p>
+        <p class="footer-col-body-location">Imus - Philippines</p>
+      </div>
+    </section>
   </div>
-</section>
-</div>
 
-<div class="homepage-scroll-progress" id="homepageScrollProgress" role="progressbar" aria-label="Homepage scroll progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-  <span class="homepage-scroll-progress__fill" id="homepageScrollProgressFill"></span>
-</div>
-<div data-faq-chatbot-mount></div>
+  <div class="homepage-scroll-progress" id="homepageScrollProgress" role="progressbar"
+    aria-label="Homepage scroll progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+    <span class="homepage-scroll-progress__fill" id="homepageScrollProgressFill"></span>
+  </div>
+  <div data-faq-chatbot-mount></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.15.0/gsap.min.js" integrity="sha512-oJ8QbaQThQoJZ7oEv+29jfPM6CcP+zUxh3PKJs1vyOhx0UraUrE7PQgeItu3dOuCJyrzWpoYMsVjkkPEBzbUqw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.15.0/ScrollTrigger.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script src="homepage-hero.js?v=service-panels-20261011" defer></script>
-<script src="header.js"></script>
-<script src="homepage-treatments-carousel.js"></script>
-<script src="homepage-testimonials.js"></script>
-<script src="public-content.js?v=homepage-sections-20261011"></script>
-<script src="faq-chatbot.js"></script>
-<script src="homepage-scroll-indicator.js?v=bottom-progress-20261011"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.15.0/gsap.min.js"
+    integrity="sha512-oJ8QbaQThQoJZ7oEv+29jfPM6CcP+zUxh3PKJs1vyOhx0UraUrE7PQgeItu3dOuCJyrzWpoYMsVjkkPEBzbUqw=="
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.15.0/ScrollTrigger.min.js" crossorigin="anonymous"
+    referrerpolicy="no-referrer"></script>
+  <script src="homepage-hero.js?v=homepage-editorial-20261013" defer></script>
+  <script src="header.js"></script>
+  <script src="homepage-treatments-carousel.js"></script>
+  <script src="homepage-testimonials.js"></script>
+  <script src="public-content.js?v=homepage-sections-20261011"></script>
+  <script src="faq-chatbot.js"></script>
+  <script src="homepage-scroll-indicator.js?v=bottom-progress-20261011"></script>
 </body>
+
 </html>

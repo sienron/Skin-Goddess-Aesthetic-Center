@@ -7,14 +7,22 @@
 
   const mm = gsap.matchMedia();
   mm.add("(prefers-reduced-motion: no-preference)", () => {
-    gsap.from(hero.querySelectorAll(".hero-copy > *"), {
-      autoAlpha: 0,
-      y: 28,
-      duration: 0.9,
-      ease: "power3.out",
-      stagger: 0.18,
-      delay: 0.15,
-    });
+    const image = hero.querySelector(".hero-photo-img");
+    const intro = gsap.timeline();
+    intro
+      .from(hero.querySelectorAll(".hero-copy > *"), {
+        autoAlpha: 0,
+        y: 24,
+        duration: 0.85,
+        ease: "power3.out",
+        stagger: 0.14,
+        delay: 0.1,
+      })
+      .from(image, {
+        autoAlpha: 0,
+        duration: 1.1,
+        ease: "power1.out",
+      }, 0);
   });
 
   mm.add("(min-width: 701px) and (prefers-reduced-motion: no-preference)", () => {
@@ -131,6 +139,8 @@
 
   if (ScrollTrigger) {
     const refresh = () => ScrollTrigger.refresh();
+    const image = hero.querySelector(".hero-photo-img");
+    if (image && !image.complete) image.addEventListener("load", refresh, { once: true });
     if (document.readyState === "complete") refresh();
     else window.addEventListener("load", refresh, { once: true });
     document.fonts?.ready.then(refresh);

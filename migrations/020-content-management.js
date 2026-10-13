@@ -3,7 +3,7 @@ const db = require('../db');
 const homepageContent = [
   {
     key: 'hero', label: 'Hero Section', title: 'Healthy Skin.\nConfident You.',
-    body: 'Trusted skincare and aesthetic treatments, tailored to you at Skin-Goddess Aesthetic Center.', payload: {},
+    body: 'Personalized skincare and aesthetic treatments designed around you.', payload: {},
   },
   {
     key: 'services_strip', label: 'Services Strip', title: 'Services at a glance',
