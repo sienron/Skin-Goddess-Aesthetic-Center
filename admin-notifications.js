@@ -1,4 +1,81 @@
 (function () {
+    const sidebar = document.querySelector(".um-sidebar, .inv-sidebar");
+    let headerActions = document.querySelector(".um-header__actions, .header-actions");
+    const header = document.querySelector(".um-header");
+
+    if (!headerActions && header) {
+        headerActions = document.createElement("div");
+        headerActions.className = "staff-theme-header-actions";
+        header.append(headerActions);
+    }
+
+    if (sidebar && headerActions) {
+        const notificationWrap = headerActions.querySelector(".admin-notification-wrap");
+        const account = sidebar.querySelector(".um-sidebar__account, .inv-sidebar__account");
+        const storageKey = "skin-goddess-staff-theme";
+        const icons = `
+            <svg class="staff-theme-toggle__icon staff-theme-toggle__icon--moon" viewBox="0 0 20 20" aria-hidden="true">
+                <path d="M16.8 12.1A7.2 7.2 0 0 1 7.9 3.2 7.3 7.3 0 1 0 16.8 12.1Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <svg class="staff-theme-toggle__icon staff-theme-toggle__icon--sun" viewBox="0 0 20 20" aria-hidden="true">
+                <circle cx="10" cy="10" r="3.3" fill="none" stroke="currentColor" stroke-width="1.6"/>
+                <path d="M10 1.8v2M10 16.2v2M18.2 10h-2M3.8 10h-2m14-5.8-1.4 1.4M5.6 14.4l-1.4 1.4m11.6 0-1.4-1.4M5.6 5.6 4.2 4.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+            </svg>
+            <span class="staff-theme-toggle__label"></span>`;
+
+        function createToggle(location) {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = `staff-theme-toggle staff-theme-toggle--${location}`;
+            button.innerHTML = icons;
+            button.addEventListener("click", () => {
+                setTheme(document.body.classList.contains("staff-theme-dark") ? "light" : "dark", true);
+            });
+            return button;
+        }
+
+        const headerToggle = createToggle("header");
+        const sidebarToggle = createToggle("sidebar");
+        if (notificationWrap) {
+            notificationWrap.insertAdjacentElement("afterend", headerToggle);
+        } else {
+            headerActions.prepend(headerToggle);
+        }
+        sidebar.insertBefore(sidebarToggle, account || null);
+
+        function setTheme(theme, persist) {
+            const isDark = theme === "dark";
+            document.body.classList.toggle("staff-theme-dark", isDark);
+            [headerToggle, sidebarToggle].forEach((button) => {
+                const label = isDark ? "Switch to light mode" : "Switch to dark mode";
+                button.setAttribute("aria-label", label);
+                button.title = label;
+                button.setAttribute("aria-pressed", String(isDark));
+                button.querySelector(".staff-theme-toggle__label").textContent = isDark ? "Light mode" : "Dark mode";
+            });
+            if (!persist) return;
+            try {
+                window.localStorage.setItem(storageKey, theme);
+            } catch (error) {
+                console.warn("Unable to save the staff theme preference.", error);
+            }
+        }
+
+        let savedTheme = "light";
+        try {
+            savedTheme = window.localStorage.getItem(storageKey) === "dark" ? "dark" : "light";
+        } catch (error) {
+            console.warn("Unable to read the saved staff theme preference.", error);
+        }
+        setTheme(savedTheme, false);
+
+        window.addEventListener("storage", (event) => {
+            if (event.key === storageKey) {
+                setTheme(event.newValue === "dark" ? "dark" : "light", false);
+            }
+        });
+    }
+
     const button = document.getElementById("adminNotificationBtn");
     const dropdown = document.getElementById("adminNotificationDropdown");
     const wrap = button?.closest(".admin-notification-wrap");

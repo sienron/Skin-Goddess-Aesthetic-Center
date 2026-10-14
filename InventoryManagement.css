@@ -2181,3 +2181,250 @@ button{
         grid-template-columns: minmax(0, 1fr);
     }
 }
+
+/* ===== INVENTORY DARK THEME ===== */
+body.staff-theme-dark.InventoryManagement {
+    --cream: #222421;
+    --cream-deep: #302f2b;
+    --gold: #d8bb73;
+    --gold-dark: #b39252;
+    --espresso: #d8bb73;
+    --espresso-dark: #c9a84c;
+    --ink: #eee8dd;
+    --ink-soft: #aaa398;
+    --line: #3d3e39;
+    --white: #222421;
+    background: #181a19;
+    color: #e9e4da;
+    color-scheme: dark;
+}
+
+body.staff-theme-dark.InventoryManagement .inventory-header,
+body.staff-theme-dark.InventoryManagement .inventory-table-container,
+body.staff-theme-dark.InventoryManagement .transaction-section,
+body.staff-theme-dark.InventoryManagement .edit-modal,
+body.staff-theme-dark.InventoryManagement .add-modal,
+body.staff-theme-dark.InventoryManagement .inventory-card,
+body.staff-theme-dark.InventoryManagement .stock-alert-card,
+body.staff-theme-dark.InventoryManagement .inventory-summary-card {
+    border-color: #3d3e39;
+    background: #222421;
+    color: #e9e4da;
+}
+
+body.staff-theme-dark.InventoryManagement .header-title h1,
+body.staff-theme-dark.InventoryManagement .table-heading h2,
+body.staff-theme-dark.InventoryManagement .transaction-header h2,
+body.staff-theme-dark.InventoryManagement .edit-modal-header h3,
+body.staff-theme-dark.InventoryManagement #editProductNameDisplay,
+body.staff-theme-dark.InventoryManagement .product-name,
+body.staff-theme-dark.InventoryManagement .stock-number {
+    color: #eee8dd;
+}
+
+body.staff-theme-dark.InventoryManagement .header-title p,
+body.staff-theme-dark.InventoryManagement .table-heading p,
+body.staff-theme-dark.InventoryManagement .transaction-header p,
+body.staff-theme-dark.InventoryManagement .edit-modal-header p,
+body.staff-theme-dark.InventoryManagement .transaction-table small {
+    color: #aaa398;
+}
+
+body.staff-theme-dark.InventoryManagement .inventory-table th,
+body.staff-theme-dark.InventoryManagement .transaction-table th {
+    border-color: #3d3e39;
+    background: #2b2c29;
+    color: #bdb5a8;
+}
+
+body.staff-theme-dark.InventoryManagement .inventory-table td,
+body.staff-theme-dark.InventoryManagement .transaction-table td {
+    border-color: #383934;
+    color: #d5cec2;
+}
+
+body.staff-theme-dark.InventoryManagement .inventory-table tbody tr:hover,
+body.staff-theme-dark.InventoryManagement .transaction-table tbody tr:hover {
+    background: #2b2c29;
+}
+
+body.staff-theme-dark.InventoryManagement .table-heading,
+body.staff-theme-dark.InventoryManagement .transaction-header,
+body.staff-theme-dark.InventoryManagement .edit-modal-header,
+body.staff-theme-dark.InventoryManagement .add-modal-header {
+    border-color: #3d3e39;
+}
+
+body.staff-theme-dark.InventoryManagement .transaction-filters select,
+body.staff-theme-dark.InventoryManagement .table-filters input,
+body.staff-theme-dark.InventoryManagement .table-filters select,
+body.staff-theme-dark.InventoryManagement .edit-modal input,
+body.staff-theme-dark.InventoryManagement .edit-modal select,
+body.staff-theme-dark.InventoryManagement .edit-modal textarea,
+body.staff-theme-dark.InventoryManagement .add-modal input,
+body.staff-theme-dark.InventoryManagement .add-modal select,
+body.staff-theme-dark.InventoryManagement .add-modal textarea {
+    border-color: #4a4942;
+    background: #292a27;
+    color: #e9e4da;
+}
+
+body.staff-theme-dark.InventoryManagement .edit-modal-close:hover {
+    background: #373126;
+    color: #ead9a9;
+}
+
+body.staff-theme-dark.InventoryManagement .inv-sidebar {
+    border-color: #383a36;
+    background: #222321;
+}
+
+body.staff-theme-dark.InventoryManagement .inv-sidebar__label,
+body.staff-theme-dark.InventoryManagement .inv-sidebar__account-name,
+body.staff-theme-dark.InventoryManagement .inv-sidebar__account-role,
+body.staff-theme-dark.InventoryManagement .inv-nav-link {
+    color: #c9c2b7;
+}
+
+body.staff-theme-dark.InventoryManagement .inv-nav-link--active,
+body.staff-theme-dark.InventoryManagement .inv-nav-link:hover {
+    border-left-color: #a18447;
+    background: #373126;
+    color: #ead9a9;
+}
+
+body.staff-theme-dark.InventoryManagement .admin-notification-dropdown,
+body.staff-theme-dark.InventoryManagement .admin-notification-dropdown strong,
+body.staff-theme-dark.InventoryManagement .admin-notification-item {
+    border-color: #45453f;
+    background: #292a27;
+    color: #e9e4da;
+}
+
+body.staff-theme-dark.InventoryManagement .admin-notification-item:hover {
+    background: #373126;
+}
+
+body.staff-theme-dark.InventoryManagement .sidebar-backdrop,
+body.staff-theme-dark.InventoryManagement .um-sidebar-overlay {
+    background: rgba(0, 0, 0, 0.72);
+}
+
+body.InventoryManagement .staff-theme-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    min-width: 38px;
+    min-height: 36px;
+    padding: 8px;
+    border: 1px solid #E6E2DB;
+    border-radius: 8px;
+    background: #fff;
+    color: #705725;
+    font: 600 12px "Inter", sans-serif;
+    cursor: pointer;
+}
+
+body.InventoryManagement .staff-theme-toggle--header .staff-theme-toggle__label {
+    display: none;
+}
+
+body.InventoryManagement .staff-theme-toggle--sidebar {
+    display: none;
+}
+
+body.InventoryManagement .staff-theme-toggle__icon {
+    display: block;
+    width: 18px;
+    height: 18px;
+    flex: 0 0 18px;
+}
+
+body.InventoryManagement .staff-theme-toggle__icon--sun {
+    display: none;
+}
+
+body.staff-theme-dark.InventoryManagement .staff-theme-toggle {
+    border-color: #4a463c;
+    background: #302e29;
+    color: #e5cf91;
+}
+
+body.staff-theme-dark.InventoryManagement .staff-theme-toggle__icon--moon {
+    display: none;
+}
+
+body.staff-theme-dark.InventoryManagement .staff-theme-toggle__icon--sun {
+    display: block;
+}
+
+body.staff-theme-dark.InventoryManagement .delete-modal {
+    border-color: #3d3e39;
+    background: #222421;
+    color: #e9e4da;
+}
+
+body.staff-theme-dark.InventoryManagement .delete-modal h3,
+body.staff-theme-dark.InventoryManagement .delete-modal p,
+body.staff-theme-dark.InventoryManagement .delete-modal p strong {
+    color: #eee8dd;
+}
+
+body.staff-theme-dark.InventoryManagement .delete-modal .cancel-btn {
+    border-color: #4a4942;
+    background: #292a27;
+    color: #d5cec2;
+}
+
+body.staff-theme-dark.InventoryManagement .delete-modal .cancel-btn:hover {
+    background: #373126;
+    color: #ead9a9;
+}
+
+body.staff-theme-dark.InventoryManagement .delete-modal-overlay {
+    background: rgba(0, 0, 0, 0.76);
+}
+
+body.staff-theme-dark.InventoryManagement .alert-item {
+    border-color: #45453f;
+    background: #292a27;
+}
+
+body.staff-theme-dark.InventoryManagement .alert-item strong {
+    color: #eee8dd;
+}
+
+body.staff-theme-dark.InventoryManagement .alert-item small,
+body.staff-theme-dark.InventoryManagement .empty-stock-alerts {
+    color: #c9c2b7;
+}
+
+body.staff-theme-dark.InventoryManagement .alert-item > span {
+    background: #3a3326;
+    color: #ead9a9;
+}
+
+body.staff-theme-dark.InventoryManagement .alert-item.critical-alert {
+    border-color: #654442;
+    background: #302624;
+}
+
+body.staff-theme-dark.InventoryManagement .alert-item.critical-alert > span {
+    background: #4b302e;
+    color: #f1b5ae;
+}
+
+@media (max-width: 860px) {
+    body.InventoryManagement .staff-theme-toggle--header {
+        display: none;
+    }
+
+    body.InventoryManagement .staff-theme-toggle--sidebar {
+        display: flex;
+        width: calc(100% - 24px);
+        justify-content: flex-start;
+        margin: 8px 12px 12px;
+        padding: 10px 12px;
+    }
+}

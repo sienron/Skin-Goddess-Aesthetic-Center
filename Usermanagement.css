@@ -813,3 +813,112 @@
     align-items: flex-start;
   }
 }
+
+body.staff-theme-dark #userManagementMain {
+  background: #181a19;
+  color: #e9e4da;
+}
+
+body.staff-theme-dark #userManagementMain .um-header {
+  border-color: #383a36;
+  background: transparent;
+  color: #e9e4da;
+}
+
+body.staff-theme-dark #userManagementMain .um-header__title,
+body.staff-theme-dark #userManagementMain .um-stat-card__value,
+body.staff-theme-dark #userManagementMain .um-user-cell__name {
+  color: #eee8dd;
+}
+
+body.staff-theme-dark #userManagementMain .um-header__subtitle,
+body.staff-theme-dark #userManagementMain .um-stat-card__label,
+body.staff-theme-dark #userManagementMain .um-stat-card__hint,
+body.staff-theme-dark #userManagementMain .um-status-filter {
+  color: #aaa398;
+}
+
+body.staff-theme-dark #userManagementMain .um-stat-card,
+body.staff-theme-dark #userManagementMain .um-toolbar,
+body.staff-theme-dark #userManagementMain .um-table-wrap {
+  border-color: #3d3e39;
+  background: #222421;
+  color: #e9e4da;
+}
+
+body.staff-theme-dark #userManagementMain .um-stat-card__icon--gold,
+body.staff-theme-dark #userManagementMain .um-stat-card__icon--blue,
+body.staff-theme-dark #userManagementMain .um-stat-card__icon--violet,
+body.staff-theme-dark #userManagementMain .um-stat-card__icon--red {
+  background: #373126;
+  color: #e8ce8b;
+}
+
+body.staff-theme-dark #userManagementMain .um-btn--ghost,
+body.staff-theme-dark #userManagementMain .admin-notification-btn,
+body.staff-theme-dark #userManagementMain .um-search,
+body.staff-theme-dark #userManagementMain .um-status-filter select {
+  border-color: #4a4942;
+  background: #292a27;
+  color: #e9e4da;
+}
+
+body.staff-theme-dark #userManagementMain .um-btn--ghost:hover,
+body.staff-theme-dark #userManagementMain .admin-notification-btn:hover,
+body.staff-theme-dark #userManagementMain .um-tab:hover {
+  background: #373126;
+  color: #ead9a9;
+}
+
+body.staff-theme-dark #userManagementMain .um-tab {
+  color: #c9c2b7;
+}
+
+body.staff-theme-dark #userManagementMain .um-tab--active {
+  border-color: #a18447;
+  background: #3a3326;
+  color: #e8ce8b;
+}
+
+body.staff-theme-dark #userManagementMain .um-search input,
+body.staff-theme-dark #userManagementMain .um-status-filter select {
+  color: #eee8dd;
+}
+
+body.staff-theme-dark #userManagementMain .um-search input::placeholder {
+  color: #aaa398;
+}
+
+body.staff-theme-dark #userManagementMain .um-table thead tr,
+body.staff-theme-dark #userManagementMain .um-table tbody tr,
+body.staff-theme-dark #userManagementMain .um-table tbody tr:hover {
+  background: #222421;
+}
+
+body.staff-theme-dark #userManagementMain .um-table th {
+  border-color: #3d3e39;
+  background: #2b2c29;
+  color: #c9c2b7;
+}
+
+body.staff-theme-dark #userManagementMain .um-table td {
+  border-color: #3d3e39;
+  color: #d5cec2;
+}
+
+body.staff-theme-dark #userManagementMain .um-user-cell__meta,
+body.staff-theme-dark #userManagementMain .um-table-footer {
+  color: #aaa398;
+}
+
+body.staff-theme-dark #userManagementMain .um-avatar--sm,
+body.staff-theme-dark #userManagementMain .um-avatar--muted {
+  background: #373126;
+  color: #e8ce8b;
+}
+
+body.staff-theme-dark #userManagementMain .um-pagination button {
+  border-color: #4a4942;
+  background: #292a27;
+  color: #c9c2b7;
+}
