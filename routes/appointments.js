@@ -291,6 +291,38 @@ router.get('/admin', requireRole('admin'), async (req, res) => {
   }
 });
 
+router.post('/admin/advance-started', requireRole('admin'), async (_req, res) => {
+  const now = manilaNow();
+  try {
+    const result = await db.query(`
+      UPDATE appointments
+      SET appointment_status = 'in_progress', updated_at = NOW()
+      WHERE appointment_status = 'confirmed'
+        AND appointment_date = $1::date
+        AND appointment_time <= $2::time
+      RETURNING appointment_id, user_id
+    `, [now.dateStr, now.timeStr]);
+
+    for (const appointment of result.rows) {
+      if (!appointment.user_id) continue;
+      try {
+        await notifyUser(
+          appointment.user_id,
+          'appointment_status_changed',
+          `Appointment ${appointment.appointment_id} status changed to in progress.`,
+        );
+      } catch (error) {
+        console.error(`Appointment start notification failed for appointment ${appointment.appointment_id}:`, error);
+      }
+    }
+
+    return res.json({ updatedCount: result.rows.length });
+  } catch (error) {
+    console.error('Error advancing started appointments:', error);
+    return res.status(500).json({ message: 'Could not update started appointments.' });
+  }
+});
+
 router.put('/admin/:id/edit', requireRole('admin'), async (req, res) => {
   const appointmentId = validAppointmentId(req.params.id);
   if (!appointmentId) return res.status(400).json({ message: 'Choose a valid appointment.' });
