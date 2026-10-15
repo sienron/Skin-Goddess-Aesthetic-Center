@@ -984,6 +984,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (appointmentLoadPromise) return appointmentLoadPromise;
     const pendingLoad = (async () => {
       try {
+        const advanceResponse = await fetch('/api/appointments/admin/advance-started', {
+          method: 'POST',
+          headers: { Accept: 'application/json' },
+          cache: 'no-store'
+        });
+        const advanceResult = await readApiResponse(advanceResponse);
+        if (!advanceResponse.ok) {
+          throw new Error(advanceResult.message || `Could not update started appointments (HTTP ${advanceResponse.status}).`);
+        }
+
         const response = await fetch('/api/appointments/admin', {
           headers: { Accept: 'application/json' },
           cache: 'no-store'
