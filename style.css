@@ -16089,7 +16089,7 @@ body.homepage .hero {
   min-height: max(580px, 100svh);
   overflow: hidden;
   isolation: isolate;
-  background: var(--white, #fff);
+  background: transparent;
 }
 
 body.homepage .hero-visual {
@@ -16098,7 +16098,6 @@ body.homepage .hero-visual {
   z-index: 0;
   width: min(52%, 760px);
   height: max(580px, 100svh);
-  background: #fff;
   pointer-events: none;
 }
 
@@ -22675,16 +22674,19 @@ body.customer-theme-dark .notification-bell {
   filter: brightness(0) invert(0.9);
 }
 
-body.customer-theme-dark .hero-visual {
-  background: #181a19;
+body.customer-theme-dark .hero {
+  background-image: radial-gradient(ellipse 32% 56% at 77% 48%, rgba(146, 119, 61, 0.38) 0%, rgba(78, 67, 43, 0.26) 44%, rgba(24, 26, 25, 0) 100%);
 }
 
 body.customer-theme-dark .hero-visual::before {
-  background: radial-gradient(ellipse at 54% 45%, rgba(98, 82, 49, 0.32) 0%, rgba(52, 47, 38, 0.2) 36%, rgba(24, 26, 25, 0) 68%);
+  background: none;
 }
 
 body.customer-theme-dark .hero-copy::before {
-  background: radial-gradient(ellipse at 46% 50%, rgba(75, 65, 47, 0.42) 0%, rgba(48, 43, 35, 0.25) 36%, rgba(24, 26, 25, 0) 64%);
+  left: -6%;
+  width: 112%;
+  height: min(110%, 680px);
+  background: radial-gradient(ellipse at 46% 50%, rgba(137, 111, 57, 0.46) 0%, rgba(72, 63, 42, 0.3) 42%, rgba(24, 26, 25, 0) 72%);
 }
 
 body.customer-theme-dark .hero-photo-img {
