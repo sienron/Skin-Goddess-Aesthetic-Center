@@ -549,38 +549,6 @@ router.get('/admin/:id/inventory-review', requireRole('admin'), async (req, res)
         throw error;
       }
 
-      let draftResult = await client.query(`
-        SELECT selected_items
-        FROM appointment_inventory_review_drafts
-        WHERE appointment_id = $1
-      `, [appointmentId]);
-      if (!draftResult.rows.length) {
-        const suggestions = await client.query(`
-          SELECT product_id, default_quantity
-          FROM service_inventory_product_defaults
-          WHERE service_id = $1 AND is_enabled = TRUE
-          ORDER BY product_id
-        `, [appointment.service_id]);
-        const initialSelection = suggestions.rows.map((item) => ({
-          productId: Number(item.product_id),
-          quantity: Number(item.default_quantity),
-          isSuggested: true
-        }));
-        draftResult = await client.query(`
-          INSERT INTO appointment_inventory_review_drafts
-            (appointment_id, selected_items, updated_by, updated_at)
-          VALUES ($1, $2::jsonb, $3, NOW())
-          RETURNING selected_items
-        `, [appointmentId, JSON.stringify(initialSelection), req.session.userId]);
-      }
-
-      const selectedItems = draftResult.rows[0].selected_items;
-      await client.query(`
-        UPDATE appointment_inventory_review_drafts
-        SET reviewed_by = NULL, reviewed_at = NULL
-        WHERE appointment_id = $1
-      `, [appointmentId]);
-      const selectedById = new Map(selectedItems.map((item) => [Number(item.productId), item]));
       const productsResult = await client.query(`
         SELECT product.product_id, product.product_name, product.category,
                product.stock_quantity, mapping.default_quantity,
@@ -592,6 +560,45 @@ router.get('/admin/:id/inventory-review', requireRole('admin'), async (req, res)
          AND mapping.is_enabled = TRUE
         ORDER BY product.category, product.product_name, product.product_id
       `, [appointment.service_id]);
+      const productsById = new Map(productsResult.rows.map((product) => [
+        Number(product.product_id),
+        product
+      ]));
+
+      let draftResult = await client.query(`
+        SELECT selected_items
+        FROM appointment_inventory_review_drafts
+        WHERE appointment_id = $1
+      `, [appointmentId]);
+      if (!draftResult.rows.length) {
+        const initialSelection = productsResult.rows
+          .filter((product) => product.is_suggested && Number(product.stock_quantity) > 0)
+          .map((product) => ({
+            productId: Number(product.product_id),
+            quantity: Number(product.default_quantity),
+            isSuggested: true
+          }));
+        draftResult = await client.query(`
+          INSERT INTO appointment_inventory_review_drafts
+            (appointment_id, selected_items, updated_by, updated_at)
+          VALUES ($1, $2::jsonb, $3, NOW())
+          RETURNING selected_items
+        `, [appointmentId, JSON.stringify(initialSelection), req.session.userId]);
+      }
+
+      const storedSelection = draftResult.rows[0].selected_items;
+      const selectedItems = storedSelection.filter((item) => {
+        const product = productsById.get(Number(item.productId));
+        return product && Number(product.stock_quantity) > 0;
+      });
+      const removedUnavailableSelection = selectedItems.length !== storedSelection.length;
+      await client.query(`
+        UPDATE appointment_inventory_review_drafts
+        SET selected_items = CASE WHEN $2 THEN $3::jsonb ELSE selected_items END,
+            reviewed_by = NULL, reviewed_at = NULL
+        WHERE appointment_id = $1
+      `, [appointmentId, removedUnavailableSelection, JSON.stringify(selectedItems)]);
+      const selectedById = new Map(selectedItems.map((item) => [Number(item.productId), item]));
       const products = productsResult.rows.map((product) => {
         const selected = selectedById.get(Number(product.product_id));
         return {
@@ -601,7 +608,7 @@ router.get('/admin/:id/inventory-review', requireRole('admin'), async (req, res)
           selected_quantity: selected && selected.quantity !== null ? Number(selected.quantity) : null
         };
       });
-      return { appointment, products };
+      return { appointment, products, removedUnavailableSelection };
     });
     return res.json(review);
   } catch (error) {
@@ -659,21 +666,37 @@ router.put('/admin/:id/inventory-review-draft', requireRole('admin'), async (req
       }
       if (selectedIds.size) {
         const products = await client.query(`
-          SELECT product_id
+          SELECT product_id, product_name, stock_quantity
           FROM inventory_products
           WHERE product_id = ANY($1::integer[])
-        `, [[...selectedIds]]);
+          ORDER BY product_id
+          FOR UPDATE
+        `, [[...selectedIds].sort((left, right) => left - right)]);
         if (products.rows.length !== selectedIds.size) {
           const error = new Error('One or more selected products are no longer available.');
           error.statusCode = 409;
           throw error;
         }
+        for (const product of products.rows) {
+          const item = selectedItems.find((selected) => selected.productId === Number(product.product_id));
+          if (Number(product.stock_quantity) <= 0) {
+            const error = new Error(`${product.product_name} is out of stock and cannot be selected.`);
+            error.statusCode = 409;
+            throw error;
+          }
+          if (item.quantity !== null && item.quantity > Number(product.stock_quantity)) {
+            const error = new Error(`${product.product_name} has only ${product.stock_quantity} units available.`);
+            error.statusCode = 409;
+            throw error;
+          }
+        }
       }
       await client.query(`
         INSERT INTO appointment_inventory_review_drafts
           (appointment_id, selected_items, updated_by, updated_at, reviewed_by, reviewed_at)
-        VALUES ($1, $2::jsonb, $3, NOW(), CASE WHEN $4 THEN $3 ELSE NULL END,
-                CASE WHEN $4 THEN NOW() ELSE NULL END)
+        VALUES ($1, $2::jsonb, $3::integer, NOW(),
+                CASE WHEN $4::boolean THEN $3::integer ELSE NULL::integer END,
+                CASE WHEN $4::boolean THEN NOW() ELSE NULL::timestamp END)
         ON CONFLICT (appointment_id)
         DO UPDATE SET selected_items = EXCLUDED.selected_items,
                       updated_by = EXCLUDED.updated_by,
@@ -686,7 +709,11 @@ router.put('/admin/:id/inventory-review-draft', requireRole('admin'), async (req
   } catch (error) {
     if (error.statusCode) return res.status(error.statusCode).json({ message: error.message });
     console.error('Error saving appointment inventory review draft:', error);
-    return res.status(500).json({ message: 'Could not save the product review.' });
+    return res.status(500).json({
+      message: process.env.NODE_ENV === 'production'
+        ? 'Could not save the product review.'
+        : `Could not save the product review: ${error.message}`
+    });
   }
 });
 
@@ -714,16 +741,20 @@ router.post('/admin/:id/inventory-review/refresh-suggestions', requireRole('admi
         throw error;
       }
       const suggestions = await client.query(`
-        SELECT product_id, default_quantity
-        FROM service_inventory_product_defaults
-        WHERE service_id = $1 AND is_enabled = TRUE
-        ORDER BY product_id
+        SELECT mapping.product_id, mapping.default_quantity, product.stock_quantity
+        FROM service_inventory_product_defaults mapping
+        JOIN inventory_products product ON product.product_id = mapping.product_id
+        WHERE mapping.service_id = $1 AND mapping.is_enabled = TRUE
+        ORDER BY mapping.product_id
       `, [appointment.service_id]);
-      const nextSelection = suggestions.rows.map((item) => ({
-        productId: Number(item.product_id),
-        quantity: Number(item.default_quantity),
-        isSuggested: true
-      }));
+      const nextSelection = suggestions.rows
+        .filter((item) => Number(item.stock_quantity) > 0)
+        .map((item) => ({
+          productId: Number(item.product_id),
+          quantity: Number(item.default_quantity),
+          isSuggested: true
+        }));
+      const removedUnavailableSelection = nextSelection.length !== suggestions.rows.length;
       await client.query(`
         INSERT INTO appointment_inventory_review_drafts
           (appointment_id, selected_items, updated_by, updated_at)
@@ -731,11 +762,13 @@ router.post('/admin/:id/inventory-review/refresh-suggestions', requireRole('admi
         ON CONFLICT (appointment_id)
         DO UPDATE SET selected_items = EXCLUDED.selected_items,
                       updated_by = EXCLUDED.updated_by,
-                      updated_at = NOW()
+                      updated_at = NOW(),
+                      reviewed_by = NULL,
+                      reviewed_at = NULL
       `, [appointmentId, JSON.stringify(nextSelection), req.session.userId]);
-      return nextSelection;
+      return { selectedItems: nextSelection, removedUnavailableSelection };
     });
-    return res.json({ selectedItems });
+    return res.json(selectedItems);
   } catch (error) {
     if (error.statusCode) return res.status(error.statusCode).json({ message: error.message });
     console.error('Error refreshing appointment product suggestions:', error);
@@ -859,9 +892,14 @@ router.post('/admin/:id/complete-with-inventory', requireRole('admin'), async (r
         const updateResult = await client.query(`
           UPDATE inventory_products
           SET stock_quantity = stock_quantity - $1, updated_at = NOW()
-          WHERE product_id = $2
+          WHERE product_id = $2 AND stock_quantity >= $1
           RETURNING product_id, product_name, category, stock_quantity
         `, [quantity, productId]);
+        if (!updateResult.rows.length) {
+          const error = new Error(`${product.product_name} no longer has enough stock for this deduction.`);
+          error.statusCode = 409;
+          throw error;
+        }
         const updatedProduct = updateResult.rows[0];
         await recordInventoryTransaction(client, {
           productId,
@@ -963,7 +1001,8 @@ router.get('/admin/walk-in-options', requireRole('admin'), async (req, res) => {
     }, excludeAppointmentId);
     return res.json(availableStaff.rows.map((staff) => ({
       user_id: staff.user_id,
-      full_name: [staff.first_name, staff.last_name].filter(Boolean).join(' ').trim()
+      full_name: [staff.first_name, staff.last_name].filter(Boolean).join(' ').trim(),
+      role: staff.role
     })));
   } catch (error) {
     console.error('Error fetching walk-in appointment staff:', error);
@@ -1352,7 +1391,7 @@ async function findAvailableAestheticians(queryClient, booking, excludeAppointme
   const serviceResult = await queryClient.query('SELECT category FROM services WHERE service_id = $1', [booking.serviceId]);
   const staffRole = roleForCategory(serviceResult.rows[0]?.category);
   return queryClient.query(`
-    SELECT u.user_id, u.first_name, u.last_name FROM users u
+    SELECT u.user_id, u.first_name, u.last_name, u.role FROM users u
     WHERE u.role = $4 AND u.status = 'active' AND u.email_verified = TRUE
       AND NOT EXISTS (
         SELECT 1 FROM appointments a

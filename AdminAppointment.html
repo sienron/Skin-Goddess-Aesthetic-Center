@@ -446,8 +446,15 @@
           </label>
           <button class="um-btn um-btn--ghost" id="appointmentProductsRefreshSuggestions" type="button">Refresh Suggestions</button>
         </div>
-        <p class="appointment-inventory-note">Suggested products are editable defaults and may require clinic validation. Review the actual products and quantities used before continuing.</p>
-        <div id="appointmentProductsList" class="appointment-products-list"></div>
+        <p class="appointment-inventory-note">Suggestions are provisional starting points inferred from service and product names, not verified clinic procedures. Review the actual products and quantities used before continuing.</p>
+        <section class="appointment-products-section" aria-labelledby="appointmentProductsSelectedTitle">
+          <h3 id="appointmentProductsSelectedTitle">Selected Products for This Service</h3>
+          <div id="appointmentProductsSelectedList" class="appointment-products-list"></div>
+        </section>
+        <section class="appointment-products-section" aria-labelledby="appointmentProductsOtherTitle">
+          <h3 id="appointmentProductsOtherTitle">Other Inventory Products</h3>
+          <div id="appointmentProductsOtherList" class="appointment-products-list"></div>
+        </section>
         <section id="appointmentProductsReviewStep" class="appointment-products-review" hidden>
           <h3>Review Deduction</h3>
           <p>Confirm that these are the products and quantities actually used. Stock changes and appointment completion happen together only after confirmation.</p>
@@ -462,6 +469,21 @@
         <button class="um-btn um-btn--primary" id="appointmentProductsConfirm" type="button" hidden>Confirm Products &amp; Complete Appointment</button>
       </footer>
     </section>
+  </div>
+
+  <div class="apt-alert-overlay" id="appointmentAlertOverlay" hidden>
+    <div class="apt-alert" role="alertdialog" aria-modal="true" aria-labelledby="appointmentAlertTitle">
+      <div class="apt-alert__header">
+        <span class="apt-alert__accent" aria-hidden="true"></span>
+        <h2 class="apt-alert__title" id="appointmentAlertTitle">Appointment Updated</h2>
+      </div>
+      <div class="apt-alert__body">
+        <p id="appointmentAlertMessage"></p>
+      </div>
+      <div class="apt-alert__actions">
+        <button class="um-btn um-btn--primary" id="appointmentAlertOk" type="button">OK</button>
+      </div>
+    </div>
   </div>
 
   <script src="admin-dashboard.js"></script>
