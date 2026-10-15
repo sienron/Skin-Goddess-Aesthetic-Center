@@ -1,7 +1,7 @@
 const db = require('../db');
 
 const pageContent = [
-  { key: 'experience', page: 'home', label: 'Experience Feature', title: 'Experience\nSkin\nGoddess\nGlow', body: 'Work Hours: 09:00 AM – 06:00 PM from Monday to Saturday', image: 'images/CenterOutsideImg.png' },
+  { key: 'experience', page: 'home', label: 'Experience Feature', title: 'Experience\nSkin\nGoddess\nGlow', body: 'Work Hours: 09:00 AM – 06:00 PM from Monday to Saturday', image: 'images/CenterOutsideImg.webp' },
   { key: 'services_intro', page: 'services', label: 'Services Page Intro', title: 'OUR SERVICES', body: 'All prices are in Philippine Peso (₱). Book for an appointment for a personalized consultation.' },
   { key: 'about_hero', page: 'about', label: 'About Page Heading', title: 'About Skin Goddess', body: 'HOME · ABOUT US' },
   {
@@ -18,19 +18,19 @@ const pageContent = [
 ];
 
 const categoryImages = {
-  eyelash_extension: 'images/EyelashExtension.png',
-  paraffin_therapy: 'images/ParaffinTherapy.png',
-  hand_treatment: 'images/Manicure.png',
-  threading_services: 'images/ThreadingService.png',
-  foot_treatment: 'images/FootTreatment.png',
-  soft_gel_nail_extensions: 'images/NailExtension.png',
-  body_tightening_bt_body_fat_reduction_bfr: 'images/BodyTightening.png',
-  drip_shot_ed_gs: 'images/DripShot.png',
-  mesotherapy_mt: 'images/Mesotherapy.png',
-  facials: 'images/HydratingFacialImg.png',
-  hair_removal_ipl_hr: 'images/HairRemoval.png',
-  chemical_peeling_tca: 'images/ChemicalPeel.png',
-  electrocautery_ect: 'images/Electrocautery.png',
+  eyelash_extension: 'images/EyelashExtension.webp',
+  paraffin_therapy: 'images/ParaffinTherapy.webp',
+  hand_treatment: 'images/Manicure.webp',
+  threading_services: 'images/ThreadingService.webp',
+  foot_treatment: 'images/FootTreatment.webp',
+  soft_gel_nail_extensions: 'images/NailExtension.webp',
+  body_tightening_bt_body_fat_reduction_bfr: 'images/BodyTightening.webp',
+  drip_shot_ed_gs: 'images/DripShot.webp',
+  mesotherapy_mt: 'images/Mesotherapy.webp',
+  facials: 'images/HydratingFacialImg.webp',
+  hair_removal_ipl_hr: 'images/HairRemoval.webp',
+  chemical_peeling_tca: 'images/ChemicalPeel.webp',
+  electrocautery_ect: 'images/Electrocautery.webp',
 };
 
 async function migrate() {
@@ -47,7 +47,7 @@ async function migrate() {
       );
       UPDATE homepage_content
       SET image_url = CASE content_key
-        WHEN 'hero' THEN 'images/GSAP Hero.png'
+        WHEN 'hero' THEN 'images/GSAP Hero.webp'
         WHEN 'why_skin_goddess' THEN ''
         WHEN 'about_story' THEN 'images/SkinGoddessReceptionImg.jpg'
         ELSE image_url

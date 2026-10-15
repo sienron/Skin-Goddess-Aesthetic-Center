@@ -10,6 +10,10 @@ const QUALITY = 80;
 const targets = [
   { file: 'GSAP Hero.png', maxWidth: 2400 },
   { file: 'CenterOutsideImg.png', maxWidth: 1920 },
+  { file: 'logo_horizontal-removebg.png', maxWidth: 1200 },
+  { file: 'Logo.png', maxWidth: 512 },
+  { file: 'OCRImg.png', maxWidth: 512 },
+  { file: 'ServicesBackground.png', maxWidth: 1920 },
   ...[
     'HydratingFacialImg', 'SkinWhiteningImg', 'AntiAgingTherapyImg', 'EyelashExtension',
     'ParaffinTherapy', 'Manicure', 'ChemicalPeel', 'ThreadingService', 'FootTreatment',
@@ -23,6 +27,13 @@ async function main() {
   for (const { file, maxWidth } of targets) {
     const source = path.join(imagesDir, file);
     const output = path.join(imagesDir, file.replace(/\.png$/i, '.webp'));
+    if (fs.existsSync(output)) {
+      console.log(`${path.basename(output)}\talready exists`);
+      continue;
+    }
+    if (!fs.existsSync(source)) {
+      throw new Error(`Missing both source and WebP image for ${file}`);
+    }
     const info = await sharp(source)
       .resize({ width: maxWidth, withoutEnlargement: true })
       .webp({ quality: QUALITY })

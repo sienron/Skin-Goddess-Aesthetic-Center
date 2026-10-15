@@ -28,82 +28,82 @@ const homepageContent = [
   {
     key: 'home_treatment_hydrating_facial', label: 'Hydrating Facial', title: 'Hydrating Facial',
     body: 'A deep-cleansing, moisture-rich facial that restores radiance and softness. Suitable for all skin types.',
-    image: 'images/HydratingFacialImg.png',
+    image: 'images/HydratingFacialImg.webp',
   },
   {
     key: 'home_treatment_skin_whitening', label: 'Skin Whitening', title: 'Skin Whitening',
     body: 'Science-backed brightening that targets dark spots and uneven tone for a luminous, radiant finish.',
-    image: 'images/SkinWhiteningImg.png',
+    image: 'images/SkinWhiteningImg.webp',
   },
   {
     key: 'home_treatment_anti_aging_therapy', label: 'Anti-Aging Therapy', title: 'Anti-Aging Therapy',
     body: "Advanced collagen-stimulating treatments that reduce fine lines and restore your skin's natural youthfulness.",
-    image: 'images/AntiAgingTherapyImg.png',
+    image: 'images/AntiAgingTherapyImg.webp',
   },
   {
     key: 'home_treatment_eyelash_extension', label: 'Eyelash Extension', title: 'Eyelash Extension',
     body: 'Full lash sets from classic to mega volume for a fuller, more dramatic lash look. Infill and removal services are also available for maintenance.',
-    image: 'images/EyelashExtension.png',
+    image: 'images/EyelashExtension.webp',
   },
   {
     key: 'home_treatment_paraffin_therapy', label: 'Paraffin Therapy', title: 'Paraffin Therapy',
     body: 'A warm paraffin wax treatment for hands and feet that softens skin and soothes joints. Great as a quick add-on or standalone relaxation service.',
-    image: 'images/ParaffinTherapy.png',
+    image: 'images/ParaffinTherapy.webp',
   },
   {
     key: 'home_treatment_hand_treatment', label: 'Hand Treatment', title: 'Hand Treatment',
     body: 'Classic and soft gel manicure services to keep nails clean and well-groomed. Ideal for regular upkeep or special occasions.',
-    image: 'images/Manicure.png',
+    image: 'images/Manicure.webp',
   },
   {
     key: 'home_treatment_chemical_peeling_tca', label: 'Chemical Peeling (TCA)', title: 'Chemical Peeling (TCA)',
     body: 'TCA peels that target uneven skin tone and texture across the face and body. Areas range from small zones like elbows to full-body treatments.',
-    image: 'images/ChemicalPeel.png',
+    image: 'images/ChemicalPeel.webp',
   },
   {
     key: 'home_treatment_threading_services', label: 'Threading Services', title: 'Threading Services',
     body: 'Precise hair removal for eyebrows, upper lip, and lower lip using traditional threading. A quick, low-irritation option for facial hair grooming.',
-    image: 'images/ThreadingService.png',
+    image: 'images/ThreadingService.webp',
   },
   {
     key: 'home_treatment_foot_treatment', label: 'Foot Treatment', title: 'Foot Treatment',
     body: 'Foot spa and pedicure services designed to relax and refresh tired feet. Add-on foot spa options are available for a more indulgent experience.',
-    image: 'images/FootTreatment.png',
+    image: 'images/FootTreatment.webp',
   },
   {
     key: 'home_treatment_soft_gel_nail_extensions', label: 'Soft Gel Nail Extensions', title: 'Soft Gel Nail Extensions',
     body: 'Durable soft gel extensions available in short, medium, and long lengths. Nail art, rhinestones, and other add-ons can enhance the final look.',
-    image: 'images/NailExtension.png',
+    image: 'images/NailExtension.webp',
   },
   {
     key: 'home_treatment_hair_removal_ipl_hr', label: 'Hair Removal (IPL-HR)', title: 'Hair Removal (IPL-HR)',
     body: 'IPL-based hair removal for targeted areas like underarms and bikini line up to full-body sessions. A long-term solution for smoother, hair-free skin.',
-    image: 'images/HairRemoval.png',
+    image: 'images/HairRemoval.webp',
   },
   {
     key: 'home_treatment_drip_shot_ed_gs', label: 'Drip / Shot (ED/GS)', title: 'Drip / Shot (ED/GS)',
     body: 'IV drips and shots formulated for anti-aging, immune support, slimming, and whitening. Delivers nutrients directly for faster, noticeable results.',
-    image: 'images/DripShot.png',
+    image: 'images/DripShot.webp',
   },
   {
     key: 'home_treatment_facials', label: 'Facials', title: 'Facials',
     body: 'A range of facials from basic cleansing to advanced treatments like diamond peel and acne programs. Customizable based on skin concerns and goals.',
-    image: 'images/HydratingFacialImg.png',
+    image: 'images/HydratingFacialImg.webp',
   },
   {
     key: 'home_treatment_tightening_bt_body_fat_reduction', label: 'Tightening (BT) / Body Fat Reduction', title: 'Tightening (BT) / Body Fat Reduction',
     body: 'Body tightening and fat reduction treatments for the tummy, arms, and thighs. Can be combined with BFR for enhanced contouring results.',
-    image: 'images/BodyTightening.png',
+    image: 'images/BodyTightening.webp',
   },
   {
     key: 'home_treatment_electrocautery_ect', label: 'Electrocautery (ECT)', title: 'Electrocautery (ECT)',
     body: 'A precise method for removing warts and milia using controlled heat. A quick, in-clinic procedure with minimal downtime.',
-    image: 'images/Electrocautery.png',
+    image: 'images/Electrocautery.webp',
   },
   {
     key: 'home_treatment_mesotherapy_mt', label: 'Mesotherapy (MT)', title: 'Mesotherapy (MT)',
     body: 'Injectable treatments targeting the face, arms, tummy, thighs, or full body for tightening and rejuvenation. Includes BFR-enhanced whole-body options for deeper results.',
-    image: 'images/Mesotherapy.png',
+    image: 'images/Mesotherapy.webp',
   },
 ];
 

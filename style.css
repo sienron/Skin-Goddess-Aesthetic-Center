@@ -6806,7 +6806,7 @@ body.services {
   background-color: black;
   padding: 20px 5vw;
   text-align: center;
-  background-image: url("images/ServicesBackground.png");
+  background-image: url("images/ServicesBackground.webp");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -7369,7 +7369,7 @@ body.services {
   text-align: center;
   border-top: 4px solid var(--gold);
   background-color: black;
-  background-image: url("images/ServicesBackground.png");
+  background-image: url("images/ServicesBackground.webp");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
