@@ -20498,7 +20498,7 @@ section.sidebar[aria-label="Aesthetician navigation"] .finance-nav-icon {
   cursor: pointer;
 }
 
-.um-sidebar__nav .um-nav-link:hover,
+.um-sidebar__nav .um-nav-link:not(.um-nav-link--active):hover,
 .admin-nav-group-toggle:hover {
   background: #f8f6f1;
   color: #60491b;
@@ -20537,7 +20537,6 @@ section.sidebar[aria-label="Aesthetician navigation"] .finance-nav-icon {
 }
 
 .admin-nav-group.is-active > .admin-nav-group-toggle {
-  background: #f6f0e3;
   color: #705725;
   font-weight: 600;
 }
@@ -22235,21 +22234,66 @@ body.staff-theme-dark .inv-nav-link {
   color: #c9c2b7;
 }
 
-body.staff-theme-dark .um-nav-link:hover,
+body.staff-theme-dark .um-nav-link:not(.um-nav-link--active):hover,
+body.staff-theme-dark .inv-nav-link:not(.inv-nav-link--active):hover,
+body.staff-theme-dark .admin-nav-group-toggle:hover {
+  border-color: #a18447;
+  background: #302e29;
+  color: #ead9a9;
+}
+
 body.staff-theme-dark .um-nav-link--active,
-body.staff-theme-dark .inv-nav-link:hover,
-body.staff-theme-dark .inv-nav-link--active,
-body.staff-theme-dark .admin-nav-group-toggle,
-body.staff-theme-dark .admin-nav-group-toggle:hover,
-body.staff-theme-dark .admin-nav-group-toggle.is-active {
+body.staff-theme-dark .inv-nav-link--active {
   border-color: #a18447;
   background: #373126;
+  color: #ead9a9;
+}
+
+body.staff-theme-dark .admin-nav-group-toggle {
+  color: #c9c2b7;
+}
+
+body.staff-theme-dark .admin-nav-group.is-active > .admin-nav-group-toggle:not(:hover),
+body.staff-theme-dark .admin-nav-group-toggle.is-active:not(:hover) {
+  background: transparent;
   color: #ead9a9;
 }
 
 body.staff-theme-dark .admin-nav-submenu,
 body.staff-theme-dark .admin-nav-child {
   color: #d5cec2;
+}
+
+body.staff-theme-dark .um-sidebar__nav .um-nav-link.admin-nav-child {
+  background: transparent;
+  color: #d5cec2;
+}
+
+body.staff-theme-dark .um-sidebar__nav .um-nav-link.admin-nav-child:not(.um-nav-link--active):hover {
+  background: #302e29;
+  color: #ead9a9;
+}
+
+body.staff-theme-dark .um-sidebar__nav .um-nav-link.admin-nav-child.um-nav-link--active {
+  border-left-color: #a18447;
+  background: #373126;
+  color: #ead9a9;
+}
+
+body.staff-theme-dark section.sidebar[aria-label="Finance navigation"] .fin-nav-view-tab {
+  background: transparent;
+  color: #d5cec2;
+}
+
+body.staff-theme-dark section.sidebar[aria-label="Finance navigation"] .fin-nav-view-tab:not(.is-active):hover {
+  background: #302e29;
+  color: #ead9a9;
+}
+
+body.staff-theme-dark section.sidebar[aria-label="Finance navigation"] .fin-nav-view-tab.is-active {
+  border-left-color: #a18447;
+  background: #373126;
+  color: #ead9a9;
 }
 
 body.staff-theme-dark .um-sidebar__account-menu {
@@ -22328,6 +22372,7 @@ body.staff-theme-dark .um-dashboard-panel,
 body.staff-theme-dark .admin-dashboard-section,
 body.staff-theme-dark .admin-dashboard-stat,
 body.staff-theme-dark .admin-dashboard-stat__icon,
+body.staff-theme-dark .admin-dashboard-empty-state,
 body.staff-theme-dark .appointments-list,
 body.staff-theme-dark .appointment-card,
 body.staff-theme-dark .appointments-empty,
@@ -22351,6 +22396,40 @@ body.staff-theme-dark .admin-notification-dropdown {
   background: #222421;
   color: #e9e4da;
   box-shadow: 0 3px 12px rgba(0, 0, 0, 0.14);
+}
+
+body.staff-theme-dark .admin-dashboard-empty-state {
+  border-color: #4a4942;
+  background: #2b2c29;
+}
+
+body.staff-theme-dark .admin-dashboard-empty-state > img {
+  background: #373126;
+}
+
+body.staff-theme-dark .admin-dashboard-empty-state__details strong {
+  color: #eee8dd;
+}
+
+body.staff-theme-dark .admin-dashboard-empty-state__details span {
+  color: #aaa398;
+}
+
+body.staff-theme-dark .admin-dashboard-activity-item {
+  border-color: #3d3e39;
+}
+
+body.staff-theme-dark .admin-dashboard-activity-item:hover {
+  background: #302e29;
+}
+
+body.staff-theme-dark .admin-dashboard-activity-item:hover .admin-dashboard-activity-item__details strong {
+  color: #ead9a9;
+}
+
+body.staff-theme-dark .admin-dashboard-activity-item__icon {
+  border-color: #4a4942;
+  background: #2b2c29;
 }
 
 body.staff-theme-dark .inquiries-list-toolbar,
