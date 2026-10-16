@@ -22761,6 +22761,50 @@ body.customer-theme-dark .booking-summary-card {
   color: #e9e4da;
 }
 
+body.customer-theme-dark .summary-page-main .booking-panel {
+  background-color: #1f201d;
+  border-color: #3d3e39;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+}
+
+body.customer-theme-dark .summary-row {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+body.customer-theme-dark .summary-row span:first-child {
+  color: #aaa398;
+}
+
+body.customer-theme-dark .summary-row span:last-child {
+  color: #eee8dd;
+}
+
+body.customer-theme-dark .summary-total span:first-child {
+  color: #eee8dd;
+}
+
+body.customer-theme-dark .summary-note,
+body.customer-theme-dark .summary-list li,
+body.customer-theme-dark #paymongoCheckout,
+body.customer-theme-dark .summary-location,
+body.customer-theme-dark .summary-location strong {
+  color: #e9e4da;
+}
+
+body.customer-theme-dark .summary-list li::before {
+  background-color: #d8bb73;
+}
+
+body.customer-theme-dark .summary-location {
+  background-color: rgba(255, 255, 255, 0.04);
+  border: 1px solid #3d3e39;
+}
+
+body.customer-theme-dark .checkout-section-title,
+body.customer-theme-dark .summary-section-title {
+  color: #d8bb73;
+}
+
 body.customer-theme-dark .service-card.selected,
 body.customer-theme-dark .service-card:hover,
 body.customer-theme-dark .calendar-day.available:hover {
@@ -22802,6 +22846,30 @@ body.customer-theme-dark .appointment-cancel-btn {
   border-color: #4a4942;
   background-color: #292a27;
   color: #d5cec2;
+}
+
+body.customer-theme-dark .slot-btn {
+  border-color: #4a4942;
+  background-color: #292a27;
+  color: #e9e4da;
+}
+
+body.customer-theme-dark .slot-btn:hover:not(.disabled):not(.selected) {
+  border-color: #c9a84c;
+  background-color: #373126;
+  color: #f1dfaa;
+}
+
+body.customer-theme-dark .slot-btn.selected {
+  border-color: #c9a84c;
+  background-color: #c9a84c;
+  color: white;
+}
+
+body.customer-theme-dark .slot-btn.disabled {
+  border-color: #363732;
+  background-color: #292a27;
+  color: #77776f;
 }
 
 body.customer-theme-dark .team-section {

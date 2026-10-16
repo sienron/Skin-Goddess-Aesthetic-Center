@@ -522,7 +522,7 @@
 
     const customerThemeToggle = document.getElementById("themeToggle");
     if (customerThemeToggle && (document.body.classList.contains("client-header") || document.body.classList.contains("homepage"))) {
-        const themeStorageKey = "skin-goddess-staff-theme";
+        const themeStorageKey = "skin-goddess-customer-theme";
         const themeIcon = customerThemeToggle.querySelector(".theme-toggle-icon");
 
         function setCustomerTheme(theme, persist) {
