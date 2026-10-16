@@ -1,15 +1,6 @@
 /* ===== UserAppointment.html — page-specific logic =====
-   Service selection, calendar rendering, time-slot selection, and the
-   live booking summary. Scoped to this page only (client-facing booking
-   flow), per the "one thin page-specific file per page" convention.
-
-   BACKEND TODO:
-   - Availability: replace generatePlaceholderAvailability() with a call to
-     GET /api/availability?month=YYYY-MM (and ideally scoped by service id,
-     since different services may need different durations/slots).
-   - Submission: wire the submit handler below to POST /api/appointments
-     with { serviceName, servicePrice, date, time, firstName, lastName,
-     email, phone, paymentMethod }.
+   Service selection, live availability, time-slot selection, and booking
+   summary. Appointments are created only after verified PayMongo payment.
 */
 (function () {
     const categorySelect = document.getElementById("serviceCategorySelect");

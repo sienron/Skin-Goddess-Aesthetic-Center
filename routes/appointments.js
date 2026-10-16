@@ -1286,7 +1286,9 @@ function calendarDayNumber(dateStr) {
 function minutesUntil(dateStr, timeStr, now) {
   const [hour, minute] = timeStr.slice(0, 5).split(':').map(Number);
   const [nowHour, nowMinute] = now.timeStr.split(':').map(Number);
-  return (calendarDayNumber(dateStr) - calendarDayNumber(now.dateStr)) * 1440 + (hour * 60 + minute) - (nowHour * 60 + nowMinute);
+  return (calendarDayNumber(dateStr) - calendarDayNumber(now.dateStr)) * 1440
+    + (hour * 60 + minute) - (nowHour * 60 + nowMinute)
+    - (now.second + now.millisecond / 1000) / 60;
 }
 
 async function getValidatedSchedule(queryClient, body, res, allowShortLead = false) {
@@ -1622,7 +1624,9 @@ router.post('/:id/cancellation-request', requireActiveAccount, async (req, res) 
 
   try {
     const result = await db.query(`
-      SELECT appointment_id, aesthetician_id, user_id, appointment_status, cancellation_request_status
+      SELECT appointment_id, aesthetician_id, user_id, appointment_status,
+             cancellation_request_status, appointment_date::text AS appointment_date,
+             appointment_time::text AS appointment_time
       FROM appointments WHERE appointment_id = $1
     `, [appointmentId]);
     if (result.rows.length === 0) return res.status(404).json({ message: 'Appointment not found.' });
@@ -1632,6 +1636,9 @@ router.post('/:id/cancellation-request', requireActiveAccount, async (req, res) 
     if (!isAssignedAesthetician && !isClient) return res.status(403).json({ message: 'Only the assigned aesthetician or client can request cancellation.' });
     if (appointment.appointment_status !== 'confirmed') return res.status(400).json({ message: 'Only confirmed appointments can be cancelled.' });
     if (appointment.cancellation_request_status) return res.status(409).json({ message: 'A cancellation request has already been submitted for this appointment.' });
+    if (isClient && minutesUntil(appointment.appointment_date, appointment.appointment_time, manilaNow()) < 24 * 60) {
+      return res.status(400).json({ message: 'Client cancellation requests must be submitted at least 24 hours before the appointment.' });
+    }
 
     await db.query(`
       UPDATE appointments
@@ -1683,6 +1690,31 @@ router.post('/:id/cancellation-request/review', requireRole('admin'), async (req
     if (requestStatus !== 'pending') return res.status(400).json({ message: 'This request is no longer pending.' });
 
     if (requestType === 'reschedule' && decision === 'allow') {
+      const conflictResult = await db.query(`
+        SELECT 1
+        FROM appointments
+        WHERE aesthetician_id = $1
+          AND appointment_id <> $2
+          AND appointment_status IN ('confirmed', 'in_progress', 'completed')
+          AND tsrange(
+            appointment_date + appointment_time,
+            appointment_date + appointment_end_time
+          ) && tsrange(
+            $3::date + $4::time,
+            $3::date + $5::time
+          )
+        LIMIT 1
+      `, [
+        appointment.aesthetician_id,
+        appointmentId,
+        appointment.reschedule_requested_date,
+        appointment.reschedule_requested_time,
+        appointment.reschedule_requested_end_time
+      ]);
+      if (conflictResult.rows.length > 0) {
+        return res.status(409).json({ message: 'The requested slot is no longer available. Choose another slot.' });
+      }
+
       await db.query(`
         UPDATE appointments
         SET appointment_date = reschedule_requested_date,
@@ -1731,6 +1763,9 @@ router.post('/:id/cancellation-request/review', requireRole('admin'), async (req
     const label = requestType === 'reschedule' ? 'Reschedule' : 'Cancellation';
     return res.json({ message: decision === 'allow' ? `${label} allowed.` : `${label} request rejected.` });
   } catch (error) {
+    if (error.code === '23P01' || error.code === '23505') {
+      return res.status(409).json({ message: 'The requested slot is no longer available. Choose another slot.' });
+    }
     console.error('Error reviewing cancellation request:', error);
     return res.status(500).json({ message: 'Could not review cancellation request.' });
   }

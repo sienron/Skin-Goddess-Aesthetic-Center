@@ -39,12 +39,18 @@ function addMinutes(time24, minutes) {
 }
 
 function manilaNow() {
+  const instant = new Date();
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Manila', year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
-  }).formatToParts(new Date());
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
+  }).formatToParts(instant);
   const values = Object.fromEntries(parts.filter((part) => part.type !== 'literal').map((part) => [part.type, part.value]));
-  return { dateStr: `${values.year}-${values.month}-${values.day}`, timeStr: `${values.hour}:${values.minute}` };
+  return {
+    dateStr: `${values.year}-${values.month}-${values.day}`,
+    timeStr: `${values.hour}:${values.minute}`,
+    second: Number(values.second),
+    millisecond: instant.getUTCMilliseconds(),
+  };
 }
 
 function isSlotInPast(dateStr, timeStr24) {
@@ -60,7 +66,8 @@ function isSlotTooSoon(dateStr, timeStr24) {
 
   const [slotHour, slotMinute] = timeStr24.split(':').map(Number);
   const [nowHour, nowMinute] = now.timeStr.split(':').map(Number);
-  return (slotHour * 60 + slotMinute) - (nowHour * 60 + nowMinute) < MIN_BOOKING_LEAD_MINUTES;
+  return ((slotHour * 60 + slotMinute) - (nowHour * 60 + nowMinute)) * 60
+    - now.second - now.millisecond / 1000 < MIN_BOOKING_LEAD_MINUTES * 60;
 }
 
 module.exports = {

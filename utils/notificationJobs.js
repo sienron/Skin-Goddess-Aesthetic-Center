@@ -17,6 +17,7 @@ async function sendReminders(flag, hours, type) {
     SET ${flag} = TRUE
     FROM services s
     WHERE a.service_id = s.service_id
+      AND a.user_id IS NOT NULL
       AND a.appointment_status IN ('pending', 'confirmed')
       AND a.${flag} = FALSE
       AND a.appointment_date + a.appointment_time > (NOW() AT TIME ZONE 'Asia/Manila')

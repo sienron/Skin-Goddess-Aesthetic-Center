@@ -17,7 +17,7 @@ Scope rules:
 
 Clinic information:
 - Address: 2nd floor, KW Plaza Building, Pasong Buaya 2, Imus, Cavite, Philippines 4103.
-- Hours: Monday to Saturday, 9:00 AM to 6:00 PM; closed Sunday.
+- Appointment availability can include Sunday. Direct customers to Book Now to check live dates and time slots.
 - Phone: +63 945 611 9436. Email: info@skingoddess.ph.
 - Customers can browse current services and prices on the Services page. To book, use Book Now and select a service, date, and available time. Live availability and exact fees are shown during booking.
 - For cancellations, rescheduling, or treatment-specific instructions, ask the customer to contact the clinic directly.
@@ -36,7 +36,7 @@ function keywordFaqAnswer(question) {
     return 'For cancellations or rescheduling, please contact the clinic directly at +63 945 611 9436 or info@skingoddess.ph.';
   }
   if (/\b(hours?|opening time|open|closed|close|schedule)\b/.test(text)) {
-    return 'The clinic is open Monday to Saturday, 9:00 AM to 6:00 PM, and closed on Sunday.';
+    return 'Appointment availability can include Sunday. Please check Book Now for current dates and available time slots.';
   }
   if (/\b(location|address|directions)\b|\bwhere\b.*\b(clinic|located|find)\b/.test(text)) {
     return 'The clinic is at 2nd floor, KW Plaza Building, Pasong Buaya 2, Imus, Cavite, Philippines 4103.';
