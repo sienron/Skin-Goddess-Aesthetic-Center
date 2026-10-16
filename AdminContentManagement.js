@@ -104,7 +104,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const normalizedQuery = serviceSearchTerm.trim().toLowerCase();
     const filteredServices = SERVICES.filter((service) => {
-      const matchesCategory = selectedServiceCategory === 'all' || service.category === selectedServiceCategory;
+      const matchesCategory = Boolean(normalizedQuery)
+        || selectedServiceCategory === 'all'
+        || service.category === selectedServiceCategory;
       if (!matchesCategory) return false;
 
       if (!normalizedQuery) return true;
@@ -183,9 +185,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const list = document.getElementById('cmServiceDefaultsList');
     if (!list) return;
     const query = serviceDefaultsSearchTerm.trim().toLowerCase();
-    const products = serviceDefaultsInventory.filter((product) => (
-      !query || `${product.product_name} ${product.category}`.toLowerCase().includes(query)
-    ));
+    const products = serviceDefaultsInventory
+      .filter((product) => (
+        !query || `${product.product_name} ${product.category}`.toLowerCase().includes(query)
+      ))
+      .sort((left, right) => {
+        const leftEnabled = Boolean(serviceDefaultsState.get(Number(left.product_id))?.isEnabled);
+        const rightEnabled = Boolean(serviceDefaultsState.get(Number(right.product_id))?.isEnabled);
+        if (leftEnabled !== rightEnabled) return leftEnabled ? -1 : 1;
+        return left.product_name.localeCompare(right.product_name);
+      });
     list.textContent = '';
     if (!products.length) {
       list.appendChild(el('p', 'cm-empty', 'No inventory products match your search.'));
@@ -887,6 +896,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const action = event.target.closest('[data-action]');
     if (!action) return;
     const { section, id, action: actionName } = action.dataset;
+    if (section === 'services') {
+      const service = SERVICES.find((item) => String(item.service_id) === String(id));
+      if (service?.category) {
+        selectedServiceCategory = service.category;
+        const categorySelect = document.getElementById('cmServiceCategorySelect');
+        if (categorySelect) categorySelect.value = selectedServiceCategory;
+      }
+    }
     try {
       if (actionName === 'edit') {
         const items = section === 'services'
