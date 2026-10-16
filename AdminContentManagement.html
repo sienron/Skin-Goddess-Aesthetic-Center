@@ -112,7 +112,10 @@
 
               <label class="cm-search-field" for="cmServiceSearchInput">
                 <span>Search</span>
-                <input id="cmServiceSearchInput" type="search" placeholder="Search treatments..." aria-label="Search treatments" />
+                <span class="cm-search-control">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                  <input id="cmServiceSearchInput" type="search" placeholder="Search treatments..." aria-label="Search treatments" />
+                </span>
               </label>
             </div>
             <div class="cm-service-list" id="cmServiceList"></div>
@@ -194,7 +197,10 @@
       <p class="cm-service-defaults-note">Enabled defaults are provisional starting suggestions for future In Progress appointments and are preselected for review. They are not verified clinic procedures; confirm actual products and quantities for each appointment. Existing appointment review drafts are not changed.</p>
       <label class="cm-search-field" for="cmServiceDefaultsSearch">
         <span>Search inventory</span>
-        <input id="cmServiceDefaultsSearch" type="search" placeholder="Search product or category">
+        <span class="cm-search-control">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input id="cmServiceDefaultsSearch" type="search" placeholder="Search product or category">
+        </span>
       </label>
       <div class="cm-service-defaults-list" id="cmServiceDefaultsList"></div>
       <p class="cm-editor__error" id="cmServiceDefaultsError" role="alert" hidden></p>

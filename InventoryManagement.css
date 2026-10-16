@@ -298,21 +298,41 @@ button{
     letter-spacing: .04em;
 }
 
-.search-box input{
-    width: 100%;
+.search-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-sizing: border-box;
     height: 36px;
-
-    border: 1px solid #E6E2DB;
-    background: var(--white);       
-
     padding: 0 13px;
-    font-size: 12px;
+    border: 1px solid #E6E2DB;
+    background: var(--white);
+}
 
+.search-box:focus-within {
+    border: 2px solid var(--gold);
+}
+
+.search-box svg {
+    flex: 0 0 18px;
+    color: #847A6D;
+}
+
+.search-box input{
+    box-sizing: border-box;
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    font-size: 12px;
     outline: none;
 }
 
 .search-box input:focus{
-   border: 2px solid var(--gold)
+   border: 0;
 }
 
 .btn{
@@ -566,10 +586,11 @@ button{
 
 .table-filters .search-box {
     min-width: 0;
+    width: 220px;
 }
 
 .table-filters .search-box input {
-    width: 220px;
+    width: 100%;
     max-width: 100%;
 }
 

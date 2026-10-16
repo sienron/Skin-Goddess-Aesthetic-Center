@@ -3276,7 +3276,10 @@ hr {
   border-color: #C9A84C;
 }
 
-.service-search {
+.service-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   box-sizing: border-box;
   width: 100%;
   margin: 0 0 14px;
@@ -3284,13 +3287,29 @@ hr {
   border: 1px solid rgb(228, 228, 228);
   border-radius: 8px;
   background-color: white;
+}
+
+.service-search-icon {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+.service-search {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
   color: rgb(50, 50, 50);
   font-family: "Raleway", sans-serif;
   font-size: calc(0.85rem + 1px);
 }
 
-.service-search:focus {
-  outline: none;
+.service-search-wrap:focus-within {
   border-color: #C9A84C;
 }
 
@@ -11951,10 +11970,25 @@ body:not(.profile-ready) .mobile-nav-profile {
   color: var(--text-muted);
 }
 
+.inquiries-search-control {
+  position: relative;
+}
+
+.inquiries-search-control svg {
+  position: absolute;
+  top: 50%;
+  left: 10px;
+  width: 18px;
+  height: 18px;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
 .inquiries-search {
   width: 100%;
   min-height: 36px;
-  padding: 8px 10px;
+  padding: 8px 10px 8px 36px;
   border: 1px solid var(--um-border);
   border-radius: 3px;
   background: #fff;
@@ -13042,7 +13076,47 @@ main.my-appointments-main .booking-intro {
   font: inherit;
 }
 
-.cm-search-field input:focus,
+.cm-search-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--um-border);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--text-muted);
+  font-size: 11px;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.cm-search-control:focus-within {
+  border-color: var(--gold-2);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(201, 168, 76, 0.12);
+}
+
+.cm-search-control svg {
+  flex: 0 0 18px;
+}
+
+.cm-search-field .cm-search-control input {
+  min-width: 0;
+  min-height: 36px;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.cm-search-field .cm-search-control input:focus {
+  border: 0;
+  outline: 0;
+  box-shadow: none;
+}
+
 .cm-select-field select:focus {
   border-color: var(--gold-2);
   outline: none;
@@ -22494,6 +22568,7 @@ body.staff-theme-dark .um-table tbody tr:hover {
 }
 
 body.staff-theme-dark .um-table__checkbox-col,
+body.staff-theme-dark .cm-search-control,
 body.staff-theme-dark .inquiries-search,
 body.staff-theme-dark .inquiry-reply-input,
 body.staff-theme-dark .cm-select-field select,
@@ -22521,6 +22596,17 @@ body.staff-theme-dark .um-search input::placeholder,
 body.staff-theme-dark .inquiries-search::placeholder,
 body.staff-theme-dark .cm-search-field input::placeholder {
   color: #a39c90;
+}
+
+body.staff-theme-dark .cm-search-control {
+  border-color: #4a4942;
+  background: #292a27;
+}
+
+body.staff-theme-dark .cm-search-control input {
+  border: 0;
+  background: transparent;
+  color: #eee8dd;
 }
 
 body.staff-theme-dark .um-btn--ghost {
@@ -22844,7 +22930,6 @@ body.customer-theme-dark .info-title {
 }
 
 body.customer-theme-dark .service-category-select,
-body.customer-theme-dark .service-search,
 body.customer-theme-dark .booking-panel input,
 body.customer-theme-dark .booking-panel select,
 body.customer-theme-dark .booking-panel textarea,
@@ -22855,6 +22940,17 @@ body.customer-theme-dark .form-field select,
 body.customer-theme-dark .form-field textarea {
   border-color: #4a4942;
   background-color: #292a27;
+  color: #eee8dd;
+}
+
+body.customer-theme-dark .service-search-wrap {
+  border-color: #4a4942;
+  background-color: #292a27;
+}
+
+body.customer-theme-dark .service-search {
+  border: 0;
+  background: transparent;
   color: #eee8dd;
 }
 
