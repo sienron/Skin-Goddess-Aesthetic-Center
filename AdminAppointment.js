@@ -321,6 +321,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const serviceSelect = document.getElementById('appointmentEditService');
     const staffSelect = document.getElementById('appointmentEditStaff');
     const statusSelect = document.getElementById('appointmentEditStatus');
+    const statusField = statusSelect.closest('.appointment-edit-fields__status');
     const message = document.getElementById('appointmentEditMessage');
     const saveButton = document.getElementById('appointmentEditSave');
     document.getElementById('appointmentEditSubtitle').textContent = appointment.ref;
@@ -330,6 +331,13 @@ document.addEventListener('DOMContentLoaded', () => {
     timeSelect.value = appointment.time;
     statusSelect.value = appointment.status;
     statusSelect.querySelector('option[value="completed"]').disabled = true;
+    const needsCompletionHint = appointment.status === 'in-progress';
+    statusField.classList.toggle('appointment-edit-fields__status--completion-hint', needsCompletionHint);
+    if (needsCompletionHint) {
+      statusSelect.setAttribute('aria-describedby', 'appointmentEditCompletionHint');
+    } else {
+      statusSelect.removeAttribute('aria-describedby');
+    }
     message.textContent = '';
     message.classList.remove('appointment-inventory-message--error');
     saveButton.disabled = true;

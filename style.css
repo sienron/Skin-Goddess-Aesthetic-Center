@@ -13652,6 +13652,29 @@ textarea.cm-editor__input {
 
 .appointment-edit-fields__status {
   grid-column: 1 / -1;
+  position: relative;
+}
+
+.appointment-edit-status-hint {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + 4px);
+  left: 0;
+  display: none;
+  width: min(360px, calc(100vw - 48px));
+  padding: 10px 12px;
+  border: 1px solid var(--um-border);
+  border-radius: 5px;
+  background: #fffdfa;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 12%);
+  color: var(--text-dark);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.appointment-edit-fields__status--completion-hint:hover .appointment-edit-status-hint,
+.appointment-edit-fields__status--completion-hint:focus-within .appointment-edit-status-hint {
+  display: block;
 }
 
 .appointment-details-grid {

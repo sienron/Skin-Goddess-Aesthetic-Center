@@ -413,10 +413,11 @@
               <option value="pending">Pending</option>
               <option value="confirmed">Confirmed</option>
               <option value="in-progress">In Progress</option>
-              <option value="completed">Completed</option>
+              <option value="completed" title="Review and confirm the products used in the View modal before completing this appointment.">Completed</option>
               <option value="cancelled">Cancelled</option>
               <option value="no-show">No Show</option>
             </select>
+            <span class="appointment-edit-status-hint" id="appointmentEditCompletionHint" role="tooltip">To complete this appointment, open its View modal and review and confirm the products used.</span>
           </div>
         </div>
         <p class="appointment-inventory-message" id="appointmentEditMessage" role="status" aria-live="polite"></p>
