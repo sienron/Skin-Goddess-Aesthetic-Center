@@ -442,17 +442,18 @@
             <span>Search inventory</span>
             <input id="appointmentProductsSearch" type="search" placeholder="Search products or categories">
           </label>
-          <button class="um-btn um-btn--ghost" id="appointmentProductsRefreshSuggestions" type="button">Refresh Suggestions</button>
         </div>
-        <p class="appointment-inventory-note">Suggestions are provisional starting points inferred from service and product names, not verified clinic procedures. Review the actual products and quantities used before continuing.</p>
-        <section class="appointment-products-section" aria-labelledby="appointmentProductsSelectedTitle">
-          <h3 id="appointmentProductsSelectedTitle">Selected Products for This Service</h3>
-          <div id="appointmentProductsSelectedList" class="appointment-products-list"></div>
-        </section>
-        <section class="appointment-products-section" aria-labelledby="appointmentProductsOtherTitle">
-          <h3 id="appointmentProductsOtherTitle">Other Inventory Products</h3>
-          <div id="appointmentProductsOtherList" class="appointment-products-list"></div>
-        </section>
+        <p class="appointment-inventory-note">Configured suggestions are provisional starting points, not verified clinic procedures. Confirm the actual products and quantities used before continuing.</p>
+        <div class="appointment-products-lists" id="appointmentProductsLists">
+          <section class="appointment-products-section" aria-labelledby="appointmentProductsSelectedTitle">
+            <h3 id="appointmentProductsSelectedTitle">Selected Products for This Service</h3>
+            <div id="appointmentProductsSelectedList" class="appointment-products-list"></div>
+          </section>
+          <section class="appointment-products-section" aria-labelledby="appointmentProductsOtherTitle">
+            <h3 id="appointmentProductsOtherTitle">Other Inventory Products</h3>
+            <div id="appointmentProductsOtherList" class="appointment-products-list"></div>
+          </section>
+        </div>
         <section id="appointmentProductsReviewStep" class="appointment-products-review" hidden>
           <h3>Review Deduction</h3>
           <p>Confirm that these are the products and quantities actually used. Stock changes and appointment completion happen together only after confirmation.</p>

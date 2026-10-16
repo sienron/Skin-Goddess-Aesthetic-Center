@@ -551,7 +551,7 @@ router.get('/admin/:id/inventory-review', requireRole('admin'), async (req, res)
 
       const productsResult = await client.query(`
         SELECT product.product_id, product.product_name, product.category,
-               product.stock_quantity, mapping.default_quantity,
+               product.stock_quantity, mapping.default_quantity, mapping.review_note,
                (mapping.product_id IS NOT NULL) AS is_suggested
         FROM inventory_products product
         LEFT JOIN service_inventory_product_defaults mapping
@@ -565,39 +565,56 @@ router.get('/admin/:id/inventory-review', requireRole('admin'), async (req, res)
         product
       ]));
 
-      let draftResult = await client.query(`
+      const draftResult = await client.query(`
         SELECT selected_items
         FROM appointment_inventory_review_drafts
         WHERE appointment_id = $1
       `, [appointmentId]);
-      if (!draftResult.rows.length) {
-        const initialSelection = productsResult.rows
-          .filter((product) => product.is_suggested && Number(product.stock_quantity) > 0)
-          .map((product) => ({
-            productId: Number(product.product_id),
-            quantity: Number(product.default_quantity),
-            isSuggested: true
-          }));
-        draftResult = await client.query(`
-          INSERT INTO appointment_inventory_review_drafts
-            (appointment_id, selected_items, updated_by, updated_at)
-          VALUES ($1, $2::jsonb, $3, NOW())
-          RETURNING selected_items
-        `, [appointmentId, JSON.stringify(initialSelection), req.session.userId]);
-      }
-
-      const storedSelection = draftResult.rows[0].selected_items;
-      const selectedItems = storedSelection.filter((item) => {
+      const storedSelection = draftResult.rows[0]?.selected_items || [];
+      const storedById = new Map(storedSelection.map((item) => [Number(item.productId), item]));
+      const selectedItems = productsResult.rows
+        .filter((product) => product.is_suggested && Number(product.stock_quantity) > 0)
+        .map((product) => {
+          const productId = Number(product.product_id);
+          const stored = storedById.get(productId);
+          const defaultQuantity = Number(product.default_quantity);
+          const mappingChanged = Number(stored?.suggestionDefaultQuantity) !== defaultQuantity;
+          return {
+            productId,
+            quantity: stored?.isSuggested && stored.quantity !== null && !mappingChanged
+              ? Number(stored.quantity)
+              : defaultQuantity,
+            isSuggested: true,
+            suggestionDefaultQuantity: defaultQuantity
+          };
+        });
+      storedSelection.forEach((item) => {
         const product = productsById.get(Number(item.productId));
-        return product && Number(product.stock_quantity) > 0;
+        if (!product || Number(product.stock_quantity) <= 0) return;
+        if (item.isSuggested || product.is_suggested) return;
+        selectedItems.push({
+          productId: Number(item.productId),
+          quantity: item.quantity === null ? null : Number(item.quantity),
+          isSuggested: false,
+          suggestionDefaultQuantity: null
+        });
       });
-      const removedUnavailableSelection = selectedItems.length !== storedSelection.length;
+      selectedItems.sort((left, right) => left.productId - right.productId);
+      const removedUnavailableSelection = storedSelection.some((item) => {
+        const product = productsById.get(Number(item.productId));
+        return !product || Number(product.stock_quantity) <= 0;
+      });
       await client.query(`
-        UPDATE appointment_inventory_review_drafts
-        SET selected_items = CASE WHEN $2 THEN $3::jsonb ELSE selected_items END,
-            reviewed_by = NULL, reviewed_at = NULL
-        WHERE appointment_id = $1
-      `, [appointmentId, removedUnavailableSelection, JSON.stringify(selectedItems)]);
+        INSERT INTO appointment_inventory_review_drafts
+          (appointment_id, selected_items, updated_by, updated_at, reviewed_by, reviewed_at)
+        VALUES ($1, $2::jsonb, $3, NOW(), NULL, NULL)
+        ON CONFLICT (appointment_id)
+        DO UPDATE SET selected_items = EXCLUDED.selected_items,
+                      updated_by = EXCLUDED.updated_by,
+                      updated_at = NOW(),
+                      reviewed_by = NULL,
+                      reviewed_at = NULL
+      `, [appointmentId, JSON.stringify(selectedItems), req.session.userId]);
       const selectedById = new Map(selectedItems.map((item) => [Number(item.productId), item]));
       const products = productsResult.rows.map((product) => {
         const selected = selectedById.get(Number(product.product_id));
@@ -635,15 +652,26 @@ router.put('/admin/:id/inventory-review-draft', requireRole('admin'), async (req
   for (const item of submittedItems) {
     const productId = Number(item?.productId);
     const quantity = item?.quantity === null || item?.quantity === '' ? null : Number(item?.quantity);
+    const suggestionDefaultQuantity = item?.suggestionDefaultQuantity == null
+      ? null
+      : Number(item.suggestionDefaultQuantity);
     if (!Number.isSafeInteger(productId) || productId < 1
       || (quantity !== null && (!Number.isSafeInteger(quantity) || quantity < 1))
+      || (suggestionDefaultQuantity !== null
+        && (!Number.isSafeInteger(suggestionDefaultQuantity) || suggestionDefaultQuantity < 1))
       || (markReviewed && quantity === null)
       || typeof item?.isSuggested !== 'boolean'
+      || (!item.isSuggested && suggestionDefaultQuantity !== null)
       || selectedIds.has(productId)) {
       return res.status(400).json({ message: 'Each selected product must have a unique ID and either an empty quantity or a positive whole number.' });
     }
     selectedIds.add(productId);
-    selectedItems.push({ productId, quantity, isSuggested: item.isSuggested });
+    selectedItems.push({
+      productId,
+      quantity,
+      isSuggested: item.isSuggested,
+      suggestionDefaultQuantity
+    });
   }
 
   try {
@@ -714,65 +742,6 @@ router.put('/admin/:id/inventory-review-draft', requireRole('admin'), async (req
         ? 'Could not save the product review.'
         : `Could not save the product review: ${error.message}`
     });
-  }
-});
-
-router.post('/admin/:id/inventory-review/refresh-suggestions', requireRole('admin'), async (req, res) => {
-  const appointmentId = validAppointmentId(req.params.id);
-  if (!appointmentId) return res.status(400).json({ message: 'Choose a valid appointment.' });
-
-  try {
-    const selectedItems = await db.transaction(async (client) => {
-      const appointmentResult = await client.query(`
-        SELECT service_id, appointment_status
-        FROM appointments
-        WHERE appointment_id = $1
-        FOR UPDATE
-      `, [appointmentId]);
-      if (!appointmentResult.rows.length) {
-        const error = new Error('Appointment not found.');
-        error.statusCode = 404;
-        throw error;
-      }
-      const appointment = appointmentResult.rows[0];
-      if (appointment.appointment_status !== 'in_progress') {
-        const error = new Error('Suggestions can only be refreshed for an In Progress appointment.');
-        error.statusCode = 409;
-        throw error;
-      }
-      const suggestions = await client.query(`
-        SELECT mapping.product_id, mapping.default_quantity, product.stock_quantity
-        FROM service_inventory_product_defaults mapping
-        JOIN inventory_products product ON product.product_id = mapping.product_id
-        WHERE mapping.service_id = $1 AND mapping.is_enabled = TRUE
-        ORDER BY mapping.product_id
-      `, [appointment.service_id]);
-      const nextSelection = suggestions.rows
-        .filter((item) => Number(item.stock_quantity) > 0)
-        .map((item) => ({
-          productId: Number(item.product_id),
-          quantity: Number(item.default_quantity),
-          isSuggested: true
-        }));
-      const removedUnavailableSelection = nextSelection.length !== suggestions.rows.length;
-      await client.query(`
-        INSERT INTO appointment_inventory_review_drafts
-          (appointment_id, selected_items, updated_by, updated_at)
-        VALUES ($1, $2::jsonb, $3, NOW())
-        ON CONFLICT (appointment_id)
-        DO UPDATE SET selected_items = EXCLUDED.selected_items,
-                      updated_by = EXCLUDED.updated_by,
-                      updated_at = NOW(),
-                      reviewed_by = NULL,
-                      reviewed_at = NULL
-      `, [appointmentId, JSON.stringify(nextSelection), req.session.userId]);
-      return { selectedItems: nextSelection, removedUnavailableSelection };
-    });
-    return res.json(selectedItems);
-  } catch (error) {
-    if (error.statusCode) return res.status(error.statusCode).json({ message: error.message });
-    console.error('Error refreshing appointment product suggestions:', error);
-    return res.status(500).json({ message: 'Could not refresh product suggestions.' });
   }
 });
 

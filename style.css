@@ -13713,6 +13713,21 @@ textarea.cm-editor__input {
   width: min(720px, 100%);
 }
 
+.appointment-products-modal {
+  display: flex;
+  flex-direction: column;
+  width: min(900px, calc(100vw - 40px));
+  height: min(900px, calc(100vh - 40px));
+  max-height: calc(100vh - 40px);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.appointment-products-modal > .apt-modal__head,
+.appointment-products-modal > .appointment-inventory-actions {
+  flex: 0 0 auto;
+}
+
 .appointment-edit-modal form {
   margin: 0;
 }
@@ -13821,12 +13836,18 @@ textarea.cm-editor__input {
 }
 
 .appointment-products-content {
-  padding: 18px 20px;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  padding: 12px 20px 10px;
 }
 
 .appointment-products-toolbar {
   display: flex;
   align-items: flex-end;
+  flex: 0 0 auto;
   gap: 12px;
 }
 
@@ -13835,22 +13856,33 @@ textarea.cm-editor__input {
 }
 
 .appointment-inventory-note {
-  margin: 12px 0;
+  flex: 0 0 auto;
+  margin: 8px 0;
   color: var(--text-muted);
   font-size: 11px;
   line-height: 1.5;
 }
 
+.appointment-products-lists {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 2px 6px 2px 2px;
+}
+
 .appointment-products-list {
   display: grid;
   gap: 8px;
-  max-height: min(42vh, 440px);
-  overflow-y: auto;
   padding: 2px;
 }
 
 .appointment-products-section {
-  margin-top: 14px;
+  margin-top: 10px;
+}
+
+.appointment-products-section:first-child {
+  margin-top: 0;
 }
 
 .appointment-products-section h3 {
@@ -13903,6 +13935,12 @@ textarea.cm-editor__input {
   color: var(--um-role-client);
 }
 
+.appointment-product-review-note {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-style: italic;
+}
+
 .appointment-product-row__quantity {
   display: grid;
   gap: 4px;
@@ -13925,7 +13963,10 @@ textarea.cm-editor__input {
 }
 
 .appointment-products-review {
-  margin-top: 14px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  margin-top: 8px;
   padding: 14px;
   border: 1px solid var(--um-border);
   border-radius: 5px;
@@ -14171,6 +14212,21 @@ textarea.cm-editor__input {
   .appointment-inventory-actions {
     align-items: stretch;
     flex-direction: column-reverse;
+  }
+
+  .appointment-products-modal .appointment-inventory-actions {
+    align-items: center;
+    flex-direction: row;
+    justify-content: flex-end;
+    padding: 10px 14px 14px;
+  }
+
+  .appointment-products-modal .appointment-inventory-actions .um-btn {
+    width: auto;
+  }
+
+  .appointment-products-content {
+    padding: 10px 14px 8px;
   }
 
   .appointment-inventory-actions .um-btn {

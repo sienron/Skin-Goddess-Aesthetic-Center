@@ -391,7 +391,8 @@ document.addEventListener('DOMContentLoaded', () => {
     return [...productSelection.entries()].map(([productId, selection]) => ({
       productId,
       quantity: selection.quantity === '' || selection.quantity === null ? null : Number(selection.quantity),
-      isSuggested: Boolean(selection.isSuggested)
+      isSuggested: Boolean(selection.isSuggested),
+      suggestionDefaultQuantity: selection.suggestionDefaultQuantity ?? null
     }));
   }
 
@@ -456,6 +457,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const otherProducts = productReview.products.filter((product) => (
       !productSelection.has(Number(product.product_id)) && matchesSearch(product)
     ));
+    const hasConfiguredSuggestions = productReview.products.some((product) => product.is_suggested);
 
     function renderProductList(list, products, emptyMessage) {
       list.textContent = '';
@@ -479,6 +481,9 @@ document.addEventListener('DOMContentLoaded', () => {
           : `${product.category} · Current stock: ${product.stock_quantity}`));
         if (product.is_suggested) {
           details.appendChild(el('span', 'appointment-product-tag', `Provisional suggestion${product.default_quantity ? ` · Starting quantity ${product.default_quantity}` : ''}`));
+          if (product.review_note) {
+            details.appendChild(el('span', 'appointment-product-review-note', product.review_note));
+          }
         } else if (selection) {
           details.appendChild(el('span', 'appointment-product-tag appointment-product-tag--manual', 'Manually added'));
         }
@@ -500,7 +505,8 @@ document.addEventListener('DOMContentLoaded', () => {
               quantity: product.is_suggested && product.default_quantity
                 ? Number(product.default_quantity)
                 : '',
-              isSuggested: Boolean(product.is_suggested)
+              isSuggested: Boolean(product.is_suggested),
+              suggestionDefaultQuantity: product.is_suggested ? Number(product.default_quantity) : null
             });
           } else {
             productSelection.delete(productId);
@@ -521,7 +527,9 @@ document.addEventListener('DOMContentLoaded', () => {
     renderProductList(
       document.getElementById('appointmentProductsSelectedList'),
       selectedProducts,
-      query ? 'No selected products match your search.' : 'No products selected yet.'
+      query ? 'No selected products match your search.'
+        : hasConfiguredSuggestions ? 'No products selected yet.'
+          : 'No configured suggestions for this service. Select products manually.'
     );
     renderProductList(
       document.getElementById('appointmentProductsOtherList'),
@@ -544,6 +552,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
     document.querySelectorAll('.appointment-products-section').forEach((section) => { section.hidden = true; });
+    document.getElementById('appointmentProductsLists').hidden = true;
     document.querySelector('.appointment-products-toolbar').hidden = true;
     document.querySelector('.appointment-inventory-note').hidden = true;
     document.getElementById('appointmentProductsReviewStep').hidden = false;
@@ -554,6 +563,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function showProductEditorStep() {
     document.querySelectorAll('.appointment-products-section').forEach((section) => { section.hidden = false; });
+    document.getElementById('appointmentProductsLists').hidden = false;
     document.querySelector('.appointment-products-toolbar').hidden = false;
     document.querySelector('.appointment-inventory-note').hidden = false;
     document.getElementById('appointmentProductsReviewStep').hidden = true;
@@ -571,7 +581,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (product.is_selected) {
         productSelection.set(Number(product.product_id), {
           quantity: product.selected_quantity ?? '',
-          isSuggested: Boolean(product.is_suggested)
+          isSuggested: Boolean(product.is_suggested),
+          suggestionDefaultQuantity: product.is_suggested ? Number(product.default_quantity) : null
         });
       }
     });
@@ -715,27 +726,6 @@ document.addEventListener('DOMContentLoaded', () => {
     productSearchTerm = event.target.value;
     renderProductSelection();
   });
-  document.getElementById('appointmentProductsRefreshSuggestions').addEventListener('click', async () => {
-    if (!window.confirm('Replace this appointment’s saved selection with the latest enabled service suggestions?')) return;
-    const button = document.getElementById('appointmentProductsRefreshSuggestions');
-    button.disabled = true;
-    try {
-      const refreshResult = await requestJson(`/api/appointments/admin/${selectedAppointment.id}/inventory-review/refresh-suggestions`, {
-        method: 'POST'
-      });
-      await loadProductReview();
-      renderProductSelection();
-      if (refreshResult.removedUnavailableSelection) {
-        document.getElementById('appointmentProductsMessage').textContent = 'Out-of-stock suggestions were excluded.';
-      }
-      scheduleProductDraftSave();
-    } catch (error) {
-      document.getElementById('appointmentProductsMessage').textContent = error.message;
-      document.getElementById('appointmentProductsMessage').classList.add('appointment-inventory-message--error');
-    } finally {
-      button.disabled = false;
-    }
-  });
   document.getElementById('appointmentProductsReview').addEventListener('click', async () => {
     const issue = getProductSelectionProblem();
     if (issue) {
@@ -778,6 +768,14 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     const button = document.getElementById('appointmentProductsConfirm');
+    const selectedItems = selectedProductItems();
+    const confirmationMessage = selectedItems.length
+      ? `Deduct the selected products from inventory and mark this appointment as completed?\n\n${selectedItems.map((item) => {
+        const product = productReview.products.find((entry) => Number(entry.product_id) === item.productId);
+        return `${product?.product_name || 'Inventory product'} — ${item.quantity} unit(s)`;
+      }).join('\n')}`
+      : 'No products are selected. Complete this appointment without changing inventory?';
+    if (!window.confirm(confirmationMessage)) return;
     button.disabled = true;
     try {
       window.clearTimeout(draftSaveTimer);
