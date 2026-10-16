@@ -480,7 +480,9 @@ document.addEventListener('DOMContentLoaded', () => {
           ? `${product.category} · Out of stock`
           : `${product.category} · Current stock: ${product.stock_quantity}`));
         if (product.is_suggested) {
-          details.appendChild(el('span', 'appointment-product-tag', `Provisional suggestion${product.default_quantity ? ` · Starting quantity ${product.default_quantity}` : ''}`));
+          details.appendChild(el('span', 'appointment-product-tag', product.default_quantity == null
+            ? 'Provisional suggestion · quantity not configured'
+            : `Provisional suggestion · starting quantity ${product.default_quantity}`));
           if (product.review_note) {
             details.appendChild(el('span', 'appointment-product-review-note', product.review_note));
           }
@@ -502,11 +504,13 @@ document.addEventListener('DOMContentLoaded', () => {
         checkbox.addEventListener('change', () => {
           if (checkbox.checked) {
             productSelection.set(productId, {
-              quantity: product.is_suggested && product.default_quantity
+              quantity: product.is_suggested && product.default_quantity != null
                 ? Number(product.default_quantity)
                 : '',
               isSuggested: Boolean(product.is_suggested),
-              suggestionDefaultQuantity: product.is_suggested ? Number(product.default_quantity) : null
+              suggestionDefaultQuantity: product.is_suggested && product.default_quantity != null
+                ? Number(product.default_quantity)
+                : null
             });
           } else {
             productSelection.delete(productId);
@@ -582,7 +586,9 @@ document.addEventListener('DOMContentLoaded', () => {
         productSelection.set(Number(product.product_id), {
           quantity: product.selected_quantity ?? '',
           isSuggested: Boolean(product.is_suggested),
-          suggestionDefaultQuantity: product.is_suggested ? Number(product.default_quantity) : null
+          suggestionDefaultQuantity: product.is_suggested && product.default_quantity != null
+            ? Number(product.default_quantity)
+            : null
         });
       }
     });

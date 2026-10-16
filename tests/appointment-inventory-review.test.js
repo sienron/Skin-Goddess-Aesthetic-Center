@@ -2,12 +2,20 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const db = require('../db');
 const appointmentsRouter = require('../routes/appointments');
+const servicesRouter = require('../routes/services');
+const { buildCandidates } = require('../migrations/039-appointment-inventory-mappings');
 
 const draftRoute = appointmentsRouter.stack
   .find((layer) => layer.route?.path === '/admin/:id/inventory-review-draft' && layer.route.methods.put)
   .route.stack.at(-1).handle;
 const reviewRoute = appointmentsRouter.stack
   .find((layer) => layer.route?.path === '/admin/:id/inventory-review' && layer.route.methods.get)
+  .route.stack.at(-1).handle;
+const serviceDefaultsRoute = servicesRouter.stack
+  .find((layer) => layer.route?.path === '/admin/:id/inventory-defaults' && layer.route.methods.put)
+  .route.stack.at(-1).handle;
+const completeRoute = appointmentsRouter.stack
+  .find((layer) => layer.route?.path === '/admin/:id/complete-with-inventory' && layer.route.methods.post)
   .route.stack.at(-1).handle;
 
 async function saveDraft({ selectedItems, stockByProductId }) {
@@ -110,6 +118,164 @@ async function loadReview({ products, savedSelection = null }) {
   return { statusCode, responseBody, queryCalls };
 }
 
+async function saveServiceDefaults({ products }) {
+  const originalTransaction = db.transaction;
+  const queryCalls = [];
+  let statusCode = 200;
+  let responseBody;
+
+  db.transaction = async (callback) => callback({
+    async query(sql, values = []) {
+      queryCalls.push({ sql, values });
+      if (/SELECT service_id FROM services/.test(sql)) {
+        return { rows: [{ service_id: 31 }] };
+      }
+      if (/SELECT product_id\s+FROM inventory_products/.test(sql)) {
+        return { rows: values[0].map((productId) => ({ product_id: productId })) };
+      }
+      if (/SELECT mapping\.product_id, product\.product_name/.test(sql)) {
+        return {
+          rows: products.map((item) => ({
+            product_id: item.productId,
+            product_name: `Product ${item.productId}`,
+            category: 'Medical/Injection Supplies',
+            default_quantity: item.defaultQuantity,
+            is_enabled: item.isEnabled,
+            review_note: item.reviewNote
+          }))
+        };
+      }
+      return { rows: [] };
+    }
+  });
+
+  try {
+    await serviceDefaultsRoute({
+      params: { id: '31' },
+      body: {
+        products: products.map((item) => ({
+          productId: item.productId,
+          defaultQuantity: item.defaultQuantity,
+          isEnabled: item.isEnabled,
+          reviewNote: item.reviewNote
+        }))
+      },
+      session: { userId: 7 }
+    }, {
+      status(code) {
+        statusCode = code;
+        return this;
+      },
+      json(body) {
+        responseBody = body;
+        return this;
+      }
+    });
+  } finally {
+    db.transaction = originalTransaction;
+  }
+
+  return { statusCode, responseBody, queryCalls };
+}
+
+async function completeAppointment({
+  selectedItems,
+  stockByProductId = new Map([[12, 20]]),
+  alreadyDeducted = false,
+  failOnInventoryLog = false,
+  failOnConditionalUpdate = false
+}) {
+  const originalTransaction = db.transaction;
+  const queryCalls = [];
+  let transactionStarted = false;
+  let committed = false;
+  let rolledBack = false;
+  let statusCode = 200;
+  let responseBody;
+
+  db.transaction = async (callback) => {
+    transactionStarted = true;
+    try {
+      const result = await callback({
+        async query(sql, values = []) {
+          queryCalls.push({ sql, values });
+          if (/SELECT appointment_id, appointment_status, user_id/.test(sql)) {
+            return { rows: [{ appointment_id: 42, appointment_status: 'in_progress', user_id: null }] };
+          }
+          if (/SELECT selected_items, reviewed_by, reviewed_at/.test(sql)) {
+            return {
+              rows: [{
+                selected_items: selectedItems,
+                reviewed_by: 7,
+                reviewed_at: '2026-10-16T00:00:00Z'
+              }]
+            };
+          }
+          if (/FROM appointment_inventory_deductions/.test(sql)) {
+            return { rows: alreadyDeducted ? [{ confirmed_at: '2026-10-16T00:00:00Z' }] : [] };
+          }
+          if (/SELECT product_id, product_name, stock_quantity\s+FROM inventory_products/.test(sql)) {
+            return {
+              rows: values[0]
+                .filter((productId) => stockByProductId.has(productId))
+                .map((productId) => ({
+                  product_id: productId,
+                  product_name: `Product ${productId}`,
+                  stock_quantity: stockByProductId.get(productId)
+                }))
+            };
+          }
+          if (/UPDATE inventory_products/.test(sql)) {
+            if (failOnConditionalUpdate) return { rows: [] };
+            const [quantity, productId] = values;
+            return {
+              rows: [{
+                product_id: productId,
+                product_name: `Product ${productId}`,
+                category: 'Treatment',
+                stock_quantity: stockByProductId.get(productId) - quantity
+              }]
+            };
+          }
+          if (/INSERT INTO inventory_transactions/.test(sql) && failOnInventoryLog) {
+            throw new Error('Simulated inventory transaction failure.');
+          }
+          if (/UPDATE appointments\s+SET appointment_status = 'completed'/.test(sql)) {
+            return { rows: [{ appointment_id: 42, user_id: null }] };
+          }
+          return { rows: [] };
+        }
+      });
+      committed = true;
+      return result;
+    } catch (error) {
+      rolledBack = true;
+      throw error;
+    }
+  };
+
+  try {
+    await completeRoute({
+      params: { id: '42' },
+      body: { selectedItems },
+      session: { userId: 7 }
+    }, {
+      status(code) {
+        statusCode = code;
+        return this;
+      },
+      json(body) {
+        responseBody = body;
+        return this;
+      }
+    });
+  } finally {
+    db.transaction = originalTransaction;
+  }
+
+  return { statusCode, responseBody, queryCalls, transactionStarted, committed, rolledBack };
+}
+
 test('inventory review preselects enabled service suggestions and leaves other products unselected', async () => {
   const result = await loadReview({
     products: [
@@ -134,6 +300,32 @@ test('inventory review preselects enabled service suggestions and leaves other p
   assert.deepEqual(JSON.parse(persistedSelection.values[1]), [
     { productId: 12, quantity: 2, isSuggested: true, suggestionDefaultQuantity: 2 }
   ]);
+  const mappingQuery = result.queryCalls.find(({ sql }) => /FROM inventory_products product/.test(sql));
+  assert.match(mappingQuery.sql, /mapping\.is_enabled = TRUE/);
+  assert.deepEqual(mappingQuery.values, [3]);
+});
+
+test('provisional catalog candidates use exact supplied products and do not assume quantities', () => {
+  const candidates = buildCandidates();
+  const antiAgingDrip = candidates
+    .filter((candidate) => candidate.service_name === 'Anti-Aging Drip')
+    .map((candidate) => candidate.product_name)
+    .sort();
+
+  assert.deepEqual(antiAgingDrip, [
+    '10cc Syringe',
+    '3cc Syringe',
+    'Cannula',
+    'Macroset (IV Set)',
+    'Scalp Vein Set',
+    'Sterile Water'
+  ]);
+  assert.ok(candidates.every((candidate) => !Object.hasOwn(candidate, 'default_quantity')));
+  assert.equal(candidates.some((candidate) => candidate.service_name === '3-in-1 Facial Oxy'), false);
+  const keys = candidates.map(({ service_name, category, product_name }) => (
+    `${service_name}\u0000${category}\u0000${product_name}`
+  ));
+  assert.equal(new Set(keys).size, keys.length);
 });
 
 test('inventory review leaves products unselected when a service has no configured suggestions', async () => {
@@ -149,16 +341,34 @@ test('inventory review leaves products unselected when a service has no configur
   assert.deepEqual(JSON.parse(persistedSelection.values[1]), []);
 });
 
+test('inventory review preselects enabled suggestions without inventing a quantity', async () => {
+  const result = await loadReview({
+    products: [
+      { product_id: 12, product_name: 'Unconfirmed quantity', category: 'Treatment', stock_quantity: 5, default_quantity: null, review_note: 'Confirm use', is_suggested: true }
+    ]
+  });
+
+  assert.equal(result.statusCode, 200);
+  assert.equal(result.responseBody.products[0].is_selected, true);
+  assert.equal(result.responseBody.products[0].selected_quantity, null);
+  const persistedSelection = result.queryCalls.find(({ sql }) => /INSERT INTO appointment_inventory_review_drafts/.test(sql));
+  assert.deepEqual(JSON.parse(persistedSelection.values[1]), [
+    { productId: 12, quantity: null, isSuggested: true, suggestionDefaultQuantity: null }
+  ]);
+});
+
 test('inventory review reloads configured suggestions and preserves saved manual selections', async () => {
   const result = await loadReview({
     products: [
       { product_id: 12, product_name: 'Configured product', category: 'Treatment', stock_quantity: 5, default_quantity: 2, review_note: 'Provisional', is_suggested: true },
       { product_id: 13, product_name: 'Manual choice', category: 'Treatment', stock_quantity: 5, default_quantity: null, review_note: null, is_suggested: false },
-      { product_id: 14, product_name: 'Newly configured product', category: 'Treatment', stock_quantity: 5, default_quantity: 1, review_note: 'Provisional', is_suggested: true }
+      { product_id: 14, product_name: 'Newly configured product', category: 'Treatment', stock_quantity: 5, default_quantity: 1, review_note: 'Provisional', is_suggested: true },
+      { product_id: 15, product_name: 'New suggestion with saved manual quantity', category: 'Treatment', stock_quantity: 5, default_quantity: 4, review_note: 'Provisional', is_suggested: true }
     ],
     savedSelection: [
       { productId: 12, quantity: 3, isSuggested: true, suggestionDefaultQuantity: 2 },
-      { productId: 13, quantity: 2, isSuggested: false }
+      { productId: 13, quantity: 2, isSuggested: false },
+      { productId: 15, quantity: 3, isSuggested: false }
     ]
   });
 
@@ -170,7 +380,8 @@ test('inventory review reloads configured suggestions and preserves saved manual
     [
       [12, 3, true],
       [13, 2, false],
-      [14, 1, true]
+      [14, 1, true],
+      [15, 3, true]
     ]
   );
 });
@@ -240,4 +451,114 @@ test('inventory review draft rejects non-positive quantities', async () => {
 
   assert.equal(result.statusCode, 400);
   assert.match(result.responseBody.message, /positive whole number/);
+});
+
+test('service defaults allow an enabled suggestion with no unconfirmed default quantity', async () => {
+  const result = await saveServiceDefaults({
+    products: [{
+      productId: 11,
+      defaultQuantity: null,
+      isEnabled: true,
+      reviewNote: 'Confirm actual use and quantity with clinic.'
+    }]
+  });
+
+  assert.equal(result.statusCode, 200);
+  assert.deepEqual(result.responseBody, [{
+    product_id: 11,
+    product_name: 'Product 11',
+    category: 'Medical/Injection Supplies',
+    default_quantity: null,
+    is_enabled: true,
+    review_note: 'Confirm actual use and quantity with clinic.'
+  }]);
+  const upsert = result.queryCalls.find(({ sql }) => /INSERT INTO service_inventory_product_defaults/.test(sql));
+  assert.equal(upsert.values[2], null);
+  assert.equal(upsert.values[3], true);
+});
+
+test('completion rejects invalid quantities before opening a transaction', async () => {
+  for (const quantity of [0, -1, null, '', '2.5', 'invalid']) {
+    const result = await completeAppointment({
+      selectedItems: [{ productId: 12, quantity, isSuggested: false }]
+    });
+    assert.equal(result.statusCode, 400);
+    assert.equal(result.transactionStarted, false);
+  }
+});
+
+test('completion rechecks stock and rolls back when stock is insufficient', async () => {
+  const result = await completeAppointment({
+    selectedItems: [{ productId: 12, quantity: 3, isSuggested: false }],
+    stockByProductId: new Map([[12, 2]])
+  });
+
+  assert.equal(result.statusCode, 409);
+  assert.equal(result.rolledBack, true);
+  assert.equal(result.queryCalls.some(({ sql }) => /UPDATE inventory_products/.test(sql)), false);
+  assert.equal(result.queryCalls.some(({ sql }) => /UPDATE appointments\s+SET appointment_status = 'completed'/.test(sql)), false);
+});
+
+test('completion rejects products that are no longer in inventory', async () => {
+  const result = await completeAppointment({
+    selectedItems: [{ productId: 12, quantity: 1, isSuggested: false }],
+    stockByProductId: new Map()
+  });
+
+  assert.equal(result.statusCode, 409);
+  assert.equal(result.rolledBack, true);
+  assert.equal(result.queryCalls.some(({ sql }) => /UPDATE inventory_products/.test(sql)), false);
+});
+
+test('completion prevents a duplicate inventory deduction', async () => {
+  const result = await completeAppointment({
+    selectedItems: [{ productId: 12, quantity: 1, isSuggested: false }],
+    alreadyDeducted: true
+  });
+
+  assert.equal(result.statusCode, 409);
+  assert.equal(result.rolledBack, true);
+  assert.equal(result.queryCalls.some(({ sql }) => /UPDATE inventory_products/.test(sql)), false);
+});
+
+test('completion rolls back if stock changes before the guarded inventory update', async () => {
+  const result = await completeAppointment({
+    selectedItems: [{ productId: 12, quantity: 1, isSuggested: false }],
+    failOnConditionalUpdate: true
+  });
+
+  assert.equal(result.statusCode, 409);
+  assert.equal(result.rolledBack, true);
+  assert.equal(result.queryCalls.some(({ sql }) => /UPDATE appointments\s+SET appointment_status = 'completed'/.test(sql)), false);
+});
+
+test('completion rolls back a stock update if transaction logging fails', async () => {
+  const result = await completeAppointment({
+    selectedItems: [{ productId: 12, quantity: 1, isSuggested: false }],
+    failOnInventoryLog: true
+  });
+
+  assert.equal(result.statusCode, 500);
+  assert.equal(result.rolledBack, true);
+  assert.equal(result.queryCalls.some(({ sql }) => /UPDATE inventory_products/.test(sql)), true);
+  assert.equal(result.queryCalls.some(({ sql }) => /UPDATE appointments\s+SET appointment_status = 'completed'/.test(sql)), false);
+});
+
+test('completion logs the appointment deduction and updates status in one successful transaction', async () => {
+  const result = await completeAppointment({
+    selectedItems: [{ productId: 12, quantity: 2, isSuggested: false }]
+  });
+
+  assert.equal(result.statusCode, 200);
+  assert.equal(result.committed, true);
+  assert.equal(result.rolledBack, false);
+  assert.equal(result.responseBody.status, 'completed');
+  const deductionLog = result.queryCalls.find(({ sql }) => /INSERT INTO inventory_transactions/.test(sql));
+  assert.equal(deductionLog.values[6], 7);
+  assert.equal(deductionLog.values[7], 42);
+  const deductionRecord = result.queryCalls.find(({ sql }) => /INSERT INTO appointment_inventory_deductions/.test(sql));
+  const statusUpdate = result.queryCalls.find(({ sql }) => /UPDATE appointments\s+SET appointment_status = 'completed'/.test(sql));
+  assert.ok(deductionRecord);
+  assert.ok(statusUpdate);
+  assert.ok(result.queryCalls.indexOf(deductionLog) < result.queryCalls.indexOf(statusUpdate));
 });

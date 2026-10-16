@@ -75,10 +75,9 @@ router.put('/admin/:id/inventory-defaults', requireRole('admin'), async (req, re
             || typeof item?.isEnabled !== 'boolean'
             || (defaultQuantity !== null
                 && (!Number.isSafeInteger(defaultQuantity) || defaultQuantity < 1))
-            || (item.isEnabled && defaultQuantity === null)
             || productIds.has(productId)) {
             return res.status(400).json({
-                message: 'Each default must use a unique product and enabled defaults need a positive whole-number quantity.'
+                message: 'Each default must use a unique product and any configured quantity must be a positive whole number.'
             });
         }
         productIds.add(productId);

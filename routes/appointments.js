@@ -577,13 +577,21 @@ router.get('/admin/:id/inventory-review', requireRole('admin'), async (req, res)
         .map((product) => {
           const productId = Number(product.product_id);
           const stored = storedById.get(productId);
-          const defaultQuantity = Number(product.default_quantity);
-          const mappingChanged = Number(stored?.suggestionDefaultQuantity) !== defaultQuantity;
+          const defaultQuantity = product.default_quantity == null
+            ? null
+            : Number(product.default_quantity);
+          const storedDefaultQuantity = stored?.suggestionDefaultQuantity == null
+            ? null
+            : Number(stored.suggestionDefaultQuantity);
+          const mappingChanged = !stored?.isSuggested
+            || storedDefaultQuantity !== defaultQuantity;
           return {
             productId,
-            quantity: stored?.isSuggested && stored.quantity !== null && !mappingChanged
-              ? Number(stored.quantity)
-              : defaultQuantity,
+            quantity: stored && !stored.isSuggested
+              ? stored.quantity === null ? null : Number(stored.quantity)
+              : stored?.isSuggested && !mappingChanged
+                ? stored.quantity === null ? null : Number(stored.quantity)
+                : defaultQuantity,
             isSuggested: true,
             suggestionDefaultQuantity: defaultQuantity
           };

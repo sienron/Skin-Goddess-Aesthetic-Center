@@ -201,7 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
       enabled.type = 'checkbox';
       enabled.checked = Boolean(mapping?.isEnabled);
       enabled.setAttribute('aria-label', `Enable ${product.product_name} as a suggested default`);
-      toggleLabel.append(enabled, document.createTextNode('Default'));
+      toggleLabel.append(enabled, document.createTextNode('Enabled'));
 
       const details = el('div', 'cm-service-default-row__details');
       details.appendChild(el('strong', '', product.product_name));
@@ -212,12 +212,13 @@ document.addEventListener('DOMContentLoaded', () => {
         details.appendChild(el('small', 'cm-service-default-row__review', 'Saved but disabled; it will not be suggested.'));
       }
 
-      const quantityLabel = el('label', 'cm-editor__field', 'Default quantity');
+      const quantityLabel = el('label', 'cm-editor__field', 'Default quantity (optional)');
       const quantity = el('input', 'cm-editor__input');
       quantity.type = 'number';
       quantity.min = '1';
       quantity.step = '1';
       quantity.value = mapping?.quantity ?? '';
+      quantity.placeholder = 'Not confirmed';
       quantity.disabled = !enabled.checked;
       quantity.setAttribute('aria-label', `Default quantity for ${product.product_name}`);
       quantityLabel.appendChild(quantity);
@@ -232,7 +233,6 @@ document.addEventListener('DOMContentLoaded', () => {
           wasMapped: false
         };
         current.isEnabled = enabled.checked;
-        if (enabled.checked && current.reviewNote) current.reviewNote = '';
         serviceDefaultsState.set(productId, current);
         renderServiceDefaults();
       });
@@ -297,9 +297,9 @@ document.addEventListener('DOMContentLoaded', () => {
     for (const mapping of serviceDefaultsState.values()) {
       if (!mapping.wasMapped && !mapping.isEnabled) continue;
       const quantity = mapping.quantity === '' ? null : Number(mapping.quantity);
-      if (mapping.isEnabled && (!Number.isSafeInteger(quantity) || quantity < 1)) {
+      if (quantity !== null && (!Number.isSafeInteger(quantity) || quantity < 1)) {
         const errorMessage = document.getElementById('cmServiceDefaultsError');
-        errorMessage.textContent = 'Enabled defaults require a positive whole-number quantity.';
+        errorMessage.textContent = 'A configured default quantity must be a positive whole number.';
         errorMessage.hidden = false;
         return;
       }
