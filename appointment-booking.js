@@ -32,6 +32,7 @@
     const MORNING_SLOTS = ["9:00 AM", "10:00 AM", "11:00 AM"];
     const AFTERNOON_SLOTS = ["1:00 PM", "2:00 PM", "3:00 PM", "4:00 PM"];
     const ALL_SLOTS = MORNING_SLOTS.concat(AFTERNOON_SLOTS);
+    const MAX_ADVANCE_DAYS = 60;
 
     function getManilaNow() {
         const parts = new Intl.DateTimeFormat("en-CA", {
@@ -87,9 +88,9 @@
     let allServices = [];
     let selectedService = { id: null, name: null, price: 0, reservationFee: 100 };
 
-    const today = new Date();
-    let viewYear = today.getFullYear();
-    let viewMonth = today.getMonth();
+    const today = getManilaNow();
+    let viewYear = today.year;
+    let viewMonth = today.month;
     let selectedDate = null; // { year, month, day }
     let selectedTime = null;
     let currentAvailability = {};
@@ -227,6 +228,7 @@
                 selectedDate = null;
                 selectedTime = null;
                 setBookingStatus("");
+                renderCalendar();
                 fetchAvailability();
             });
         });
@@ -293,6 +295,14 @@
     function renderCalendar() {
         calendarMonthLabel.textContent = `${MONTH_NAMES[viewMonth]} ${viewYear}`;
         calendarDays.innerHTML = "";
+        const now = getManilaNow();
+        const todayDate = new Date(now.year, now.month, now.day);
+        const latestBookableDate = new Date(now.year, now.month, now.day + MAX_ADVANCE_DAYS);
+        calendarPrev.disabled = viewYear < now.year
+            || (viewYear === now.year && viewMonth <= now.month);
+        const latestNavigableMonth = new Date(now.year, now.month + 2, 1);
+        calendarNext.disabled = viewYear > latestNavigableMonth.getFullYear()
+            || (viewYear === latestNavigableMonth.getFullYear() && viewMonth >= latestNavigableMonth.getMonth());
 
         const firstWeekday = new Date(viewYear, viewMonth, 1).getDay();
         const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
@@ -309,34 +319,28 @@
             cell.textContent = day;
 
             const date = new Date(viewYear, viewMonth, day);
-            const isToday = viewYear === today.getFullYear() && viewMonth === today.getMonth() && day === today.getDate();
-            const isPast = date < new Date(today.getFullYear(), today.getMonth(), today.getDate());
-            const isSunday = date.getDay() === 0;
+            const isToday = viewYear === now.year && viewMonth === now.month && day === now.day;
+            const isPast = date < todayDate;
+            const isBeyondBookingWindow = date > latestBookableDate;
             const key = formatAvailabilityKey(viewYear, viewMonth, day);
             const daySlots = currentAvailability[key] || [];
 
             // Bookings close at 4 PM Manila time, so today stops being selectable past that cutoff.
-            const now = getManilaNow();
             const isPastCutoffToday = isToday && (now.hour * 60 + now.minute) >= 16 * 60;
-            const isSelectable = !isPast && !isSunday && !isPastCutoffToday;
+            const isSelectable = !isPast && !isBeyondBookingWindow && !isPastCutoffToday;
 
-            if (isSelectable) {
+            if (isSelectable && daySlots.length > 0) {
                 cell.classList.add("available");
-                if (daySlots.length > 0) {
-                    cell.addEventListener("click", () => selectDate(day));
-                } else {
-                    cell.classList.add("disabled");
-                    cell.title = "No available slots for this date";
-                }
+                cell.addEventListener("click", () => selectDate(day));
+            } else {
+                cell.classList.add("disabled");
+                if (isBeyondBookingWindow) cell.title = "Appointments can only be booked up to 60 days in advance";
+                else if (isSelectable) cell.title = "No available slots for this date";
             }
 
             if (isToday) cell.classList.add("today");
             if (selectedDate && selectedDate.year === viewYear && selectedDate.month === viewMonth && selectedDate.day === day) {
                 cell.classList.add("selected");
-            }
-
-            if (!isSelectable) {
-                cell.classList.add("disabled");
             }
 
             calendarDays.appendChild(cell);
@@ -351,20 +355,28 @@
     }
 
     calendarPrev.addEventListener("click", () => {
+        const now = getManilaNow();
+        if (viewYear < now.year || (viewYear === now.year && viewMonth <= now.month)) return;
         viewMonth -= 1;
         if (viewMonth < 0) { viewMonth = 11; viewYear -= 1; }
         selectedDate = null;
         selectedTime = null;
         setBookingStatus("");
+        renderCalendar();
         fetchAvailability();
     });
 
     calendarNext.addEventListener("click", () => {
+        const now = getManilaNow();
+        const latestNavigableMonth = new Date(now.year, now.month + 2, 1);
+        if (viewYear > latestNavigableMonth.getFullYear()
+            || (viewYear === latestNavigableMonth.getFullYear() && viewMonth >= latestNavigableMonth.getMonth())) return;
         viewMonth += 1;
         if (viewMonth > 11) { viewMonth = 0; viewYear += 1; }
         selectedDate = null;
         selectedTime = null;
         setBookingStatus("");
+        renderCalendar();
         fetchAvailability();
     });
 

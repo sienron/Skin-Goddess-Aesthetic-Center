@@ -3404,6 +3404,13 @@ hr {
   color: #C9A84C;
 }
 
+.calendar-nav button:disabled,
+.calendar-nav button:disabled:hover {
+  background: none;
+  color: rgb(210, 210, 210);
+  cursor: not-allowed;
+}
+
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -22845,6 +22852,17 @@ body.customer-theme-dark .appointment-cancel-btn {
   border-color: #4a4942;
   background-color: #292a27;
   color: #d5cec2;
+}
+
+body.customer-theme-dark .calendar-day:not(.available) {
+  background-color: transparent;
+  color: #77776f;
+}
+
+body.customer-theme-dark .calendar-nav button:disabled,
+body.customer-theme-dark .calendar-nav button:disabled:hover {
+  background-color: transparent;
+  color: #77776f;
 }
 
 body.customer-theme-dark .slot-btn {
