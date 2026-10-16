@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const pagination = document.getElementById('aptPagination');
   const searchInput = document.getElementById('aptSearchInput');
   const todayChip = document.getElementById('aptTodayChip');
+  const dateRangeSelect = document.getElementById('aptDateRange');
 
   if (!tbody || !tabsWrap || !footerText || !pagination) return;
 
@@ -100,7 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   }
 
-  const state = { status: 'all', todayOnly: false, query: '', page: 1 };
+  const state = { status: 'all', todayOnly: false, month: manilaDateKey().slice(0, 7), query: '', page: 1 };
 
   // ---------- helpers ----------
 
@@ -135,6 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const query = state.query.trim().toLowerCase();
     return APPOINTMENTS.filter((a) => {
       if (state.status !== 'all' && a.status !== state.status) return false;
+      if (a.dateKey.slice(0, 7) !== state.month) return false;
       if (state.todayOnly && !a.isToday) return false;
       if (!query) return true;
       return [a.ref, a.client, a.service, a.assignedTo].some((v) => v.toLowerCase().includes(query));
@@ -871,9 +873,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function renderTabs() {
+    const monthAppointments = APPOINTMENTS.filter((appointment) => appointment.dateKey.startsWith(state.month));
     tabsWrap.querySelectorAll('.um-tab').forEach((tab) => {
       const key = tab.dataset.status;
-      const count = key === 'all' ? APPOINTMENTS.length : APPOINTMENTS.filter((a) => a.status === key).length;
+      const count = key === 'all' ? monthAppointments.length : monthAppointments.filter((a) => a.status === key).length;
       tab.textContent = tab.dataset.label + ' (' + count + ')';
       tab.classList.toggle('um-tab--active', key === state.status);
     });
@@ -959,24 +962,41 @@ document.addEventListener('DOMContentLoaded', () => {
     const breakdown = document.getElementById('aptBreakdown');
     const totalCount = document.getElementById('aptTotalCount');
     const topServices = document.getElementById('aptTopServices');
-    const dateRange = document.getElementById('aptDateRangeLabel');
     const today = manilaDateKey();
-    const monthKey = today.slice(0, 7);
+    const monthKey = state.month;
     const monthAppointments = APPOINTMENTS.filter((appointment) => appointment.dateKey.startsWith(monthKey));
+
+    if (dateRangeSelect) {
+      const [currentYear, currentMonth] = today.slice(0, 7).split('-').map(Number);
+      const latestMonth = new Date(Date.UTC(currentYear, currentMonth - 1 + 2, 1)).toISOString().slice(0, 7);
+      const availableMonths = new Set([state.month]);
+      APPOINTMENTS.forEach((appointment) => {
+        const appointmentMonth = appointment.dateKey.slice(0, 7);
+        if (/^\d{4}-\d{2}$/.test(appointmentMonth) && appointmentMonth <= latestMonth) {
+          availableMonths.add(appointmentMonth);
+        }
+      });
+      for (let offset = -12; offset <= 2; offset += 1) {
+        availableMonths.add(new Date(Date.UTC(currentYear, currentMonth - 1 + offset, 1)).toISOString().slice(0, 7));
+      }
+      dateRangeSelect.replaceChildren();
+      [...availableMonths].sort().forEach((month) => {
+        const [year, monthNumber] = month.split('-').map(Number);
+        const monthName = new Intl.DateTimeFormat('en-US', { month: 'short', timeZone: 'UTC' })
+          .format(new Date(Date.UTC(year, monthNumber - 1, 1)));
+        const lastDay = new Date(Date.UTC(year, monthNumber, 0)).getUTCDate();
+        const option = el('option', '', `${monthName} 1 – ${monthName} ${lastDay}, ${year}`);
+        option.value = month;
+        dateRangeSelect.appendChild(option);
+      });
+      dateRangeSelect.value = state.month;
+    }
 
     if (timelineDate) {
       timelineDate.textContent = new Intl.DateTimeFormat('en-US', {
         month: 'short', day: 'numeric', timeZone: 'UTC'
       }).format(new Date(`${today}T00:00:00Z`));
     }
-    if (dateRange) {
-      const [year, month] = monthKey.split('-').map(Number);
-      const monthName = new Intl.DateTimeFormat('en-US', { month: 'short', timeZone: 'UTC' })
-        .format(new Date(Date.UTC(year, month - 1, 1)));
-      const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
-      dateRange.textContent = `${monthName} 1 – ${monthName} ${lastDay}, ${year}`;
-    }
-
     if (timeline) {
       timeline.textContent = '';
       const todaysAppointments = APPOINTMENTS.filter((appointment) => appointment.isToday);
@@ -1129,6 +1149,13 @@ document.addEventListener('DOMContentLoaded', () => {
     render();
   });
 
+  dateRangeSelect?.addEventListener('change', () => {
+    state.month = dateRangeSelect.value;
+    state.todayOnly = false;
+    state.page = 1;
+    render();
+  });
+
   // "View" links on the summary cards
   document.querySelectorAll('[data-apt-filter]').forEach((link) => {
     link.addEventListener('click', () => {
@@ -1137,6 +1164,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (key === 'today') {
         state.status = 'all';
         state.todayOnly = true;
+        state.month = manilaDateKey().slice(0, 7);
       } else {
         state.status = key;
         state.todayOnly = false;
@@ -1562,7 +1590,9 @@ document.addEventListener('DOMContentLoaded', () => {
       state.status = 'all';
       state.todayOnly = false;
       state.query = '';
-      state.page = createdIndex >= 0 ? Math.floor(createdIndex / PAGE_SIZE) + 1 : 1;
+      if (createdIndex >= 0) state.month = APPOINTMENTS[createdIndex].dateKey.slice(0, 7);
+      const visibleIndex = getFiltered().findIndex((appointment) => appointment.id === String(result.appointment.appointment_id));
+      state.page = visibleIndex >= 0 ? Math.floor(visibleIndex / PAGE_SIZE) + 1 : 1;
       if (searchInput) searchInput.value = '';
       render();
     } catch (error) {

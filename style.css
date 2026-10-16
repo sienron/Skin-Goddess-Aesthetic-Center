@@ -11146,10 +11146,7 @@ body:not(.profile-ready) .mobile-nav-profile {
 }
 
 .apt-date-range {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  display: block;
   min-width: 172px;
   height: 28px;
   padding: 0 10px;
@@ -11160,11 +11157,6 @@ body:not(.profile-ready) .mobile-nav-profile {
   font-size: 10.5px;
   color: var(--text-muted);
   cursor: pointer;
-}
-
-.apt-date-range span:last-child {
-  color: var(--gold-2);
-  font-size: 10px;
 }
 
 .apt-chip {
@@ -20953,22 +20945,6 @@ section.sidebar[aria-label="Aesthetician navigation"] .finance-nav-icon {
 #appointmentsMain .apt-date-range:hover {
   border-color: #d8c89f;
   background: #fffdf8;
-}
-
-#appointmentsMain .apt-date-range span:last-child {
-  display: inline-flex;
-  align-items: center;
-}
-
-#appointmentsMain .apt-date-range svg {
-  display: block;
-  width: 16px;
-  height: 16px;
-  fill: none;
-  stroke: #8c6d2c;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 1.6;
 }
 
 #appointmentsMain .apt-table-wrap {
