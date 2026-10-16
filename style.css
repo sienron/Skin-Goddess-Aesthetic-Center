@@ -3276,6 +3276,24 @@ hr {
   border-color: #C9A84C;
 }
 
+.service-search {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border: 1px solid rgb(228, 228, 228);
+  border-radius: 8px;
+  background-color: white;
+  color: rgb(50, 50, 50);
+  font-family: "Raleway", sans-serif;
+  font-size: calc(0.85rem + 1px);
+}
+
+.service-search:focus {
+  outline: none;
+  border-color: #C9A84C;
+}
+
 .service-list-placeholder {
   font-family: "Raleway", sans-serif;
   font-size: calc(0.8rem + 1px);
@@ -22826,6 +22844,7 @@ body.customer-theme-dark .info-title {
 }
 
 body.customer-theme-dark .service-category-select,
+body.customer-theme-dark .service-search,
 body.customer-theme-dark .booking-panel input,
 body.customer-theme-dark .booking-panel select,
 body.customer-theme-dark .booking-panel textarea,

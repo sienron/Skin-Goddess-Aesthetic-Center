@@ -13,6 +13,7 @@
 */
 (function () {
     const categorySelect = document.getElementById("serviceCategorySelect");
+    const serviceSearch = document.getElementById("serviceSearch");
     const serviceList = document.getElementById("serviceList");
     const calendarMonthLabel = document.getElementById("calendarMonthLabel");
     const calendarDays = document.getElementById("calendarDays");
@@ -160,15 +161,18 @@
        Two-step flow: a category dropdown (e.g. "IPL Hair Removal") narrows
        the variant list (e.g. "Full Legs") rendered below it in the same
        card, instead of showing every service flat. */
-    function renderServiceVariants(services) {
+    function renderServiceVariants(services, selectFirst = true) {
         serviceList.replaceChildren();
 
         if (services.length === 0) {
             const placeholder = document.createElement("p");
             placeholder.className = "service-list-placeholder";
-            placeholder.textContent = "No options available for this treatment yet.";
+            const isSearching = Boolean(serviceSearch && serviceSearch.value.trim());
+            placeholder.textContent = isSearching
+                ? "No services match your search."
+                : "No options available for this treatment yet.";
             serviceList.appendChild(placeholder);
-            selectedService = { id: null, name: null, price: 0, reservationFee: 100 };
+            if (!isSearching) selectedService = { id: null, name: null, price: 0, reservationFee: 100 };
             return;
         }
 
@@ -179,6 +183,7 @@
             card.dataset.service = service.service_name;
             card.dataset.price = service.service_price;
             card.dataset.reservationFee = service.reservation_fee;
+            card.dataset.category = service.category || "Other";
 
             const name = document.createElement("span");
             name.className = "service-name";
@@ -204,21 +209,26 @@
             serviceList.appendChild(card);
         });
 
-        const firstCard = serviceList.querySelector(".service-card");
-        if (firstCard) {
-            firstCard.classList.add("selected");
-            selectedService = {
-                id: firstCard.dataset.serviceId,
-                name: firstCard.dataset.service,
-                price: Number(firstCard.dataset.price),
-                reservationFee: Number(firstCard.dataset.reservationFee)
-            };
+        const serviceCards = [...serviceList.querySelectorAll(".service-card")];
+        let selectedCard = serviceCards.find((card) => card.dataset.serviceId === String(selectedService.id));
+        if (!selectedCard && selectFirst) selectedCard = serviceCards[0];
+        if (selectedCard) {
+            selectedCard.classList.add("selected");
+            if (selectFirst && selectedCard.dataset.serviceId !== String(selectedService.id)) {
+                selectedService = {
+                    id: selectedCard.dataset.serviceId,
+                    name: selectedCard.dataset.service,
+                    price: Number(selectedCard.dataset.price),
+                    reservationFee: Number(selectedCard.dataset.reservationFee)
+                };
+            }
         }
 
         serviceList.querySelectorAll(".service-card").forEach((card) => {
             card.addEventListener("click", () => {
                 serviceList.querySelectorAll(".service-card").forEach((c) => c.classList.remove("selected"));
                 card.classList.add("selected");
+                categorySelect.value = card.dataset.category;
                 selectedService = {
                     id: card.dataset.serviceId,
                     name: card.dataset.service,
@@ -284,11 +294,24 @@
     }
 
     categorySelect.addEventListener("change", () => {
+        if (serviceSearch) serviceSearch.value = "";
         renderServiceVariants(servicesForCategory(categorySelect.value));
         selectedDate = null;
         selectedTime = null;
         setBookingStatus("");
         fetchAvailability();
+    });
+
+    serviceSearch?.addEventListener("input", () => {
+        const query = serviceSearch.value.trim().toLowerCase();
+        if (!query) {
+            renderServiceVariants(servicesForCategory(categorySelect.value));
+            return;
+        }
+        renderServiceVariants(
+            allServices.filter((service) => String(service.service_name || "").toLowerCase().includes(query)),
+            false
+        );
     });
 
     /* ===== Calendar ===== */
