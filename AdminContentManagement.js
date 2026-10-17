@@ -187,7 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const query = serviceDefaultsSearchTerm.trim().toLowerCase();
     const products = serviceDefaultsInventory
       .filter((product) => (
-        !query || `${product.product_name} ${product.category}`.toLowerCase().includes(query)
+        !query || product.product_name.toLowerCase().includes(query)
       ))
       .sort((left, right) => {
         const leftEnabled = Boolean(serviceDefaultsState.get(Number(left.product_id))?.isEnabled);
