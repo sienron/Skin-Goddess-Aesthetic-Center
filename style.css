@@ -13117,6 +13117,35 @@ main.my-appointments-main .booking-intro {
   box-shadow: none;
 }
 
+.modal-search-input{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-sizing: border-box;
+    height: 36px;
+    padding: 0 13px;
+    border: 1px solid #E6E2DB;
+    background: var(--white);
+}
+
+.modal-search-input svg {
+    flex: 0 0 18px;
+    color: #847A6D;
+}
+
+.modal-search-input input{
+    box-sizing: border-box;
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    font-size: 12px;
+    outline: none;
+}
+
 .cm-select-field select:focus {
   border-color: var(--gold-2);
   outline: none;
@@ -13351,6 +13380,12 @@ main.my-appointments-main .booking-intro {
   margin: 0;
   color: var(--text-dark);
   font-size: 18px;
+}
+
+.cm-editor__header h5 {
+  margin: 0;
+  padding-top:8px;
+  font-size: 12px;
 }
 
 .cm-editor__close {
@@ -13815,6 +13850,8 @@ textarea.cm-editor__input {
 }
 
 .appointment-inventory-message {
+  box-sizing: border-box;
+  flex: 0 0 auto;
   min-height: 18px;
   margin: 0;
   padding: 0 20px 12px;
@@ -13823,7 +13860,15 @@ textarea.cm-editor__input {
 }
 
 .appointment-inventory-message--error {
-  color: #9b2626;
+  width: 100%;
+  padding: 8px 12px;
+  border-left: 4px solid #9b2626;
+  border-radius: 4px;
+  background: #fbeaea;
+  color: #7f1d1d;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
 }
 
 .appointment-inventory-actions {
@@ -13991,35 +14036,64 @@ textarea.cm-editor__input {
 }
 
 .appointment-products-confirm-dialog {
-  width: min(460px, calc(100vw - 32px));
-  padding: 22px;
-  border: 1px solid var(--um-border);
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  margin: 0;
+  transform: translate(-50%, -50%);
+  box-sizing: border-box;
+  width: min(540px, calc(100vw - 32px));
+  max-height: calc(100vh - 40px);
+  padding: 0;
+  border: 0;
+  border-top: 4px solid var(--um-status-suspended);
   border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, .2);
   color: var(--text-dark);
   font-family: 'Poppins', sans-serif;
+  overflow-y: auto;
 }
 
 .appointment-products-confirm-dialog::backdrop {
   background: rgba(26, 23, 20, .55);
 }
 
-.appointment-products-confirm-dialog h2 {
-  margin: 0 0 10px;
-  font-size: 16px;
+.appointment-products-confirm-content {
+  padding: 16px 20px 4px;
 }
 
-.appointment-products-confirm-dialog p {
+.appointment-products-confirm-content p {
   margin: 0;
   color: var(--um-text-body);
   font-size: 12px;
   line-height: 1.6;
 }
 
+.appointment-products-confirm-content ul {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.appointment-products-confirm-content ul[hidden] {
+  display: none;
+}
+
+.appointment-products-confirm-content li {
+  padding: 10px 12px;
+  border: 1px solid var(--um-border);
+  border-radius: 5px;
+  background: #fbfaf7;
+  color: var(--um-text-body);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
 .appointment-products-confirm-dialog footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 20px;
+  margin-top: 12px;
 }
 
 .apt-alert-overlay {
@@ -14039,12 +14113,13 @@ textarea.cm-editor__input {
 
 .apt-alert {
   width: min(100%, 470px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
-  background: rgba(28, 25, 23, 0.94);
-  box-shadow: 0 22px 52px rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--um-border);
+  border-top: 4px solid var(--um-status-suspended);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, .2);
   overflow: hidden;
-  color: #f8f4ee;
+  color: var(--text-dark);
   font-family: 'Poppins', sans-serif;
 }
 
@@ -14052,58 +14127,55 @@ textarea.cm-editor__input {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 18px 20px 12px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--um-border);
+  background: #fbfaf7;
 }
 
 .apt-alert__accent {
-  width: 6px;
-  height: 26px;
-  border-radius: 10px;
-  background: linear-gradient(180deg, #f0d78d 0%, #c9a84c 100%);
-  box-shadow: 0 0 14px rgba(201, 168, 76, 0.45);
+  flex: 0 0 10px;
+  height: 24px;
+  background: var(--um-status-suspended);
 }
 
 .apt-alert__title {
   margin: 0;
-  color: #f9f2e7;
-  font-size: 18px;
-  font-weight: 700;
+  color: var(--text-dark);
+  font-size: 16px;
+  font-weight: 600;
 }
 
 .apt-alert__body {
-  padding: 0 20px 6px;
+  padding: 16px 20px 4px;
 }
 
 .apt-alert__body p {
   margin: 0;
-  color: #efe4d2;
-  font-size: 14px;
+  color: var(--um-text-body);
+  font-size: 12px;
   line-height: 1.6;
 }
 
 .apt-alert__actions {
   display: flex;
-  justify-content: center;
-  padding: 14px 20px 22px;
+  justify-content: flex-end;
+  padding: 14px 20px 20px;
 }
 
 .apt-alert__actions .um-btn {
   min-width: 140px;
   justify-content: center;
-  border-radius: 999px;
-  padding: 11px 20px;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  border-radius: 6px;
+  padding: 9px 16px;
+  font-size: 11px;
 }
 
 .apt-alert-overlay--error .apt-alert {
-  background: rgba(42, 22, 22, 0.94);
+  border-top-color: var(--um-status-suspended);
 }
 
 .apt-alert-overlay--error .apt-alert__accent {
-  background: linear-gradient(180deg, #f2a8a8 0%, #ce6565 100%);
-  box-shadow: 0 0 14px rgba(206, 101, 101, 0.45);
+  background: var(--um-status-suspended);
 }
 
 .cm-service-defaults-dialog {
@@ -14118,6 +14190,11 @@ textarea.cm-editor__input {
   margin: 5px 0 0;
   color: var(--text-muted);
   font-size: 11px;
+}
+
+.cm-service-defaults-dialog .cm-service-defaults-category {
+  color: var(--gold-dark-2);
+  font-weight: 700;
 }
 
 .cm-service-defaults-note {

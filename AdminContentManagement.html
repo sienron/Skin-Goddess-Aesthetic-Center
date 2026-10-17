@@ -190,11 +190,15 @@
       <header class="cm-editor__header">
         <div>
           <h2 id="cmServiceDefaultsTitle">Service Product Defaults</h2>
-          <p id="cmServiceDefaultsSubtitle"></p>
+          <p> Select the products you want to set as defaults for this service which will be preselected when confirming the appointment.</p>
+          <h5 id="cmServiceDefaultsSubtitle">
+            <span id="cmServiceDefaultsServiceName"></span>
+            <span aria-hidden="true"> · </span>
+            <span class="cm-service-defaults-category" id="cmServiceDefaultsCategory"></span>
+          </h5>
         </div>
         <button class="cm-editor__close" id="cmServiceDefaultsClose" type="button" aria-label="Close product defaults">&times;</button>
       </header>
-      <p class="cm-service-defaults-note">Enable a product only after the clinic confirms it belongs to this service. Enabled suggestions are still provisional and must be verified for every appointment. Leave quantity blank when usage is unconfirmed; the administrator must enter the actual quantity before reviewing the deduction. Changes affect future review sessions and do not alter saved appointment drafts or completed deductions.</p>
       <label class="cm-search-field" for="cmServiceDefaultsSearch">
         <span>Search inventory</span>
         <span class="cm-search-control">

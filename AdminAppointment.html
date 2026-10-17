@@ -440,10 +440,13 @@
         <div class="appointment-products-toolbar">
           <label class="cm-search-field" for="appointmentProductsSearch">
             <span>Search inventory</span>
-            <input id="appointmentProductsSearch" type="search" placeholder="Search products or categories">
+            <div class = "modal-search-input">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <input id="appointmentProductsSearch" type="search" placeholder="Search products or categories">
+            </div>
           </label>
         </div>
-        <p class="appointment-inventory-note">Configured suggestions are provisional starting points, not verified clinic procedures. Confirm the actual products and quantities used before continuing.</p>
+        <p class="appointment-inventory-note"></p>
         <div class="appointment-products-lists" id="appointmentProductsLists">
           <section class="appointment-products-section" aria-labelledby="appointmentProductsSelectedTitle">
             <h3 id="appointmentProductsSelectedTitle">Selected Products for This Service</h3>
@@ -469,6 +472,23 @@
       </footer>
     </section>
   </div>
+
+  <dialog class="appointment-products-confirm-dialog" id="appointmentProductsConfirmDialog" aria-modal="true" aria-labelledby="appointmentProductsConfirmTitle">
+    <header class="apt-modal__head">
+      <span class="apt-modal__accent"></span>
+      <div class="apt-modal__titles">
+        <h2 class="apt-modal__title" id="appointmentProductsConfirmTitle">Confirm Appointment Completion</h2>
+      </div>
+    </header>
+    <div class="appointment-products-confirm-content">
+      <p id="appointmentProductsConfirmMessage"></p>
+      <ul id="appointmentProductsConfirmList"></ul>
+    </div>
+    <footer class="appointment-inventory-actions">
+      <button class="um-btn um-btn--ghost" id="appointmentProductsConfirmCancel" type="button" autofocus>Cancel</button>
+      <button class="um-btn um-btn--primary" id="appointmentProductsConfirmProceed" type="button">Confirm &amp; Complete Appointment</button>
+    </footer>
+  </dialog>
 
   <div class="apt-alert-overlay" id="appointmentAlertOverlay" hidden>
     <div class="apt-alert" role="alertdialog" aria-modal="true" aria-labelledby="appointmentAlertTitle">

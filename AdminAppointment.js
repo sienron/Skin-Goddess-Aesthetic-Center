@@ -146,6 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const detailsModal = document.getElementById('appointmentDetailsModal');
   const editModal = document.getElementById('appointmentEditModal');
   const productsModal = document.getElementById('appointmentProductsModal');
+  const productConfirmDialog = document.getElementById('appointmentProductsConfirmDialog');
   const appointmentAlertOverlay = document.getElementById('appointmentAlertOverlay');
   const appointmentAlertTitle = document.getElementById('appointmentAlertTitle');
   const appointmentAlertMessage = document.getElementById('appointmentAlertMessage');
@@ -479,14 +480,7 @@ document.addEventListener('DOMContentLoaded', () => {
         details.appendChild(el('span', '', Number(product.stock_quantity) <= 0
           ? `${product.category} · Out of stock`
           : `${product.category} · Current stock: ${product.stock_quantity}`));
-        if (product.is_suggested) {
-          details.appendChild(el('span', 'appointment-product-tag', product.default_quantity == null
-            ? 'Provisional suggestion · quantity not configured'
-            : `Provisional suggestion · starting quantity ${product.default_quantity}`));
-          if (product.review_note) {
-            details.appendChild(el('span', 'appointment-product-review-note', product.review_note));
-          }
-        } else if (selection) {
+        if (!product.is_suggested && selection) {
           details.appendChild(el('span', 'appointment-product-tag appointment-product-tag--manual', 'Manually added'));
         }
         const quantityLabel = el('label', 'appointment-product-row__quantity', 'Quantity to deduct');
@@ -765,7 +759,7 @@ document.addEventListener('DOMContentLoaded', () => {
       button.disabled = false;
     }
   });
-  document.getElementById('appointmentProductsConfirm').addEventListener('click', async () => {
+  document.getElementById('appointmentProductsConfirm').addEventListener('click', () => {
     const issue = getProductSelectionProblem();
     if (issue) {
       document.getElementById('appointmentProductsMessage').textContent = issue;
@@ -773,16 +767,30 @@ document.addEventListener('DOMContentLoaded', () => {
       showProductEditorStep();
       return;
     }
-    const button = document.getElementById('appointmentProductsConfirm');
     const selectedItems = selectedProductItems();
-    const confirmationMessage = selectedItems.length
-      ? `Deduct the selected products from inventory and mark this appointment as completed?\n\n${selectedItems.map((item) => {
-        const product = productReview.products.find((entry) => Number(entry.product_id) === item.productId);
-        return `${product?.product_name || 'Inventory product'} — ${item.quantity} unit(s)`;
-      }).join('\n')}`
+    const confirmationMessage = document.getElementById('appointmentProductsConfirmMessage');
+    const confirmationList = document.getElementById('appointmentProductsConfirmList');
+    confirmationMessage.textContent = selectedItems.length
+      ? 'Deduct the following products from inventory and mark this appointment as completed?'
       : 'No products are selected. Complete this appointment without changing inventory?';
-    if (!window.confirm(confirmationMessage)) return;
+    confirmationList.textContent = '';
+    confirmationList.hidden = !selectedItems.length;
+    selectedItems.forEach((item) => {
+      const product = productReview.products.find((entry) => Number(entry.product_id) === item.productId);
+      confirmationList.appendChild(el('li', '', `${product?.product_name || 'Inventory product'} — ${item.quantity} unit(s)`));
+    });
+    productConfirmDialog.showModal();
+    document.getElementById('appointmentProductsConfirmCancel').focus();
+  });
+  document.getElementById('appointmentProductsConfirmCancel').addEventListener('click', () => {
+    productConfirmDialog.close();
+  });
+  document.getElementById('appointmentProductsConfirmProceed').addEventListener('click', async () => {
+    const button = document.getElementById('appointmentProductsConfirm');
+    const proceedButton = document.getElementById('appointmentProductsConfirmProceed');
+    productConfirmDialog.close();
     button.disabled = true;
+    proceedButton.disabled = true;
     try {
       window.clearTimeout(draftSaveTimer);
       draftSaveTimer = null;
@@ -809,10 +817,12 @@ document.addEventListener('DOMContentLoaded', () => {
       message.classList.add('appointment-inventory-message--error');
     } finally {
       button.disabled = false;
+      proceedButton.disabled = false;
     }
   });
   document.addEventListener('keydown', (event) => {
     if (event.key !== 'Escape') return;
+    if (productConfirmDialog?.open) return;
     if (!appointmentAlertOverlay?.hidden) {
       hideAppointmentAlert();
     } else if (productsModal.classList.contains('apt-modal-overlay--open')) {

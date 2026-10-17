@@ -215,11 +215,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const details = el('div', 'cm-service-default-row__details');
       details.appendChild(el('strong', '', product.product_name));
       details.appendChild(el('span', '', product.category));
-      if (mapping?.reviewNote) {
-        details.appendChild(el('small', 'cm-service-default-row__review', mapping.reviewNote));
-      } else if (mapping?.wasMapped && !mapping.isEnabled) {
-        details.appendChild(el('small', 'cm-service-default-row__review', 'Saved but disabled; it will not be suggested.'));
-      }
 
       const quantityLabel = el('label', 'cm-editor__field', 'Default quantity (optional)');
       const quantity = el('input', 'cm-editor__input');
@@ -262,7 +257,8 @@ document.addEventListener('DOMContentLoaded', () => {
     serviceDefaultsInventory = [];
     serviceDefaultsSearchTerm = '';
     document.getElementById('cmServiceDefaultsSearch').value = '';
-    document.getElementById('cmServiceDefaultsSubtitle').textContent = `${service.service_name} · ${service.category}`;
+    document.getElementById('cmServiceDefaultsServiceName').textContent = service.service_name;
+    document.getElementById('cmServiceDefaultsCategory').textContent = service.category;
     const errorMessage = document.getElementById('cmServiceDefaultsError');
     errorMessage.hidden = true;
     errorMessage.textContent = '';
