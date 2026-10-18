@@ -7,10 +7,16 @@ const { buildCandidates } = require('../migrations/039-appointment-inventory-map
 const { migrate: enableSuggestions } = require('../migrations/040-enable-service-inventory-suggestions');
 
 const draftRoute = appointmentsRouter.stack
-  .find((layer) => layer.route?.path === '/admin/:id/inventory-review-draft' && layer.route.methods.put)
+  .find((layer) => layer.route?.path === '/inventory-officer/:id/review' && layer.route.methods.put)
   .route.stack.at(-1).handle;
 const reviewRoute = appointmentsRouter.stack
-  .find((layer) => layer.route?.path === '/admin/:id/inventory-review' && layer.route.methods.get)
+  .find((layer) => layer.route?.path === '/inventory-officer/:id/review' && layer.route.methods.get)
+  .route.stack.at(-1).handle;
+const reviewQueueRoute = appointmentsRouter.stack
+  .find((layer) => layer.route?.path === '/inventory-officer/reviews' && layer.route.methods.get)
+  .route.stack.at(-1).handle;
+const adminAppointmentsRoute = appointmentsRouter.stack
+  .find((layer) => layer.route?.path === '/admin' && layer.route.methods.get)
   .route.stack.at(-1).handle;
 const serviceDefaultsRoute = servicesRouter.stack
   .find((layer) => layer.route?.path === '/admin/:id/inventory-defaults' && layer.route.methods.put)
@@ -19,7 +25,12 @@ const completeRoute = appointmentsRouter.stack
   .find((layer) => layer.route?.path === '/admin/:id/complete-with-inventory' && layer.route.methods.post)
   .route.stack.at(-1).handle;
 
-async function saveDraft({ selectedItems, stockByProductId }) {
+async function saveDraft({
+  selectedItems,
+  stockByProductId,
+  confirmed = false,
+  existingDraft = null
+}) {
   const originalTransaction = db.transaction;
   const queryCalls = [];
   let statusCode = 200;
@@ -30,6 +41,9 @@ async function saveDraft({ selectedItems, stockByProductId }) {
       queryCalls.push({ sql, values });
       if (/SELECT appointment_status\s+FROM appointments/.test(sql)) {
         return { rows: [{ appointment_status: 'in_progress' }] };
+      }
+      if (/SELECT selected_items, reviewed_by, reviewed_at\s+FROM appointment_inventory_review_drafts/.test(sql)) {
+        return existingDraft ? { rows: [existingDraft] } : { rows: [] };
       }
       if (/FROM inventory_products/.test(sql)) {
         const productIds = values[0];
@@ -50,7 +64,7 @@ async function saveDraft({ selectedItems, stockByProductId }) {
   try {
     await draftRoute({
       params: { id: '42' },
-      body: { selectedItems, reviewed: false },
+      body: { selectedItems, confirmed },
       session: { userId: 7 }
     }, {
       status(code) {
@@ -91,8 +105,15 @@ async function loadReview({ products, savedSelection = null }) {
       }
       if (/FROM appointment_inventory_deductions/.test(sql)) return { rows: [] };
       if (/FROM inventory_products product/.test(sql)) return { rows: products };
-      if (/SELECT selected_items\s+FROM appointment_inventory_review_drafts/.test(sql)) {
-        return savedSelection === null ? { rows: [] } : { rows: [{ selected_items: savedSelection }] };
+      if (/FROM appointment_inventory_review_drafts review/.test(sql)) {
+        return savedSelection === null ? { rows: [] } : {
+          rows: [{
+            selected_items: savedSelection,
+            reviewed_by: 19,
+            reviewed_at: '2026-10-16T00:00:00Z',
+            reviewer_name: 'Inventory Officer'
+          }]
+        };
       }
       return { rows: [] };
     }
@@ -183,6 +204,7 @@ async function completeAppointment({
   selectedItems,
   stockByProductId = new Map([[12, 20]]),
   alreadyDeducted = false,
+  reviewConfirmed = true,
   failOnInventoryLog = false,
   failOnConditionalUpdate = false
 }) {
@@ -207,8 +229,8 @@ async function completeAppointment({
             return {
               rows: [{
                 selected_items: selectedItems,
-                reviewed_by: 7,
-                reviewed_at: '2026-10-16T00:00:00Z'
+                reviewed_by: reviewConfirmed ? 19 : null,
+                reviewed_at: reviewConfirmed ? '2026-10-16T00:00:00Z' : null
               }]
             };
           }
@@ -258,7 +280,7 @@ async function completeAppointment({
   try {
     await completeRoute({
       params: { id: '42' },
-      body: { selectedItems },
+      body: {},
       session: { userId: 7 }
     }, {
       status(code) {
@@ -305,6 +327,185 @@ test('inventory review preselects enabled service suggestions and leaves other p
   const mappingQuery = result.queryCalls.find(({ sql }) => /FROM inventory_products product/.test(sql));
   assert.match(mappingQuery.sql, /mapping\.is_enabled = TRUE/);
   assert.deepEqual(mappingQuery.values, [3]);
+});
+
+test('Inventory Officer queue includes in-progress appointments and review status', async () => {
+  const originalQuery = db.query;
+  let queryText = '';
+  db.query = async (sql) => {
+    queryText = sql;
+    return {
+      rows: [
+        { appointment_id: 42, service: 'Test service', reviewed_at: null, reviewer_id: null, reviewer_name: null },
+        { appointment_id: 43, service: 'Other service', reviewed_at: '2026-10-16T00:00:00Z', reviewer_id: 19, reviewer_name: 'Officer' }
+      ]
+    };
+  };
+  let responseBody;
+
+  try {
+    await reviewQueueRoute({}, {
+      status() {
+        return this;
+      },
+      json(body) {
+        responseBody = body;
+        return this;
+      }
+    });
+  } finally {
+    db.query = originalQuery;
+  }
+
+  assert.match(queryText, /appointment_status = 'in_progress'/);
+  assert.match(queryText, /appointment_inventory_deductions/);
+  assert.deepEqual(responseBody.map((item) => item.review_status), ['pending', 'confirmed']);
+});
+
+test('only Inventory Officers can access officer review queue and review routes', async () => {
+  const originalQuery = db.query;
+  const routes = [
+    ['/inventory-officer/reviews', 'get'],
+    ['/inventory-officer/:id/review', 'get'],
+    ['/inventory-officer/:id/review', 'put']
+  ];
+
+  try {
+    for (const [path, method] of routes) {
+      const layer = appointmentsRouter.stack.find((entry) => (
+        entry.route?.path === path && entry.route.methods[method]
+      ));
+      const authorize = layer.route.stack[0].handle;
+      for (const [role, expectedStatus, expectedNext] of [
+        ['inventory_officer', null, true],
+        ['admin', 403, false]
+      ]) {
+        db.query = async () => ({
+          rows: [{ role, status: 'active', dev_access_all: false }]
+        });
+        let statusCode = null;
+        let nextCalled = false;
+        await authorize({
+          session: { userId: 8 },
+          path: `/api/appointments${path}`,
+          originalUrl: `/api/appointments${path}`,
+          accepts: () => false
+        }, {
+          status(code) {
+            statusCode = code;
+            return this;
+          },
+          json() {
+            return this;
+          }
+        }, () => {
+          nextCalled = true;
+        });
+        assert.equal(statusCode, expectedStatus);
+        assert.equal(nextCalled, expectedNext);
+      }
+    }
+  } finally {
+    db.query = originalQuery;
+  }
+});
+
+test('officer confirmation validates stock and records officer identity without deducting inventory', async () => {
+  const result = await saveDraft({
+    selectedItems: [{ productId: 12, quantity: 2, isSuggested: true, suggestionDefaultQuantity: null }],
+    stockByProductId: new Map([[12, 5]]),
+    confirmed: true
+  });
+
+  assert.equal(result.statusCode, 200);
+  assert.equal(result.responseBody.reviewStatus, 'confirmed');
+  const upsert = result.queryCalls.find(({ sql }) => /INSERT INTO appointment_inventory_review_drafts/.test(sql));
+  assert.equal(upsert.values[2], 7);
+  assert.equal(upsert.values[3], true);
+  assert.equal(result.queryCalls.some(({ sql }) => /UPDATE inventory_products/.test(sql)), false);
+  assert.match(result.queryCalls.find(({ sql }) => /FROM inventory_products/.test(sql)).sql, /FOR UPDATE/);
+});
+
+test('officer cannot confirm products with insufficient or zero stock', async () => {
+  const result = await saveDraft({
+    selectedItems: [{ productId: 12, quantity: 2, isSuggested: true }],
+    stockByProductId: new Map([[12, 1]]),
+    confirmed: true
+  });
+
+  assert.equal(result.statusCode, 409);
+  assert.match(result.responseBody.message, /Product 12 has only 1 units available/);
+  assert.equal(result.queryCalls.some(({ sql }) => /INSERT INTO appointment_inventory_review_drafts/.test(sql)), false);
+});
+
+test('editing a confirmed product selection clears review confirmation', async () => {
+  const result = await saveDraft({
+    selectedItems: [{ productId: 12, quantity: 3, isSuggested: false }],
+    stockByProductId: new Map([[12, 5]]),
+    existingDraft: {
+      selected_items: [{ productId: 12, quantity: 2, isSuggested: false, suggestionDefaultQuantity: null }],
+      reviewed_by: 19,
+      reviewed_at: '2026-10-16T00:00:00Z'
+    }
+  });
+
+  const upsert = result.queryCalls.find(({ sql }) => /INSERT INTO appointment_inventory_review_drafts/.test(sql));
+  assert.equal(upsert.values[4], false);
+  assert.equal(result.responseBody.reviewStatus, 'pending');
+});
+
+test('saving an unchanged confirmed selection preserves the existing review', async () => {
+  const selection = [{ productId: 12, quantity: 2, isSuggested: false, suggestionDefaultQuantity: null }];
+  const result = await saveDraft({
+    selectedItems: selection,
+    stockByProductId: new Map([[12, 5]]),
+    existingDraft: {
+      selected_items: selection,
+      reviewed_by: 19,
+      reviewed_at: '2026-10-16T00:00:00Z'
+    }
+  });
+
+  const upsert = result.queryCalls.find(({ sql }) => /INSERT INTO appointment_inventory_review_drafts/.test(sql));
+  assert.equal(upsert.values[4], true);
+  assert.equal(result.responseBody.reviewStatus, 'confirmed');
+});
+
+test('admin appointment list exposes the Inventory Officer review audit', async () => {
+  const originalQuery = db.query;
+  let queryText = '';
+  db.query = async (sql) => {
+    queryText = sql;
+    return {
+      rows: [{
+        appointment_id: 42,
+        inventory_product_reviewed_at: '2026-10-16T00:00:00Z',
+        inventory_product_reviewed_by: 'Inventory Officer'
+      }]
+    };
+  };
+  let responseBody;
+
+  try {
+    await adminAppointmentsRoute({}, {
+      status() {
+        return this;
+      },
+      json(body) {
+        responseBody = body;
+        return this;
+      }
+    });
+  } finally {
+    db.query = originalQuery;
+  }
+
+  assert.match(queryText, /CASE WHEN inventory_review\.reviewed_by IS NOT NULL[\s\S]*THEN inventory_review\.reviewed_at[\s\S]*AS inventory_product_reviewed_at/);
+  assert.deepEqual(responseBody[0], {
+    appointment_id: 42,
+    inventory_product_reviewed_at: '2026-10-16T00:00:00Z',
+    inventory_product_reviewed_by: 'Inventory Officer'
+  });
 });
 
 test('provisional catalog candidates use exact supplied products and do not assume quantities', () => {
@@ -407,7 +608,7 @@ test('inventory review preselects enabled suggestions without inventing a quanti
   ]);
 });
 
-test('inventory review reloads configured suggestions and preserves saved manual selections', async () => {
+test('inventory review preserves saved products and quantities without silently changing a confirmed review', async () => {
   const result = await loadReview({
     products: [
       { product_id: 12, product_name: 'Configured product', category: 'Treatment', stock_quantity: 5, default_quantity: 2, review_note: 'Provisional', is_suggested: true },
@@ -430,13 +631,15 @@ test('inventory review reloads configured suggestions and preserves saved manual
     [
       [12, 3, true],
       [13, 2, false],
-      [14, 1, true],
       [15, 3, true]
     ]
   );
+  assert.equal(result.responseBody.reviewStatus, 'confirmed');
+  assert.equal(result.responseBody.reviewedBy, 'Inventory Officer');
+  assert.equal(result.queryCalls.some(({ sql }) => /INSERT INTO appointment_inventory_review_drafts/.test(sql)), false);
 });
 
-test('inventory review applies a changed suggested quantity while reopening the draft', async () => {
+test('inventory review preserves the confirmed quantity when the configured suggestion changes', async () => {
   const result = await loadReview({
     products: [
       { product_id: 12, product_name: 'Configured product', category: 'Treatment', stock_quantity: 5, default_quantity: 3, review_note: 'Provisional', is_suggested: true }
@@ -447,11 +650,9 @@ test('inventory review applies a changed suggested quantity while reopening the 
   });
 
   assert.equal(result.statusCode, 200);
-  assert.equal(result.responseBody.products[0].selected_quantity, 3);
-  const persistedSelection = result.queryCalls.find(({ sql }) => /INSERT INTO appointment_inventory_review_drafts/.test(sql));
-  assert.deepEqual(JSON.parse(persistedSelection.values[1]), [
-    { productId: 12, quantity: 3, isSuggested: true, suggestionDefaultQuantity: 3 }
-  ]);
+  assert.equal(result.responseBody.products[0].selected_quantity, 2);
+  assert.equal(result.responseBody.reviewStatus, 'confirmed');
+  assert.equal(result.queryCalls.some(({ sql }) => /INSERT INTO appointment_inventory_review_drafts/.test(sql)), false);
 });
 
 test('inventory review draft accepts a valid quantity up to current stock', async () => {
@@ -461,13 +662,13 @@ test('inventory review draft accepts a valid quantity up to current stock', asyn
   });
 
   assert.equal(result.statusCode, 200);
-  assert.equal(result.responseBody.message, 'Product review draft saved.');
+  assert.equal(result.responseBody.message, 'Product review draft saved; any previous confirmation was cleared.');
   const stockQuery = result.queryCalls.find(({ sql }) => /FROM inventory_products/.test(sql));
   assert.deepEqual(stockQuery.values[0], [12]);
   assert.match(stockQuery.sql, /stock_quantity/);
   const draftUpsert = result.queryCalls.find(({ sql }) => /INSERT INTO appointment_inventory_review_drafts/.test(sql));
   assert.match(draftUpsert.sql, /\$3::integer/);
-  assert.match(draftUpsert.sql, /\$4::boolean/);
+  assert.match(draftUpsert.sql, /\$5::boolean/);
   assert.deepEqual(JSON.parse(draftUpsert.values[1]), [
     { productId: 12, quantity: 5, isSuggested: true, suggestionDefaultQuantity: 2 }
   ]);
@@ -525,14 +726,28 @@ test('service defaults allow an enabled suggestion with no unconfirmed default q
   assert.equal(upsert.values[3], true);
 });
 
-test('completion rejects invalid quantities before opening a transaction', async () => {
+test('completion rejects an invalid persisted quantity before stock deduction', async () => {
   for (const quantity of [0, -1, null, '', '2.5', 'invalid']) {
     const result = await completeAppointment({
       selectedItems: [{ productId: 12, quantity, isSuggested: false }]
     });
-    assert.equal(result.statusCode, 400);
-    assert.equal(result.transactionStarted, false);
+    assert.equal(result.statusCode, 409);
+    assert.equal(result.rolledBack, true);
+    assert.equal(result.queryCalls.some(({ sql }) => /UPDATE inventory_products/.test(sql)), false);
   }
+});
+
+test('admin cannot complete an appointment with pending or invalidated product review', async () => {
+  const result = await completeAppointment({
+    selectedItems: [{ productId: 12, quantity: 1, isSuggested: false }],
+    reviewConfirmed: false
+  });
+
+  assert.equal(result.statusCode, 409);
+  assert.match(result.responseBody.message, /Inventory Officer must confirm/);
+  assert.equal(result.rolledBack, true);
+  assert.equal(result.queryCalls.some(({ sql }) => /UPDATE inventory_products/.test(sql)), false);
+  assert.equal(result.queryCalls.some(({ sql }) => /UPDATE appointments\s+SET appointment_status = 'completed'/.test(sql)), false);
 });
 
 test('completion rechecks stock and rolls back when stock is insufficient', async () => {
@@ -625,6 +840,8 @@ test('completion logs the appointment deduction and updates status in one succes
   const deductionRecord = result.queryCalls.find(({ sql }) => /INSERT INTO appointment_inventory_deductions/.test(sql));
   const statusUpdate = result.queryCalls.find(({ sql }) => /UPDATE appointments\s+SET appointment_status = 'completed'/.test(sql));
   assert.ok(deductionRecord);
+  assert.ok(result.queryCalls.some(({ sql }) => /SELECT selected_items, reviewed_by, reviewed_at/.test(sql)));
+  assert.equal(result.queryCalls.some(({ sql }) => /DELETE FROM appointment_inventory_review_drafts/.test(sql)), false);
   assert.ok(statusUpdate);
   assert.ok(result.queryCalls.indexOf(deductionLog) < result.queryCalls.indexOf(statusUpdate));
 });

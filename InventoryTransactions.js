@@ -20,13 +20,15 @@
 
     function getFilteredTransactions() {
         const selectedType = transactionTypeFilter.value;
-        const transactionType = selectedType === "deduct-stock" ? "Used in Service" : selectedType;
+        const transactionTypes = selectedType === "deduct-stock"
+            ? ["Manual Stock Deduction", "Used in Service"]
+            : [selectedType];
         const periodStart = transactionPeriodFilter.value === "all"
             ? null
             : getPeriodStart(transactionPeriodFilter.value);
 
         return transactions.filter(transaction => {
-            if (transactionType !== "all" && transaction.transaction_type !== transactionType) return false;
+            if (selectedType !== "all" && !transactionTypes.includes(transaction.transaction_type)) return false;
             if (!periodStart) return true;
             const date = new Date(transaction.created_at);
             return !Number.isNaN(date.getTime()) && date >= periodStart;
@@ -48,6 +50,7 @@
             case "Sale": return "used";
             case "Sale Reversed": return "restock";
             case "Used in Service": return "used";
+            case "Manual Stock Deduction": return "used";
             case "Adjustment": return "adjustment";
             case "Expired": return "disposed";
             case "Deleted": return "deleted";

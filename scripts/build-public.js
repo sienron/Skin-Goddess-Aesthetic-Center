@@ -11,6 +11,7 @@ const browserScripts = [
   'admin-clients.js',
   'admin-context-nav.js',
   'admin-notifications.js',
+  'appointment-inventory-review.js',
   'AdminInventoryManagement.js',
   'batch-upload.js',
   'AdminAppointment.js',

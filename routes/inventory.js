@@ -359,7 +359,7 @@ async function updateInventoryProduct(productId, stock, details, userId) {
             await recordInventoryTransaction(client, {
                 productId,
                 productName: result.rows[0].product_name,
-                transactionType: stock > previousStock ? 'Restock' : 'Used in Service',
+                transactionType: stock > previousStock ? 'Restock' : 'Manual Stock Deduction',
                 quantity: Math.abs(stock - previousStock),
                 previousStock,
                 newStock: stock,
@@ -435,7 +435,12 @@ router.get('/transactions', async (req, res) => {
         const result = await db.query(`
             SELECT
                 stock_transaction.transaction_id,
-                stock_transaction.transaction_type,
+                CASE
+                    WHEN stock_transaction.transaction_type = 'Used in Service'
+                         AND stock_transaction.appointment_id IS NULL
+                    THEN 'Manual Stock Deduction'
+                    ELSE stock_transaction.transaction_type
+                END AS transaction_type,
                 stock_transaction.quantity,
                 stock_transaction.previous_stock,
                 stock_transaction.new_stock,
@@ -506,7 +511,7 @@ router.get('/deducted-today', async (req, res) => {
             SELECT
                 COALESCE(SUM(quantity), 0) AS total_deducted
             FROM inventory_transactions
-            WHERE transaction_type = 'Used in Service'
+            WHERE transaction_type IN ('Used in Service', 'Manual Stock Deduction')
             AND created_at::date = CURRENT_DATE
         `);
 
@@ -738,6 +743,85 @@ router.put('/:id/stock', async (req, res) => {
 
     }
 
+});
+
+router.post('/:id/deduct', async (req, res) => {
+    const productId = Number(req.params.id);
+    if (!Number.isSafeInteger(productId) || productId < 1) {
+        return res.status(400).json({ message: 'Choose a valid inventory product.' });
+    }
+
+    try {
+        const updated = await db.transaction(async (client) => {
+            const current = await client.query(`
+                SELECT product_name, stock_quantity
+                FROM inventory_products
+                WHERE product_id = $1
+                FOR UPDATE
+            `, [productId]);
+            if (!current.rows.length) return null;
+
+            const previousStock = Number(current.rows[0].stock_quantity);
+            if (previousStock < 1) {
+                const error = new Error(`${current.rows[0].product_name} is out of stock.`);
+                error.statusCode = 409;
+                throw error;
+            }
+
+            const result = await client.query(`
+                UPDATE inventory_products
+                SET stock_quantity = stock_quantity - 1, updated_at = NOW()
+                WHERE product_id = $1 AND stock_quantity > 0
+                RETURNING product_id, product_name, category, stock_quantity, expiry_date
+            `, [productId]);
+            if (!result.rows.length) {
+                const error = new Error('Stock changed before it could be deducted. Refresh and try again.');
+                error.statusCode = 409;
+                throw error;
+            }
+
+            await recordInventoryTransaction(client, {
+                productId,
+                productName: result.rows[0].product_name,
+                transactionType: 'Manual Stock Deduction',
+                quantity: 1,
+                previousStock,
+                newStock: previousStock - 1,
+                userId: req.session.userId
+            });
+
+            return {
+                product: result.rows[0],
+                previousStock
+            };
+        });
+        if (!updated) {
+            return res.status(404).json({ message: 'Product not found.' });
+        }
+
+        try {
+            await notifyStockTransition(
+                updated.previousStock,
+                Number(updated.product.stock_quantity),
+                updated.product.product_name
+            );
+        } catch (error) {
+            console.error(`Inventory threshold notification failed for product ${productId}:`, error);
+        }
+        return res.json(updated.product);
+    } catch (error) {
+        if (error.statusCode) {
+            return res.status(error.statusCode).json({ message: error.message });
+        }
+        if (error.code === '23514'
+            && error.constraint === 'inventory_transactions_transaction_type_check') {
+            return res.status(503).json({
+                message: 'The inventory database is missing support for manual stock deductions. Run npm run migrate:manual-stock-deduction against this server database, then try again.'
+            });
+        }
+        console.error('Error deducting inventory stock:', error);
+        return res.status(500).json({ message: 'Failed to deduct inventory stock.' });
+    }
 });
 
 

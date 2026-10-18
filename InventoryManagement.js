@@ -1409,9 +1409,10 @@ clearFilters.addEventListener("click", () => {
 
         if(stock > 0){
 
-            stock--;
-
-            updateStock(row, stock);
+            button.disabled = true;
+            updateStock(row, stock - 1, true).finally(() => {
+                button.disabled = false;
+            });
 
         }
 
@@ -1932,7 +1933,7 @@ confirmAddProduct.addEventListener("click", async () => {
    UPDATE STOCK
    ========================================================= */
 
-   async function updateStock(row, stock){
+   async function updateStock(row, stock, deductOne = false){
 
     const productId =
         row.dataset.id;
@@ -1940,33 +1941,23 @@ confirmAddProduct.addEventListener("click", async () => {
 
     try {
 
-        const response =
-            await fetch(`/api/inventory/${productId}/stock`, {
+        const response = await fetch(
+            deductOne
+                ? `/api/inventory/${productId}/deduct`
+                : `/api/inventory/${productId}/stock`,
+            {
+                method: deductOne ? "POST" : "PUT",
+                headers: deductOne ? {} : { "Content-Type": "application/json" },
+                ...(deductOne ? {} : { body: JSON.stringify({ stock }) })
+            }
+        );
 
-                method: "PUT",
-
-                headers: {
-                    "Content-Type": "application/json"
-                },
-
-                body: JSON.stringify({
-                    stock: stock
-                })
-
-            });
-
-
+        const responseBody = await response.json();
         if(!response.ok){
-
-            throw new Error(
-                "Failed to update stock."
-            );
-
+            throw new Error(responseBody.message || "Failed to update stock.");
         }
 
-
-        const updatedProduct =
-            await response.json();
+        const updatedProduct = responseBody;
 
 
         row.dataset.stock =
@@ -2068,9 +2059,7 @@ confirmAddProduct.addEventListener("click", async () => {
             error
         );
 
-        alert(
-            "Failed to update stock. Please try again."
-        );
+        alert(error.message || "Failed to update stock. Please try again.");
 
     }
 

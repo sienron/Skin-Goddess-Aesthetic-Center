@@ -97,7 +97,9 @@ document.addEventListener('DOMContentLoaded', () => {
       cancellationRequestStatus: record.cancellation_request_status || null,
       cancellationReason: record.cancellation_reason || '',
       cancellationDescription: record.cancellation_description || '',
-      inventoryDeductionConfirmedAt: record.inventory_deduction_confirmed_at || null
+      inventoryDeductionConfirmedAt: record.inventory_deduction_confirmed_at || null,
+      inventoryReviewConfirmedAt: record.inventory_product_reviewed_at || null,
+      inventoryReviewConfirmedBy: String(record.inventory_product_reviewed_by || '')
     };
   }
 
@@ -204,12 +206,19 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('appointmentDetailsStatus').textContent = STATUS_LABELS[appointment.status] || appointment.status.toUpperCase();
     const message = document.getElementById('appointmentDetailsMessage');
     const reviewButton = document.getElementById('appointmentProductsReviewBtn');
-    reviewButton.hidden = appointment.status !== 'in-progress';
+    reviewButton.hidden = true;
+    document.getElementById('appointmentDetailsProductReview').textContent = appointment.status === 'completed'
+      ? appointment.inventoryDeductionConfirmedAt ? 'Products Reviewed' : 'Review Not Recorded'
+      : appointment.inventoryReviewConfirmedAt ? 'Products Reviewed'
+        : appointment.status === 'in-progress' ? 'Products Pending Review'
+          : 'Not started';
     if (appointment.status === 'in-progress') {
-      message.textContent = 'This appointment is In Progress. Review and confirm products used to deduct inventory and complete it.';
+      message.textContent = appointment.inventoryReviewConfirmedAt
+        ? `Products were confirmed by ${appointment.inventoryReviewConfirmedBy || 'an Inventory Officer'} at ${new Date(appointment.inventoryReviewConfirmedAt).toLocaleString()}. An admin can complete the appointment.`
+        : 'Products are pending review. An Inventory Officer must confirm the products and quantities before an admin can complete this appointment.';
       message.classList.remove('appointment-inventory-message--error');
     } else if (appointment.inventoryDeductionConfirmedAt) {
-      message.textContent = `Inventory was deducted and confirmed at ${new Date(appointment.inventoryDeductionConfirmedAt).toLocaleString()}.`;
+      message.textContent = `Product-use review and inventory processing were recorded at ${new Date(appointment.inventoryDeductionConfirmedAt).toLocaleString()}.`;
       message.classList.remove('appointment-inventory-message--error');
     } else if (appointment.status === 'completed') {
       message.textContent = 'This appointment was completed before the product-review workflow was enabled. It cannot be deducted again through this workflow.';
@@ -333,8 +342,9 @@ document.addEventListener('DOMContentLoaded', () => {
     dateInput.value = appointment.dateKey;
     timeSelect.value = appointment.time;
     statusSelect.value = appointment.status;
-    statusSelect.querySelector('option[value="completed"]').disabled = true;
-    const needsCompletionHint = appointment.status === 'in-progress';
+    statusSelect.querySelector('option[value="completed"]').disabled = !appointment.inventoryReviewConfirmedAt
+      || appointment.status !== 'in-progress';
+    const needsCompletionHint = appointment.status === 'in-progress' && !appointment.inventoryReviewConfirmedAt;
     statusField.classList.toggle('appointment-edit-fields__status--completion-hint', needsCompletionHint);
     if (needsCompletionHint) {
       statusSelect.setAttribute('aria-describedby', 'appointmentEditCompletionHint');
@@ -688,7 +698,14 @@ document.addEventListener('DOMContentLoaded', () => {
     appointmentEditMessage.textContent = 'Saving appointment…';
     appointmentEditMessage.classList.remove('appointment-inventory-message--error');
     try {
-      if (appointmentEditStatus.value === 'cancelled') {
+      if (appointmentEditStatus.value === 'completed') {
+        if (scheduleChanged) {
+          throw new Error('Save schedule, service, or staff changes before completing the appointment.');
+        }
+        await requestJson(`/api/appointments/admin/${editingAppointment.id}/complete-with-inventory`, {
+          method: 'POST'
+        });
+      } else if (appointmentEditStatus.value === 'cancelled') {
         if (scheduleChanged) {
           throw new Error('Save schedule, service, or staff changes before cancelling the appointment.');
         }
@@ -864,6 +881,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusTd = el('td');
     const statusClass = a.status;
     statusTd.appendChild(el('span', 'apt-status apt-status--' + statusClass, STATUS_LABELS[a.status] || a.status.toUpperCase()));
+    if (a.status === 'in-progress') {
+      statusTd.appendChild(el(
+        'small',
+        'apt-sub',
+        a.inventoryReviewConfirmedAt ? 'Products Reviewed' : 'Products Pending Review'
+      ));
+    }
 
     const actionTd = el('td');
     const actions = el('div', 'apt-actions');

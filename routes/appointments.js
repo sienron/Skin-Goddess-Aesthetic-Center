@@ -267,6 +267,10 @@ router.get('/admin', requireRole('admin'), async (req, res) => {
              c.contact_number AS contact,
              COALESCE(NULLIF(BTRIM(CONCAT_WS(' ', NULLIF(BTRIM(aesthetician.first_name), ''), NULLIF(BTRIM(aesthetician.last_name), ''))), ''), 'Unassigned') AS assigned_to,
              deduction.confirmed_at AS inventory_deduction_confirmed_at,
+             CASE WHEN inventory_review.reviewed_by IS NOT NULL
+               THEN inventory_review.reviewed_at
+             END AS inventory_product_reviewed_at,
+             NULLIF(BTRIM(CONCAT_WS(' ', inventory_reviewer.first_name, inventory_reviewer.last_name)), '') AS inventory_product_reviewed_by,
              (
                SELECT COUNT(*)
                FROM appointments previous
@@ -278,6 +282,9 @@ router.get('/admin', requireRole('admin'), async (req, res) => {
       JOIN services s ON s.service_id = a.service_id
       LEFT JOIN users aesthetician ON aesthetician.user_id = a.aesthetician_id
       LEFT JOIN appointment_inventory_deductions deduction ON deduction.appointment_id = a.appointment_id
+      LEFT JOIN appointment_inventory_review_drafts inventory_review
+        ON inventory_review.appointment_id = a.appointment_id
+      LEFT JOIN users inventory_reviewer ON inventory_reviewer.user_id = inventory_review.reviewed_by
       ORDER BY a.appointment_date ASC, a.appointment_time ASC, a.appointment_id ASC
     `);
     return res.json(result.rows);
@@ -507,7 +514,44 @@ router.put('/admin/:id/edit', requireRole('admin'), async (req, res) => {
   }
 });
 
-router.get('/admin/:id/inventory-review', requireRole('admin'), async (req, res) => {
+router.get('/inventory-officer/reviews', requireRole('inventory_officer'), async (_req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT a.appointment_id, a.appointment_date::text AS date,
+             a.appointment_time::text AS start, a.appointment_status AS status,
+             s.service_name AS service,
+             COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Client') AS client,
+             COALESCE(NULLIF(BTRIM(CONCAT_WS(' ', NULLIF(BTRIM(staff.first_name), ''), NULLIF(BTRIM(staff.last_name), ''))), ''), 'Unassigned') AS assigned_to,
+             review.reviewed_at,
+             review.reviewed_by AS reviewer_id,
+             NULLIF(BTRIM(CONCAT_WS(' ', reviewer.first_name, reviewer.last_name)), '') AS reviewer_name
+      FROM appointments a
+      JOIN services s ON s.service_id = a.service_id
+      LEFT JOIN users c ON c.user_id = a.user_id
+      LEFT JOIN users staff ON staff.user_id = a.aesthetician_id
+      LEFT JOIN appointment_inventory_review_drafts review
+        ON review.appointment_id = a.appointment_id
+      LEFT JOIN users reviewer ON reviewer.user_id = review.reviewed_by
+      WHERE a.appointment_status = 'in_progress'
+        AND NOT EXISTS (
+          SELECT 1 FROM appointment_inventory_deductions deduction
+          WHERE deduction.appointment_id = a.appointment_id
+        )
+      ORDER BY (review.reviewed_at IS NOT NULL AND review.reviewed_by IS NOT NULL),
+               a.appointment_date, a.appointment_time, a.appointment_id
+    `);
+    return res.json(result.rows.map((appointment) => ({
+      ...appointment,
+      reviewed_by: appointment.reviewer_name,
+      review_status: appointment.reviewer_id && appointment.reviewed_at ? 'confirmed' : 'pending'
+    })));
+  } catch (error) {
+    console.error('Error fetching appointments for inventory review:', error);
+    return res.status(500).json({ message: 'Could not load appointments awaiting product review.' });
+  }
+});
+
+const loadInventoryReview = async (req, res) => {
   const appointmentId = validAppointmentId(req.params.id);
   if (!appointmentId) return res.status(400).json({ message: 'Choose a valid appointment.' });
 
@@ -566,73 +610,77 @@ router.get('/admin/:id/inventory-review', requireRole('admin'), async (req, res)
       ]));
 
       const draftResult = await client.query(`
-        SELECT selected_items
-        FROM appointment_inventory_review_drafts
-        WHERE appointment_id = $1
+        SELECT review.selected_items, review.reviewed_by, review.reviewed_at,
+               NULLIF(BTRIM(CONCAT_WS(' ', reviewer.first_name, reviewer.last_name)), '') AS reviewer_name
+        FROM appointment_inventory_review_drafts review
+        LEFT JOIN users reviewer ON reviewer.user_id = review.reviewed_by
+        WHERE review.appointment_id = $1
       `, [appointmentId]);
-      const storedSelection = draftResult.rows[0]?.selected_items || [];
-      const storedById = new Map(storedSelection.map((item) => [Number(item.productId), item]));
-      const selectedItems = productsResult.rows
-        .filter((product) => product.is_suggested)
-        .map((product) => {
-          const productId = Number(product.product_id);
-          const stored = storedById.get(productId);
-          const defaultQuantity = product.default_quantity == null
-            ? null
-            : Number(product.default_quantity);
-          const storedDefaultQuantity = stored?.suggestionDefaultQuantity == null
-            ? null
-            : Number(stored.suggestionDefaultQuantity);
-          const mappingChanged = !stored?.isSuggested
-            || storedDefaultQuantity !== defaultQuantity;
-          return {
-            productId,
-            quantity: stored && !stored.isSuggested
-              ? stored.quantity === null ? null : Number(stored.quantity)
-              : stored?.isSuggested && !mappingChanged
-                ? stored.quantity === null ? null : Number(stored.quantity)
-                : defaultQuantity,
+      const savedDraft = draftResult.rows[0] || null;
+      const storedSelection = savedDraft?.selected_items || [];
+      const selectedItems = savedDraft
+        ? storedSelection
+          .filter((item) => productsById.has(Number(item.productId)))
+          .map((item) => ({
+            productId: Number(item.productId),
+            quantity: item.quantity === null ? null : Number(item.quantity),
+            isSuggested: Boolean(item.isSuggested),
+            suggestionDefaultQuantity: item.suggestionDefaultQuantity == null
+              ? null
+              : Number(item.suggestionDefaultQuantity)
+          }))
+        : productsResult.rows
+          .filter((product) => product.is_suggested)
+          .map((product) => ({
+            productId: Number(product.product_id),
+            quantity: product.default_quantity == null ? null : Number(product.default_quantity),
             isSuggested: true,
-            suggestionDefaultQuantity: defaultQuantity
-          };
-        });
-      storedSelection.forEach((item) => {
-        const product = productsById.get(Number(item.productId));
-        if (!product) return;
-        if (item.isSuggested || product.is_suggested) return;
-        selectedItems.push({
-          productId: Number(item.productId),
-          quantity: item.quantity === null ? null : Number(item.quantity),
-          isSuggested: false,
-          suggestionDefaultQuantity: null
-        });
-      });
+            suggestionDefaultQuantity: product.default_quantity == null
+              ? null
+              : Number(product.default_quantity)
+          }));
       selectedItems.sort((left, right) => left.productId - right.productId);
       const removedMissingSelection = storedSelection.some((item) => (
         !productsById.has(Number(item.productId))
       ));
-      await client.query(`
-        INSERT INTO appointment_inventory_review_drafts
-          (appointment_id, selected_items, updated_by, updated_at, reviewed_by, reviewed_at)
-        VALUES ($1, $2::jsonb, $3, NOW(), NULL, NULL)
-        ON CONFLICT (appointment_id)
-        DO UPDATE SET selected_items = EXCLUDED.selected_items,
-                      updated_by = EXCLUDED.updated_by,
-                      updated_at = NOW(),
-                      reviewed_by = NULL,
-                      reviewed_at = NULL
-      `, [appointmentId, JSON.stringify(selectedItems), req.session.userId]);
+      if (!savedDraft) {
+        await client.query(`
+          INSERT INTO appointment_inventory_review_drafts
+            (appointment_id, selected_items, updated_by, updated_at, reviewed_by, reviewed_at)
+          VALUES ($1, $2::jsonb, $3, NOW(), NULL, NULL)
+        `, [appointmentId, JSON.stringify(selectedItems), req.session.userId]);
+      } else if (removedMissingSelection) {
+        await client.query(`
+          UPDATE appointment_inventory_review_drafts
+          SET selected_items = $1::jsonb, updated_by = $2, updated_at = NOW(),
+              reviewed_by = NULL, reviewed_at = NULL
+          WHERE appointment_id = $3
+        `, [JSON.stringify(selectedItems), req.session.userId, appointmentId]);
+      }
       const selectedById = new Map(selectedItems.map((item) => [Number(item.productId), item]));
       const products = productsResult.rows.map((product) => {
         const selected = selectedById.get(Number(product.product_id));
         return {
           ...product,
-          is_suggested: selected ? Boolean(selected.isSuggested) : Boolean(product.is_suggested),
+          is_suggested: Boolean(product.is_suggested),
           is_selected: Boolean(selected),
-          selected_quantity: selected && selected.quantity !== null ? Number(selected.quantity) : null
+          selected_quantity: selected && selected.quantity !== null ? Number(selected.quantity) : null,
+          selected_is_suggested: selected ? Boolean(selected.isSuggested) : false,
+          selected_suggestion_default_quantity: selected
+            ? selected.suggestionDefaultQuantity
+            : null
         };
       });
-      return { appointment, products, removedMissingSelection };
+      return {
+        appointment,
+        products,
+        removedMissingSelection,
+        reviewStatus: savedDraft?.reviewed_by && savedDraft?.reviewed_at && !removedMissingSelection
+          ? 'confirmed'
+          : 'pending',
+        reviewedAt: savedDraft?.reviewed_at || null,
+        reviewedBy: savedDraft?.reviewer_name || null
+      };
     });
     return res.json(review);
   } catch (error) {
@@ -640,19 +688,22 @@ router.get('/admin/:id/inventory-review', requireRole('admin'), async (req, res)
     console.error('Error loading appointment inventory review:', error);
     return res.status(500).json({ message: 'Could not load products for review.' });
   }
-});
+};
 
-router.put('/admin/:id/inventory-review-draft', requireRole('admin'), async (req, res) => {
+router.get('/admin/:id/inventory-review', requireRole('admin'), loadInventoryReview);
+router.get('/inventory-officer/:id/review', requireRole('inventory_officer'), loadInventoryReview);
+
+router.put('/inventory-officer/:id/review', requireRole('inventory_officer'), async (req, res) => {
   const appointmentId = validAppointmentId(req.params.id);
   if (!appointmentId) return res.status(400).json({ message: 'Choose a valid appointment.' });
   const submittedItems = req.body?.selectedItems;
   if (!Array.isArray(submittedItems) || submittedItems.length > 500) {
     return res.status(400).json({ message: 'The selected product list is invalid.' });
   }
-  if (req.body?.reviewed !== undefined && typeof req.body.reviewed !== 'boolean') {
+  if (typeof req.body?.confirmed !== 'boolean') {
     return res.status(400).json({ message: 'The product review state is invalid.' });
   }
-  const markReviewed = req.body?.reviewed === true;
+  const confirmReview = req.body.confirmed;
 
   const selectedItems = [];
   const selectedIds = new Set();
@@ -666,7 +717,7 @@ router.put('/admin/:id/inventory-review-draft', requireRole('admin'), async (req
       || (quantity !== null && (!Number.isSafeInteger(quantity) || quantity < 1))
       || (suggestionDefaultQuantity !== null
         && (!Number.isSafeInteger(suggestionDefaultQuantity) || suggestionDefaultQuantity < 1))
-      || (markReviewed && quantity === null)
+      || (confirmReview && quantity === null)
       || typeof item?.isSuggested !== 'boolean'
       || (!item.isSuggested && suggestionDefaultQuantity !== null)
       || selectedIds.has(productId)) {
@@ -682,7 +733,7 @@ router.put('/admin/:id/inventory-review-draft', requireRole('admin'), async (req
   }
 
   try {
-    await db.transaction(async (client) => {
+    const unchangedConfirmedReview = await db.transaction(async (client) => {
       const appointmentResult = await client.query(`
         SELECT appointment_status
         FROM appointments
@@ -699,6 +750,28 @@ router.put('/admin/:id/inventory-review-draft', requireRole('admin'), async (req
         error.statusCode = 409;
         throw error;
       }
+      const existingDraftResult = await client.query(`
+        SELECT selected_items, reviewed_by, reviewed_at
+        FROM appointment_inventory_review_drafts
+        WHERE appointment_id = $1
+        FOR UPDATE
+      `, [appointmentId]);
+      const previousDraft = existingDraftResult.rows[0] || null;
+      const normalizeSelection = (items) => items
+        .map((item) => ({
+          productId: Number(item.productId),
+          quantity: item.quantity === null ? null : Number(item.quantity),
+          isSuggested: Boolean(item.isSuggested),
+          suggestionDefaultQuantity: item.suggestionDefaultQuantity == null
+            ? null
+            : Number(item.suggestionDefaultQuantity)
+        }))
+        .sort((left, right) => left.productId - right.productId);
+      const unchangedConfirmedReview = !confirmReview
+        && Boolean(previousDraft?.reviewed_at && previousDraft.reviewed_by)
+        && JSON.stringify(normalizeSelection(selectedItems))
+          === JSON.stringify(normalizeSelection(previousDraft.selected_items || []));
+
       if (selectedIds.size) {
         const products = await client.query(`
           SELECT product_id, product_name, stock_quantity
@@ -712,6 +785,20 @@ router.put('/admin/:id/inventory-review-draft', requireRole('admin'), async (req
           error.statusCode = 409;
           throw error;
         }
+        if (confirmReview) {
+          const insufficientStock = products.rows.flatMap((product) => {
+            const item = selectedItems.find((selected) => selected.productId === Number(product.product_id));
+            if (item.quantity <= Number(product.stock_quantity)) return [];
+            return [Number(product.stock_quantity) <= 0
+              ? `${product.product_name} is out of stock (0 units available).`
+              : `${product.product_name} has only ${product.stock_quantity} units available.`];
+          });
+          if (insufficientStock.length) {
+            const error = new Error(`Cannot confirm product use: ${insufficientStock.join(' ')}`);
+            error.statusCode = 409;
+            throw error;
+          }
+        }
       }
       await client.query(`
         INSERT INTO appointment_inventory_review_drafts
@@ -723,14 +810,34 @@ router.put('/admin/:id/inventory-review-draft', requireRole('admin'), async (req
         DO UPDATE SET selected_items = EXCLUDED.selected_items,
                       updated_by = EXCLUDED.updated_by,
                       updated_at = NOW(),
-                      reviewed_by = EXCLUDED.reviewed_by,
-                      reviewed_at = EXCLUDED.reviewed_at
-      `, [appointmentId, JSON.stringify(selectedItems), req.session.userId, markReviewed]);
+                      reviewed_by = CASE WHEN $5::boolean
+                        THEN appointment_inventory_review_drafts.reviewed_by
+                        ELSE EXCLUDED.reviewed_by
+                      END,
+                      reviewed_at = CASE WHEN $5::boolean
+                        THEN appointment_inventory_review_drafts.reviewed_at
+                        ELSE EXCLUDED.reviewed_at
+                      END
+      `, [
+        appointmentId,
+        JSON.stringify(selectedItems),
+        req.session.userId,
+        confirmReview,
+        unchangedConfirmedReview
+      ]);
+      return unchangedConfirmedReview;
     });
-    return res.json({ message: 'Product review draft saved.' });
+    return res.json({
+      message: confirmReview
+        ? 'Product use was confirmed. Inventory will be deducted when an admin completes the appointment.'
+        : unchangedConfirmedReview
+          ? 'The saved review is unchanged and remains confirmed.'
+          : 'Product review draft saved; any previous confirmation was cleared.',
+      reviewStatus: confirmReview || unchangedConfirmedReview ? 'confirmed' : 'pending'
+    });
   } catch (error) {
     if (error.statusCode) return res.status(error.statusCode).json({ message: error.message });
-    console.error('Error saving appointment inventory review draft:', error);
+    console.error('Error saving appointment inventory officer review:', error);
     return res.status(500).json({
       message: process.env.NODE_ENV === 'production'
         ? 'Could not save the product review.'
@@ -742,26 +849,6 @@ router.put('/admin/:id/inventory-review-draft', requireRole('admin'), async (req
 router.post('/admin/:id/complete-with-inventory', requireRole('admin'), async (req, res) => {
   const appointmentId = validAppointmentId(req.params.id);
   if (!appointmentId) return res.status(400).json({ message: 'Choose a valid appointment.' });
-  const submittedItems = req.body?.selectedItems;
-  if (!Array.isArray(submittedItems) || submittedItems.length > 500) {
-    return res.status(400).json({ message: 'The selected product list is invalid.' });
-  }
-
-  const quantities = new Map();
-  const submittedSelection = [];
-  for (const item of submittedItems) {
-    const productId = Number(item?.productId);
-    const quantity = Number(item?.quantity);
-    if (!Number.isSafeInteger(productId) || productId < 1
-      || !Number.isSafeInteger(quantity) || quantity < 1
-      || typeof item?.isSuggested !== 'boolean'
-      || quantities.has(productId)) {
-      return res.status(400).json({ message: 'Each selected product must have a unique ID and positive whole-number quantity.' });
-    }
-    quantities.set(productId, quantity);
-    submittedSelection.push({ productId, quantity, isSuggested: item.isSuggested });
-  }
-  submittedSelection.sort((left, right) => left.productId - right.productId);
 
   try {
     const deduction = await db.transaction(async (client) => {
@@ -790,22 +877,28 @@ router.post('/admin/:id/complete-with-inventory', requireRole('admin'), async (r
         FOR UPDATE
       `, [appointmentId]);
       const reviewDraft = reviewDraftResult.rows[0];
-      if (!reviewDraft || Number(reviewDraft.reviewed_by) !== Number(req.session.userId) || !reviewDraft.reviewed_at) {
-        const error = new Error('Review the selected products and quantities before confirming appointment completion.');
+      if (!reviewDraft || !reviewDraft.reviewed_by || !reviewDraft.reviewed_at) {
+        const error = new Error('Products are pending review. An Inventory Officer must confirm the products and quantities before the appointment can be completed.');
         error.statusCode = 409;
         throw error;
       }
-      const reviewedSelection = reviewDraft.selected_items
-        .map((item) => ({
-          productId: Number(item.productId),
-          quantity: Number(item.quantity),
-          isSuggested: Boolean(item.isSuggested)
-        }))
-        .sort((left, right) => left.productId - right.productId);
-      if (JSON.stringify(reviewedSelection) !== JSON.stringify(submittedSelection)) {
-        const error = new Error('The product selection changed after review. Review it again before confirming.');
+      if (!Array.isArray(reviewDraft.selected_items) || reviewDraft.selected_items.length > 500) {
+        const error = new Error('The confirmed product review is invalid. Ask the Inventory Officer to review it again.');
         error.statusCode = 409;
         throw error;
+      }
+      const quantities = new Map();
+      for (const item of reviewDraft.selected_items) {
+        const productId = Number(item?.productId);
+        const quantity = Number(item?.quantity);
+        if (!Number.isSafeInteger(productId) || productId < 1
+          || !Number.isSafeInteger(quantity) || quantity < 1
+          || quantities.has(productId)) {
+          const error = new Error('The confirmed product review contains an invalid product or quantity. Ask the Inventory Officer to review it again.');
+          error.statusCode = 409;
+          throw error;
+        }
+        quantities.set(productId, quantity);
       }
 
       const existingDeduction = await client.query(`
@@ -896,10 +989,6 @@ router.post('/admin/:id/complete-with-inventory', requireRole('admin'), async (r
         error.statusCode = 409;
         throw error;
       }
-      await client.query(`
-        DELETE FROM appointment_inventory_review_drafts
-        WHERE appointment_id = $1
-      `, [appointmentId]);
       return { appointment: statusResult.rows[0], updatedProducts };
     });
 
