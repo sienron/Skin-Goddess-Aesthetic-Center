@@ -435,17 +435,21 @@ router.put('/admin/:id/edit', requireRole('admin'), async (req, res) => {
             appointment_end_time = $4,
             service_id = $5,
             aesthetician_id = $6,
-            reminder_24h_sent = CASE WHEN appointment_date <> $2 OR appointment_time <> $3 THEN FALSE ELSE reminder_24h_sent END,
+            reminder_24h_sent = CASE
+              WHEN appointment_date <> $2 OR appointment_time <> $3
+              THEN $2::date + $3::time <= (NOW() AT TIME ZONE 'Asia/Manila') + INTERVAL '24 hours'
+              ELSE reminder_24h_sent
+            END,
             reminder_3h_sent = CASE WHEN appointment_date <> $2 OR appointment_time <> $3 THEN FALSE ELSE reminder_3h_sent END,
             reminder_email_24h_sent = CASE
               WHEN appointment_date <> $2 OR appointment_time <> $3
               THEN $2::date + $3::time <= (NOW() AT TIME ZONE 'Asia/Manila') + INTERVAL '24 hours'
               ELSE reminder_email_24h_sent
             END,
-            reminder_email_1h_sent = CASE
+            reminder_email_3h_sent = CASE
               WHEN appointment_date <> $2 OR appointment_time <> $3
-              THEN $2::date + $3::time <= (NOW() AT TIME ZONE 'Asia/Manila') + INTERVAL '1 hour'
-              ELSE reminder_email_1h_sent
+              THEN FALSE
+              ELSE reminder_email_3h_sent
             END,
             updated_at = NOW()
         WHERE appointment_id = $7
@@ -633,7 +637,10 @@ router.get('/admin/:id/inventory-review', requireRole('admin'), async (req, res)
           selected_quantity: selected && selected.quantity !== null ? Number(selected.quantity) : null
         };
       });
-      return { appointment, products, removedUnavailableSelection };
+      const mappingConfigured = productsResult.rows.some(
+        (product) => product.is_suggested && product.default_quantity != null
+      );
+      return { appointment, products, removedUnavailableSelection, mappingConfigured };
     });
     return res.json(review);
   } catch (error) {
@@ -954,6 +961,94 @@ router.post('/admin/:id/complete-with-inventory', requireRole('admin'), async (r
     if (error.statusCode) return res.status(error.statusCode).json({ message: error.message });
     console.error('Error completing appointment with inventory deduction:', error);
     return res.status(500).json({ message: 'Could not deduct inventory and complete the appointment.' });
+  }
+});
+
+router.post('/admin/:id/rebook', requireRole('admin'), async (req, res) => {
+  const appointmentId = validAppointmentId(req.params.id);
+  if (!appointmentId) return res.status(400).json({ message: 'Choose a valid appointment.' });
+
+  const body = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
+  const staffValue = body.staffId;
+  const staffId = typeof staffValue === 'number' && Number.isSafeInteger(staffValue) && staffValue > 0
+    ? staffValue
+    : typeof staffValue === 'string' && /^\d+$/.test(staffValue) && Number.isSafeInteger(Number(staffValue)) && Number(staffValue) > 0
+      ? Number(staffValue)
+      : null;
+  if (!staffId) return res.status(400).json({ message: 'Choose an available staff member.' });
+
+  try {
+    const created = await db.transaction(async (client) => {
+      const originalResult = await client.query(`
+        SELECT appointment_id, user_id, walk_in_name, service_id,
+               booked_service_price, booked_reservation_fee, appointment_status
+        FROM appointments
+        WHERE appointment_id = $1
+        FOR UPDATE
+      `, [appointmentId]);
+      if (originalResult.rows.length === 0) {
+        const error = new Error('Appointment not found.');
+        error.statusCode = 404;
+        throw error;
+      }
+      const original = originalResult.rows[0];
+      if (!['completed', 'cancelled', 'no_show'].includes(original.appointment_status)) {
+        const error = new Error('Only completed, cancelled, or no-show appointments can be rebooked.');
+        error.statusCode = 400;
+        throw error;
+      }
+
+      const booking = await getValidatedSchedule(client, {
+        serviceId: original.service_id,
+        date: body.date,
+        time: body.time
+      }, res);
+      if (!booking) return null;
+
+      const availableStaff = await findAvailableAestheticians(client, {
+        ...booking,
+        serviceId: original.service_id
+      });
+      if (!availableStaff.rows.some((staff) => staff.user_id === staffId)) {
+        const error = new Error('That staff member is not available for this service and time. Choose another slot or staff member.');
+        error.statusCode = 409;
+        throw error;
+      }
+
+      const result = await client.query(`
+        INSERT INTO appointments
+          (user_id, walk_in_name, service_id, booked_service_price, booked_reservation_fee,
+           appointment_date, appointment_time, appointment_end_time, aesthetician_id,
+           appointment_status, payment_status)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'confirmed', 'unpaid')
+        RETURNING appointment_id, appointment_status, payment_status
+      `, [
+        original.user_id,
+        original.walk_in_name,
+        original.service_id,
+        original.booked_service_price,
+        original.booked_reservation_fee,
+        booking.appointmentDate,
+        booking.appointmentTime,
+        booking.appointmentEndTime,
+        staffId
+      ]);
+      return result.rows[0];
+    });
+    if (!created) return;
+
+    return res.status(201).json({
+      message: 'Rebooked appointment created successfully. The original appointment and its payment history were not changed.',
+      appointment: created,
+      referenceNumber: `APT-${String(created.appointment_id).padStart(4, '0')}`
+    });
+  } catch (error) {
+    if (error.statusCode) return res.status(error.statusCode).json({ message: error.message });
+    if (error.code === '23P01' || error.code === '23505') {
+      return res.status(409).json({ message: 'That time is no longer available. Choose another slot or staff member.' });
+    }
+    console.error('Error rebooking appointment:', error);
+    return res.status(500).json({ message: 'Could not rebook the appointment.' });
   }
 });
 
@@ -1400,12 +1495,15 @@ async function createAppointmentFromPaidCheckout(client, payment, referenceNumbe
         INSERT INTO appointments (
           user_id, service_id, booked_service_price, booked_reservation_fee,
           appointment_date, appointment_time, appointment_end_time, aesthetician_id,
-          appointment_status, payment_status, reminder_email_24h_sent, reminder_email_1h_sent
+          appointment_status, payment_status, reminder_24h_sent, reminder_3h_sent,
+          reminder_email_24h_sent, reminder_email_3h_sent
         )
         VALUES (
           $1, $2, $3, $4, $5, $6, $7, $8, 'confirmed', 'paid',
           $5::date + $6::time <= (NOW() AT TIME ZONE 'Asia/Manila') + INTERVAL '24 hours',
-          $5::date + $6::time <= (NOW() AT TIME ZONE 'Asia/Manila') + INTERVAL '1 hour'
+          FALSE,
+          $5::date + $6::time <= (NOW() AT TIME ZONE 'Asia/Manila') + INTERVAL '24 hours',
+          FALSE
         )
         RETURNING appointment_id, appointment_status, payment_status, aesthetician_id
       `, [payment.user_id, payment.service_id, payment.service_price,
@@ -1441,6 +1539,101 @@ async function createAppointmentFromPaidCheckout(client, payment, referenceNumbe
 
 function validPaymentReference(value) {
   return typeof value === 'string' && /^SG[A-F0-9]{24}$/.test(value);
+}
+
+async function recoverPendingCheckoutPayment(payment) {
+  const config = getPayMongoConfig();
+  if (!config || payment.livemode !== config.isLive || !payment.checkout_session_id) {
+    return { type: 'unavailable' };
+  }
+
+  let response;
+  try {
+    response = await fetch(
+      `https://api.paymongo.com/v2/checkout_sessions/${encodeURIComponent(payment.checkout_session_id)}`,
+      {
+        headers: {
+          Authorization: `Basic ${Buffer.from(`${config.secretKey}:`).toString('base64')}`,
+          Accept: 'application/json'
+        }
+      }
+    );
+  } catch (error) {
+    console.error('PayMongo checkout recovery request failed:', error.message);
+    return { type: 'unavailable' };
+  }
+
+  if (!response.ok) {
+    console.error('PayMongo checkout recovery request failed with status:', response.status);
+    return { type: 'unavailable' };
+  }
+
+  let checkout;
+  try {
+    checkout = (await response.json()).data;
+  } catch (error) {
+    console.error('PayMongo checkout recovery returned invalid JSON.');
+    return { type: 'unavailable' };
+  }
+
+  const attributes = checkout?.attributes;
+  if (checkout?.id !== payment.checkout_session_id
+    || attributes?.reference_number !== payment.reference_number
+    || attributes?.livemode !== config.isLive) {
+    console.warn('Ignoring PayMongo checkout recovery with mismatched checkout details.');
+    return { type: 'unavailable' };
+  }
+
+  if (attributes.status === 'expired') {
+    await db.query(`
+      UPDATE paymongo_checkout_sessions
+      SET status = 'expired', updated_at = NOW()
+      WHERE reference_number = $1 AND status = 'pending'
+        AND checkout_session_id = $2 AND livemode = $3
+    `, [payment.reference_number, payment.checkout_session_id, config.isLive]);
+    return { type: 'not-paid' };
+  }
+
+  const paidPayment = Array.isArray(attributes.payments)
+    ? attributes.payments.find((item) => item?.attributes?.status === 'paid')
+    : null;
+  const paymentAttributes = paidPayment?.attributes;
+  const lineItems = Array.isArray(attributes.line_items) ? attributes.line_items : [];
+  const sessionAmount = lineItems.reduce(
+    (total, item) => total + Number(item.amount) * Number(item.quantity || 1),
+    0
+  );
+  if (attributes.status !== 'paid' || !paidPayment || !paidPayment.id
+    || !paymentAttributes || paymentAttributes.currency !== 'PHP'
+    || !Number.isSafeInteger(sessionAmount)
+    || sessionAmount !== Number(payment.amount_cents)
+    || Number(paymentAttributes.amount) !== sessionAmount) {
+    return { type: 'not-paid' };
+  }
+
+  const paymentMethod = financeMethodForPayMongo(paymentAttributes);
+  await db.transaction(async (client) => {
+    const locked = await client.query(`
+      SELECT status
+      FROM paymongo_checkout_sessions
+      WHERE reference_number = $1 AND checkout_session_id = $2
+        AND livemode = $3 AND amount_cents = $4 AND currency = 'PHP'
+      FOR UPDATE
+    `, [
+      payment.reference_number,
+      payment.checkout_session_id,
+      config.isLive,
+      sessionAmount
+    ]);
+    if (!locked.rows.length || locked.rows[0].status !== 'pending') return;
+
+    await client.query(`
+      UPDATE paymongo_checkout_sessions
+      SET status = 'paid', payment_id = $2, payment_method = $3, updated_at = NOW()
+      WHERE reference_number = $1 AND status = 'pending'
+    `, [payment.reference_number, paidPayment.id, paymentMethod]);
+  });
+  return { type: 'paid' };
 }
 
 // Must stay before any future /:id GET route so "mine" is never treated as an ID.
@@ -1720,9 +1913,10 @@ router.post('/:id/cancellation-request/review', requireRole('admin'), async (req
         SET appointment_date = reschedule_requested_date,
             appointment_time = reschedule_requested_time,
             appointment_end_time = reschedule_requested_end_time,
-          reminder_24h_sent = FALSE, reminder_3h_sent = FALSE,
+          reminder_24h_sent = reschedule_requested_date + reschedule_requested_time <= (NOW() AT TIME ZONE 'Asia/Manila') + INTERVAL '24 hours',
+          reminder_3h_sent = FALSE,
           reminder_email_24h_sent = reschedule_requested_date + reschedule_requested_time <= (NOW() AT TIME ZONE 'Asia/Manila') + INTERVAL '24 hours',
-          reminder_email_1h_sent = reschedule_requested_date + reschedule_requested_time <= (NOW() AT TIME ZONE 'Asia/Manila') + INTERVAL '1 hour',
+          reminder_email_3h_sent = FALSE,
             reschedule_request_status = 'approved', reschedule_reviewed_by = $1,
             reschedule_reviewed_at = NOW()
         WHERE appointment_id = $2
@@ -1988,9 +2182,10 @@ router.post('/:id/reschedule', requireActiveAccount, async (req, res) => {
     await db.query(`
       UPDATE appointments
         SET appointment_date = $1, appointment_time = $2, appointment_end_time = $3,
-          reminder_24h_sent = FALSE, reminder_3h_sent = FALSE,
+          reminder_24h_sent = $1::date + $2::time <= (NOW() AT TIME ZONE 'Asia/Manila') + INTERVAL '24 hours',
+          reminder_3h_sent = FALSE,
           reminder_email_24h_sent = $1::date + $2::time <= (NOW() AT TIME ZONE 'Asia/Manila') + INTERVAL '24 hours',
-          reminder_email_1h_sent = $1::date + $2::time <= (NOW() AT TIME ZONE 'Asia/Manila') + INTERVAL '1 hour'
+          reminder_email_3h_sent = FALSE
       WHERE appointment_id = $4
     `, [appointmentDate, appointmentTime, appointmentEndTime, appointmentId]);
     await notifyUsers(
@@ -2162,16 +2357,50 @@ router.post('/paymongo/confirm', requireActiveAccount, async (req, res) => {
     if (payment.status === 'consumed' && payment.appointment_id) {
       return res.json({ message: 'Appointment already created.', appointment: { appointment_id: payment.appointment_id } });
     }
+    if (payment.status === 'pending') {
+      const recovery = await recoverPendingCheckoutPayment(payment);
+      if (recovery.type === 'unavailable') {
+        return res.status(503).json({
+          pending: true,
+          message: 'PayMongo is temporarily unavailable. Payment is still being verified.'
+        });
+      }
+      const refreshed = await db.query(`
+        SELECT status, appointment_id, payment_id, payment_method
+        FROM paymongo_checkout_sessions
+        WHERE reference_number = $1 AND user_id = $2
+      `, [referenceNumber, req.session.userId]);
+      if (refreshed.rows.length) Object.assign(payment, refreshed.rows[0]);
+    }
+    if (payment.status === 'consumed' && payment.appointment_id) {
+      return res.json({ message: 'Appointment already created.', appointment: { appointment_id: payment.appointment_id } });
+    }
     if (payment.status !== 'paid') {
-      return res.status(409).json({ pending: payment.status === 'pending', message: payment.status === 'pending' ? 'Payment is still being verified.' : 'Payment was not completed.' });
+      return res.status(409).json({
+        pending: payment.status === 'pending',
+        message: payment.status === 'pending' ? 'Payment is still being verified.' : 'Payment was not completed.'
+      });
     }
 
     const config = getPayMongoConfig();
     if (!config || payment.livemode !== config.isLive) {
       return res.status(503).json({ message: 'PayMongo mode does not match this checkout.' });
     }
-    if (payment.currency !== 'PHP' || isSlotInPast(payment.appointment_date, payment.appointment_time.slice(0, 5))) {
+    if (payment.currency !== 'PHP') {
       return res.status(409).json({ message: 'Payment was received after this appointment time. Contact support to arrange a refund.' });
+    }
+    if (isSlotInPast(payment.appointment_date, payment.appointment_time.slice(0, 5))) {
+      const refundOutcome = await attemptCheckoutRefund(
+        referenceNumber,
+        payment.amount_cents,
+        payment.payment_id,
+        'others'
+      );
+      return res.status(409).json({
+        message: refundOutcome.refunded
+          ? 'Payment was received after the appointment time and has been automatically refunded.'
+          : 'Payment was received after this appointment time. Contact support to arrange a refund.'
+      });
     }
 
     const appointment = await db.transaction(async (client) => {

@@ -81,14 +81,30 @@
     const wrap = button?.closest(".admin-notification-wrap");
     if (!button || !dropdown || !wrap) return;
     const list = dropdown.querySelector('.admin-notification-list');
-    const unreadBadge = document.getElementById('inventoryUnreadNotificationCount');
+    let unreadBadge = document.getElementById('inventoryUnreadNotificationCount');
+    if (!unreadBadge) {
+        unreadBadge = document.createElement('span');
+        unreadBadge.className = 'admin-notification-badge';
+        unreadBadge.setAttribute('aria-live', 'polite');
+        unreadBadge.setAttribute('aria-atomic', 'true');
+        unreadBadge.hidden = true;
+        button.append(unreadBadge);
+    }
     let notifications = [];
     let isLoadingNotifications = false;
+
+    function notificationAgeClass(value) {
+        const createdAt = new Date(value);
+        if (Number.isNaN(createdAt.getTime())) return '';
+        const age = Math.max(0, Date.now() - createdAt.getTime());
+        if (age < 24 * 60 * 60 * 1000) return 'notification-age--fresh';
+        if (age < 7 * 24 * 60 * 60 * 1000) return 'notification-age--recent';
+        return 'notification-age--older';
+    }
 
     function renderUnreadCount(count) {
         const unreadCount = Math.max(0, Number(count) || 0);
         button.title = `${unreadCount} unread notifications`;
-        if (!unreadBadge) return;
         unreadBadge.textContent = unreadCount > 99 ? '99+' : String(unreadCount);
         unreadBadge.hidden = unreadCount === 0 || dropdown.classList.contains('show');
         unreadBadge.setAttribute('aria-label', `${unreadCount} unread notifications`);
@@ -122,7 +138,8 @@
             notifications.forEach((notification) => {
                 const item = document.createElement('button');
                 item.type = 'button';
-                item.className = `admin-notification-item${notification.is_read ? '' : ' unread'}`;
+                const ageClass = notificationAgeClass(notification.created_at);
+                item.className = `admin-notification-item${notification.is_read ? '' : ' unread'}${ageClass ? ` ${ageClass}` : ''}`;
                 item.dataset.notificationId = notification.notification_id;
                 const message = document.createElement('span');
                 message.textContent = notification.message;
@@ -138,6 +155,7 @@
                         dateStyle: 'medium',
                         timeStyle: 'short'
                     });
+                    timestamp.className += ` ${ageClass}`;
                 }
                 item.append(timestamp);
                 if (!notification.is_read) {

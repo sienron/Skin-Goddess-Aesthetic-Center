@@ -1,4 +1,23 @@
 (() => {
+  const servicePanels = Array.from(document.querySelectorAll("body.homepage .homepage-service-panel"));
+  const touchLayout = window.matchMedia("(hover: none), (pointer: coarse)");
+
+  servicePanels.forEach((panel) => {
+    if (touchLayout.matches) panel.setAttribute("aria-expanded", "false");
+    panel.addEventListener("click", (event) => {
+      if (!touchLayout.matches || event.detail === 0) return;
+
+      if (!panel.classList.contains("is-expanded")) {
+        event.preventDefault();
+        servicePanels.forEach((otherPanel) => {
+          const isExpanded = otherPanel === panel;
+          otherPanel.classList.toggle("is-expanded", isExpanded);
+          otherPanel.setAttribute("aria-expanded", String(isExpanded));
+        });
+      }
+    });
+  });
+
   const hero = document.querySelector(".homepage .hero");
   const gsap = window.gsap;
   const ScrollTrigger = window.ScrollTrigger;

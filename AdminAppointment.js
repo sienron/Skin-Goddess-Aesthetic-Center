@@ -316,7 +316,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  async function openAppointmentEdit(appointment) {
+  async function openAppointmentEdit(appointment, rebook = false) {
     editStaffRequestId += 1;
     editingAppointment = appointment;
     const dateInput = document.getElementById('appointmentEditDate');
@@ -325,15 +325,30 @@ document.addEventListener('DOMContentLoaded', () => {
     const staffSelect = document.getElementById('appointmentEditStaff');
     const statusSelect = document.getElementById('appointmentEditStatus');
     const statusField = statusSelect.closest('.appointment-edit-fields__status');
+    const serviceField = serviceSelect.closest('.form-group');
     const message = document.getElementById('appointmentEditMessage');
     const saveButton = document.getElementById('appointmentEditSave');
+    document.getElementById('appointmentEditTitle').textContent = rebook ? 'Rebook Appointment' : 'Edit Appointment';
+    saveButton.textContent = rebook ? 'Create Rebooked Appointment' : 'Save Changes';
     document.getElementById('appointmentEditSubtitle').textContent = appointment.ref;
     document.getElementById('appointmentEditReference').textContent = appointment.ref;
     document.getElementById('appointmentEditClient').textContent = appointment.client;
-    dateInput.value = appointment.dateKey;
-    timeSelect.value = appointment.time;
-    statusSelect.value = appointment.status;
+    document.getElementById('appointmentEditServiceSummary').textContent = appointment.service;
+    dateInput.value = rebook ? '' : appointment.dateKey;
+    timeSelect.value = rebook ? '' : appointment.time;
+    statusSelect.value = rebook ? 'confirmed' : appointment.status;
     statusSelect.querySelector('option[value="completed"]').disabled = true;
+    statusField.hidden = rebook;
+    serviceField.hidden = rebook;
+    document.getElementById('appointmentRebookNotice').hidden = !rebook;
+    if (rebook) {
+      const [year, month, day] = manilaDateKey().split('-').map(Number);
+      dateInput.min = manilaDateKey();
+      dateInput.max = new Date(Date.UTC(year, month - 1, day + 60)).toISOString().slice(0, 10);
+    } else {
+      dateInput.removeAttribute('min');
+      dateInput.removeAttribute('max');
+    }
     const needsCompletionHint = appointment.status === 'in-progress';
     statusField.classList.toggle('appointment-edit-fields__status--completion-hint', needsCompletionHint);
     if (needsCompletionHint) {
@@ -351,13 +366,21 @@ document.addEventListener('DOMContentLoaded', () => {
     setAppointmentModalOpen(editModal, true);
 
     const isInProgress = appointment.status === 'in-progress';
-    if (isInProgress) {
+    if (rebook) {
+      message.textContent = 'Choose a new date and time. Staff availability will be checked again when you confirm.';
+    } else if (isInProgress) {
       message.textContent = 'Schedule, service, and staff cannot be changed while this appointment is In Progress.';
     }
 
     try {
       await loadEditServices(appointment.serviceId);
-      if (isInProgress) {
+      if (rebook) {
+        serviceSelect.value = appointment.serviceId;
+        serviceSelect.disabled = true;
+        dateInput.disabled = false;
+        timeSelect.disabled = false;
+        saveButton.disabled = false;
+      } else if (isInProgress) {
         serviceSelect.disabled = true;
         staffSelect.replaceChildren(el('option', '', appointment.assignedTo));
         staffSelect.options[0].value = appointment.staffId;
@@ -448,6 +471,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function renderProductSelection() {
     if (!productReview) return;
+    document.getElementById('appointmentProductsMappingNotice').textContent = productReview.mappingConfigured
+      ? ''
+      : 'No verified product mapping is configured for this procedure. Admins should confirm the products and quantities in Content Management. You may still complete the appointment without deducting inventory.';
     const query = productSearchTerm.trim().toLowerCase();
     const matchesSearch = (product) => (
       !query || `${product.product_name} ${product.category}`.toLowerCase().includes(query)
@@ -627,12 +653,13 @@ document.addEventListener('DOMContentLoaded', () => {
   tbody.addEventListener('click', (event) => {
     const viewButton = event.target.closest('[data-action="view"]');
     const editButton = event.target.closest('[data-action="edit"]');
-    const target = viewButton || editButton;
+    const rebookButton = event.target.closest('[data-action="rebook"]');
+    const target = viewButton || editButton || rebookButton;
     if (!target) return;
     const appointment = APPOINTMENTS.find((item) => item.ref === target.dataset.ref);
     if (!appointment) return;
     if (viewButton) openAppointmentDetails(appointment);
-    else openAppointmentEdit(appointment);
+    else openAppointmentEdit(appointment, Boolean(rebookButton));
   });
 
   document.getElementById('appointmentDetailsClose').addEventListener('click', () => {
@@ -673,6 +700,7 @@ document.addEventListener('DOMContentLoaded', () => {
   appointmentEditForm.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (!editingAppointment || !appointmentEditForm.reportValidity()) return;
+    const rebooking = document.getElementById('appointmentRebookNotice').hidden === false;
     const scheduleFieldsChanged = appointmentEditDate.value !== editingAppointment.dateKey
       || appointmentEditTime.value !== editingAppointment.time
       || appointmentEditService.value !== editingAppointment.serviceId;
@@ -689,7 +717,31 @@ document.addEventListener('DOMContentLoaded', () => {
     appointmentEditMessage.textContent = 'Saving appointment…';
     appointmentEditMessage.classList.remove('appointment-inventory-message--error');
     try {
-      if (appointmentEditStatus.value === 'cancelled') {
+      if (rebooking) {
+        if (!staffId) throw new Error('Choose an available staff member.');
+        const result = await requestJson(`/api/appointments/admin/${editingAppointment.id}/rebook`, {
+          method: 'POST',
+          body: JSON.stringify({
+            date: appointmentEditDate.value,
+            time: appointmentEditTime.value,
+            staffId
+          })
+        });
+        await loadAppointments();
+        const newId = String(result.appointment.appointment_id);
+        const created = APPOINTMENTS.find((item) => item.id === newId);
+        if (created) {
+          state.status = 'all';
+          state.todayOnly = false;
+          state.query = '';
+          state.month = created.dateKey.slice(0, 7);
+          state.page = Math.max(1, Math.ceil((getFiltered().findIndex((item) => item.id === newId) + 1) / PAGE_SIZE));
+          if (searchInput) searchInput.value = '';
+          render();
+        }
+        setAppointmentModalOpen(editModal, false);
+        return;
+      } else if (appointmentEditStatus.value === 'cancelled') {
         if (scheduleChanged) {
           throw new Error('Save schedule, service, or staff changes before cancelling the appointment.');
         }

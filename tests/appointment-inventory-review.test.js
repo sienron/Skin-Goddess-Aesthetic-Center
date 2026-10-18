@@ -286,6 +286,7 @@ test('inventory review preselects enabled service suggestions and leaves other p
   });
 
   assert.equal(result.statusCode, 200);
+  assert.equal(result.responseBody.mappingConfigured, true);
   assert.deepEqual(
     result.responseBody.products.map(({ product_id, is_selected, selected_quantity }) => ({
       product_id, is_selected, selected_quantity
@@ -336,6 +337,7 @@ test('inventory review leaves products unselected when a service has no configur
   });
 
   assert.equal(result.statusCode, 200);
+  assert.equal(result.responseBody.mappingConfigured, false);
   assert.equal(result.responseBody.products[0].is_selected, false);
   const persistedSelection = result.queryCalls.find(({ sql }) => /INSERT INTO appointment_inventory_review_drafts/.test(sql));
   assert.deepEqual(JSON.parse(persistedSelection.values[1]), []);
@@ -453,12 +455,12 @@ test('inventory review draft rejects non-positive quantities', async () => {
   assert.match(result.responseBody.message, /positive whole number/);
 });
 
-test('service defaults allow an enabled suggestion with no unconfirmed default quantity', async () => {
+test('service defaults allow a disabled candidate without a confirmed quantity', async () => {
   const result = await saveServiceDefaults({
     products: [{
       productId: 11,
       defaultQuantity: null,
-      isEnabled: true,
+      isEnabled: false,
       reviewNote: 'Confirm actual use and quantity with clinic.'
     }]
   });
@@ -469,12 +471,27 @@ test('service defaults allow an enabled suggestion with no unconfirmed default q
     product_name: 'Product 11',
     category: 'Medical/Injection Supplies',
     default_quantity: null,
-    is_enabled: true,
+    is_enabled: false,
     review_note: 'Confirm actual use and quantity with clinic.'
   }]);
   const upsert = result.queryCalls.find(({ sql }) => /INSERT INTO service_inventory_product_defaults/.test(sql));
   assert.equal(upsert.values[2], null);
-  assert.equal(upsert.values[3], true);
+  assert.equal(upsert.values[3], false);
+});
+
+test('service defaults reject enabling a candidate without a confirmed quantity', async () => {
+  const result = await saveServiceDefaults({
+    products: [{
+      productId: 11,
+      defaultQuantity: null,
+      isEnabled: true,
+      reviewNote: 'Confirm actual use and quantity with clinic.'
+    }]
+  });
+
+  assert.equal(result.statusCode, 400);
+  assert.match(result.responseBody.message, /confirmed positive whole-number quantity/);
+  assert.equal(result.queryCalls.length, 0);
 });
 
 test('completion rejects invalid quantities before opening a transaction', async () => {

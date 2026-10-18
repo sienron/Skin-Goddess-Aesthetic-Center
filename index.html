@@ -15,7 +15,7 @@
     <link rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&family=Poppins:wght@500;600;700&display=swap">
   </noscript>
-  <link rel="stylesheet" href="style.css?v=homepage-editorial-20261013">
+  <link rel="stylesheet" href="style.css?v=homepage-treatment-timeline-20261019">
 </head>
 
 <body class="homepage">
@@ -139,8 +139,15 @@
     <section class="homepage-service-panels-section" id="featuredServices" aria-labelledby="featuredServicesHeading">
       <div class="homepage-service-panels">
         <header class="homepage-service-panels__header">
-          <p class="homepage-service-panels__eyebrow">SKIN GODDESS SIGNATURES</p>
-          <h2 id="featuredServicesHeading">Care for Every Skin Story</h2>
+          <div class="homepage-service-panels__intro">
+            <h2 id="featuredServicesHeading">Care for Every Skin Story</h2>
+            <p>Personalized treatments designed to bring out your natural beauty. Because every skin story deserves
+              expert care.</p>
+          </div>
+          <a class="homepage-service-panels__explore" href="ServicesPage.html">
+            EXPLORE OUR SIGNATURE TREATMENTS
+            <span class="homepage-service-panels__explore-arrow" aria-hidden="true">&#8594;</span>
+          </a>
         </header>
         <div class="homepage-service-panels__grid">
           <a class="homepage-service-panel" href="ServicesPage.html#facials">
@@ -189,8 +196,14 @@
 
     <section class="treatments-section" id="treatments" aria-labelledby="treatmentsHeading">
       <header class="treatments-section__header">
-        <h2 class="treatments-heading" id="treatmentsHeading">Tailored Care for <span class="accent">Every Skin
-            Story</span></h2>
+        <h2 class="treatments-heading" id="treatmentsHeading">Tailored Care for<br>
+          <span class="accent">Every Skin Story</span>
+        </h2>
+        <p class="treatments-section__description">Discover our signature treatments, thoughtfully designed to bring
+          out your natural beauty and match your unique skin goals.</p>
+        <div class="treatments-section__divider" aria-hidden="true">
+          <span></span><i></i><span></span>
+        </div>
       </header>
       <div class="appointment-process" aria-label="How to book your appointment">
         <ol class="appointment-process__steps">
@@ -239,6 +252,9 @@
           </li>
         </ol>
       </div>
+      <a class="treatments-section__cta" href="ServicesPage.html">
+        VIEW ALL TREATMENTS <span aria-hidden="true">&#8594;</span>
+      </a>
       <div class="treatments-carousel-wrap">
 
         <button type="button" class="carousel-nav carousel-nav--prev" id="carouselPrev" aria-label="Rewind treatments">
@@ -787,7 +803,7 @@
     crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.15.0/ScrollTrigger.min.js" crossorigin="anonymous"
     referrerpolicy="no-referrer"></script>
-  <script src="homepage-hero.js?v=homepage-editorial-20261013" defer></script>
+  <script src="homepage-hero.js?v=homepage-signatures-20261019" defer></script>
   <script src="header.js"></script>
   <script src="homepage-treatments-carousel.js"></script>
   <script src="homepage-testimonials.js"></script>

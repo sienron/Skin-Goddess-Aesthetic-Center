@@ -16,6 +16,8 @@ For local or other non-production environments, set `NODE_ENV` to a value other 
 
 Do not put live keys in `.env.example`, browser code, or Git. Use Render's Environment settings for the real values. The service must be publicly reachable over HTTPS; no ngrok tunnel is needed.
 
+The production service also needs `SESSION_SECRET`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_SSL=true`, `EMAIL_USER`, and `BREVO_API_KEY`. Configure these only in Render's Environment settings; `PORT` is supplied by Render. Reminder jobs run from the app process, and a failed reminder email is logged without stopping appointment handling.
+
 ## Verify The Flow
 
 1. Sign in as a verified client and select an active service, available date, and time.
@@ -26,3 +28,11 @@ Do not put live keys in `.env.example`, browser code, or Git. Use Render's Envir
 Live-mode payments charge real money. Start with a transaction you authorize, verify the webhook and appointment, then issue a refund through PayMongo if appropriate.
 
 Render's free web services can spin down when idle, causing cold starts and delayed webhook processing. PayMongo retries failed webhook delivery, but an always-on service is more reliable for accepting real customer payments.
+
+## Production checks that require operator access
+
+- Verify the actual Render environment values and connected database before running the migration chain. The current chain applies migrations in numeric order through `040-appointment-email-reminder-3h.js`; this repository cannot prove that the production database has all prerequisites or that the chain completed there.
+- Confirm the PayMongo dashboard has the exact webhook URL and event listed above, and test signature-verified delivery from the dashboard. Repository configuration cannot confirm the live dashboard settings.
+- Confirm Brevo credentials and sender verification in Render/Brevo, and check delivery/error logs after an authorized reminder test.
+- Configure and verify database backups and a restore procedure with the database/hosting provider. No backup schedule or successful restore evidence is tracked in this repository.
+- Review Render health, restart, and instance settings in the dashboard. No deployment manifest or hosting health-check configuration is present here.

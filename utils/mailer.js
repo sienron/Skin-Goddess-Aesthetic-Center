@@ -108,7 +108,7 @@ async function sendAppointmentReminderEmail(appointment, reminderHours) {
   }).format(appointmentDate);
   const safeName = escapeHtml(appointment.first_name || 'there');
   const safeService = escapeHtml(appointment.service_name);
-  const leadLabel = reminderHours === 24 ? 'tomorrow' : 'in about one hour';
+  const leadLabel = reminderHours === 24 ? 'within the next 24 hours' : 'in about three hours';
   const response = await fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',
     headers: {

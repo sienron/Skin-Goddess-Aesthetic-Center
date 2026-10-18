@@ -151,22 +151,7 @@
     if (!state.data) return;
     const report = state.data;
     if (section === 'income-statement') {
-      const charts = [
-        ['Sales earned vs expenses', 'reportSalesExpensesChart'],
-        ['Online reservations', 'reportOnlineReservationsChart'],
-        ['Revenue by service category', 'reportServiceCategoryChart'],
-        ['Deposits by status', 'reportDepositsChart'],
-        ['Cash collected by payment method', 'reportMethodsChart'],
-        ['Top services', 'reportTopServicesChart'],
-        ['Expenses by category', 'reportExpenseCategoryChart'],
-      ].reduce((images, [title, id]) => {
-        const canvas = document.getElementById(id);
-        if (canvas && !canvas.hidden && canvas.width && canvas.height) {
-          images[title] = canvas.toDataURL('image/png');
-        }
-        return images;
-      }, {});
-      refs.reportMessage.textContent = 'Preparing Excel workbook with charts…';
+      refs.reportMessage.textContent = 'Preparing Excel workbook with all six financial reports…';
       const exportButton = exportButtons.find((button) => button.dataset.export === section);
       if (exportButton) exportButton.disabled = true;
       try {
@@ -176,7 +161,7 @@
             method: 'POST',
             credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ from: state.from, to: state.to, charts }),
+            body: JSON.stringify({ from: state.from, to: state.to }),
           });
         } catch {
           throw new Error('Unable to reach the server. Check your connection and try again.');
@@ -194,12 +179,12 @@
         const url = URL.createObjectURL(await response.blob());
         const link = document.createElement('a');
         link.href = url;
-        link.download = `finance-income-statement-${state.from}-to-${state.to}.xlsx`;
+        link.download = `finance-reports-${state.from}-to-${state.to}.xlsx`;
         document.body.append(link);
         link.click();
         link.remove();
         window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-        refs.reportMessage.textContent = 'Excel workbook exported.';
+        refs.reportMessage.textContent = 'All six financial reports exported to Excel.';
       } finally {
         if (exportButton) exportButton.disabled = false;
       }

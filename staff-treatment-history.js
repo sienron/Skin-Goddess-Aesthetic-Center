@@ -17,6 +17,7 @@
     };
 
     let appointments = [];
+    let sortState = { key: "date", direction: "descending" };
 
     function text(value, fallback = "—") {
         return value === null || value === undefined || value === "" ? fallback : String(value);
@@ -185,8 +186,7 @@
 
     function filteredAppointments() {
         const query = searchInput.value.trim().toLowerCase();
-        if (!query) return appointments;
-        return appointments.filter((appointment) => {
+        const filtered = !query ? appointments : appointments.filter((appointment) => {
             const status = statusLabels[appointment.status] || appointment.status;
             const searchable = [
                 appointment.id,
@@ -203,9 +203,74 @@
             ].join(" ").toLowerCase();
             return searchable.includes(query);
         });
+        return filtered
+            .map((appointment, index) => ({ appointment, index }))
+            .sort((first, second) => {
+                const firstValue = sortValue(first.appointment, sortState.key);
+                const secondValue = sortValue(second.appointment, sortState.key);
+                const firstMissing = firstValue === null || firstValue === undefined || firstValue === "";
+                const secondMissing = secondValue === null || secondValue === undefined || secondValue === "";
+                if (firstMissing !== secondMissing) return firstMissing ? 1 : -1;
+                const comparison = compareAppointments(first.appointment, second.appointment, sortState.key);
+                return comparison === 0 ? first.index - second.index
+                    : sortState.direction === "ascending" ? comparison : -comparison;
+            })
+            .map(({ appointment }) => appointment);
+    }
+
+    function sortValue(appointment, key) {
+        switch (key) {
+            case "appointment": return appointment.apptNumber ?? appointment.id;
+            case "client": return appointment.client;
+            case "contact": return [appointment.clientEmail, appointment.contact].filter(Boolean).join(" · ");
+            case "service": return appointment.service;
+            case "date": {
+                const timestamp = appointmentTimestamp(appointment);
+                return Number.isFinite(timestamp) ? timestamp : null;
+            }
+            case "time": {
+                const [hour, minute] = String(appointment.start || "").split(":").map(Number);
+                return Number.isInteger(hour) && Number.isInteger(minute) ? hour * 60 + minute : null;
+            }
+            case "status": return statusLabels[appointment.status] || appointment.status;
+            case "payment": return appointment.paymentStatus;
+            case "fee": return appointment.fee;
+            case "deposit": return appointment.depositAmount;
+            case "aesthetician": return appointment.aesthetician;
+            default: return null;
+        }
+    }
+
+    function compareAppointments(first, second, key) {
+        const firstValue = sortValue(first, key);
+        const secondValue = sortValue(second, key);
+        if (typeof firstValue === "number" && typeof secondValue === "number") {
+            return firstValue - secondValue;
+        }
+        const firstNumber = Number(firstValue);
+        const secondNumber = Number(secondValue);
+        if (key === "appointment" && Number.isFinite(firstNumber) && Number.isFinite(secondNumber)) {
+            return firstNumber - secondNumber;
+        }
+        return String(firstValue).localeCompare(String(secondValue), undefined, {
+            numeric: true,
+            sensitivity: "base",
+        });
+    }
+
+    function updateSortIndicators() {
+        document.querySelectorAll(".treatment-sort-button").forEach((button) => {
+            const active = button.dataset.sortKey === sortState.key;
+            const header = button.closest("th");
+            button.classList.toggle("active", active);
+            if (active) button.dataset.sortDirection = sortState.direction;
+            else delete button.dataset.sortDirection;
+            if (header) header.setAttribute("aria-sort", active ? sortState.direction : "none");
+        });
     }
 
     function render() {
+        updateSortIndicators();
         const visibleAppointments = filteredAppointments();
         tableBody.replaceChildren();
 
@@ -264,7 +329,7 @@
                 aesthetician: appointment.aesthetician ?? "Aesthetician",
                 remarks: appointment.remarks ?? appointment.notes,
                 apptNumber: appointment.apptNumber ?? appointment.appt_number ?? appointment.id,
-            })).sort((first, second) => appointmentTimestamp(second) - appointmentTimestamp(first)) : [];
+            })) : [];
             render();
         } catch (error) {
             tableBody.innerHTML = "";
@@ -280,5 +345,16 @@
     }
 
     searchInput.addEventListener("input", render);
+    document.querySelectorAll(".treatment-sort-button").forEach((button) => {
+        button.addEventListener("click", () => {
+            const key = button.dataset.sortKey;
+            if (key === sortState.key) {
+                sortState.direction = sortState.direction === "ascending" ? "descending" : "ascending";
+            } else {
+                sortState = { key, direction: key === "date" ? "descending" : "ascending" };
+            }
+            render();
+        });
+    });
     loadAppointments();
 })();

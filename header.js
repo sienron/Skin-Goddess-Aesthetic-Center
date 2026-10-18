@@ -218,6 +218,43 @@
         badge.hidden = unreadCount === 0;
     }
 
+    function notificationAgeClass(value) {
+        const createdAt = new Date(value);
+        if (Number.isNaN(createdAt.getTime())) return '';
+        const age = Math.max(0, Date.now() - createdAt.getTime());
+        if (age < 24 * 60 * 60 * 1000) return 'notification-age--fresh';
+        if (age < 7 * 24 * 60 * 60 * 1000) return 'notification-age--recent';
+        return 'notification-age--older';
+    }
+
+    function appendTimestamp(item, value) {
+        const timestamp = document.createElement('time');
+        const createdAt = new Date(value);
+        timestamp.className = 'notification-item__timestamp';
+        if (Number.isNaN(createdAt.getTime())) {
+            timestamp.textContent = 'Time unavailable';
+        } else {
+            timestamp.dateTime = createdAt.toISOString();
+            timestamp.textContent = createdAt.toLocaleString(undefined, {
+                dateStyle: 'medium',
+                timeStyle: 'short'
+            });
+            const ageClass = notificationAgeClass(value);
+            if (ageClass) {
+                item.classList.add(ageClass);
+                timestamp.classList.add(ageClass);
+            }
+        }
+        item.append(timestamp);
+    }
+
+    function appendUnreadLabel(item) {
+        const status = document.createElement('span');
+        status.className = 'notification-item__unread';
+        status.textContent = 'UNREAD';
+        item.append(status);
+    }
+
     function renderNotificationList() {
         if (!notificationList) return;
         notificationList.replaceChildren();
@@ -232,8 +269,11 @@
             const title = document.createElement('strong');
             title.textContent = announcement.title;
             const message = document.createElement('span');
+            message.className = 'notification-item__message';
             message.textContent = announcement.message;
             item.append(type, title, message);
+            appendTimestamp(item, announcement.updated_at);
+            appendUnreadLabel(item);
             notificationList.append(item);
         });
 
@@ -242,7 +282,11 @@
             item.type = 'button';
             item.className = `notification-item${notification.is_read ? '' : ' unread'}`;
             item.dataset.notificationId = notification.notification_id;
-            item.textContent = notification.message;
+            const message = document.createElement('span');
+            message.textContent = notification.message;
+            item.append(message);
+            appendTimestamp(item, notification.created_at);
+            if (!notification.is_read) appendUnreadLabel(item);
             notificationList.append(item);
         });
 

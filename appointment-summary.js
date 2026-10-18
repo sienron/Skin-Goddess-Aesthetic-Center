@@ -141,7 +141,10 @@
             return;
           }
 
-          if (statusData.status === 'paid' || statusData.status === 'consumed') {
+          const shouldConfirm = statusData.status === 'paid'
+            || statusData.status === 'consumed'
+            || (statusData.status === 'pending' && attempt % 5 === 0);
+          if (shouldConfirm) {
             const confirmResponse = await fetch('/api/appointments/paymongo/confirm', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },

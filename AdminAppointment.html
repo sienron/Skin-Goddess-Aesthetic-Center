@@ -373,6 +373,7 @@
         <dl class="appointment-details-grid appointment-edit-summary">
           <div><dt>Reference</dt><dd id="appointmentEditReference"></dd></div>
           <div><dt>Client / Walk-in</dt><dd id="appointmentEditClient"></dd></div>
+          <div><dt>Service</dt><dd id="appointmentEditServiceSummary"></dd></div>
         </dl>
         <div class="appointment-edit-fields">
           <div class="form-group">
@@ -417,6 +418,9 @@
             <span class="appointment-edit-status-hint" id="appointmentEditCompletionHint" role="tooltip">To complete this appointment, open its View modal and review and confirm the products used.</span>
           </div>
         </div>
+        <p id="appointmentRebookNotice" class="appointment-inventory-message" role="note" hidden>
+          This creates a new appointment and keeps the original appointment and its payment history unchanged. Any payment or deposit on the original appointment will not transfer; the new appointment follows the usual payment process.
+        </p>
         <p class="appointment-inventory-message" id="appointmentEditMessage" role="status" aria-live="polite"></p>
         <footer class="appointment-inventory-actions">
           <button class="um-btn um-btn--ghost" id="appointmentEditCancel" type="button">Cancel</button>
@@ -446,7 +450,7 @@
             </div>
           </label>
         </div>
-        <p class="appointment-inventory-note"></p>
+        <p class="appointment-inventory-note" id="appointmentProductsMappingNotice" role="status"></p>
         <div class="appointment-products-lists" id="appointmentProductsLists">
           <section class="appointment-products-section" aria-labelledby="appointmentProductsSelectedTitle">
             <h3 id="appointmentProductsSelectedTitle">Selected Products for This Service</h3>

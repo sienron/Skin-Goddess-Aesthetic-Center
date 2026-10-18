@@ -184,6 +184,12 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderServiceDefaults() {
     const list = document.getElementById('cmServiceDefaultsList');
     if (!list) return;
+    const hasVerifiedMapping = [...serviceDefaultsState.values()].some(
+      (mapping) => mapping.isEnabled && mapping.quantity !== ''
+    );
+    document.getElementById('cmServiceDefaultsMappingStatus').textContent = hasVerifiedMapping
+      ? 'At least one product mapping is enabled with a confirmed quantity.'
+      : 'No verified product mapping is configured. Confirm the procedure’s actual products and quantities before enabling a default.';
     const query = serviceDefaultsSearchTerm.trim().toLowerCase();
     const products = serviceDefaultsInventory
       .filter((product) => (
@@ -302,9 +308,10 @@ document.addEventListener('DOMContentLoaded', () => {
     for (const mapping of serviceDefaultsState.values()) {
       if (!mapping.wasMapped && !mapping.isEnabled) continue;
       const quantity = mapping.quantity === '' ? null : Number(mapping.quantity);
-      if (quantity !== null && (!Number.isSafeInteger(quantity) || quantity < 1)) {
+      if ((mapping.isEnabled && quantity === null)
+        || (quantity !== null && (!Number.isSafeInteger(quantity) || quantity < 1))) {
         const errorMessage = document.getElementById('cmServiceDefaultsError');
-        errorMessage.textContent = 'A configured default quantity must be a positive whole number.';
+        errorMessage.textContent = 'Enabled mappings need a confirmed positive whole-number quantity.';
         errorMessage.hidden = false;
         return;
       }

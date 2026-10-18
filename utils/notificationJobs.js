@@ -6,6 +6,7 @@ const { sendAppointmentReminderEmail } = require('./mailer');
 let remindersRunning = false;
 let emailRemindersRunning = false;
 let expiryRunning = false;
+let overdueAppointmentsRunning = false;
 
 function appointmentLabel(row) {
   return `${row.service_name} on ${row.appointment_date} at ${String(row.appointment_time).slice(0, 5)}`;
@@ -22,6 +23,7 @@ async function sendReminders(flag, hours, type) {
       AND a.${flag} = FALSE
       AND a.appointment_date + a.appointment_time > (NOW() AT TIME ZONE 'Asia/Manila')
       AND a.appointment_date + a.appointment_time <= (NOW() AT TIME ZONE 'Asia/Manila') + ($1 * INTERVAL '1 hour')
+      AND ($1::integer <> 24 OR a.appointment_date + a.appointment_time > (NOW() AT TIME ZONE 'Asia/Manila') + INTERVAL '3 hours')
     RETURNING a.user_id, a.appointment_date::text AS appointment_date,
               a.appointment_time::text AS appointment_time, s.service_name
   `, [hours]);
@@ -59,23 +61,54 @@ async function sendAppointmentEmailReminders(flag, hours) {
       AND a.${flag} = FALSE
       AND a.appointment_date + a.appointment_time > ${now}
       AND a.appointment_date + a.appointment_time <= ${now} + ($1 * INTERVAL '1 hour')
+      AND ($1::integer <> 24 OR a.appointment_date + a.appointment_time > ${now} + INTERVAL '3 hours')
     ORDER BY a.appointment_date, a.appointment_time
   `, [hours]);
 
   for (const appointment of result.rows) {
+    const claim = await db.query(`
+      UPDATE appointments
+      SET ${flag} = TRUE
+      WHERE appointment_id = $1 AND ${flag} = FALSE
+        AND appointment_status = 'confirmed'
+        AND appointment_date = $2::date AND appointment_time = $3::time
+        AND appointment_date + appointment_time > ${now}
+        AND appointment_date + appointment_time <= ${now} + ($4 * INTERVAL '1 hour')
+        AND ($4::integer <> 24 OR appointment_date + appointment_time > ${now} + INTERVAL '3 hours')
+      RETURNING appointment_id
+    `, [
+      appointment.appointment_id,
+      appointment.appointment_date,
+      appointment.appointment_time,
+      hours
+    ]);
+    if (!claim.rows.length) continue;
+
     try {
       await sendAppointmentReminderEmail(appointment, hours);
-      await db.query(`
-        UPDATE appointments
-        SET ${flag} = TRUE
-        WHERE appointment_id = $1 AND ${flag} = FALSE
-          AND appointment_status = 'confirmed'
-      `, [appointment.appointment_id]);
     } catch (error) {
       console.error(
         `Could not send ${hours}-hour appointment reminder for appointment ${appointment.appointment_id}:`,
         error.message,
       );
+      try {
+        await db.query(`
+          UPDATE appointments
+          SET ${flag} = FALSE
+          WHERE appointment_id = $1 AND ${flag} = TRUE
+            AND appointment_status = 'confirmed'
+            AND appointment_date = $2::date AND appointment_time = $3::time
+        `, [
+          appointment.appointment_id,
+          appointment.appointment_date,
+          appointment.appointment_time
+        ]);
+      } catch (resetError) {
+        console.error(
+          `Could not reset ${hours}-hour appointment reminder for appointment ${appointment.appointment_id}:`,
+          resetError.message
+        );
+      }
     }
   }
 }
@@ -93,7 +126,7 @@ async function runAppointmentEmailReminders() {
     if (!lockAcquired) return;
 
     await sendAppointmentEmailReminders('reminder_email_24h_sent', 24);
-    await sendAppointmentEmailReminders('reminder_email_1h_sent', 1);
+    await sendAppointmentEmailReminders('reminder_email_3h_sent', 3);
   } catch (error) {
     console.error('Appointment email reminder job failed:', error.message);
   } finally {
@@ -106,6 +139,40 @@ async function runAppointmentEmailReminders() {
     }
     if (client) client.release();
     emailRemindersRunning = false;
+  }
+}
+
+async function runOverdueAppointments() {
+  if (overdueAppointmentsRunning) return;
+  overdueAppointmentsRunning = true;
+  try {
+    const result = await db.query(`
+      UPDATE appointments
+      SET appointment_status = 'no_show', updated_at = NOW()
+      WHERE appointment_status = 'confirmed'
+        AND appointment_date + appointment_end_time <= (NOW() AT TIME ZONE 'Asia/Manila')
+      RETURNING appointment_id, user_id
+    `);
+
+    for (const appointment of result.rows) {
+      if (!appointment.user_id) continue;
+      try {
+        await notifyUser(
+          appointment.user_id,
+          'appointment_status_changed',
+          `Appointment ${appointment.appointment_id} status changed to no show because its scheduled time passed.`
+        );
+      } catch (error) {
+        console.error(
+          `No-show notification failed for appointment ${appointment.appointment_id}:`,
+          error.message
+        );
+      }
+    }
+  } catch (error) {
+    console.error('Overdue appointment job failed:', error.message);
+  } finally {
+    overdueAppointmentsRunning = false;
   }
 }
 
@@ -151,6 +218,7 @@ async function runExpiryAlerts() {
 function startNotificationJobs() {
   cron.schedule('*/5 * * * *', runAppointmentReminders, { timezone: 'Asia/Manila' });
   cron.schedule('*/5 * * * *', runAppointmentEmailReminders, { timezone: 'Asia/Manila' });
+  cron.schedule('*/5 * * * *', runOverdueAppointments, { timezone: 'Asia/Manila' });
   cron.schedule('0 9 * * *', runExpiryAlerts, { timezone: 'Asia/Manila' });
 }
 
@@ -158,5 +226,6 @@ module.exports = {
   startNotificationJobs,
   runAppointmentReminders,
   runAppointmentEmailReminders,
+  runOverdueAppointments,
   runExpiryAlerts,
 };

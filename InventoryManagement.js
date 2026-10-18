@@ -1380,22 +1380,13 @@ clearFilters.addEventListener("click", () => {
 
     const row = button.closest("tr");
 
-    const stockNumber =
-        row.querySelector(".stock-number");
-
-    let stock =
-        Number(stockNumber.textContent);
-
-
     /* =====================================================
        ADD STOCK
        ===================================================== */
 
     if(button.classList.contains("increase")){
 
-        stock++;
-
-        updateStock(row, stock);
+        updateStock(row, 1);
 
         return;
     }
@@ -1407,13 +1398,7 @@ clearFilters.addEventListener("click", () => {
 
     if(button.classList.contains("decrease")){
 
-        if(stock > 0){
-
-            stock--;
-
-            updateStock(row, stock);
-
-        }
+        updateStock(row, -1);
 
         return;
     }
@@ -1454,6 +1439,7 @@ if(button.classList.contains("edit")){
 
     editStock.value =
         product.stock_quantity;
+    editModal.dataset.originalStock = product.stock_quantity;
 
 
     /* Expiration */
@@ -1800,6 +1786,8 @@ confirmAddProduct.addEventListener("click", async () => {
     const productName = editProductName.value.trim();
     const category = editCategory.value;
     const stock = Number(editStock.value);
+    const originalStock = Number(editModal.dataset.originalStock);
+    const stockAdjustment = stock - originalStock;
 
     // Get expiration date
     const expiryDate =
@@ -1816,7 +1804,7 @@ confirmAddProduct.addEventListener("click", async () => {
 
     }
 
-    if(!Number.isInteger(stock) || stock < 0){
+    if(!Number.isInteger(stock) || stock < 0 || !Number.isSafeInteger(stockAdjustment)){
 
         alert("Stock must be a non-negative integer.");
         return;
@@ -1861,7 +1849,7 @@ confirmAddProduct.addEventListener("click", async () => {
                 body: JSON.stringify({
                     product_name: productName,
                     category: category,
-                    stock: stock,
+                    stock_adjustment: stockAdjustment,
                     expiry_date: expiryDate
                 })
             }
@@ -1932,7 +1920,7 @@ confirmAddProduct.addEventListener("click", async () => {
    UPDATE STOCK
    ========================================================= */
 
-   async function updateStock(row, stock){
+   async function updateStock(row, stockAdjustment){
 
     const productId =
         row.dataset.id;
@@ -1950,18 +1938,15 @@ confirmAddProduct.addEventListener("click", async () => {
                 },
 
                 body: JSON.stringify({
-                    stock: stock
+                    stock_adjustment: stockAdjustment
                 })
 
             });
 
 
         if(!response.ok){
-
-            throw new Error(
-                "Failed to update stock."
-            );
-
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || "Failed to update stock.");
         }
 
 
@@ -2068,9 +2053,7 @@ confirmAddProduct.addEventListener("click", async () => {
             error
         );
 
-        alert(
-            "Failed to update stock. Please try again."
-        );
+        alert(error.message || "Failed to update stock. Please try again.");
 
     }
 

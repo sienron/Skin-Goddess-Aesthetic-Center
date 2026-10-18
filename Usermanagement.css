@@ -8,15 +8,16 @@
 }
 
 #userManagementMain .um-header {
-  min-height: 0;
+  min-height: 72px;
   height: auto;
   margin: 0 0 24px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  box-shadow: none;
-  flex-wrap: nowrap;
-  gap: 24px;
+  padding: 14px 20px;
+  border: 1px solid #eae5dc;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgb(45 36 23 / 3%);
+  flex-wrap: wrap;
+  gap: 16px 24px;
 }
 
 #userManagementMain .um-header__title {
@@ -34,7 +35,7 @@
 }
 
 #userManagementMain .um-header__actions {
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   gap: 12px;
 }
 
@@ -57,8 +58,14 @@
 }
 
 #userManagementMain .um-header__actions-row {
+  display: flex;
+  align-items: center;
   flex-wrap: nowrap;
   gap: 10px;
+}
+
+#userManagementMain .staff-theme-toggle--header {
+  flex-shrink: 0;
 }
 
 #userManagementMain .um-btn {
@@ -631,6 +638,7 @@
 
   #userManagementMain .um-header {
     flex-direction: column;
+    align-items: stretch;
     gap: 16px;
     margin-bottom: 20px;
   }
@@ -645,12 +653,15 @@
     margin: 0;
     flex-direction: row;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
+    gap: 8px;
   }
 
   #userManagementMain > .um-header .um-header__actions-row {
     display: flex;
-    width: auto;
+    width: 100%;
+    justify-content: flex-end;
+    margin-left: auto;
   }
 
   #userManagementMain .um-stats {
@@ -826,7 +837,7 @@ body.staff-theme-dark #userManagementMain {
 
 body.staff-theme-dark #userManagementMain .um-header {
   border-color: #383a36;
-  background: transparent;
+  background: #222321;
   color: #e9e4da;
 }
 
