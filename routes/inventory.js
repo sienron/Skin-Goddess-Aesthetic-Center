@@ -329,7 +329,7 @@ router.post('/batch-upload/confirm', async (req, res) => {
     }
 });
 
-async function updateInventoryProduct(productId, stockAdjustment, details, userId) {
+async function updateInventoryProduct(productId, stockAdjustment, details, userId, targetStock = null) {
     return db.transaction(async (client) => {
         const current = await client.query(`
             SELECT stock_quantity
@@ -340,7 +340,15 @@ async function updateInventoryProduct(productId, stockAdjustment, details, userI
         if (current.rows.length === 0) return null;
 
         const previousStock = Number(current.rows[0].stock_quantity);
-        const nextStock = previousStock + stockAdjustment;
+        if (targetStock !== null && (!Number.isSafeInteger(targetStock) || targetStock < 0)) {
+            const error = new Error('Stock quantity must be a non-negative whole number.');
+            error.statusCode = 400;
+            throw error;
+        }
+        const appliedStockAdjustment = targetStock === null
+            ? stockAdjustment
+            : targetStock - previousStock;
+        const nextStock = previousStock + appliedStockAdjustment;
         if (nextStock < 0) {
             const error = new Error(`Stock cannot be reduced below zero. Current stock is ${previousStock}.`);
             error.statusCode = 409;
@@ -359,20 +367,24 @@ async function updateInventoryProduct(productId, stockAdjustment, details, userI
                     expiry_date = $4, updated_at = NOW()
                 WHERE product_id = $5
                 RETURNING product_id, product_name, category, stock_quantity, expiry_date
-            `, [details.product_name.trim(), details.category, stockAdjustment, details.expiry_date || null, productId])
+            `, [details.product_name.trim(), details.category, appliedStockAdjustment, details.expiry_date || null, productId])
             : await client.query(`
                 UPDATE inventory_products
                 SET stock_quantity = stock_quantity + $1, updated_at = NOW()
                 WHERE product_id = $2 AND stock_quantity + $1 >= 0
                 RETURNING product_id, product_name, category, stock_quantity, expiry_date
-            `, [stockAdjustment, productId]);
+            `, [appliedStockAdjustment, productId]);
 
         if (Number(result.rows[0].stock_quantity) !== previousStock) {
             await recordInventoryTransaction(client, {
                 productId,
                 productName: result.rows[0].product_name,
-                transactionType: 'Adjustment',
-                quantity: Math.abs(Number(result.rows[0].stock_quantity) - previousStock),
+                transactionType: targetStock === null
+                    ? 'Adjustment'
+                    : appliedStockAdjustment > 0
+                      ? 'Restock'
+                      : 'Manual Stock Deduction',
+                quantity: Math.abs(appliedStockAdjustment),
                 previousStock,
                 newStock: Number(result.rows[0].stock_quantity),
                 userId,
@@ -447,7 +459,12 @@ router.get('/transactions', async (req, res) => {
         const result = await db.query(`
             SELECT
                 stock_transaction.transaction_id,
-                stock_transaction.transaction_type,
+                CASE
+                    WHEN stock_transaction.transaction_type = 'Used in Service'
+                         AND stock_transaction.appointment_id IS NULL
+                    THEN 'Manual Stock Deduction'
+                    ELSE stock_transaction.transaction_type
+                END AS transaction_type,
                 stock_transaction.quantity,
                 stock_transaction.previous_stock,
                 stock_transaction.new_stock,
@@ -518,7 +535,7 @@ router.get('/deducted-today', async (req, res) => {
             SELECT
                 COALESCE(SUM(quantity), 0) AS total_deducted
             FROM inventory_transactions
-            WHERE transaction_type = 'Used in Service'
+            WHERE transaction_type IN ('Used in Service', 'Manual Stock Deduction')
             AND created_at::date = CURRENT_DATE
         `);
 
@@ -715,11 +732,15 @@ router.put('/:id/stock', async (req, res) => {
 
         const productId = Number(req.params.id);
 
-        const { stock_adjustment: stockAdjustment } = req.body;
+        const body = req.body || {};
+        const hasTargetStock = Object.prototype.hasOwnProperty.call(body, 'stock');
+        const { stock_adjustment: stockAdjustment, stock } = body;
 
 
         // Check stock
-        if (!Number.isSafeInteger(stockAdjustment)) {
+        if (hasTargetStock
+            ? !Number.isSafeInteger(stock) || stock < 0
+            : !Number.isSafeInteger(stockAdjustment)) {
 
             return res.status(400).json({
                 message: 'Stock adjustment must be a whole number.'
@@ -728,7 +749,13 @@ router.put('/:id/stock', async (req, res) => {
         }
 
 
-        const updated = await updateInventoryProduct(productId, stockAdjustment, null, req.session.userId);
+        const updated = await updateInventoryProduct(
+            productId,
+            stockAdjustment || 0,
+            null,
+            req.session.userId,
+            hasTargetStock ? stock : null
+        );
         if (!updated) {
             return res.status(404).json({ message: 'Product not found.' });
         }
@@ -756,6 +783,85 @@ router.put('/:id/stock', async (req, res) => {
 
 });
 
+router.post('/:id/deduct', async (req, res) => {
+    const productId = Number(req.params.id);
+    if (!Number.isSafeInteger(productId) || productId < 1) {
+        return res.status(400).json({ message: 'Choose a valid inventory product.' });
+    }
+
+    try {
+        const updated = await db.transaction(async (client) => {
+            const current = await client.query(`
+                SELECT product_name, stock_quantity
+                FROM inventory_products
+                WHERE product_id = $1
+                FOR UPDATE
+            `, [productId]);
+            if (!current.rows.length) return null;
+
+            const previousStock = Number(current.rows[0].stock_quantity);
+            if (previousStock < 1) {
+                const error = new Error(`${current.rows[0].product_name} is out of stock.`);
+                error.statusCode = 409;
+                throw error;
+            }
+
+            const result = await client.query(`
+                UPDATE inventory_products
+                SET stock_quantity = stock_quantity - 1, updated_at = NOW()
+                WHERE product_id = $1 AND stock_quantity > 0
+                RETURNING product_id, product_name, category, stock_quantity, expiry_date
+            `, [productId]);
+            if (!result.rows.length) {
+                const error = new Error('Stock changed before it could be deducted. Refresh and try again.');
+                error.statusCode = 409;
+                throw error;
+            }
+
+            await recordInventoryTransaction(client, {
+                productId,
+                productName: result.rows[0].product_name,
+                transactionType: 'Manual Stock Deduction',
+                quantity: 1,
+                previousStock,
+                newStock: previousStock - 1,
+                userId: req.session.userId
+            });
+
+            return {
+                product: result.rows[0],
+                previousStock
+            };
+        });
+        if (!updated) {
+            return res.status(404).json({ message: 'Product not found.' });
+        }
+
+        try {
+            await notifyStockTransition(
+                updated.previousStock,
+                Number(updated.product.stock_quantity),
+                updated.product.product_name
+            );
+        } catch (error) {
+            console.error(`Inventory threshold notification failed for product ${productId}:`, error);
+        }
+        return res.json(updated.product);
+    } catch (error) {
+        if (error.statusCode) {
+            return res.status(error.statusCode).json({ message: error.message });
+        }
+        if (error.code === '23514'
+            && error.constraint === 'inventory_transactions_transaction_type_check') {
+            return res.status(503).json({
+                message: 'The inventory database is missing support for manual stock deductions. Run npm run migrate:manual-stock-deduction against this server database, then try again.'
+            });
+        }
+        console.error('Error deducting inventory stock:', error);
+        return res.status(500).json({ message: 'Failed to deduct inventory stock.' });
+    }
+});
+
 
 //PUT for editing an entire inventory product
 router.put("/:id", async (req, res) => {
@@ -764,12 +870,15 @@ router.put("/:id", async (req, res) => {
 
         const productId = Number(req.params.id);
 
+        const body = req.body || {};
+        const hasTargetStock = Object.prototype.hasOwnProperty.call(body, 'stock');
         const {
             product_name,
             category,
             stock_adjustment: stockAdjustment,
+            stock,
             expiry_date
-        } = req.body;
+        } = body;
 
 
         // Check product name
@@ -783,7 +892,9 @@ router.put("/:id", async (req, res) => {
 
 
         // Check stock
-        if (!Number.isSafeInteger(stockAdjustment)) {
+        if (hasTargetStock
+            ? !Number.isSafeInteger(stock) || stock < 0
+            : !Number.isSafeInteger(stockAdjustment)) {
 
             return res.status(400).json({
                 message: "Stock adjustment must be a whole number."
@@ -792,11 +903,17 @@ router.put("/:id", async (req, res) => {
         }
 
 
-        const updated = await updateInventoryProduct(productId, stockAdjustment, {
-            product_name,
-            category,
-            expiry_date
-        }, req.session.userId);
+        const updated = await updateInventoryProduct(
+            productId,
+            stockAdjustment || 0,
+            {
+                product_name,
+                category,
+                expiry_date
+            },
+            req.session.userId,
+            hasTargetStock ? stock : null
+        );
         if (!updated) {
             return res.status(404).json({ message: "Product not found." });
         }

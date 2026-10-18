@@ -1398,7 +1398,15 @@ clearFilters.addEventListener("click", () => {
 
     if(button.classList.contains("decrease")){
 
-        updateStock(row, -1);
+        const stock = Number(row.dataset.stock);
+        if(Number.isFinite(stock) && stock > 0){
+
+            button.disabled = true;
+            updateStock(row, -1, true).finally(() => {
+                button.disabled = false;
+            });
+
+        }
 
         return;
     }
@@ -1920,7 +1928,7 @@ confirmAddProduct.addEventListener("click", async () => {
    UPDATE STOCK
    ========================================================= */
 
-   async function updateStock(row, stockAdjustment){
+   async function updateStock(row, stockAdjustment, deductOne = false){
 
     const productId =
         row.dataset.id;
@@ -1928,30 +1936,23 @@ confirmAddProduct.addEventListener("click", async () => {
 
     try {
 
-        const response =
-            await fetch(`/api/inventory/${productId}/stock`, {
+        const response = await fetch(
+            deductOne
+                ? `/api/inventory/${productId}/deduct`
+                : `/api/inventory/${productId}/stock`,
+            {
+                method: deductOne ? "POST" : "PUT",
+                headers: deductOne ? {} : { "Content-Type": "application/json" },
+                ...(deductOne ? {} : { body: JSON.stringify({ stock_adjustment: stockAdjustment }) })
+            }
+        );
 
-                method: "PUT",
-
-                headers: {
-                    "Content-Type": "application/json"
-                },
-
-                body: JSON.stringify({
-                    stock_adjustment: stockAdjustment
-                })
-
-            });
-
-
+        const responseBody = await response.json();
         if(!response.ok){
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.message || "Failed to update stock.");
+            throw new Error(responseBody.message || "Failed to update stock.");
         }
 
-
-        const updatedProduct =
-            await response.json();
+        const updatedProduct = responseBody;
 
 
         row.dataset.stock =

@@ -97,7 +97,9 @@ document.addEventListener('DOMContentLoaded', () => {
       cancellationRequestStatus: record.cancellation_request_status || null,
       cancellationReason: record.cancellation_reason || '',
       cancellationDescription: record.cancellation_description || '',
-      inventoryDeductionConfirmedAt: record.inventory_deduction_confirmed_at || null
+      inventoryDeductionConfirmedAt: record.inventory_deduction_confirmed_at || null,
+      inventoryReviewConfirmedAt: record.inventory_product_reviewed_at || null,
+      inventoryReviewConfirmedBy: String(record.inventory_product_reviewed_by || '')
     };
   }
 
@@ -204,12 +206,19 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('appointmentDetailsStatus').textContent = STATUS_LABELS[appointment.status] || appointment.status.toUpperCase();
     const message = document.getElementById('appointmentDetailsMessage');
     const reviewButton = document.getElementById('appointmentProductsReviewBtn');
-    reviewButton.hidden = appointment.status !== 'in-progress';
+    reviewButton.hidden = true;
+    document.getElementById('appointmentDetailsProductReview').textContent = appointment.status === 'completed'
+      ? appointment.inventoryDeductionConfirmedAt ? 'Products Reviewed' : 'Review Not Recorded'
+      : appointment.inventoryReviewConfirmedAt ? 'Products Reviewed'
+        : appointment.status === 'in-progress' ? 'Products Pending Review'
+          : 'Not started';
     if (appointment.status === 'in-progress') {
-      message.textContent = 'This appointment is In Progress. Review and confirm products used to deduct inventory and complete it.';
+      message.textContent = appointment.inventoryReviewConfirmedAt
+        ? `Products were confirmed by ${appointment.inventoryReviewConfirmedBy || 'an Inventory Officer'} at ${new Date(appointment.inventoryReviewConfirmedAt).toLocaleString()}. An admin can complete the appointment.`
+        : 'Products are pending review. An Inventory Officer must confirm the products and quantities before an admin can complete this appointment.';
       message.classList.remove('appointment-inventory-message--error');
     } else if (appointment.inventoryDeductionConfirmedAt) {
-      message.textContent = `Inventory was deducted and confirmed at ${new Date(appointment.inventoryDeductionConfirmedAt).toLocaleString()}.`;
+      message.textContent = `Product-use review and inventory processing were recorded at ${new Date(appointment.inventoryDeductionConfirmedAt).toLocaleString()}.`;
       message.classList.remove('appointment-inventory-message--error');
     } else if (appointment.status === 'completed') {
       message.textContent = 'This appointment was completed before the product-review workflow was enabled. It cannot be deducted again through this workflow.';
@@ -337,7 +346,8 @@ document.addEventListener('DOMContentLoaded', () => {
     dateInput.value = rebook ? '' : appointment.dateKey;
     timeSelect.value = rebook ? '' : appointment.time;
     statusSelect.value = rebook ? 'confirmed' : appointment.status;
-    statusSelect.querySelector('option[value="completed"]').disabled = true;
+    statusSelect.querySelector('option[value="completed"]').disabled = !appointment.inventoryReviewConfirmedAt
+      || appointment.status !== 'in-progress';
     statusField.hidden = rebook;
     serviceField.hidden = rebook;
     document.getElementById('appointmentRebookNotice').hidden = !rebook;
@@ -349,7 +359,7 @@ document.addEventListener('DOMContentLoaded', () => {
       dateInput.removeAttribute('min');
       dateInput.removeAttribute('max');
     }
-    const needsCompletionHint = appointment.status === 'in-progress';
+    const needsCompletionHint = appointment.status === 'in-progress' && !appointment.inventoryReviewConfirmedAt;
     statusField.classList.toggle('appointment-edit-fields__status--completion-hint', needsCompletionHint);
     if (needsCompletionHint) {
       statusSelect.setAttribute('aria-describedby', 'appointmentEditCompletionHint');
@@ -425,7 +435,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const selection = productSelection.get(Number(product.product_id));
       if (!selection) continue;
       if (Number(product.stock_quantity) <= 0) {
-        return `${product.product_name} is out of stock and cannot be selected.`;
+        return `${product.product_name} is out of stock (0 units available). Uncheck it if it was not used.`;
       }
       if (!Number.isSafeInteger(Number(selection.quantity)) || selection.quantity === '' || Number(selection.quantity) < 1) {
         return `Enter a positive whole-number quantity for ${product.product_name}.`;
@@ -499,12 +509,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const checkbox = el('input');
         checkbox.type = 'checkbox';
         checkbox.checked = Boolean(selection);
-        checkbox.disabled = Number(product.stock_quantity) <= 0 && !selection;
         checkbox.setAttribute('aria-label', `Select ${product.product_name}`);
         const details = el('div', 'appointment-product-row__details');
         details.appendChild(el('strong', '', product.product_name));
         details.appendChild(el('span', '', Number(product.stock_quantity) <= 0
-          ? `${product.category} · Out of stock`
+          ? `${product.category} · Current stock: ${product.stock_quantity} · Out of stock`
           : `${product.category} · Current stock: ${product.stock_quantity}`));
         if (!product.is_suggested && selection) {
           details.appendChild(el('span', 'appointment-product-tag appointment-product-tag--manual', 'Manually added'));
@@ -627,8 +636,8 @@ document.addEventListener('DOMContentLoaded', () => {
       message.classList.remove('appointment-inventory-message--error');
       showProductEditorStep();
       renderProductSelection();
-      if (result.removedUnavailableSelection) {
-        message.textContent = 'Previously selected out-of-stock products were removed. Review the updated selection before confirming.';
+      if (result.removedMissingSelection) {
+        message.textContent = 'Previously selected products no longer in inventory were removed. Review the updated selection before confirming.';
       }
       setAppointmentModalOpen(productsModal, true);
     } catch (error) {
@@ -741,6 +750,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         setAppointmentModalOpen(editModal, false);
         return;
+      } else if (appointmentEditStatus.value === 'completed') {
+        if (scheduleChanged) {
+          throw new Error('Save schedule, service, or staff changes before completing the appointment.');
+        }
+        await requestJson(`/api/appointments/admin/${editingAppointment.id}/complete-with-inventory`, {
+          method: 'POST'
+        });
       } else if (appointmentEditStatus.value === 'cancelled') {
         if (scheduleChanged) {
           throw new Error('Save schedule, service, or staff changes before cancelling the appointment.');
@@ -917,6 +933,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusTd = el('td');
     const statusClass = a.status;
     statusTd.appendChild(el('span', 'apt-status apt-status--' + statusClass, STATUS_LABELS[a.status] || a.status.toUpperCase()));
+    if (a.status === 'in-progress') {
+      statusTd.appendChild(el(
+        'small',
+        'apt-sub',
+        a.inventoryReviewConfirmedAt ? 'Products Reviewed' : 'Products Pending Review'
+      ));
+    }
 
     const actionTd = el('td');
     const actions = el('div', 'apt-actions');

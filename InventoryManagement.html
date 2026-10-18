@@ -13,6 +13,7 @@
 
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="InventoryManagement.css">
+    <link rel="stylesheet" href="AppointmentInventoryReview.css">
 </head>
 
 <body class="InventoryManagement inventory-officer-page">
@@ -43,7 +44,7 @@
                 <a href="InventoryTransactions.html" class="inv-nav-link">
                     <img src="icons/finance-transactions.svg" alt=""><span>Stock Transaction Log</span>
                 </a>
-    
+
             </nav>
     
             <div class="inv-sidebar__account um-sidebar__account">
@@ -177,6 +178,18 @@
 
 
 
+        </section>
+
+        <section class="appointment-review-queue" id="appointmentProductReviewQueue" aria-labelledby="appointmentReviewQueueTitle">
+            <div class="appointment-review-queue__heading">
+                <div>
+                    <h2 id="appointmentReviewQueueTitle">Appointment Product Review</h2>
+                    <p>Review the products and quantities used for appointments In Progress.</p>
+                </div>
+                <button class="btn" id="refreshAppointmentReviews" type="button">Refresh</button>
+            </div>
+            <p class="appointment-review-queue__message" id="appointmentReviewQueueMessage" role="status" aria-live="polite"></p>
+            <div id="appointmentReviewQueueList" class="appointment-review-queue__list"></div>
         </section>
 
 
@@ -327,6 +340,49 @@
 
 
     </main>
+
+    <dialog class="appointment-review-dialog" id="appointmentReviewDialog" aria-labelledby="appointmentReviewDialogTitle">
+        <header class="appointment-review-dialog__header">
+            <div>
+                <h2 id="appointmentReviewDialogTitle">Review Products Used</h2>
+                <p id="appointmentReviewDialogSubtitle"></p>
+            </div>
+            <button class="appointment-review-dialog__close" id="closeAppointmentReview" type="button" aria-label="Close review">&times;</button>
+        </header>
+        <div class="appointment-review-dialog__body">
+            <p class="appointment-review-dialog__note">Verify products and actual quantities used for this appointment. Suggestions are only a starting point. Confirming this review does not deduct stock; an Admin deducts stock when completing the appointment.</p>
+            <label class="appointment-review-search" for="appointmentReviewSearch">Search inventory products
+                <input id="appointmentReviewSearch" type="search" placeholder="Search products or categories">
+            </label>
+            <div id="appointmentReviewProductLists" class="appointment-review-dialog__lists">
+                <section aria-labelledby="appointmentReviewSelectedTitle">
+                    <h3 id="appointmentReviewSelectedTitle">Selected Products</h3>
+                    <div id="appointmentReviewSelectedList" class="appointment-review-product-list"></div>
+                </section>
+                <section aria-labelledby="appointmentReviewOtherTitle">
+                    <h3 id="appointmentReviewOtherTitle">Other Inventory Products</h3>
+                    <div id="appointmentReviewOtherList" class="appointment-review-product-list"></div>
+                </section>
+            </div>
+            <section id="appointmentReviewFinalStep" class="appointment-review-final" hidden>
+                <h3>Final Product-use Review</h3>
+                <ul id="appointmentReviewFinalList"></ul>
+                <label class="appointment-review-attestation">
+                    <input id="appointmentReviewAttestation" type="checkbox">
+                    I confirm these products and quantities accurately represent what was used for this appointment.
+                </label>
+            </section>
+            <p class="appointment-review-dialog__message" id="appointmentReviewDialogMessage" role="status" aria-live="polite"></p>
+        </div>
+        <footer class="appointment-review-dialog__actions">
+            <button class="btn" id="cancelAppointmentReview" type="button">Close</button>
+            <button class="btn" id="saveAppointmentReviewDraft" type="button">Save Draft</button>
+            <button class="btn btn-export" id="reviewAppointmentProducts" type="button">Review Selection</button>
+            <button class="btn" id="backAppointmentReview" type="button" hidden>Back</button>
+            <button class="btn btn-export" id="confirmAppointmentProducts" type="button" hidden disabled>Confirm Products Used</button>
+        </footer>
+    </dialog>
+
         <!-- Delete Confirmation Modal -->
         <div class="delete-modal-overlay" id="deleteModal">
             <div class="delete-modal">
@@ -664,6 +720,7 @@
     <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js" integrity="sha384-Pqp51FUN2/qzfxZxBCtF0stpc9ONI6MYZpVqmo8m20SoaQCzf+arZvACkLkirlPz" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="InventoryManagement.js"></script>
     <script src="batch-upload.js"></script>
+    <script src="appointment-inventory-review.js"></script>
     <script src="admin-dashboard.js"></script>
     <script src="admin-notifications.js"></script>
 

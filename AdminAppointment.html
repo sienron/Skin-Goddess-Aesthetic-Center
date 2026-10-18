@@ -350,6 +350,7 @@
         <div><dt>Appointment date</dt><dd id="appointmentDetailsDate"></dd></div>
         <div><dt>Assigned staff</dt><dd id="appointmentDetailsStaff"></dd></div>
         <div><dt>Status</dt><dd id="appointmentDetailsStatus"></dd></div>
+        <div><dt>Product-use review</dt><dd id="appointmentDetailsProductReview"></dd></div>
       </dl>
       <p class="appointment-inventory-message" id="appointmentDetailsMessage" role="status" aria-live="polite"></p>
       <footer class="appointment-inventory-actions">
@@ -415,7 +416,7 @@
               <option value="cancelled">Cancelled</option>
               <option value="no-show">No Show</option>
             </select>
-            <span class="appointment-edit-status-hint" id="appointmentEditCompletionHint" role="tooltip">To complete this appointment, open its View modal and review and confirm the products used.</span>
+            <span class="appointment-edit-status-hint" id="appointmentEditCompletionHint" role="tooltip">An Inventory Officer must confirm the products and quantities before this appointment can be completed.</span>
           </div>
         </div>
         <p id="appointmentRebookNotice" class="appointment-inventory-message" role="note" hidden>
