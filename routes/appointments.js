@@ -573,7 +573,7 @@ router.get('/admin/:id/inventory-review', requireRole('admin'), async (req, res)
       const storedSelection = draftResult.rows[0]?.selected_items || [];
       const storedById = new Map(storedSelection.map((item) => [Number(item.productId), item]));
       const selectedItems = productsResult.rows
-        .filter((product) => product.is_suggested && Number(product.stock_quantity) > 0)
+        .filter((product) => product.is_suggested)
         .map((product) => {
           const productId = Number(product.product_id);
           const stored = storedById.get(productId);
@@ -598,7 +598,7 @@ router.get('/admin/:id/inventory-review', requireRole('admin'), async (req, res)
         });
       storedSelection.forEach((item) => {
         const product = productsById.get(Number(item.productId));
-        if (!product || Number(product.stock_quantity) <= 0) return;
+        if (!product) return;
         if (item.isSuggested || product.is_suggested) return;
         selectedItems.push({
           productId: Number(item.productId),
@@ -608,10 +608,9 @@ router.get('/admin/:id/inventory-review', requireRole('admin'), async (req, res)
         });
       });
       selectedItems.sort((left, right) => left.productId - right.productId);
-      const removedUnavailableSelection = storedSelection.some((item) => {
-        const product = productsById.get(Number(item.productId));
-        return !product || Number(product.stock_quantity) <= 0;
-      });
+      const removedMissingSelection = storedSelection.some((item) => (
+        !productsById.has(Number(item.productId))
+      ));
       await client.query(`
         INSERT INTO appointment_inventory_review_drafts
           (appointment_id, selected_items, updated_by, updated_at, reviewed_by, reviewed_at)
@@ -633,7 +632,7 @@ router.get('/admin/:id/inventory-review', requireRole('admin'), async (req, res)
           selected_quantity: selected && selected.quantity !== null ? Number(selected.quantity) : null
         };
       });
-      return { appointment, products, removedUnavailableSelection };
+      return { appointment, products, removedMissingSelection };
     });
     return res.json(review);
   } catch (error) {
@@ -712,19 +711,6 @@ router.put('/admin/:id/inventory-review-draft', requireRole('admin'), async (req
           const error = new Error('One or more selected products are no longer available.');
           error.statusCode = 409;
           throw error;
-        }
-        for (const product of products.rows) {
-          const item = selectedItems.find((selected) => selected.productId === Number(product.product_id));
-          if (Number(product.stock_quantity) <= 0) {
-            const error = new Error(`${product.product_name} is out of stock and cannot be selected.`);
-            error.statusCode = 409;
-            throw error;
-          }
-          if (item.quantity !== null && item.quantity > Number(product.stock_quantity)) {
-            const error = new Error(`${product.product_name} has only ${product.stock_quantity} units available.`);
-            error.statusCode = 409;
-            throw error;
-          }
         }
       }
       await client.query(`
@@ -847,13 +833,17 @@ router.post('/admin/:id/complete-with-inventory', requireRole('admin'), async (r
         throw error;
       }
 
-      for (const product of productsResult.rows) {
+      const insufficientStock = productsResult.rows.flatMap((product) => {
         const quantity = quantities.get(Number(product.product_id));
-        if (quantity > Number(product.stock_quantity)) {
-          const error = new Error(`${product.product_name} has only ${product.stock_quantity} units available.`);
-          error.statusCode = 409;
-          throw error;
-        }
+        if (quantity <= Number(product.stock_quantity)) return [];
+        return [Number(product.stock_quantity) <= 0
+          ? `${product.product_name} is out of stock (0 units available).`
+          : `${product.product_name} has only ${product.stock_quantity} units available.`];
+      });
+      if (insufficientStock.length) {
+        const error = new Error(`Cannot confirm inventory deduction: ${insufficientStock.join(' ')}`);
+        error.statusCode = 409;
+        throw error;
       }
 
       await client.query(`

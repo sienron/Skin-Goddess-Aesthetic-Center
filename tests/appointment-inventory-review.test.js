@@ -4,6 +4,7 @@ const db = require('../db');
 const appointmentsRouter = require('../routes/appointments');
 const servicesRouter = require('../routes/services');
 const { buildCandidates } = require('../migrations/039-appointment-inventory-mappings');
+const { migrate: enableSuggestions } = require('../migrations/040-enable-service-inventory-suggestions');
 
 const draftRoute = appointmentsRouter.stack
   .find((layer) => layer.route?.path === '/admin/:id/inventory-review-draft' && layer.route.methods.put)
@@ -293,12 +294,13 @@ test('inventory review preselects enabled service suggestions and leaves other p
     [
       { product_id: 12, is_selected: true, selected_quantity: 2 },
       { product_id: 13, is_selected: false, selected_quantity: null },
-      { product_id: 14, is_selected: false, selected_quantity: null }
+      { product_id: 14, is_selected: true, selected_quantity: 1 }
     ]
   );
   const persistedSelection = result.queryCalls.find(({ sql }) => /INSERT INTO appointment_inventory_review_drafts/.test(sql));
   assert.deepEqual(JSON.parse(persistedSelection.values[1]), [
-    { productId: 12, quantity: 2, isSuggested: true, suggestionDefaultQuantity: 2 }
+    { productId: 12, quantity: 2, isSuggested: true, suggestionDefaultQuantity: 2 },
+    { productId: 14, quantity: 1, isSuggested: true, suggestionDefaultQuantity: 1 }
   ]);
   const mappingQuery = result.queryCalls.find(({ sql }) => /FROM inventory_products product/.test(sql));
   assert.match(mappingQuery.sql, /mapping\.is_enabled = TRUE/);
@@ -312,6 +314,7 @@ test('provisional catalog candidates use exact supplied products and do not assu
     .map((candidate) => candidate.product_name)
     .sort();
 
+  assert.equal(candidates.length, 321);
   assert.deepEqual(antiAgingDrip, [
     '10cc Syringe',
     '3cc Syringe',
@@ -326,6 +329,53 @@ test('provisional catalog candidates use exact supplied products and do not assu
     `${service_name}\u0000${category}\u0000${product_name}`
   ));
   assert.equal(new Set(keys).size, keys.length);
+});
+
+test('Anti-Aging Drip preselects all six configured product suggestions', async () => {
+  const suggestedNames = [
+    'Macroset (IV Set)',
+    '10cc Syringe',
+    '3cc Syringe',
+    'Cannula',
+    'Scalp Vein Set',
+    'Sterile Water'
+  ];
+  const result = await loadReview({
+    products: suggestedNames.map((product_name, index) => ({
+      product_id: index + 1,
+      product_name,
+      category: 'Medical/Injection Supplies',
+      stock_quantity: 5,
+      default_quantity: null,
+      review_note: 'Confirm actual use and quantity.',
+      is_suggested: true
+    }))
+  });
+
+  assert.equal(result.responseBody.products.length, 6);
+  assert.ok(result.responseBody.products.every((product) => product.is_selected));
+  assert.ok(result.responseBody.products.every((product) => product.selected_quantity === null));
+});
+
+test('inventory review keeps out-of-stock and insufficient-stock draft selections and quantities', async () => {
+  const result = await loadReview({
+    products: [
+      { product_id: 12, product_name: 'Out of stock suggestion', category: 'Treatment', stock_quantity: 0, default_quantity: 2, review_note: 'Provisional', is_suggested: true },
+      { product_id: 13, product_name: 'Insufficient stock manual selection', category: 'Treatment', stock_quantity: 1, default_quantity: null, review_note: null, is_suggested: false }
+    ],
+    savedSelection: [
+      { productId: 12, quantity: 3, isSuggested: true, suggestionDefaultQuantity: 2 },
+      { productId: 13, quantity: 4, isSuggested: false }
+    ]
+  });
+
+  assert.deepEqual(
+    result.responseBody.products.map(({ product_id, is_selected, selected_quantity }) => [
+      product_id, is_selected, selected_quantity
+    ]),
+    [[12, true, 3], [13, true, 4]]
+  );
+  assert.equal(result.responseBody.removedMissingSelection, false);
 });
 
 test('inventory review leaves products unselected when a service has no configured suggestions', async () => {
@@ -423,24 +473,22 @@ test('inventory review draft accepts a valid quantity up to current stock', asyn
   ]);
 });
 
-test('inventory review draft rejects a quantity greater than current stock', async () => {
+test('inventory review draft preserves a quantity greater than current stock for administrator review', async () => {
   const result = await saveDraft({
     selectedItems: [{ productId: 12, quantity: 6, isSuggested: false }],
     stockByProductId: new Map([[12, 5]])
   });
 
-  assert.equal(result.statusCode, 409);
-  assert.equal(result.responseBody.message, 'Product 12 has only 5 units available.');
+  assert.equal(result.statusCode, 200);
 });
 
-test('inventory review draft rejects zero-stock products', async () => {
+test('inventory review draft preserves an out-of-stock selected product', async () => {
   const result = await saveDraft({
     selectedItems: [{ productId: 12, quantity: 1, isSuggested: false }],
     stockByProductId: new Map([[12, 0]])
   });
 
-  assert.equal(result.statusCode, 409);
-  assert.equal(result.responseBody.message, 'Product 12 is out of stock and cannot be selected.');
+  assert.equal(result.statusCode, 200);
 });
 
 test('inventory review draft rejects non-positive quantities', async () => {
@@ -494,6 +542,24 @@ test('completion rechecks stock and rolls back when stock is insufficient', asyn
   });
 
   assert.equal(result.statusCode, 409);
+  assert.match(result.responseBody.message, /Product 12 has only 2 units available/);
+  assert.equal(result.rolledBack, true);
+  assert.equal(result.queryCalls.some(({ sql }) => /UPDATE inventory_products/.test(sql)), false);
+  assert.equal(result.queryCalls.some(({ sql }) => /UPDATE appointments\s+SET appointment_status = 'completed'/.test(sql)), false);
+});
+
+test('completion identifies all selected products with insufficient or zero stock', async () => {
+  const result = await completeAppointment({
+    selectedItems: [
+      { productId: 12, quantity: 3, isSuggested: true },
+      { productId: 13, quantity: 1, isSuggested: true }
+    ],
+    stockByProductId: new Map([[12, 2], [13, 0]])
+  });
+
+  assert.equal(result.statusCode, 409);
+  assert.match(result.responseBody.message, /Product 12 has only 2 units available/);
+  assert.match(result.responseBody.message, /Product 13 is out of stock \(0 units available\)/);
   assert.equal(result.rolledBack, true);
   assert.equal(result.queryCalls.some(({ sql }) => /UPDATE inventory_products/.test(sql)), false);
   assert.equal(result.queryCalls.some(({ sql }) => /UPDATE appointments\s+SET appointment_status = 'completed'/.test(sql)), false);
@@ -561,4 +627,33 @@ test('completion logs the appointment deduction and updates status in one succes
   assert.ok(deductionRecord);
   assert.ok(statusUpdate);
   assert.ok(result.queryCalls.indexOf(deductionLog) < result.queryCalls.indexOf(statusUpdate));
+});
+
+test('suggestion migration enables all candidates without assigning or overwriting quantities', async () => {
+  const originalTransaction = db.transaction;
+  const queryCalls = [];
+  db.transaction = async (callback) => callback({
+    async query(sql, values = []) {
+      queryCalls.push({ sql, values });
+      if (/to_regclass/.test(sql)) return { rows: [{ mapping_table: 'service_inventory_product_defaults' }] };
+      if (/INSERT INTO service_inventory_product_defaults/.test(sql)) {
+        return { rowCount: 321, rows: [] };
+      }
+      return { rows: [] };
+    }
+  });
+
+  try {
+    const result = await enableSuggestions();
+    assert.deepEqual(result, { candidateCount: 321, enabledCount: 321 });
+  } finally {
+    db.transaction = originalTransaction;
+  }
+
+  const upsert = queryCalls.find(({ sql }) => /INSERT INTO service_inventory_product_defaults/.test(sql));
+  assert.match(upsert.sql, /DO UPDATE SET is_enabled = TRUE, updated_at = NOW\(\)/);
+  assert.doesNotMatch(upsert.sql, /DO UPDATE SET[^;]*default_quantity/s);
+  const candidates = JSON.parse(upsert.values[0]);
+  assert.equal(candidates.length, 321);
+  assert.equal(candidates.filter(({ service_name }) => service_name === 'Anti-Aging Drip').length, 6);
 });

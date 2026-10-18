@@ -402,7 +402,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const selection = productSelection.get(Number(product.product_id));
       if (!selection) continue;
       if (Number(product.stock_quantity) <= 0) {
-        return `${product.product_name} is out of stock and cannot be selected.`;
+        return `${product.product_name} is out of stock (0 units available). Uncheck it if it was not used.`;
       }
       if (!Number.isSafeInteger(Number(selection.quantity)) || selection.quantity === '' || Number(selection.quantity) < 1) {
         return `Enter a positive whole-number quantity for ${product.product_name}.`;
@@ -473,12 +473,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const checkbox = el('input');
         checkbox.type = 'checkbox';
         checkbox.checked = Boolean(selection);
-        checkbox.disabled = Number(product.stock_quantity) <= 0 && !selection;
         checkbox.setAttribute('aria-label', `Select ${product.product_name}`);
         const details = el('div', 'appointment-product-row__details');
         details.appendChild(el('strong', '', product.product_name));
         details.appendChild(el('span', '', Number(product.stock_quantity) <= 0
-          ? `${product.category} · Out of stock`
+          ? `${product.category} · Current stock: ${product.stock_quantity} · Out of stock`
           : `${product.category} · Current stock: ${product.stock_quantity}`));
         if (!product.is_suggested && selection) {
           details.appendChild(el('span', 'appointment-product-tag appointment-product-tag--manual', 'Manually added'));
@@ -601,8 +600,8 @@ document.addEventListener('DOMContentLoaded', () => {
       message.classList.remove('appointment-inventory-message--error');
       showProductEditorStep();
       renderProductSelection();
-      if (result.removedUnavailableSelection) {
-        message.textContent = 'Previously selected out-of-stock products were removed. Review the updated selection before confirming.';
+      if (result.removedMissingSelection) {
+        message.textContent = 'Previously selected products no longer in inventory were removed. Review the updated selection before confirming.';
       }
       setAppointmentModalOpen(productsModal, true);
     } catch (error) {
