@@ -15,6 +15,10 @@ let recognitionQueue = Promise.resolve();
 async function preprocessInvoiceImage(imageBuffer) {
     return sharp(imageBuffer, { limitInputPixels: 100_000_000 })
         .rotate()
+        .trim({
+            background: { r: 0, g: 0, b: 0 },
+            threshold: 16
+        })
         .resize({
             width: MAX_OCR_IMAGE_DIMENSION,
             height: MAX_OCR_IMAGE_DIMENSION,

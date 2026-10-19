@@ -17179,7 +17179,6 @@ body.inventory-officer-page > main.inventory-page {
 .batch-review-section[hidden],
 .batch-preview-wrap[hidden],
 .batch-preview-actions[hidden],
-.batch-camera-capture-input[hidden],
 .batch-raw-text[hidden] {
   display: none;
 }
@@ -17248,10 +17247,6 @@ body.inventory-officer-page > main.inventory-page {
   flex-wrap: wrap;
   gap: 10px;
   margin-top: 10px;
-}
-
-.batch-camera-capture-input {
-  display: none;
 }
 
 .batch-camera-wrap {

@@ -25,10 +25,8 @@
             <label class="batch-file-label" for="batchInvoiceFile">Invoice photo</label>
             <input id="batchInvoiceFile" type="file" accept="image/*">
             <div class="batch-camera-actions">
-                <button class="batch-action-button batch-secondary batch-native-camera" type="button">Take photo with phone camera</button>
                 <button class="batch-action-button batch-secondary batch-camera-start" type="button">Use live camera</button>
             </div>
-            <input class="batch-camera-capture-input" type="file" accept="image/*" capture="environment" tabindex="-1" aria-hidden="true">
             <div class="batch-camera-wrap" hidden>
                 <video class="batch-camera-video" autoplay playsinline muted></video>
                 <div class="batch-camera-actions">
@@ -72,8 +70,6 @@
     document.body.appendChild(modal);
 
     const fileInput = modal.querySelector("#batchInvoiceFile");
-    const nativeCameraInput = modal.querySelector(".batch-camera-capture-input");
-    const nativeCameraButton = modal.querySelector(".batch-native-camera");
     const cameraStartButton = modal.querySelector(".batch-camera-start");
     const cameraWrap = modal.querySelector(".batch-camera-wrap");
     const cameraVideo = modal.querySelector(".batch-camera-video");
@@ -171,7 +167,6 @@
         cameraPhotoSource = null;
         rows = [];
         fileInput.value = "";
-        nativeCameraInput.value = "";
         fileInput.disabled = false;
         previewWrap.hidden = true;
         previewImage.removeAttribute("src");
@@ -384,18 +379,6 @@
         setSelectedImage(file, "Photo selected. Select Scan invoice when ready.");
     });
 
-    nativeCameraButton.addEventListener("click", () => {
-        nativeCameraInput.click();
-    });
-
-    nativeCameraInput.addEventListener("change", () => {
-        const file = nativeCameraInput.files[0] || null;
-        nativeCameraInput.value = "";
-        if (!file) return;
-        stopCamera();
-        setSelectedImage(file, "Photo captured. Check that the invoice is clear, then use it or retake it.", "native");
-    });
-
     usePhotoButton.addEventListener("click", () => {
         if (!selectedFile) return;
         cameraPhotoSource = null;
@@ -405,10 +388,6 @@
     });
 
     retakePhotoButton.addEventListener("click", () => {
-        if (cameraPhotoSource === "native") {
-            nativeCameraInput.click();
-            return;
-        }
         cameraStartButton.click();
     });
 

@@ -33,6 +33,34 @@ test('preprocesses photos with EXIF orientation, readable grayscale, and a bound
     assert.equal(data[1], data[2]);
 });
 
+test('crops solid black side bars before OCR preprocessing', async () => {
+    const invoice = await sharp({
+        create: {
+            width: 508,
+            height: 720,
+            channels: 3,
+            background: { r: 235, g: 235, b: 235 }
+        }
+    }).png().toBuffer();
+    const photo = await sharp({
+        create: {
+            width: 1280,
+            height: 720,
+            channels: 3,
+            background: { r: 0, g: 0, b: 0 }
+        }
+    })
+        .composite([{ input: invoice, left: 386, top: 0 }])
+        .png()
+        .toBuffer();
+
+    const processed = await preprocessInvoiceImage(photo);
+    const metadata = await sharp(processed).metadata();
+
+    assert.equal(metadata.width, 508);
+    assert.equal(metadata.height, 720);
+});
+
 test('scores clearly parsed invoice rows above OCR text with uncertain values', () => {
     const clearInvoice = [
         'QTY UNIT DESCRIPTION EXP. DATE UNIT PRICE AMOUNT',
