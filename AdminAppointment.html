@@ -416,7 +416,7 @@
               <option value="cancelled">Cancelled</option>
               <option value="no-show">No Show</option>
             </select>
-            <span class="appointment-edit-status-hint" id="appointmentEditCompletionHint" role="tooltip">An Inventory Officer must confirm the products and quantities before this appointment can be completed.</span>
+            <span class="appointment-edit-status-hint" id="appointmentEditCompletionHint" role="tooltip">An Admin or Inventory Officer must confirm the products and quantities before this appointment can be completed.</span>
           </div>
         </div>
         <p id="appointmentRebookNotice" class="appointment-inventory-message" role="note" hidden>
@@ -462,9 +462,10 @@
             <div id="appointmentProductsOtherList" class="appointment-products-list"></div>
           </section>
         </div>
+        <p class="appointment-inventory-note" id="appointmentProductsReviewStatus" role="status"></p>
         <section id="appointmentProductsReviewStep" class="appointment-products-review" hidden>
-          <h3>Review Deduction</h3>
-          <p>Confirm that these are the products and quantities actually used. Stock changes and appointment completion happen together only after confirmation.</p>
+          <h3>Review Products Used</h3>
+          <p>Confirm that these are the products and quantities actually used. Confirming the review does not change stock; inventory is deducted only when the appointment is completed.</p>
           <ul id="appointmentProductsReviewList"></ul>
         </section>
         <p class="appointment-inventory-message" id="appointmentProductsMessage" role="status" aria-live="polite"></p>
@@ -472,8 +473,10 @@
       <footer class="appointment-inventory-actions">
         <button class="um-btn um-btn--ghost" id="appointmentProductsCancel" type="button">Cancel</button>
         <button class="um-btn um-btn--ghost" id="appointmentProductsBack" type="button" hidden>Back to Products</button>
+        <button class="um-btn um-btn--ghost" id="appointmentProductsSaveDraft" type="button">Save Draft</button>
         <button class="um-btn um-btn--primary" id="appointmentProductsReview" type="button">Review Selection</button>
-        <button class="um-btn um-btn--primary" id="appointmentProductsConfirm" type="button" hidden>Confirm Products &amp; Complete Appointment</button>
+        <button class="um-btn um-btn--primary" id="appointmentProductsConfirm" type="button" hidden>Confirm Product Review</button>
+        <button class="um-btn um-btn--primary" id="appointmentProductsComplete" type="button" hidden>Complete Appointment</button>
       </footer>
     </section>
   </div>
@@ -482,7 +485,7 @@
     <header class="apt-modal__head">
       <span class="apt-modal__accent"></span>
       <div class="apt-modal__titles">
-        <h2 class="apt-modal__title" id="appointmentProductsConfirmTitle">Confirm Appointment Completion</h2>
+        <h2 class="apt-modal__title" id="appointmentProductsConfirmTitle">Confirm Product Review</h2>
       </div>
     </header>
     <div class="appointment-products-confirm-content">
@@ -491,7 +494,7 @@
     </div>
     <footer class="appointment-inventory-actions">
       <button class="um-btn um-btn--ghost" id="appointmentProductsConfirmCancel" type="button" autofocus>Cancel</button>
-      <button class="um-btn um-btn--primary" id="appointmentProductsConfirmProceed" type="button">Confirm &amp; Complete Appointment</button>
+      <button class="um-btn um-btn--primary" id="appointmentProductsConfirmProceed" type="button">Confirm Product Review</button>
     </footer>
   </dialog>
 

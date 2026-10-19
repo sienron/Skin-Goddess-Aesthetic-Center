@@ -9,6 +9,9 @@ const { migrate: enableSuggestions } = require('../migrations/040-enable-service
 const draftRoute = appointmentsRouter.stack
   .find((layer) => layer.route?.path === '/inventory-officer/:id/review' && layer.route.methods.put)
   .route.stack.at(-1).handle;
+const adminDraftRoute = appointmentsRouter.stack
+  .find((layer) => layer.route?.path === '/admin/:id/inventory-review-draft' && layer.route.methods.put)
+  .route.stack.at(-1).handle;
 const reviewRoute = appointmentsRouter.stack
   .find((layer) => layer.route?.path === '/inventory-officer/:id/review' && layer.route.methods.get)
   .route.stack.at(-1).handle;
@@ -29,7 +32,9 @@ async function saveDraft({
   selectedItems,
   stockByProductId,
   confirmed = false,
-  existingDraft = null
+  existingDraft = null,
+  route = draftRoute,
+  userId = 7
 }) {
   const originalTransaction = db.transaction;
   const queryCalls = [];
@@ -62,10 +67,10 @@ async function saveDraft({
   });
 
   try {
-    await draftRoute({
+    await route({
       params: { id: '42' },
       body: { selectedItems, confirmed },
-      session: { userId: 7 }
+      session: { userId }
     }, {
       status(code) {
         statusCode = code;
@@ -411,6 +416,53 @@ test('only Inventory Officers can access officer review queue and review routes'
   }
 });
 
+test('only Admins can access Admin inventory-review routes', async () => {
+  const originalQuery = db.query;
+
+  try {
+    for (const [path, method] of [
+      ['/admin/:id/inventory-review', 'get'],
+      ['/admin/:id/inventory-review-draft', 'put']
+    ]) {
+      const route = appointmentsRouter.stack.find((layer) => (
+        layer.route?.path === path && layer.route.methods[method]
+      ));
+      assert.ok(route);
+      const authorize = route.route.stack[0].handle;
+      for (const [role, expectedStatus, expectedNext] of [
+        ['admin', null, true],
+        ['inventory_officer', 403, false]
+      ]) {
+        db.query = async () => ({
+          rows: [{ role, status: 'active', dev_access_all: false }]
+        });
+        let statusCode = null;
+        let nextCalled = false;
+        await authorize({
+          session: { userId: 29 },
+          path: `/api/appointments${path}`,
+          originalUrl: `/api/appointments${path}`,
+          accepts: () => false
+        }, {
+          status(code) {
+            statusCode = code;
+            return this;
+          },
+          json() {
+            return this;
+          }
+        }, () => {
+          nextCalled = true;
+        });
+        assert.equal(statusCode, expectedStatus);
+        assert.equal(nextCalled, expectedNext);
+      }
+    }
+  } finally {
+    db.query = originalQuery;
+  }
+});
+
 test('officer confirmation validates stock and records officer identity without deducting inventory', async () => {
   const result = await saveDraft({
     selectedItems: [{ productId: 12, quantity: 2, isSuggested: true, suggestionDefaultQuantity: null }],
@@ -425,6 +477,97 @@ test('officer confirmation validates stock and records officer identity without 
   assert.equal(upsert.values[3], true);
   assert.equal(result.queryCalls.some(({ sql }) => /UPDATE inventory_products/.test(sql)), false);
   assert.match(result.queryCalls.find(({ sql }) => /FROM inventory_products/.test(sql)).sql, /FOR UPDATE/);
+});
+
+test('Admin can save an unconfirmed draft without changing stock', async () => {
+  const result = await saveDraft({
+    selectedItems: [{ productId: 12, quantity: 2, isSuggested: true, suggestionDefaultQuantity: 2 }],
+    stockByProductId: new Map([[12, 5]]),
+    route: adminDraftRoute,
+    userId: 29
+  });
+
+  assert.equal(result.statusCode, 200);
+  assert.equal(result.responseBody.reviewStatus, 'pending');
+  const upsert = result.queryCalls.find(({ sql }) => /INSERT INTO appointment_inventory_review_drafts/.test(sql));
+  assert.equal(upsert.values[2], 29);
+  assert.equal(upsert.values[3], false);
+  assert.equal(result.queryCalls.some(({ sql }) => /UPDATE inventory_products/.test(sql)), false);
+});
+
+test('Admin confirmation records the Admin reviewer and timestamp without deducting stock', async () => {
+  const result = await saveDraft({
+    selectedItems: [{ productId: 12, quantity: 2, isSuggested: true, suggestionDefaultQuantity: 2 }],
+    stockByProductId: new Map([[12, 5]]),
+    confirmed: true,
+    route: adminDraftRoute,
+    userId: 29
+  });
+
+  assert.equal(result.statusCode, 200);
+  assert.equal(result.responseBody.reviewStatus, 'confirmed');
+  const upsert = result.queryCalls.find(({ sql }) => /INSERT INTO appointment_inventory_review_drafts/.test(sql));
+  assert.equal(upsert.values[2], 29);
+  assert.equal(upsert.values[3], true);
+  assert.match(upsert.sql, /CASE WHEN \$4::boolean THEN NOW\(\)/);
+  assert.equal(result.queryCalls.some(({ sql }) => /UPDATE inventory_products/.test(sql)), false);
+});
+
+test('Admin editing a confirmed review invalidates its previous confirmation', async () => {
+  const result = await saveDraft({
+    selectedItems: [{ productId: 13, quantity: 1, isSuggested: false }],
+    stockByProductId: new Map([[13, 5]]),
+    existingDraft: {
+      selected_items: [{ productId: 12, quantity: 2, isSuggested: true, suggestionDefaultQuantity: 2 }],
+      reviewed_by: 18,
+      reviewed_at: '2026-10-16T00:00:00Z'
+    },
+    route: adminDraftRoute,
+    userId: 29
+  });
+
+  assert.equal(result.statusCode, 200);
+  assert.equal(result.responseBody.reviewStatus, 'pending');
+  const upsert = result.queryCalls.find(({ sql }) => /INSERT INTO appointment_inventory_review_drafts/.test(sql));
+  assert.equal(upsert.values[3], false);
+  assert.equal(upsert.values[4], false);
+  assert.match(upsert.sql, /ELSE EXCLUDED\.reviewed_by/);
+});
+
+test('Admin saving an unchanged confirmed review preserves its confirmation', async () => {
+  const selectedItems = [{ productId: 12, quantity: 2, isSuggested: true, suggestionDefaultQuantity: 2 }];
+  const result = await saveDraft({
+    selectedItems,
+    stockByProductId: new Map([[12, 5]]),
+    existingDraft: {
+      selected_items: selectedItems,
+      reviewed_by: 18,
+      reviewed_at: '2026-10-16T00:00:00Z'
+    },
+    route: adminDraftRoute,
+    userId: 29
+  });
+
+  assert.equal(result.statusCode, 200);
+  assert.equal(result.responseBody.reviewStatus, 'confirmed');
+  const upsert = result.queryCalls.find(({ sql }) => /INSERT INTO appointment_inventory_review_drafts/.test(sql));
+  assert.equal(upsert.values[4], true);
+  assert.match(upsert.sql, /THEN appointment_inventory_review_drafts\.reviewed_by/);
+});
+
+test('Admin cannot confirm a review with insufficient stock', async () => {
+  const result = await saveDraft({
+    selectedItems: [{ productId: 12, quantity: 3, isSuggested: false }],
+    stockByProductId: new Map([[12, 2]]),
+    confirmed: true,
+    route: adminDraftRoute,
+    userId: 29
+  });
+
+  assert.equal(result.statusCode, 409);
+  assert.match(result.responseBody.message, /only 2 units available/);
+  assert.equal(result.queryCalls.some(({ sql }) => /INSERT INTO appointment_inventory_review_drafts/.test(sql)), false);
+  assert.equal(result.queryCalls.some(({ sql }) => /UPDATE inventory_products/.test(sql)), false);
 });
 
 test('officer cannot confirm products with insufficient or zero stock', async () => {
@@ -761,7 +904,7 @@ test('admin cannot complete an appointment with pending or invalidated product r
   });
 
   assert.equal(result.statusCode, 409);
-  assert.match(result.responseBody.message, /Inventory Officer must confirm/);
+  assert.match(result.responseBody.message, /authorized reviewer must confirm/);
   assert.equal(result.rolledBack, true);
   assert.equal(result.queryCalls.some(({ sql }) => /UPDATE inventory_products/.test(sql)), false);
   assert.equal(result.queryCalls.some(({ sql }) => /UPDATE appointments\s+SET appointment_status = 'completed'/.test(sql)), false);

@@ -701,7 +701,7 @@ const loadInventoryReview = async (req, res) => {
 router.get('/admin/:id/inventory-review', requireRole('admin'), loadInventoryReview);
 router.get('/inventory-officer/:id/review', requireRole('inventory_officer'), loadInventoryReview);
 
-router.put('/inventory-officer/:id/review', requireRole('inventory_officer'), async (req, res) => {
+const saveInventoryReview = async (req, res) => {
   const appointmentId = validAppointmentId(req.params.id);
   if (!appointmentId) return res.status(400).json({ message: 'Choose a valid appointment.' });
   const submittedItems = req.body?.selectedItems;
@@ -845,14 +845,17 @@ router.put('/inventory-officer/:id/review', requireRole('inventory_officer'), as
     });
   } catch (error) {
     if (error.statusCode) return res.status(error.statusCode).json({ message: error.message });
-    console.error('Error saving appointment inventory officer review:', error);
+    console.error('Error saving appointment inventory review:', error);
     return res.status(500).json({
       message: process.env.NODE_ENV === 'production'
         ? 'Could not save the product review.'
         : `Could not save the product review: ${error.message}`
     });
   }
-});
+};
+
+router.put('/inventory-officer/:id/review', requireRole('inventory_officer'), saveInventoryReview);
+router.put('/admin/:id/inventory-review-draft', requireRole('admin'), saveInventoryReview);
 
 router.post('/admin/:id/complete-with-inventory', requireRole('admin'), async (req, res) => {
   const appointmentId = validAppointmentId(req.params.id);
@@ -886,12 +889,12 @@ router.post('/admin/:id/complete-with-inventory', requireRole('admin'), async (r
       `, [appointmentId]);
       const reviewDraft = reviewDraftResult.rows[0];
       if (!reviewDraft || !reviewDraft.reviewed_by || !reviewDraft.reviewed_at) {
-        const error = new Error('Products are pending review. An Inventory Officer must confirm the products and quantities before the appointment can be completed.');
+        const error = new Error('Products are pending review. An authorized reviewer must confirm the products and quantities before the appointment can be completed.');
         error.statusCode = 409;
         throw error;
       }
       if (!Array.isArray(reviewDraft.selected_items) || reviewDraft.selected_items.length > 500) {
-        const error = new Error('The confirmed product review is invalid. Ask the Inventory Officer to review it again.');
+        const error = new Error('The confirmed product review is invalid. Review the products and quantities again.');
         error.statusCode = 409;
         throw error;
       }
@@ -902,7 +905,7 @@ router.post('/admin/:id/complete-with-inventory', requireRole('admin'), async (r
         if (!Number.isSafeInteger(productId) || productId < 1
           || !Number.isSafeInteger(quantity) || quantity < 1
           || quantities.has(productId)) {
-          const error = new Error('The confirmed product review contains an invalid product or quantity. Ask the Inventory Officer to review it again.');
+          const error = new Error('The confirmed product review contains an invalid product or quantity. Review the products and quantities again.');
           error.statusCode = 409;
           throw error;
         }

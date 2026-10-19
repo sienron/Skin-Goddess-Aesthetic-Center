@@ -185,6 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let productSelection = new Map();
   let productSearchTerm = '';
   let draftSaveTimer = null;
+  let productConfirmAction = 'review';
 
   function setAppointmentModalOpen(modal, isOpen) {
     modal?.classList.toggle('apt-modal-overlay--open', isOpen);
@@ -206,7 +207,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('appointmentDetailsStatus').textContent = STATUS_LABELS[appointment.status] || appointment.status.toUpperCase();
     const message = document.getElementById('appointmentDetailsMessage');
     const reviewButton = document.getElementById('appointmentProductsReviewBtn');
-    reviewButton.hidden = true;
+    reviewButton.hidden = appointment.status !== 'in-progress';
     document.getElementById('appointmentDetailsProductReview').textContent = appointment.status === 'completed'
       ? appointment.inventoryDeductionConfirmedAt ? 'Products Reviewed' : 'Review Not Recorded'
       : appointment.inventoryReviewConfirmedAt ? 'Products Reviewed'
@@ -214,8 +215,8 @@ document.addEventListener('DOMContentLoaded', () => {
           : 'Not started';
     if (appointment.status === 'in-progress') {
       message.textContent = appointment.inventoryReviewConfirmedAt
-        ? `Products were confirmed by ${appointment.inventoryReviewConfirmedBy || 'an Inventory Officer'} at ${new Date(appointment.inventoryReviewConfirmedAt).toLocaleString()}. An admin can complete the appointment.`
-        : 'Products are pending review. An Inventory Officer must confirm the products and quantities before an admin can complete this appointment.';
+        ? `Products were confirmed by ${appointment.inventoryReviewConfirmedBy || 'a reviewer'} at ${new Date(appointment.inventoryReviewConfirmedAt).toLocaleString()}. An Admin can complete the appointment.`
+        : 'Products are pending review. An Admin or Inventory Officer can confirm the products and quantities before the appointment is completed.';
       message.classList.remove('appointment-inventory-message--error');
     } else if (appointment.inventoryDeductionConfirmedAt) {
       message.textContent = `Product-use review and inventory processing were recorded at ${new Date(appointment.inventoryDeductionConfirmedAt).toLocaleString()}.`;
@@ -430,6 +431,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }));
   }
 
+  function updateProductReviewStatus() {
+    if (!productReview) return;
+    const status = document.getElementById('appointmentProductsReviewStatus');
+    status.textContent = productReview.reviewStatus === 'confirmed'
+      ? `Confirmed by ${productReview.reviewedBy || 'a reviewer'}${productReview.reviewedAt ? ` at ${new Date(productReview.reviewedAt).toLocaleString()}` : ''}. Editing this selection will require confirmation again.`
+      : 'Review pending confirmation.';
+  }
+
   function getProductSelectionProblem() {
     for (const product of productReview?.products || []) {
       const selection = productSelection.get(Number(product.product_id));
@@ -447,20 +456,33 @@ document.addEventListener('DOMContentLoaded', () => {
     return '';
   }
 
-  async function saveProductReviewDraft(showSavedMessage = false, reviewed = false) {
+  async function saveProductReviewDraft(showSavedMessage = false, confirmed = false) {
     if (!selectedAppointment || !productReview) return;
     const selectedItems = selectedProductItems();
-    await requestJson(`/api/appointments/admin/${selectedAppointment.id}/inventory-review-draft`, {
+    const result = await requestJson(`/api/appointments/admin/${selectedAppointment.id}/inventory-review-draft`, {
       method: 'PUT',
-      body: JSON.stringify({ selectedItems, reviewed })
+      body: JSON.stringify({ selectedItems, confirmed })
     });
+    productReview.reviewStatus = result.reviewStatus;
+    if (result.reviewStatus !== 'confirmed') {
+      productReview.reviewedBy = null;
+      productReview.reviewedAt = null;
+    }
+    updateProductReviewStatus();
     if (showSavedMessage) {
       document.getElementById('appointmentProductsMessage').textContent = 'Your selection has been saved as a draft. No stock has been changed.';
     }
+    return result;
   }
 
   function scheduleProductDraftSave() {
     window.clearTimeout(draftSaveTimer);
+    if (productReview?.reviewStatus === 'confirmed') {
+      productReview.reviewStatus = 'pending';
+      productReview.reviewedBy = null;
+      productReview.reviewedAt = null;
+      updateProductReviewStatus();
+    }
     draftSaveTimer = window.setTimeout(async () => {
       try {
         await saveProductReviewDraft();
@@ -581,7 +603,8 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       selected.forEach((item) => {
         const product = productReview.products.find((entry) => Number(entry.product_id) === item.productId);
-        reviewList.appendChild(el('li', '', `${product?.product_name || 'Inventory product'} — ${item.quantity} unit(s)${item.isSuggested ? ' (suggested)' : ' (manually added)'}`));
+        const stock = Number(product?.stock_quantity);
+        reviewList.appendChild(el('li', '', `${product?.product_name || 'Inventory product'} — ${item.quantity} unit(s); ${stock} currently in stock${item.isSuggested ? ' (suggested)' : ' (manually added)'}`));
       });
     }
     document.querySelectorAll('.appointment-products-section').forEach((section) => { section.hidden = true; });
@@ -591,7 +614,10 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('appointmentProductsReviewStep').hidden = false;
     document.getElementById('appointmentProductsReview').hidden = true;
     document.getElementById('appointmentProductsBack').hidden = false;
-    document.getElementById('appointmentProductsConfirm').hidden = false;
+    document.getElementById('appointmentProductsSaveDraft').hidden = true;
+    document.getElementById('appointmentProductsConfirm').hidden = productReview.reviewStatus === 'confirmed';
+    document.getElementById('appointmentProductsComplete').hidden = productReview.reviewStatus !== 'confirmed';
+    updateProductReviewStatus();
   }
 
   function showProductEditorStep() {
@@ -603,6 +629,9 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('appointmentProductsReview').hidden = false;
     document.getElementById('appointmentProductsBack').hidden = true;
     document.getElementById('appointmentProductsConfirm').hidden = true;
+    document.getElementById('appointmentProductsComplete').hidden = true;
+    document.getElementById('appointmentProductsSaveDraft').hidden = false;
+    updateProductReviewStatus();
   }
 
   async function loadProductReview() {
@@ -614,13 +643,14 @@ document.addEventListener('DOMContentLoaded', () => {
       if (product.is_selected) {
         productSelection.set(Number(product.product_id), {
           quantity: product.selected_quantity ?? '',
-          isSuggested: Boolean(product.is_suggested),
-          suggestionDefaultQuantity: product.is_suggested && product.default_quantity != null
-            ? Number(product.default_quantity)
+          isSuggested: Boolean(product.selected_is_suggested),
+          suggestionDefaultQuantity: product.selected_suggestion_default_quantity != null
+            ? Number(product.selected_suggestion_default_quantity)
             : null
         });
       }
     });
+    updateProductReviewStatus();
     return result;
   }
 
@@ -794,6 +824,21 @@ document.addEventListener('DOMContentLoaded', () => {
     productSearchTerm = event.target.value;
     renderProductSelection();
   });
+  document.getElementById('appointmentProductsSaveDraft').addEventListener('click', async (event) => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    window.clearTimeout(draftSaveTimer);
+    draftSaveTimer = null;
+    try {
+      await saveProductReviewDraft(true);
+    } catch (error) {
+      const message = document.getElementById('appointmentProductsMessage');
+      message.textContent = `Draft could not be saved: ${error.message}`;
+      message.classList.add('appointment-inventory-message--error');
+    } finally {
+      button.disabled = false;
+    }
+  });
   document.getElementById('appointmentProductsReview').addEventListener('click', async () => {
     const issue = getProductSelectionProblem();
     if (issue) {
@@ -827,7 +872,7 @@ document.addEventListener('DOMContentLoaded', () => {
       button.disabled = false;
     }
   });
-  document.getElementById('appointmentProductsConfirm').addEventListener('click', () => {
+  function openProductConfirmation(action) {
     const issue = getProductSelectionProblem();
     if (issue) {
       document.getElementById('appointmentProductsMessage').textContent = issue;
@@ -835,12 +880,25 @@ document.addEventListener('DOMContentLoaded', () => {
       showProductEditorStep();
       return;
     }
+    if (action === 'complete' && productReview.reviewStatus !== 'confirmed') {
+      showProductReviewStep();
+      return;
+    }
+    productConfirmAction = action;
     const selectedItems = selectedProductItems();
     const confirmationMessage = document.getElementById('appointmentProductsConfirmMessage');
     const confirmationList = document.getElementById('appointmentProductsConfirmList');
-    confirmationMessage.textContent = selectedItems.length
-      ? 'Deduct the following products from inventory and mark this appointment as completed?'
-      : 'No products are selected. Complete this appointment without changing inventory?';
+    document.getElementById('appointmentProductsConfirmTitle').textContent = action === 'review'
+      ? 'Confirm Product Review'
+      : 'Confirm Appointment Completion';
+    document.getElementById('appointmentProductsConfirmProceed').textContent = action === 'review'
+      ? 'Confirm Product Review'
+      : 'Confirm & Complete Appointment';
+    confirmationMessage.textContent = action === 'review'
+      ? 'Confirm that these products and quantities accurately represent what was used. This will not deduct stock or complete the appointment.'
+      : selectedItems.length
+        ? 'Deduct the confirmed products from inventory and mark this appointment as completed?'
+        : 'No products are selected. Complete this appointment without changing inventory?';
     confirmationList.textContent = '';
     confirmationList.hidden = !selectedItems.length;
     selectedItems.forEach((item) => {
@@ -849,12 +907,20 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     productConfirmDialog.showModal();
     document.getElementById('appointmentProductsConfirmCancel').focus();
+  }
+  document.getElementById('appointmentProductsConfirm').addEventListener('click', () => {
+    openProductConfirmation('review');
+  });
+  document.getElementById('appointmentProductsComplete').addEventListener('click', () => {
+    openProductConfirmation('complete');
   });
   document.getElementById('appointmentProductsConfirmCancel').addEventListener('click', () => {
     productConfirmDialog.close();
   });
   document.getElementById('appointmentProductsConfirmProceed').addEventListener('click', async () => {
-    const button = document.getElementById('appointmentProductsConfirm');
+    const button = document.getElementById(productConfirmAction === 'review'
+      ? 'appointmentProductsConfirm'
+      : 'appointmentProductsComplete');
     const proceedButton = document.getElementById('appointmentProductsConfirmProceed');
     productConfirmDialog.close();
     button.disabled = true;
@@ -862,23 +928,35 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       window.clearTimeout(draftSaveTimer);
       draftSaveTimer = null;
-      await saveProductReviewDraft(false, true);
-      const result = await requestJson(`/api/appointments/admin/${selectedAppointment.id}/complete-with-inventory`, {
-        method: 'POST',
-        body: JSON.stringify({ selectedItems: selectedProductItems() })
-      });
-      window.clearTimeout(draftSaveTimer);
-      setAppointmentModalOpen(productsModal, false);
-      setAppointmentModalOpen(detailsModal, false);
-      await loadAppointments();
-      showAppointmentAlert(result.message, { title: 'Appointment completed', tone: 'success' });
-    } catch (error) {
-      const message = document.getElementById('appointmentProductsMessage');
-      try {
+      if (productConfirmAction === 'review') {
+        await saveProductReviewDraft(false, true);
         await loadProductReview();
         renderProductSelection();
-      } catch (reloadError) {
-        console.error('Could not refresh appointment product stock after completion failed:', reloadError);
+        showProductReviewStep();
+        document.getElementById('appointmentProductsMessage').textContent =
+          'Product review confirmed. No stock has been changed; complete the appointment to deduct inventory.';
+        await loadAppointments();
+        const refreshedAppointment = APPOINTMENTS.find((item) => item.id === selectedAppointment.id);
+        if (refreshedAppointment) openAppointmentDetails(refreshedAppointment);
+      } else {
+        const result = await requestJson(`/api/appointments/admin/${selectedAppointment.id}/complete-with-inventory`, {
+          method: 'POST'
+        });
+        window.clearTimeout(draftSaveTimer);
+        setAppointmentModalOpen(productsModal, false);
+        setAppointmentModalOpen(detailsModal, false);
+        await loadAppointments();
+        showAppointmentAlert(result.message, { title: 'Appointment completed', tone: 'success' });
+      }
+    } catch (error) {
+      const message = document.getElementById('appointmentProductsMessage');
+      if (productConfirmAction === 'complete') {
+        try {
+          await loadProductReview();
+          renderProductSelection();
+        } catch (reloadError) {
+          console.error('Could not refresh appointment product stock after completion failed:', reloadError);
+        }
       }
       showProductEditorStep();
       message.textContent = error.message;
