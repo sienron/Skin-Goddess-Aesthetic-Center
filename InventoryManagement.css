@@ -2358,3 +2358,41 @@ body.staff-theme-dark.InventoryManagement .alert-item.critical-alert > span {
         padding: 10px 12px;
     }
 }
+
+@media (max-width: 640px) {
+    body.staff-theme-dark.InventoryManagement .admin-inventory-main .summary-card,
+    body.staff-theme-dark.InventoryManagement .admin-inventory-main .inventory-table tbody tr {
+        border-color: #3d3e39;
+        background: #222421;
+        color: #e9e4da;
+    }
+
+    body.staff-theme-dark.InventoryManagement .admin-inventory-main .summary-label,
+    body.staff-theme-dark.InventoryManagement .admin-inventory-main .inventory-table tbody td::before {
+        color: #aaa398;
+    }
+
+    body.staff-theme-dark.InventoryManagement .admin-inventory-main .summary-value {
+        color: #e8ce8b;
+    }
+
+    body.staff-theme-dark.InventoryManagement .admin-inventory-main .summary-info.positive {
+        color: #9bd3a8;
+    }
+
+    body.staff-theme-dark.InventoryManagement .admin-inventory-main .summary-info.warning {
+        color: #e8ce8b;
+    }
+
+    body.staff-theme-dark.InventoryManagement .admin-inventory-main .summary-info.danger {
+        color: #f0a29b;
+    }
+
+    body.staff-theme-dark.InventoryManagement .admin-inventory-main .inventory-table tbody td {
+        color: #d5cec2;
+    }
+
+    body.staff-theme-dark.InventoryManagement .admin-inventory-main .inventory-table tbody tr:hover {
+        background: #2b2c29;
+    }
+}

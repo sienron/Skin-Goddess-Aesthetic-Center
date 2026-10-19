@@ -8,7 +8,6 @@ const { parseInvoiceText } = require('./invoiceParser');
 const cachePath = path.join(os.tmpdir(), 'skin-goddess-tesseract');
 fs.mkdirSync(cachePath, { recursive: true });
 
-const PAGE_SEGMENTATION_MODES = ['3', '4', '6'];
 const MAX_OCR_IMAGE_DIMENSION = 3200;
 let workerPromise = null;
 let recognitionQueue = Promise.resolve();
@@ -55,27 +54,14 @@ function recognizeImage(imageBuffer) {
     const recognition = recognitionQueue.then(async () => {
         const enhancedImage = await preprocessInvoiceImage(imageBuffer);
         const worker = await getWorker();
-        let bestResult = null;
-        let bestScore = Number.NEGATIVE_INFINITY;
+        await worker.setParameters({
+            tessedit_pageseg_mode: '4',
+            preserve_interword_spaces: '1',
+            user_defined_dpi: '300'
+        });
 
-        for (const pageSegmentationMode of PAGE_SEGMENTATION_MODES) {
-            await worker.setParameters({
-                tessedit_pageseg_mode: pageSegmentationMode,
-                preserve_interword_spaces: '1',
-                user_defined_dpi: '300'
-            });
-
-            for (const image of [imageBuffer, enhancedImage]) {
-                const result = await worker.recognize(image, { rotateAuto: true });
-                const score = scoreRecognition(result.data.text, result.data.confidence);
-                if (score > bestScore) {
-                    bestResult = result;
-                    bestScore = score;
-                }
-            }
-        }
-
-        return bestResult.data.text;
+        const result = await worker.recognize(enhancedImage);
+        return result.data.text;
     });
     recognitionQueue = recognition.then(() => undefined, () => undefined);
     return recognition;

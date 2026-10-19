@@ -24412,6 +24412,82 @@ body.staff-theme-dark.InventoryManagement .batch-action-button.batch-secondary {
   font-weight: 700;
 }
 
+body.staff-theme-dark #appointmentsMain #aptTodayCount {
+  color: #e8ce8b;
+}
+
+body.staff-theme-dark #appointmentsMain #aptConfirmedCount {
+  color: #9bd3a8;
+}
+
+body.staff-theme-dark #appointmentsMain #aptCancelledCount {
+  color: #f0a29b;
+}
+
+body.staff-theme-dark #appointmentsMain .apt-table thead tr,
+body.staff-theme-dark #appointmentsMain .apt-table th {
+  border-color: #3d3e39;
+  background: #2b2c29;
+  color: #bdb5a8;
+}
+
+body.staff-theme-dark #appointmentsMain .apt-table td {
+  border-color: #383934;
+  color: #d5cec2;
+}
+
+body.staff-theme-dark #appointmentsMain .apt-table tbody tr {
+  background: #222421;
+}
+
+body.staff-theme-dark #appointmentsMain .apt-table tbody tr:hover {
+  background: #2b2c29;
+}
+
+body.staff-theme-dark #appointmentsMain .apt-table tbody tr.apt-row--live {
+  background: #302e29;
+}
+
+body.staff-theme-dark #appointmentsMain .apt-row--muted td,
+body.staff-theme-dark #appointmentsMain .apt-row--muted .apt-name,
+body.staff-theme-dark #appointmentsMain .apt-row--muted .apt-sub {
+  color: #aaa398;
+}
+
+body.staff-theme-dark #appointmentsMain .apt-timeline__item::before {
+  background: #4a4942;
+}
+
+body.staff-theme-dark #appointmentsMain .apt-timeline__event {
+  border-color: #45453f;
+  background: #292a27;
+  color: #e9e4da;
+}
+
+body.staff-theme-dark #appointmentsMain .apt-timeline__event small {
+  color: #9fd0a9;
+}
+
+body.staff-theme-dark #appointmentsMain .apt-timeline__item--live .apt-timeline__event {
+  border-color: #665735;
+  background: #3a3326;
+  color: #eee8dd;
+}
+
+body.staff-theme-dark #appointmentsMain .apt-timeline__item--live .apt-timeline__event small {
+  color: #e8ce8b;
+}
+
+body.staff-theme-dark #appointmentsMain .apt-timeline__item--upcoming .apt-timeline__event {
+  border-color: #45453f;
+  background: #292a27;
+  color: #c9c2b7;
+}
+
+body.staff-theme-dark #appointmentsMain .apt-timeline__item--upcoming .apt-timeline__event small {
+  color: #c9c2b7;
+}
+
 .notification-item--announcement {
   display: grid;
   gap: 4px;

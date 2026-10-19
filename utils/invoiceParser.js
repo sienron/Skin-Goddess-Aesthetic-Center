@@ -19,6 +19,8 @@ const INVOICE_PARSER_CONFIG = {
         'bt',
         'box',
         'boxes',
+        'bl',
+        'bot',
         'cs',
         'case',
         'cases',
@@ -43,6 +45,8 @@ const INVOICE_PARSER_CONFIG = {
         'kg',
         'g',
         'ml',
+        'pec',
+        'pecs',
         'pes'
     ],
     ignoreLineKeywords: [
@@ -143,7 +147,7 @@ function parseExpiryDate(line) {
     };
 }
 
-function parseInvoiceLine(line, hasAmountColumn) {
+function parseInvoiceLine(line, { hasAmountColumn, quantityFirst }) {
     const cleanedLine = line
         .replace(/[|]+/g, ' ')
         .replace(/\s+/g, ' ')
@@ -166,6 +170,7 @@ function parseInvoiceLine(line, hasAmountColumn) {
     const numberTokens = tokens
         .map((token, index) => ({
             index,
+            token,
             value: parseNumberToken(token.replace(/[()]/g, ''))
         }))
         .filter(token => token.value !== null && !/^\d+s$/i.test(tokens[token.index]));
@@ -179,49 +184,65 @@ function parseInvoiceLine(line, hasAmountColumn) {
     let quantity = null;
     let unitPrice = null;
     let ambiguousQuantity = false;
+    let amount = null;
+    let productEnd = tokens.length;
 
     if (hasLeadingQuantity) {
         quantity = numberTokens[0].value;
         let productStart = 1;
         const unitLabel = tokens[productStart]?.toLowerCase().replace(/[.,]/g, '');
         if (INVOICE_PARSER_CONFIG.unitKeywords.includes(unitLabel)) productStart += 1;
-        productName = tokens.slice(productStart, numberTokens.length >= 3
-            ? numberTokens[numberTokens.length - 2].index
-            : undefined).join(' ').trim();
-        if (numberTokens.length >= 3) {
-            unitPrice = numberTokens[numberTokens.length - 2].value;
-            const amount = numberTokens[numberTokens.length - 1].value;
-            if (Math.abs(quantity * unitPrice - amount) > Math.max(0.02, amount * 0.01)) {
-                ambiguousQuantity = true;
-            }
-        } else if (numberTokens.length === 2) {
-            unitPrice = numberTokens[1].value;
-        }
-    } else if (hasAmountColumn) {
-        const priceIndex = numberTokens.length >= 2 ? numberTokens.length - 2 : 0;
-        unitPrice = numberTokens[priceIndex]?.value ?? null;
-        const productEnd = numberTokens[priceIndex]?.index ?? tokens.length;
-        productName = tokens.slice(hasLeadingUnit ? 1 : 0, productEnd).join(' ').trim();
-    } else {
-        const quantityToken = numberTokens[0];
-        const priceToken = numberTokens[1];
+        const values = numberTokens.filter(token => token.index >= productStart);
+        const priceToken = hasAmountColumn && values.length >= 2
+            ? values[values.length - 2]
+            : values[values.length - 1];
         if (priceToken) {
+            unitPrice = priceToken.value;
+            productEnd = priceToken.index;
+        }
+        if (hasAmountColumn && values.length >= 2) {
+            amount = values[values.length - 1].value;
+        }
+        productName = tokens.slice(productStart, productEnd).join(' ').trim();
+    } else {
+        const values = hasLeadingUnit
+            ? numberTokens.filter(token => token.index > 0)
+            : numberTokens;
+        if (!quantityFirst && values.length >= 2) {
+            const quantityToken = values[0];
+            quantity = quantityToken.value;
+            const priceToken = hasAmountColumn && values.length >= 3
+                ? values[values.length - 2]
+                : values[1];
+            unitPrice = priceToken.value;
+            productEnd = quantityToken.index;
+            if (hasAmountColumn && values.length >= 3) {
+                amount = values[values.length - 1].value;
+            }
+        } else if (hasAmountColumn && values.length >= 2) {
+            const priceToken = values[values.length - 2];
+            unitPrice = priceToken.value;
+            amount = values[values.length - 1].value;
+            productEnd = priceToken.index;
+            ambiguousQuantity = true;
+        } else if (values.length >= 2) {
+            const quantityToken = values[values.length - 2];
+            const priceToken = values[values.length - 1];
             quantity = quantityToken.value;
             unitPrice = priceToken.value;
-            productName = tokens.slice(0, quantityToken.index).join(' ').trim();
-        } else if (quantityToken.value % 1 !== 0) {
-            unitPrice = quantityToken.value;
-            productName = tokens.slice(0, quantityToken.index).join(' ').trim();
-            ambiguousQuantity = true;
+            productEnd = quantityToken.index;
         } else {
-            quantity = quantityToken.value;
-            productName = tokens.slice(0, quantityToken.index).join(' ').trim();
+            const valueToken = values[0];
+            if (!valueToken) return null;
+            unitPrice = valueToken.value;
+            productEnd = valueToken.index;
             ambiguousQuantity = true;
         }
+        productName = tokens.slice(hasLeadingUnit ? 1 : 0, productEnd).join(' ').trim();
     }
 
     productName = (productName || '')
-        .replace(/^[#*-]+/, '')
+        .replace(/^[#*'"“”‘’.-]+/, '')
         .replace(/[|]+/g, ' ')
         .replace(/\s+/g, ' ')
         .trim();
@@ -235,9 +256,13 @@ function parseInvoiceLine(line, hasAmountColumn) {
         reasons.push('Unit price could not be read.');
     }
     if (ambiguousQuantity) {
-        reasons.push(hasAmountColumn && numberTokens.length >= 3
+        reasons.push(amount !== null && quantity !== null && Number.isFinite(unitPrice)
             ? 'Line amount does not match quantity × unit price; verify the OCR values.'
             : 'Verify the quantity and unit price.');
+    }
+    if (amount !== null && quantity !== null && Number.isFinite(unitPrice)
+        && Math.abs(quantity * unitPrice - amount) > Math.max(0.02, amount * 0.01)) {
+        reasons.push('Line amount does not match quantity × unit price; verify the OCR values.');
     }
     if (unitPrice >= 10000) {
         reasons.push('Unit price is unusually high; verify the decimal point.');
@@ -258,12 +283,15 @@ function parseInvoiceLine(line, hasAmountColumn) {
 function parseInvoiceText(text) {
     const lines = String(text || '').split(/\r?\n/);
     const headerIndex = lines.findIndex(line =>
-        /\b(?:qty|quantity)\b/i.test(line)
-        && /\b(?:description|articles?|product|item|particulars)\b/i.test(line)
-        && /\b(?:unit\s*price|price|amount)\b/i.test(line));
-    const tableLines = headerIndex === -1 ? lines : lines.slice(headerIndex + 1);
-    const hasAmountColumn = lines.some(line =>
-        /\b(?:qty|quantity)\b/i.test(line) && /\bamount\b/i.test(line));
+        /\b(?:description|articles?|product|item|particulars)\b/i.test(line)
+        && /\b(?:qty|quantity|unit)\b/i.test(line)
+        && /\b(?:unit\s*price|unitprice|price|amount)\b/i.test(line));
+    if (headerIndex === -1) return [];
+
+    const header = lines[headerIndex];
+    const tableLines = lines.slice(headerIndex + 1);
+    const hasAmountColumn = /\bamount\b/i.test(header);
+    const quantityFirst = /^\s*(?:qty|quantity|unit)\b/i.test(header);
     const rows = [];
     let pendingProduct = '';
 
@@ -277,7 +305,7 @@ function parseInvoiceText(text) {
         }
         if (/^\s*exp(?:iry)?\.?\b/i.test(line)) continue;
 
-        const row = parseInvoiceLine(line, hasAmountColumn);
+        const row = parseInvoiceLine(line, { hasAmountColumn, quantityFirst });
         if (!row) {
             const description = expiry.text
                 .replace(/\bexp(?:iry)?\.?\s*:?\s*/i, ' ')
