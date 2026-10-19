@@ -12,10 +12,10 @@
 
         <div class="header-left">
           <div class="logo-container glass-pill">
-            <a href="index.html"><img id="logo" src="images/logo_horizontal-removebg.webp" alt="Skin Goddess Aesthetic Center logo"></a>
+            <a href="index.html"><img id="logo" src="images/logo_horizontal-removebg.webp" alt="Skin Goddess Aesthetic Center logo" width="250" height="82"></a>
           </div>
           <button type="button" class="theme-toggle glass-pill" id="themeToggle" aria-label="Toggle light/dark mode">
-            <img src="icons/light-mode.svg" alt="" class="theme-toggle-icon">
+            <img src="icons/light-mode.svg" alt="" class="theme-toggle-icon" width="800" height="800">
           </button>
         </div>
 
@@ -33,7 +33,7 @@
 
             <div class="notification-wrap" id="notificationWrap">
                 <div class="notification" id="notificationBtn">
-                    <img src="icons/notification-bell.svg" alt="Notifications" class="notification-bell">
+                    <img src="icons/notification-bell.svg" alt="Notifications" class="notification-bell" width="800" height="800">
                 </div>
 
                 <div class="notification-dropdown" id="notificationDropdown">
@@ -76,7 +76,7 @@
     <aside class="mobile-nav-drawer" id="mobileNavDrawer" aria-hidden="true" inert>
 
         <div class="mobile-nav-top">
-            <img src="images/logo_horizontal-removebg.webp" alt="Skin Goddess Aesthetic Center logo" class="mobile-nav-logo">
+            <img src="images/logo_horizontal.jpg" alt="Skin Goddess Aesthetic Center logo" class="mobile-nav-logo">
             <button type="button" class="mobile-nav-close" id="mobileNavClose" aria-label="Close menu">&times;</button>
         </div>
 
@@ -100,12 +100,6 @@
 
     <main class="booking-main">
 
-        <div class="booking-intro">
-            <span class="booking-eyebrow">-- BOOK A VISIT</span>
-            <h1>Book Your <span>Appointment</span></h1>
-            <p>Choose your service, pick a date, and confirm all online.</p>
-        </div>
-
         <div class="booking-layout">
 
             <!-- ===== Column 1: Service selection =====
@@ -116,8 +110,7 @@
                 <div class="booking-panel">
                     <p class="booking-panel-label">SELECT A SERVICE</p>
 
-                    <label for="serviceCategorySelect" class="service-category-label">Treatment</label>
-                    <select class="service-category-select" id="serviceCategorySelect">
+                    <select class="service-category-select" id="serviceCategorySelect" aria-label="Treatment category">
                         <option value="">Loading treatments...</option>
                     </select>
                     <div class="service-search-wrap">
@@ -207,6 +200,7 @@
                     <div class="confirm-bar">
                         <button type="submit" form="detailsForm" class="confirm-btn" id="confirmBtn">CONFIRM APPOINTMENT</button>
                     </div>
+                    <p class="booking-notice"><strong>Booking Notice</strong><br>Please book your appointment at least 3 hours in advance. For the best availability, we recommend booking a day before your preferred appointment time.</p>
                 </div>
             </div>
 

@@ -7,6 +7,7 @@ const { roleForCategory } = require('../utils/staffRoles');
 const { notifyUser, notifyUsers, notifyRoles } = require('../utils/notifications');
 const { notifyStockTransition } = require('../utils/inventoryNotifications');
 const { recordInventoryTransaction } = require('../utils/inventoryTransactions');
+const { canBookAppointments } = require('../utils/appointmentBookingAccess');
 const { createHmac, randomBytes, timingSafeEqual } = require('crypto');
 const RATING_WINDOW_DAYS = 14;
 const ratingLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, message: { message: 'Too many rating attempts. Try again later.' } });
@@ -1529,13 +1530,13 @@ async function getValidatedSchedule(queryClient, body, res, allowShortLead = fal
 }
 
 async function getValidatedBooking(userId, body, res) {
-  const userResult = await db.query('SELECT user_id, email_verified, role FROM users WHERE user_id = $1', [userId]);
+  const userResult = await db.query('SELECT user_id, email_verified, role, dev_access_all FROM users WHERE user_id = $1', [userId]);
   if (userResult.rows.length === 0) {
     res.status(401).json({ message: 'Your session is no longer valid. Please log in again.' });
     return null;
   }
   const user = userResult.rows[0];
-  if (!user.email_verified || user.role !== 'client') {
+  if (!canBookAppointments(user)) {
     res.status(403).json({ message: 'Only verified client accounts can book appointments.' });
     return null;
   }

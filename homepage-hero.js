@@ -71,17 +71,20 @@
       // ScrollTrigger refreshes render the timeline end-to-end, so ignore calls unless the user has really scrolled past the cream expansion.
       if (careShown || !tl.scrollTrigger || tl.scrollTrigger.progress < 2.5 / tl.duration()) return;
       careShown = true;
+      care.classList.remove("is-background-visible");
       gsap.set(care, { autoAlpha: 1 });
       gsap.set(careHeading, { x: W() - careHeading.getBoundingClientRect().left });
       careEntrance
         .clear()
         .to(careHeading, { x: 0, autoAlpha: 1, duration: 0.9 })
         .to(careColumns, { autoAlpha: 1, duration: 0.3, ease: "power1.out", stagger: 0.05 }, ">-0.05")
+        .call(() => care.classList.add("is-background-visible"))
         .play(0);
     };
     // Scrolling back up into the hero hands the screen back to the hero; Care stays put while the cream is covering it.
     const hideCare = () => {
       careShown = false;
+      care.classList.remove("is-background-visible");
       careEntrance.pause(0).clear();
       gsap.set([care, careHeading, ...careColumns], { autoAlpha: 0 });
     };
@@ -151,6 +154,7 @@
       tl.kill();
       careEntrance.kill();
       hero.classList.remove("hero-scrolly", "hero-static");
+      care.classList.remove("is-background-visible");
       treatments.style.clipPath = "";
       gsap.set([band, copy, care, careHeading, ...careColumns, treatmentsHeader, carouselWrap], { clearProps: "all" });
     };
