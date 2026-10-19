@@ -22843,30 +22843,125 @@ body.staff-theme-dark .modal-overlay {
   background: rgba(0, 0, 0, 0.76);
 }
 
+body.staff-theme-dark .apt-modal-overlay {
+  background: rgba(0, 0, 0, 0.78);
+}
+
+body.staff-theme-dark .apt-modal,
 body.staff-theme-dark .appt-modal {
   background: #222421;
   color: #e9e4da;
+  border-color: #3d3e39;
+  box-shadow: 0 22px 52px rgba(0, 0, 0, 0.36);
 }
 
+body.staff-theme-dark .apt-modal__head,
+body.staff-theme-dark .apt-modal__summary,
+body.staff-theme-dark .appointment-inventory-modal,
+body.staff-theme-dark .appointment-edit-modal,
+body.staff-theme-dark .new-appointment-form,
+body.staff-theme-dark .cancellation-requests-modal,
+body.staff-theme-dark .cancellation-request-card {
+  background: #222421;
+  border-color: #3d3e39;
+}
+
+body.staff-theme-dark .apt-modal__title,
 body.staff-theme-dark .appt-modal-heading h3,
-body.staff-theme-dark .appt-field-value {
+body.staff-theme-dark .appt-field-value,
+body.staff-theme-dark .appointment-details-grid dd,
+body.staff-theme-dark .appointment-edit-fields .form-group label,
+body.staff-theme-dark .new-appointment-form input,
+body.staff-theme-dark .new-appointment-form select,
+body.staff-theme-dark .new-appointment-form .booking-status-message,
+body.staff-theme-dark .cancellation-request-card__title,
+body.staff-theme-dark .cancellation-request-card__reason,
+body.staff-theme-dark .cancellation-request-card__description,
+body.staff-theme-dark .apt-summary-row strong,
+body.staff-theme-dark .apt-summary-row,
+body.staff-theme-dark .apt-modal__subtitle,
+body.staff-theme-dark .apt-modal__summary-title,
+body.staff-theme-dark .apt-reason-count {
   color: #eee8dd;
 }
 
+body.staff-theme-dark .apt-modal__subtitle,
 body.staff-theme-dark .appt-modal-heading p,
-body.staff-theme-dark .appt-field-label {
+body.staff-theme-dark .appt-field-label,
+body.staff-theme-dark .appointment-details-grid dt,
+body.staff-theme-dark .appointment-edit-fields .field-hint,
+body.staff-theme-dark .booking-status-message,
+body.staff-theme-dark .cancellation-requests-empty,
+body.staff-theme-dark .cancellation-requests-list,
+body.staff-theme-dark .apt-modal__summary-title,
+body.staff-theme-dark .apt-summary-row span,
+body.staff-theme-dark .apt-sub {
   color: #aaa398;
 }
 
-body.staff-theme-dark .appt-modal hr {
+body.staff-theme-dark .appointment-details-grid > div,
+body.staff-theme-dark .apt-modal__head,
+body.staff-theme-dark .new-appointment-form .form-group,
+body.staff-theme-dark .appointment-edit-fields .form-group,
+body.staff-theme-dark .cancellation-request-card {
+  border-color: #3d3e39;
+}
+
+body.staff-theme-dark .appointment-details-grid > div {
+  background: #2b2c29;
+}
+
+body.staff-theme-dark .apt-modal hr,
+body.staff-theme-dark .new-appointment-form__actions,
+body.staff-theme-dark .appointment-details-grid,
+body.staff-theme-dark .appointment-edit-fields,
+body.staff-theme-dark .cancellation-requests-list,
+body.staff-theme-dark .cancellation-request-card__actions {
   border-color: #3d3e39;
 }
 
 body.staff-theme-dark .appt-modal-avatar,
 body.staff-theme-dark .appt-modal-remarks p,
-body.staff-theme-dark .modal-close {
+body.staff-theme-dark .modal-close,
+body.staff-theme-dark .apt-modal__close,
+body.staff-theme-dark .new-appointment-form input,
+body.staff-theme-dark .new-appointment-form select,
+body.staff-theme-dark .appointment-edit-fields input,
+body.staff-theme-dark .appointment-edit-fields select,
+body.staff-theme-dark .appt-cancellation-form input,
+body.staff-theme-dark .appt-cancellation-form textarea,
+body.staff-theme-dark .cancellation-request-card__actions .um-btn,
+body.staff-theme-dark .new-appointment-form__actions .um-btn {
   background: #302f2b;
-  color: #d5cec2;
+  color: #e9e4da;
+}
+
+body.staff-theme-dark .new-appointment-form input,
+body.staff-theme-dark .new-appointment-form select,
+body.staff-theme-dark .appointment-edit-fields input,
+body.staff-theme-dark .appointment-edit-fields select,
+body.staff-theme-dark .appt-cancellation-form input,
+body.staff-theme-dark .appt-cancellation-form textarea {
+  border-color: #4a4942;
+}
+
+body.staff-theme-dark .new-appointment-form input[readonly] {
+  background: #2a2a27;
+  color: #aaa398;
+}
+
+body.staff-theme-dark .booking-status-message.info,
+body.staff-theme-dark .booking-status-message.success,
+body.staff-theme-dark .booking-status-message.error {
+  color: #e9e4da;
+}
+
+body.staff-theme-dark .booking-status-message.success {
+  color: #89d9a9;
+}
+
+body.staff-theme-dark .booking-status-message.error {
+  color: #ff9a9a;
 }
 
 body.staff-theme-dark .appt-reschedule-form input,
@@ -22883,6 +22978,44 @@ body.staff-theme-dark .appt-modal-topbar.status-completed {
 body.staff-theme-dark .appt-status-badge.status-completed {
   background-color: rgba(216, 187, 115, 0.16);
   color: #e8ce8b;
+}
+
+body.staff-theme-dark .cancellation-request-card {
+  border-left-color: #d08d8d;
+}
+
+body.staff-theme-dark .apt-pill--gold,
+body.staff-theme-dark .apt-tag--medical,
+body.staff-theme-dark .apt-tag--personal,
+body.staff-theme-dark .apt-tag--resched {
+  border-color: rgba(216, 187, 115, 0.4);
+  background: rgba(216, 187, 115, 0.12);
+  color: #f5d99c;
+}
+
+body.staff-theme-dark .apt-pill--red,
+body.staff-theme-dark .apt-tag--noshow {
+  border-color: rgba(224, 118, 118, 0.42);
+  background: rgba(184, 76, 76, 0.12);
+  color: #ff9a9a;
+}
+
+body.staff-theme-dark .appointment-details-grid {
+  background: transparent;
+}
+
+body.staff-theme-dark .appointment-inventory-message {
+  color: #c8c0b4;
+}
+
+body.staff-theme-dark .appointment-inventory-message--error {
+  color: #000;
+}
+
+body.staff-theme-dark .appointment-inventory-actions,
+body.staff-theme-dark .new-appointment-form__actions,
+body.staff-theme-dark .appointment-edit-modal form {
+  background: transparent;
 }
 
 /* Admin workspaces share the staff theme preference and palette. */
@@ -24708,4 +24841,46 @@ body.customer-theme-dark .notification-empty {
     max-width: calc(100vw - 24px);
     max-height: calc(100vh - 96px);
   }
+}
+
+body.staff-theme-dark #umCreateOverlay .um-create-modal {
+  border-color: #3d3e39;
+  border-top-color: #d8bb73;
+  background: #222421;
+  color: #e9e4da;
+  color-scheme: dark;
+}
+
+body.staff-theme-dark #umCreateOverlay .um-modal__section-title {
+  color: #dfc27d;
+}
+
+body.staff-theme-dark #umCreateOverlay .um-create-modal label {
+  color: #c9c2b7;
+}
+
+body.staff-theme-dark #umCreateOverlay .um-create-modal hr {
+  border-color: #3d3e39;
+}
+
+body.staff-theme-dark #umCreateOverlay .um-create-modal input,
+body.staff-theme-dark #umCreateOverlay .um-create-modal select {
+  border-color: #4a4942;
+  background: #292a27;
+  color: #eee8dd;
+}
+
+body.staff-theme-dark #umCreateOverlay .um-create-modal input::placeholder {
+  color: #aaa398;
+}
+
+body.staff-theme-dark #umCreateOverlay .um-modal__close {
+  border-color: #4a4942;
+  background: #292a27;
+  color: #d5cec2;
+}
+
+body.staff-theme-dark #umCreateOverlay .um-modal__close:hover {
+  background: #373126;
+  color: #ead9a9;
 }
