@@ -17178,6 +17178,8 @@ body.inventory-officer-page > main.inventory-page {
 .batch-upload-modal[hidden],
 .batch-review-section[hidden],
 .batch-preview-wrap[hidden],
+.batch-preview-actions[hidden],
+.batch-camera-capture-input[hidden],
 .batch-raw-text[hidden] {
   display: none;
 }
@@ -17248,6 +17250,10 @@ body.inventory-officer-page > main.inventory-page {
   margin-top: 10px;
 }
 
+.batch-camera-capture-input {
+  display: none;
+}
+
 .batch-camera-wrap {
   margin-top: 12px;
 }
@@ -17276,10 +17282,17 @@ body.inventory-officer-page > main.inventory-page {
   margin-top: 12px;
 }
 
+.batch-preview-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+
 .batch-preview-image {
   display: block;
-  max-width: 190px;
-  max-height: 170px;
+  width: min(100%, 520px);
+  max-height: 36vh;
   border: 1px solid #e7ddc9;
   border-radius: 8px;
   object-fit: contain;
@@ -22720,6 +22733,7 @@ body.staff-theme-dark .dashboard-table-search,
 body.staff-theme-dark .dashboard-status-button,
 body.staff-theme-dark .dashboard-status-menu,
 body.staff-theme-dark .fin-button,
+body.staff-theme-dark .fin-expense-record-search,
 body.staff-theme-dark .fin-filters input,
 body.staff-theme-dark .fin-filters select,
 body.staff-theme-dark .fin-form input,
@@ -22732,6 +22746,10 @@ body.staff-theme-dark .fin-segmented button {
   border-color: #4a4942;
   background: #292a27;
   color: #e9e4da;
+}
+
+body.staff-theme-dark .fin-expense-record-search::placeholder {
+  color: #aaa398;
 }
 
 body.staff-theme-dark .fin-segmented button.is-active {

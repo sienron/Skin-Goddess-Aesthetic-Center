@@ -1,6 +1,7 @@
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const sharp = require('sharp');
 const { createWorker } = require('tesseract.js');
 const { parseInvoiceText } = require('./invoiceParser');
 
@@ -8,8 +9,25 @@ const cachePath = path.join(os.tmpdir(), 'skin-goddess-tesseract');
 fs.mkdirSync(cachePath, { recursive: true });
 
 const PAGE_SEGMENTATION_MODES = ['3', '4', '6'];
+const MAX_OCR_IMAGE_DIMENSION = 3200;
 let workerPromise = null;
 let recognitionQueue = Promise.resolve();
+
+async function preprocessInvoiceImage(imageBuffer) {
+    return sharp(imageBuffer, { limitInputPixels: 100_000_000 })
+        .rotate()
+        .resize({
+            width: MAX_OCR_IMAGE_DIMENSION,
+            height: MAX_OCR_IMAGE_DIMENSION,
+            fit: 'inside',
+            withoutEnlargement: true
+        })
+        .greyscale()
+        .normalize()
+        .sharpen()
+        .png()
+        .toBuffer();
+}
 
 function getWorker() {
     if (!workerPromise) {
@@ -35,6 +53,7 @@ function scoreRecognition(text, confidence = 0) {
 
 function recognizeImage(imageBuffer) {
     const recognition = recognitionQueue.then(async () => {
+        const enhancedImage = await preprocessInvoiceImage(imageBuffer);
         const worker = await getWorker();
         let bestResult = null;
         let bestScore = Number.NEGATIVE_INFINITY;
@@ -46,11 +65,13 @@ function recognizeImage(imageBuffer) {
                 user_defined_dpi: '300'
             });
 
-            const result = await worker.recognize(imageBuffer, { rotateAuto: true });
-            const score = scoreRecognition(result.data.text, result.data.confidence);
-            if (score > bestScore) {
-                bestResult = result;
-                bestScore = score;
+            for (const image of [imageBuffer, enhancedImage]) {
+                const result = await worker.recognize(image, { rotateAuto: true });
+                const score = scoreRecognition(result.data.text, result.data.confidence);
+                if (score > bestScore) {
+                    bestResult = result;
+                    bestScore = score;
+                }
             }
         }
 
@@ -69,4 +90,9 @@ async function terminateWorker() {
     await worker.terminate();
 }
 
-module.exports = { recognizeImage, scoreRecognition, terminateWorker };
+module.exports = {
+    preprocessInvoiceImage,
+    recognizeImage,
+    scoreRecognition,
+    terminateWorker
+};

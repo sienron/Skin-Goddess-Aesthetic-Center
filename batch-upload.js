@@ -21,12 +21,14 @@
                 <h2 id="batchUploadTitle">Batch Upload Invoice</h2>
                 <button class="batch-upload-close" type="button" aria-label="Close">×</button>
             </div>
-            <p class="batch-upload-help">Place the invoice on a flat surface, use good lighting, and fill the frame.</p>
+            <p class="batch-upload-help">Place the invoice flat, fill the frame, and use bright, even light. Keep text in focus and avoid shadows or glare.</p>
             <label class="batch-file-label" for="batchInvoiceFile">Invoice photo</label>
             <input id="batchInvoiceFile" type="file" accept="image/*">
             <div class="batch-camera-actions">
-                <button class="batch-action-button batch-secondary batch-camera-start" type="button">Use camera</button>
+                <button class="batch-action-button batch-secondary batch-native-camera" type="button">Take photo with phone camera</button>
+                <button class="batch-action-button batch-secondary batch-camera-start" type="button">Use live camera</button>
             </div>
+            <input class="batch-camera-capture-input" type="file" accept="image/*" capture="environment" tabindex="-1" aria-hidden="true">
             <div class="batch-camera-wrap" hidden>
                 <video class="batch-camera-video" autoplay playsinline muted></video>
                 <div class="batch-camera-actions">
@@ -36,6 +38,10 @@
             </div>
             <div class="batch-preview-wrap" hidden>
                 <img class="batch-preview-image" alt="Selected invoice preview">
+            </div>
+            <div class="batch-preview-actions" hidden>
+                <button class="batch-action-button batch-secondary batch-retake-photo" type="button">Retake photo</button>
+                <button class="batch-action-button batch-use-photo" type="button">Use photo and scan</button>
             </div>
             <p class="batch-upload-status" role="status" aria-live="polite"></p>
             <div class="batch-review-section" hidden>
@@ -66,6 +72,8 @@
     document.body.appendChild(modal);
 
     const fileInput = modal.querySelector("#batchInvoiceFile");
+    const nativeCameraInput = modal.querySelector(".batch-camera-capture-input");
+    const nativeCameraButton = modal.querySelector(".batch-native-camera");
     const cameraStartButton = modal.querySelector(".batch-camera-start");
     const cameraWrap = modal.querySelector(".batch-camera-wrap");
     const cameraVideo = modal.querySelector(".batch-camera-video");
@@ -73,6 +81,9 @@
     const cameraStopButton = modal.querySelector(".batch-camera-stop");
     const previewWrap = modal.querySelector(".batch-preview-wrap");
     const previewImage = modal.querySelector(".batch-preview-image");
+    const previewActions = modal.querySelector(".batch-preview-actions");
+    const retakePhotoButton = modal.querySelector(".batch-retake-photo");
+    const usePhotoButton = modal.querySelector(".batch-use-photo");
     const status = modal.querySelector(".batch-upload-status");
     const reviewSection = modal.querySelector(".batch-review-section");
     const tableBody = modal.querySelector("tbody");
@@ -83,6 +94,7 @@
     let selectedFile = null;
     let previewUrl = "";
     let cameraStream = null;
+    let cameraPhotoSource = null;
     let rows = [];
     let confirmationRequestKey = null;
     let sourceHash = null;
@@ -131,10 +143,11 @@
         cameraStartButton.disabled = false;
     }
 
-    function setSelectedImage(file, source, fromCamera = false) {
+    function setSelectedImage(file, source, cameraSource = null) {
         selectedFile = file;
-        if (fromCamera) fileInput.value = "";
-        scanButton.disabled = !selectedFile;
+        cameraPhotoSource = cameraSource;
+        scanButton.disabled = Boolean(cameraSource) || !selectedFile;
+        previewActions.hidden = !cameraSource;
         reviewSection.hidden = true;
         confirmButton.hidden = true;
         scanButton.hidden = false;
@@ -155,11 +168,14 @@
         if (previewUrl) URL.revokeObjectURL(previewUrl);
         previewUrl = "";
         selectedFile = null;
+        cameraPhotoSource = null;
         rows = [];
         fileInput.value = "";
+        nativeCameraInput.value = "";
         fileInput.disabled = false;
         previewWrap.hidden = true;
         previewImage.removeAttribute("src");
+        previewActions.hidden = true;
         reviewSection.hidden = true;
         confirmButton.hidden = true;
         scanButton.hidden = false;
@@ -315,7 +331,7 @@
             }
         }
 
-        const scale = Math.min(1, 2000 / Math.max(imageWidth, imageHeight));
+        const scale = Math.min(1, 3200 / Math.max(imageWidth, imageHeight));
         const canvas = document.createElement("canvas");
         canvas.width = Math.max(1, Math.round(imageWidth * scale));
         canvas.height = Math.max(1, Math.round(imageHeight * scale));
@@ -334,7 +350,7 @@
             canvas.toBlob(result => {
                 if (result) resolve(result);
                 else reject(new Error("The invoice image could not be resized."));
-            }, "image/jpeg", 0.8);
+            }, "image/jpeg", 0.92);
         });
         if (blob.size > 10 * 1024 * 1024) {
             throw new Error("The resized invoice image is still over 10 MB. Please choose a smaller photo.");
@@ -368,6 +384,34 @@
         setSelectedImage(file, "Photo selected. Select Scan invoice when ready.");
     });
 
+    nativeCameraButton.addEventListener("click", () => {
+        nativeCameraInput.click();
+    });
+
+    nativeCameraInput.addEventListener("change", () => {
+        const file = nativeCameraInput.files[0] || null;
+        nativeCameraInput.value = "";
+        if (!file) return;
+        stopCamera();
+        setSelectedImage(file, "Photo captured. Check that the invoice is clear, then use it or retake it.", "native");
+    });
+
+    usePhotoButton.addEventListener("click", () => {
+        if (!selectedFile) return;
+        cameraPhotoSource = null;
+        previewActions.hidden = true;
+        scanButton.disabled = false;
+        scanButton.click();
+    });
+
+    retakePhotoButton.addEventListener("click", () => {
+        if (cameraPhotoSource === "native") {
+            nativeCameraInput.click();
+            return;
+        }
+        cameraStartButton.click();
+    });
+
     cameraStartButton.addEventListener("click", async () => {
         if (!navigator.mediaDevices?.getUserMedia) {
             setStatus("Camera access is unavailable here. Open the site over HTTPS on your phone, or choose a photo instead.", true);
@@ -381,8 +425,8 @@
                 audio: false,
                 video: {
                     facingMode: { ideal: "environment" },
-                    width: { ideal: 2000 },
-                    height: { ideal: 2000 }
+                    width: { ideal: 3000 },
+                    height: { ideal: 3000 }
                 }
             });
             cameraVideo.srcObject = cameraStream;
@@ -409,7 +453,7 @@
         }
 
         cameraCaptureButton.disabled = true;
-        const scale = Math.min(1, 2000 / Math.max(width, height));
+        const scale = Math.min(1, 3200 / Math.max(width, height));
         const canvas = document.createElement("canvas");
         canvas.width = Math.max(1, Math.round(width * scale));
         canvas.height = Math.max(1, Math.round(height * scale));
@@ -426,12 +470,12 @@
                 canvas.toBlob(result => {
                     if (result) resolve(result);
                     else reject(new Error("The camera photo could not be created. Please try again."));
-                }, "image/jpeg", 0.8);
+                }, "image/jpeg", 0.92);
             });
             setSelectedImage(
                 new File([blob], "invoice-camera.jpg", { type: "image/jpeg" }),
-                "Camera photo ready. Select Scan invoice when ready.",
-                true
+                "Photo captured. Check that the invoice is clear, then use it or retake it.",
+                "live"
             );
             stopCamera();
         } catch (error) {
@@ -443,8 +487,10 @@
 
     cameraStopButton.addEventListener("click", () => {
         stopCamera();
-        setStatus(selectedFile
-            ? "Camera closed. Your selected photo is ready to scan."
+        setStatus(cameraPhotoSource
+            ? "Camera closed. Review your photo, then use it or retake it."
+            : selectedFile
+                ? "Camera closed. Your selected photo is ready to scan."
             : "Camera closed. Choose a photo or open the camera to capture one.");
     });
 
