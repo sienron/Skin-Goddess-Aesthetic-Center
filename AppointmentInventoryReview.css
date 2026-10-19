@@ -76,6 +76,7 @@
 .appointment-review-dialog {
     width: min(900px, calc(100% - 28px));
     max-height: min(90vh, 900px);
+    margin: auto;
     padding: 0;
     overflow: hidden;
     border: 1px solid var(--line);
@@ -144,6 +145,8 @@
 
 .appointment-review-search input,
 .appointment-review-product__quantity input {
+    width: 100%;
+    min-width: 0;
     min-height: 38px;
     padding: 7px 10px;
     border: 1px solid var(--line);
