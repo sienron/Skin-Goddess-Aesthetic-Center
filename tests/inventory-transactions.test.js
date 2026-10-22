@@ -16,6 +16,32 @@ function getRouteHandler(path, method) {
         .route.stack.at(-1).handle;
 }
 
+test('inventory transaction history returns timezone-aware transaction timestamps', async () => {
+    const originalQuery = db.query;
+    let queryText = '';
+    const rows = [{ transaction_id: 1, created_at: '2026-10-22T08:50:00.000Z' }];
+    db.query = async sql => {
+        queryText = sql;
+        return { rows };
+    };
+
+    let responseBody;
+    try {
+        const handler = getRouteHandler('/transactions', 'get');
+        await handler({}, {
+            json(value) {
+                responseBody = value;
+                return this;
+            }
+        });
+    } finally {
+        db.query = originalQuery;
+    }
+
+    assert.match(queryText, /created_at AT TIME ZONE current_setting\('TIMEZONE'\) AS created_at/);
+    assert.equal(responseBody, rows);
+});
+
 test('manual inventory transactions do not require the appointment_id column', async () => {
     const queries = [];
     const client = {

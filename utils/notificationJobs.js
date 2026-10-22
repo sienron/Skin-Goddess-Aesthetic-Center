@@ -6,7 +6,6 @@ const { sendAppointmentReminderEmail } = require('./mailer');
 let remindersRunning = false;
 let emailRemindersRunning = false;
 let expiryRunning = false;
-let overdueAppointmentsRunning = false;
 
 function appointmentLabel(row) {
   return `${row.service_name} on ${row.appointment_date} at ${String(row.appointment_time).slice(0, 5)}`;
@@ -142,40 +141,6 @@ async function runAppointmentEmailReminders() {
   }
 }
 
-async function runOverdueAppointments() {
-  if (overdueAppointmentsRunning) return;
-  overdueAppointmentsRunning = true;
-  try {
-    const result = await db.query(`
-      UPDATE appointments
-      SET appointment_status = 'no_show', updated_at = NOW()
-      WHERE appointment_status = 'confirmed'
-        AND appointment_date + appointment_end_time <= (NOW() AT TIME ZONE 'Asia/Manila')
-      RETURNING appointment_id, user_id
-    `);
-
-    for (const appointment of result.rows) {
-      if (!appointment.user_id) continue;
-      try {
-        await notifyUser(
-          appointment.user_id,
-          'appointment_status_changed',
-          `Appointment ${appointment.appointment_id} status changed to no show because its scheduled time passed.`
-        );
-      } catch (error) {
-        console.error(
-          `No-show notification failed for appointment ${appointment.appointment_id}:`,
-          error.message
-        );
-      }
-    }
-  } catch (error) {
-    console.error('Overdue appointment job failed:', error.message);
-  } finally {
-    overdueAppointmentsRunning = false;
-  }
-}
-
 async function runExpiryAlerts() {
   if (expiryRunning) return;
   expiryRunning = true;
@@ -218,7 +183,6 @@ async function runExpiryAlerts() {
 function startNotificationJobs() {
   cron.schedule('*/5 * * * *', runAppointmentReminders, { timezone: 'Asia/Manila' });
   cron.schedule('*/5 * * * *', runAppointmentEmailReminders, { timezone: 'Asia/Manila' });
-  cron.schedule('*/5 * * * *', runOverdueAppointments, { timezone: 'Asia/Manila' });
   cron.schedule('0 9 * * *', runExpiryAlerts, { timezone: 'Asia/Manila' });
 }
 
@@ -226,6 +190,5 @@ module.exports = {
   startNotificationJobs,
   runAppointmentReminders,
   runAppointmentEmailReminders,
-  runOverdueAppointments,
   runExpiryAlerts,
 };

@@ -808,6 +808,32 @@ function filterInventory(){
     });
 }
 
+function updateStockSummaryFromInventory() {
+    const totalStock = inventoryProducts.reduce(
+        (total, product) => total + Number(product.stock_quantity),
+        0
+    );
+    const lowStockProducts = inventoryProducts.filter(product => {
+        const stock = Number(product.stock_quantity);
+        return stock > inventoryThresholds.criticalStock
+            && stock <= inventoryThresholds.lowStock;
+    });
+    const criticalStockProducts = inventoryProducts.filter(product => {
+        const stock = Number(product.stock_quantity);
+        return stock > 0 && stock <= inventoryThresholds.criticalStock;
+    });
+    const outOfStockProducts = inventoryProducts.filter(
+        product => Number(product.stock_quantity) === 0
+    );
+
+    totalProducts.textContent = totalStock;
+    lowStockCount.textContent = lowStockProducts.length;
+    criticalStockCount.textContent = criticalStockProducts.length;
+    outOfStockCount.textContent = outOfStockProducts.length;
+    renderInventorySidebar();
+    filterInventory();
+}
+
 function getSelectedFilterLabel(select){
     if(select.value === "all"){
         return "All";
@@ -1400,11 +1426,7 @@ clearFilters.addEventListener("click", () => {
 
         const stock = Number(row.dataset.stock);
         if(Number.isFinite(stock) && stock > 0){
-
-            button.disabled = true;
-            updateStock(row, -1, true).finally(() => {
-                button.disabled = false;
-            });
+            updateStock(row, -1, true);
 
         }
 
@@ -1932,6 +1954,10 @@ confirmAddProduct.addEventListener("click", async () => {
 
     const productId =
         row.dataset.id;
+    const stockButtons = row.querySelectorAll(".action-btn.increase, .action-btn.decrease");
+    stockButtons.forEach(button => {
+        button.disabled = true;
+    });
 
 
     try {
@@ -1953,6 +1979,12 @@ confirmAddProduct.addEventListener("click", async () => {
         }
 
         const updatedProduct = responseBody;
+        const product = inventoryProducts.find(
+            item => String(item.product_id) === String(productId)
+        );
+        if (product) {
+            product.stock_quantity = updatedProduct.stock_quantity;
+        }
 
 
         row.dataset.stock =
@@ -2033,20 +2065,18 @@ confirmAddProduct.addEventListener("click", async () => {
         
         }
 
-
         row.dataset.status =
             newStatus;
 
-            await loadRestockedToday();
-            await loadDeductedToday();
-            await loadLowStockToday();
-            await loadLowStockCount();
-            await loadInventory();
-            filterInventory();
-            await loadCriticalStockToday();
-            await loadCriticalStockCount();
-            await loadOutOfStockToday();
-            await loadOutOfStockCount();
+        updateStockSummaryFromInventory();
+
+        void Promise.all([
+            loadRestockedToday(),
+            loadDeductedToday(),
+            loadLowStockToday(),
+            loadCriticalStockToday(),
+            loadOutOfStockToday()
+        ]);
     } catch(error){
 
         console.error(
@@ -2056,6 +2086,10 @@ confirmAddProduct.addEventListener("click", async () => {
 
         alert(error.message || "Failed to update stock. Please try again.");
 
+    } finally {
+        stockButtons.forEach(button => {
+            button.disabled = false;
+        });
     }
 
 }

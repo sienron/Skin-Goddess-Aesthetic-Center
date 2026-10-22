@@ -27,6 +27,67 @@ const serviceDefaultsRoute = servicesRouter.stack
 const completeRoute = appointmentsRouter.stack
   .find((layer) => layer.route?.path === '/admin/:id/complete-with-inventory' && layer.route.methods.post)
   .route.stack.at(-1).handle;
+const adminEditRoute = appointmentsRouter.stack
+  .find((layer) => layer.route?.path === '/admin/:id/edit' && layer.route.methods.put)
+  .route.stack.at(-1).handle;
+const adminCancelRoute = appointmentsRouter.stack
+  .find((layer) => layer.route?.path === '/:id/cancel' && layer.route.methods.post)
+  .route.stack.at(-1).handle;
+
+async function editAppointmentStatus({ currentStatus, requestedStatus, appointmentDate }) {
+  const originalTransaction = db.transaction;
+  const queryCalls = [];
+  let statusCode = 200;
+  let responseBody;
+  db.transaction = async (callback) => callback({
+    async query(sql, values = []) {
+      queryCalls.push({ sql, values });
+      if (/SELECT appointment_status, service_id, aesthetician_id/.test(sql)) {
+        return {
+          rows: [{
+            appointment_status: currentStatus,
+            service_id: 3,
+            aesthetician_id: 4,
+            appointment_date: appointmentDate,
+            appointment_time: '16:00:00',
+            appointment_end_time: '17:30:00',
+            user_id: null
+          }]
+        };
+      }
+      if (/UPDATE appointments/.test(sql)) {
+        return { rows: [{ appointment_status: requestedStatus, user_id: null }] };
+      }
+      return { rows: [] };
+    }
+  });
+
+  try {
+    await adminEditRoute({
+      params: { id: '42' },
+      body: {
+        serviceId: 3,
+        staffId: 4,
+        date: appointmentDate,
+        time: '4:00 PM',
+        status: requestedStatus
+      }
+    }, {
+      status(code) {
+        statusCode = code;
+        return this;
+      },
+      json(body) {
+        responseBody = body;
+        return this;
+      }
+    });
+  } finally {
+    db.transaction = originalTransaction;
+  }
+
+  return { statusCode, responseBody, queryCalls };
+}
 
 async function saveDraft({
   selectedItems,
@@ -366,6 +427,79 @@ test('Inventory Officer queue includes in-progress appointments and review statu
   assert.match(queryText, /appointment_status = 'in_progress'/);
   assert.match(queryText, /appointment_inventory_deductions/);
   assert.deepEqual(responseBody.map((item) => item.review_status), ['pending', 'confirmed']);
+});
+
+test('admin can mark a past in-progress appointment as no-show', async () => {
+  const result = await editAppointmentStatus({
+    currentStatus: 'in_progress',
+    requestedStatus: 'no_show',
+    appointmentDate: '2000-01-01'
+  });
+
+  assert.equal(result.statusCode, 200);
+  assert.equal(result.responseBody.status, 'no_show');
+  const update = result.queryCalls.find(({ sql }) => /UPDATE appointments/.test(sql));
+  assert.ok(update);
+  assert.equal(update.values[0], 'no_show');
+});
+
+test('admin cannot mark a future appointment as no-show', async () => {
+  const result = await editAppointmentStatus({
+    currentStatus: 'confirmed',
+    requestedStatus: 'no_show',
+    appointmentDate: '2999-01-01'
+  });
+
+  assert.equal(result.statusCode, 409);
+  assert.match(result.responseBody.message, /appointment that has started/i);
+  assert.equal(result.queryCalls.some(({ sql }) => /UPDATE appointments/.test(sql)), false);
+});
+
+test('admin can cancel an in-progress appointment after it has started', async () => {
+  const originalQuery = db.query;
+  const queryCalls = [];
+  let statusCode = 200;
+  let responseBody;
+  db.query = async (sql) => {
+    queryCalls.push(sql);
+    if (/SELECT a\.appointment_id, a\.user_id/.test(sql)) {
+      return {
+        rows: [{
+          appointment_id: 42,
+          user_id: null,
+          aesthetician_id: null,
+          appointment_date: '2026-10-19',
+          appointment_time: '16:00:00',
+          appointment_status: 'in_progress',
+          payment_status: 'unpaid',
+          service_name: 'Test service'
+        }]
+      };
+    }
+    return { rows: [] };
+  };
+
+  try {
+    await adminCancelRoute({
+      params: { id: '42' },
+      session: { userId: 1 }
+    }, {
+      status(code) {
+        statusCode = code;
+        return this;
+      },
+      json(body) {
+        responseBody = body;
+        return this;
+      }
+    });
+  } finally {
+    db.query = originalQuery;
+  }
+
+  assert.equal(statusCode, 200);
+  assert.match(responseBody.message, /cancelled successfully/i);
+  assert.ok(queryCalls.some((sql) => /SET appointment_status = 'cancelled'/.test(sql)));
 });
 
 test('only Inventory Officers can access officer review queue and review routes', async () => {

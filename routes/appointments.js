@@ -411,10 +411,12 @@ router.put('/admin/:id/edit', requireRole('admin'), async (req, res) => {
         error.statusCode = 409;
         throw error;
       }
+      const now = manilaNow();
+      const appointmentHasStarted = booking.appointmentDate < now.dateStr
+        || (booking.appointmentDate === now.dateStr && booking.appointmentTime <= now.timeStr);
       if (nextStatus === 'no_show'
-        && (currentStatus !== 'confirmed' || booking.appointmentDate !== manilaNow().dateStr
-          || booking.appointmentTime > manilaNow().timeStr)) {
-        const error = new Error('Only a confirmed appointment that has started today can be marked No Show.');
+        && (!['confirmed', 'in_progress'].includes(currentStatus) || !appointmentHasStarted)) {
+        const error = new Error('Only a confirmed or In Progress appointment that has started can be marked No Show.');
         error.statusCode = 409;
         throw error;
       }
@@ -1858,9 +1860,14 @@ router.post('/:id/cancel', requireRole('admin'), async (req, res) => {
     if (result.rows.length === 0) return res.status(404).json({ message: 'Appointment not found.' });
 
     const appointment = result.rows[0];
-    if (appointment.appointment_status !== 'confirmed') return res.status(400).json({ message: 'Only confirmed appointments can be cancelled.' });
+    const isInProgress = appointment.appointment_status === 'in_progress';
+    if (!['confirmed', 'in_progress'].includes(appointment.appointment_status)) {
+      return res.status(400).json({ message: 'Only confirmed or In Progress appointments can be cancelled.' });
+    }
     const minutesToAppointment = minutesUntil(appointment.appointment_date, appointment.appointment_time, manilaNow());
-    if (minutesToAppointment <= 0) return res.status(400).json({ message: 'Appointments that have already started cannot be cancelled.' });
+    if (minutesToAppointment <= 0 && !isInProgress) {
+      return res.status(400).json({ message: 'Confirmed appointments that have already started cannot be cancelled.' });
+    }
 
     await db.query(`UPDATE appointments SET appointment_status = 'cancelled' WHERE appointment_id = $1`, [appointmentId]);
 

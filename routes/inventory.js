@@ -468,7 +468,7 @@ router.get('/transactions', async (req, res) => {
                 stock_transaction.quantity,
                 stock_transaction.previous_stock,
                 stock_transaction.new_stock,
-                stock_transaction.created_at,
+                stock_transaction.created_at AT TIME ZONE current_setting('TIMEZONE') AS created_at,
                 COALESCE(
                     to_jsonb(stock_transaction)->>'product_name',
                     product.product_name
@@ -760,7 +760,13 @@ router.put('/:id/stock', async (req, res) => {
             return res.status(404).json({ message: 'Product not found.' });
         }
 
-        await notifyStockTransition(updated.previousStock, Number(updated.product.stock_quantity), updated.product.product_name);
+        void notifyStockTransition(
+            updated.previousStock,
+            Number(updated.product.stock_quantity),
+            updated.product.product_name
+        ).catch(error => {
+            console.error(`Inventory threshold notification failed for product ${productId}:`, error);
+        });
         res.json(updated.product);
 
 
@@ -837,15 +843,13 @@ router.post('/:id/deduct', async (req, res) => {
             return res.status(404).json({ message: 'Product not found.' });
         }
 
-        try {
-            await notifyStockTransition(
-                updated.previousStock,
-                Number(updated.product.stock_quantity),
-                updated.product.product_name
-            );
-        } catch (error) {
+        void notifyStockTransition(
+            updated.previousStock,
+            Number(updated.product.stock_quantity),
+            updated.product.product_name
+        ).catch(error => {
             console.error(`Inventory threshold notification failed for product ${productId}:`, error);
-        }
+        });
         return res.json(updated.product);
     } catch (error) {
         if (error.statusCode) {

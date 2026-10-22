@@ -1,18 +1,15 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const db = require('../db');
-const notifications = require('../utils/notifications');
 const mailer = require('../utils/mailer');
+const cron = require('node-cron');
 
-let notificationCalls = [];
 let emailCalls = [];
 let reminderSender = async () => {};
 const originalQuery = db.query;
 const originalConnect = db.pool.connect;
-const originalNotifyUser = notifications.notifyUser;
 const originalSendReminder = mailer.sendAppointmentReminderEmail;
 
-notifications.notifyUser = async (...args) => notificationCalls.push(args);
 mailer.sendAppointmentReminderEmail = async (...args) => {
   emailCalls.push(args);
   return reminderSender(...args);
@@ -86,26 +83,20 @@ test('email reminders select only registered confirmed appointments and use sepa
   assert.ok(clientQueries.some(({ sql }) => /pg_advisory_unlock/.test(sql)));
 });
 
-test('overdue appointment job only transitions confirmed appointments after scheduled end time', async () => {
-  let updateSql = '';
-  db.query = async (sql) => {
-    updateSql = sql;
-    return { rows: [{ appointment_id: 42, user_id: 7 }] };
-  };
-
+test('notification jobs do not automatically mark overdue appointments as no-show', () => {
+  const originalSchedule = cron.schedule;
+  const schedules = [];
+  cron.schedule = (...args) => schedules.push(args);
   try {
-    await jobs.runOverdueAppointments();
+    jobs.startNotificationJobs();
   } finally {
-    db.query = originalQuery;
+    cron.schedule = originalSchedule;
   }
 
-  assert.match(updateSql, /appointment_status = 'confirmed'/);
-  assert.match(updateSql, /appointment_date \+ appointment_end_time <= \(NOW\(\) AT TIME ZONE 'Asia\/Manila'\)/);
-  assert.match(updateSql, /SET appointment_status = 'no_show'/);
-  assert.deepEqual(notificationCalls.at(-1), [
-    7,
-    'appointment_status_changed',
-    'Appointment 42 status changed to no show because its scheduled time passed.'
+  assert.deepEqual(schedules.map(([expression]) => expression), [
+    '*/5 * * * *',
+    '*/5 * * * *',
+    '0 9 * * *'
   ]);
 });
 
@@ -161,6 +152,5 @@ test('failed reminder delivery is logged and its claim is released for a later r
 test.after(() => {
   db.query = originalQuery;
   db.pool.connect = originalConnect;
-  notifications.notifyUser = originalNotifyUser;
   mailer.sendAppointmentReminderEmail = originalSendReminder;
 });

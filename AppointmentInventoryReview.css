@@ -7,12 +7,23 @@
     box-shadow: 0 4px 18px rgb(32 28 24 / 5%);
 }
 
-.appointment-review-queue__heading,
-.appointment-review-queue__row {
+.appointment-review-queue__heading {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 16px;
+}
+
+.appointment-review-queue__row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(140px, 1fr) auto;
+    align-items: center;
+    gap: 16px;
+}
+
+.appointment-review-queue__heading button {
+    flex: 0 0 auto;
+    margin-right: 14px;
 }
 
 .appointment-review-queue__heading h2 {
@@ -63,7 +74,7 @@
 }
 
 .appointment-review-status {
-    flex: 0 0 auto;
+    justify-self: center;
     color: #8a5410;
     font-size: 12px;
     font-weight: 600;
@@ -267,8 +278,22 @@
 
 @media (max-width: 700px) {
     .appointment-review-queue__row {
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: start;
+    }
+
+    .appointment-review-queue__heading {
         align-items: flex-start;
-        flex-wrap: wrap;
+    }
+
+    .appointment-review-status {
+        grid-column: 1;
+        justify-self: start;
+    }
+
+    .appointment-review-queue__row button {
+        grid-column: 2;
+        grid-row: 1 / span 2;
     }
 
     .appointment-review-dialog__lists {

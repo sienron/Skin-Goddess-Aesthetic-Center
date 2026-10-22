@@ -1,4 +1,5 @@
 (() => {
+    const BUSINESS_TIME_ZONE = "Asia/Manila";
     const transactionBody = document.getElementById("transactionBody");
     const transactionFooter = document.getElementById("transactionFooter");
     const transactionPeriodFilter = document.getElementById("transactionPeriodFilter");
@@ -85,10 +86,19 @@
             const timeText = document.createElement("small");
             dateText.textContent = Number.isNaN(createdAt.getTime())
                 ? "Unknown date"
-                : createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+                : createdAt.toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                    timeZone: BUSINESS_TIME_ZONE
+                });
             timeText.textContent = Number.isNaN(createdAt.getTime())
                 ? ""
-                : createdAt.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+                : createdAt.toLocaleTimeString("en-US", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    timeZone: BUSINESS_TIME_ZONE
+                });
             dateCell.append(dateText, timeText);
 
             const productCell = document.createElement("td");
@@ -136,14 +146,26 @@
             return "Unavailable";
         }
 
+        const parts = new Intl.DateTimeFormat("en-US", {
+            timeZone: BUSINESS_TIME_ZONE,
+            year: "numeric",
+            month: "numeric",
+            day: "numeric",
+            hour: "numeric",
+            minute: "numeric",
+            second: "numeric",
+            hourCycle: "h23"
+        }).formatToParts(sourceDate);
+        const values = Object.fromEntries(parts.map(part => [part.type, Number(part.value)]));
+
         return new Date(Date.UTC(
-            sourceDate.getFullYear(),
-            sourceDate.getMonth(),
-            sourceDate.getDate(),
-            sourceDate.getHours(),
-            sourceDate.getMinutes(),
-            sourceDate.getSeconds(),
-            sourceDate.getMilliseconds()
+            values.year,
+            values.month - 1,
+            values.day,
+            values.hour,
+            values.minute,
+            values.second,
+            sourceDate.getUTCMilliseconds()
         ));
     }
 
