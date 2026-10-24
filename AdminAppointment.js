@@ -54,6 +54,14 @@ document.addEventListener('DOMContentLoaded', () => {
     return (hour % 12 || 12) + ':' + match[2] + ' ' + (hour >= 12 ? 'PM' : 'AM');
   }
 
+  function formatManilaDateTime(value) {
+    return new Intl.DateTimeFormat('en-US', {
+      dateStyle: 'short',
+      timeStyle: 'medium',
+      timeZone: 'Asia/Manila'
+    }).format(new Date(value));
+  }
+
   function clientAge(dateOfBirth) {
     if (!dateOfBirth) return '';
     const [birthYear, birthMonth, birthDay] = dateOfBirth.slice(0, 10).split('-').map(Number);
@@ -215,11 +223,11 @@ document.addEventListener('DOMContentLoaded', () => {
           : 'Not started';
     if (appointment.status === 'in-progress') {
       message.textContent = appointment.inventoryReviewConfirmedAt
-        ? `Products were confirmed by ${appointment.inventoryReviewConfirmedBy || 'a reviewer'} at ${new Date(appointment.inventoryReviewConfirmedAt).toLocaleString()}. An Admin can complete the appointment.`
+        ? `Products were confirmed by ${appointment.inventoryReviewConfirmedBy || 'a reviewer'} at ${formatManilaDateTime(appointment.inventoryReviewConfirmedAt)}. An Admin can complete the appointment.`
         : 'Products are pending review. An Admin or Inventory Officer can confirm the products and quantities before the appointment is completed.';
       message.classList.remove('appointment-inventory-message--error');
     } else if (appointment.inventoryDeductionConfirmedAt) {
-      message.textContent = `Product-use review and inventory processing were recorded at ${new Date(appointment.inventoryDeductionConfirmedAt).toLocaleString()}.`;
+      message.textContent = `Product-use review and inventory processing were recorded at ${formatManilaDateTime(appointment.inventoryDeductionConfirmedAt)}.`;
       message.classList.remove('appointment-inventory-message--error');
     } else if (appointment.status === 'completed') {
       message.textContent = 'This appointment was completed before the product-review workflow was enabled. It cannot be deducted again through this workflow.';

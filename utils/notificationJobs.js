@@ -5,6 +5,7 @@ const { sendAppointmentReminderEmail } = require('./mailer');
 
 let remindersRunning = false;
 let emailRemindersRunning = false;
+let appointmentStatusAdvancementRunning = false;
 let expiryRunning = false;
 
 function appointmentLabel(row) {
@@ -141,6 +142,32 @@ async function runAppointmentEmailReminders() {
   }
 }
 
+async function runAppointmentStatusAdvancement() {
+  if (appointmentStatusAdvancementRunning) return;
+  appointmentStatusAdvancementRunning = true;
+  try {
+    const result = await db.query(`
+      UPDATE appointments
+      SET appointment_status = 'in_progress', updated_at = NOW()
+      WHERE appointment_status = 'confirmed'
+        AND appointment_date + appointment_time <= (NOW() AT TIME ZONE 'Asia/Manila')
+      RETURNING appointment_id, user_id
+    `);
+
+    await Promise.all(result.rows.filter((appointment) => appointment.user_id).map((appointment) => (
+      notifyUser(
+        appointment.user_id,
+        'appointment_status_changed',
+        `Appointment ${appointment.appointment_id} status changed to in progress.`,
+      )
+    )));
+  } catch (error) {
+    console.error('Appointment status advancement job failed:', error.message);
+  } finally {
+    appointmentStatusAdvancementRunning = false;
+  }
+}
+
 async function runExpiryAlerts() {
   if (expiryRunning) return;
   expiryRunning = true;
@@ -183,6 +210,7 @@ async function runExpiryAlerts() {
 function startNotificationJobs() {
   cron.schedule('*/5 * * * *', runAppointmentReminders, { timezone: 'Asia/Manila' });
   cron.schedule('*/5 * * * *', runAppointmentEmailReminders, { timezone: 'Asia/Manila' });
+  cron.schedule('* * * * *', runAppointmentStatusAdvancement, { timezone: 'Asia/Manila' });
   cron.schedule('0 9 * * *', runExpiryAlerts, { timezone: 'Asia/Manila' });
 }
 
@@ -190,5 +218,6 @@ module.exports = {
   startNotificationJobs,
   runAppointmentReminders,
   runAppointmentEmailReminders,
+  runAppointmentStatusAdvancement,
   runExpiryAlerts,
 };

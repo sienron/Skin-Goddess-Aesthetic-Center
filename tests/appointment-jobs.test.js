@@ -96,8 +96,29 @@ test('notification jobs do not automatically mark overdue appointments as no-sho
   assert.deepEqual(schedules.map(([expression]) => expression), [
     '*/5 * * * *',
     '*/5 * * * *',
+    '* * * * *',
     '0 9 * * *'
   ]);
+});
+
+test('status advancement moves only confirmed appointments whose scheduled start has passed', async () => {
+  const queries = [];
+  db.query = async (sql, values) => {
+    queries.push({ sql, values });
+    return { rows: [] };
+  };
+
+  try {
+    await jobs.runAppointmentStatusAdvancement();
+  } finally {
+    db.query = originalQuery;
+  }
+
+  assert.equal(queries.length, 1);
+  assert.match(queries[0].sql, /appointment_status = 'confirmed'/);
+  assert.match(queries[0].sql, /SET appointment_status = 'in_progress'/);
+  assert.match(queries[0].sql, /appointment_date \+ appointment_time <= \(NOW\(\) AT TIME ZONE 'Asia\/Manila'\)/);
+  assert.match(queries[0].sql, /RETURNING appointment_id, user_id/);
 });
 
 test('failed reminder delivery is logged and its claim is released for a later retry', async () => {

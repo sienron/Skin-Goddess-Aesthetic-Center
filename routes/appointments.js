@@ -306,8 +306,8 @@ router.post('/admin/advance-started', requireRole('admin'), async (_req, res) =>
       UPDATE appointments
       SET appointment_status = 'in_progress', updated_at = NOW()
       WHERE appointment_status = 'confirmed'
-        AND appointment_date = $1::date
-        AND appointment_time <= $2::time
+        AND appointment_date <= $1::date
+        AND (appointment_date < $1::date OR appointment_time <= $2::time)
       RETURNING appointment_id, user_id
     `, [now.dateStr, now.timeStr]);
 
