@@ -27,7 +27,7 @@
 }
 
 .appointment-review-queue__heading h2 {
-    color: var(--espresso-dark);
+    color: var(--gold-dark);
     font: 600 20px var(--font-display);
 }
 
@@ -63,8 +63,17 @@
     min-width: 0;
 }
 
-.appointment-review-queue__info strong {
+.appointment-review-queue__client {
     overflow-wrap: anywhere;
+    color: var(--gold-dark);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.appointment-review-queue__service {
+    overflow-wrap: anywhere;
+    color: var(--ink-soft);
+    font: 500 13px var(--font-display);
 }
 
 .appointment-review-queue__info span,

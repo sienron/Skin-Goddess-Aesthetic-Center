@@ -104,7 +104,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const row = el('article', 'appointment-review-queue__row');
             const info = el('div', 'appointment-review-queue__info');
             info.append(
-                el('strong', '', `${item.client} · ${item.service}`),
+                el('strong', 'appointment-review-queue__client', item.client),
+                el('span', 'appointment-review-queue__service', item.service),
                 el('span', '', `${item.date} · ${item.start} · ${item.assigned_to}`)
             );
             const status = el(
