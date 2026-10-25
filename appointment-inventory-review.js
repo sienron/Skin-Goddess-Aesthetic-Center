@@ -29,6 +29,14 @@ document.addEventListener('DOMContentLoaded', () => {
         return node;
     }
 
+    function formatManilaDateTime(value) {
+        return new Intl.DateTimeFormat('en-US', {
+            dateStyle: 'short',
+            timeStyle: 'medium',
+            timeZone: 'Asia/Manila'
+        }).format(new Date(value));
+    }
+
     async function requestJson(url, options = {}) {
         const response = await fetch(url, {
             ...options,
@@ -284,7 +292,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('appointmentReviewDialogSubtitle').textContent =
                 `${review.appointment.client} · ${review.appointment.date} · ${review.appointment.assigned_to}`;
             dialogMessage.textContent = review.reviewStatus === 'confirmed'
-                ? `Confirmed by ${review.reviewedBy || 'Inventory Officer'}${review.reviewedAt ? ` on ${new Date(review.reviewedAt).toLocaleString()}` : ''}. Editing the selection will reset confirmation.`
+                ? `Confirmed by ${review.reviewedBy || 'Inventory Officer'}${review.reviewedAt ? ` on ${formatManilaDateTime(review.reviewedAt)}` : ''}. Editing the selection will reset confirmation.`
                 : 'Check the suggested products against what was actually used and enter each quantity.';
             dialogMessage.classList.remove('is-error');
             draftDirty = false;

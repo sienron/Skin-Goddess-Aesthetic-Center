@@ -44,7 +44,7 @@ async function migrate() {
         CREATE TABLE IF NOT EXISTS appointment_inventory_deductions (
         appointment_id INTEGER PRIMARY KEY REFERENCES appointments(appointment_id) ON DELETE RESTRICT,
         confirmed_by INTEGER REFERENCES users(user_id) ON DELETE SET NULL,
-        confirmed_at TIMESTAMP NOT NULL DEFAULT NOW()
+        confirmed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
       `);
 
@@ -67,13 +67,13 @@ async function migrate() {
         updated_by INTEGER REFERENCES users(user_id) ON DELETE SET NULL,
         updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
         reviewed_by INTEGER REFERENCES users(user_id) ON DELETE SET NULL,
-        reviewed_at TIMESTAMP
+        reviewed_at TIMESTAMPTZ
         )
       `);
       await client.query(`
         ALTER TABLE appointment_inventory_review_drafts
           ADD COLUMN IF NOT EXISTS reviewed_by INTEGER REFERENCES users(user_id) ON DELETE SET NULL,
-          ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMP
+          ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ
       `);
 
       await client.query(`

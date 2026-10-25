@@ -816,7 +816,7 @@ const saveInventoryReview = async (req, res) => {
           (appointment_id, selected_items, updated_by, updated_at, reviewed_by, reviewed_at)
         VALUES ($1, $2::jsonb, $3::integer, NOW(),
                 CASE WHEN $4::boolean THEN $3::integer ELSE NULL::integer END,
-                CASE WHEN $4::boolean THEN NOW() ELSE NULL::timestamp END)
+                CASE WHEN $4::boolean THEN NOW() ELSE NULL::timestamptz END)
         ON CONFLICT (appointment_id)
         DO UPDATE SET selected_items = EXCLUDED.selected_items,
                       updated_by = EXCLUDED.updated_by,

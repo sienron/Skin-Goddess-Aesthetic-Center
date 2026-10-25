@@ -443,7 +443,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!productReview) return;
     const status = document.getElementById('appointmentProductsReviewStatus');
     status.textContent = productReview.reviewStatus === 'confirmed'
-      ? `Confirmed by ${productReview.reviewedBy || 'a reviewer'}${productReview.reviewedAt ? ` at ${new Date(productReview.reviewedAt).toLocaleString()}` : ''}. Editing this selection will require confirmation again.`
+      ? `Confirmed by ${productReview.reviewedBy || 'a reviewer'}${productReview.reviewedAt ? ` at ${formatManilaDateTime(productReview.reviewedAt)}` : ''}. Editing this selection will require confirmation again.`
       : 'Review pending confirmation.';
   }
 
