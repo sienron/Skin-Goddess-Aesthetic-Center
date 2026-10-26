@@ -240,8 +240,8 @@
         getJson('/api/services'),
         getJson('/api/content/public/pages/services'),
       ]);
-      const section = document.querySelector('.all-services');
-      if (!section || !services.length) return;
+      const sections = document.querySelectorAll('.all-services');
+      if (!sections.length || !services.length) return;
       const pageBlocks = new Map(pageContent.map((block) => [block.key, block]));
       const intro = pageBlocks.get('services_intro');
       if (intro?.isPublished) {
@@ -267,30 +267,44 @@
       });
 
       const existingCards = new Map();
-      section.querySelectorAll('.category-card').forEach((card) => {
+      document.querySelectorAll('.category-card').forEach((card) => {
         const title = card.querySelector('h3')?.textContent.trim().toLowerCase();
         if (title) existingCards.set(title, card);
       });
-      const insertionGrid = section.querySelector('.category-grid:last-of-type') || section.querySelector('.category-grid');
+      const firstSectionCards = new Set(sections[0].querySelectorAll('.category-card'));
+      const categoryAliases = new Map([
+        ['body tightening (bt) / body fat reduction (bfr)', 'body tightening & fat reduction'],
+      ]);
+      const featuredCategories = new Set(
+        [...document.querySelectorAll('.featured-title')]
+          .map((title) => title.textContent.trim().toLowerCase())
+      );
+      const insertionGrid = sections[0].querySelector('.category-grid:last-of-type') || sections[0].querySelector('.category-grid');
       grouped.forEach((items, category) => {
-        const card = existingCards.get(category.toLowerCase());
+        const categoryKey = category.toLowerCase();
+        const card = existingCards.get(categoryAliases.get(categoryKey) || categoryKey);
         const categoryContent = pageContent.find((block) => block.payload?.category === category);
         if (categoryContent && !categoryContent.isPublished) {
           card?.remove();
-          existingCards.delete(category.toLowerCase());
+          if (card) firstSectionCards.delete(card);
+          existingCards.delete(categoryAliases.get(categoryKey) || categoryKey);
           return;
         }
         if (card) {
-          updateServiceCard(card, category, items);
+          const displayCategory = categoryAliases.has(categoryKey)
+            ? card.querySelector('h3')?.textContent.trim() || category
+            : category;
+          updateServiceCard(card, displayCategory, items);
           applyCategoryImage(card, category);
-          existingCards.delete(category.toLowerCase());
-        } else if (insertionGrid) {
+          firstSectionCards.delete(card);
+          existingCards.delete(categoryAliases.get(categoryKey) || categoryKey);
+        } else if (insertionGrid && !featuredCategories.has(categoryKey)) {
           const newCard = createServiceCard(category, items);
           applyCategoryImage(newCard, category);
           insertionGrid.append(newCard);
         }
       });
-      existingCards.forEach((card) => card.remove());
+      firstSectionCards.forEach((card) => card.remove());
       if (location.hash) document.getElementById(decodeURIComponent(location.hash.slice(1)))?.scrollIntoView();
     } catch (error) {
       console.warn('Could not load published services:', error.message);
