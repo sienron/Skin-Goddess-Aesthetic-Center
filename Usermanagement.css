@@ -938,3 +938,65 @@ body.staff-theme-dark #userManagementMain .um-pagination button {
   background: #292a27;
   color: #c9c2b7;
 }
+
+@media (max-width: 640px) {
+  #userManagementMain {
+    padding-top: 82px;
+  }
+
+  #userManagementMain > .um-header {
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  #userManagementMain > .um-header .um-header__title {
+    position: fixed;
+    top: calc(env(safe-area-inset-top, 0px) + 20px);
+    right: 104px;
+    left: 68px;
+    z-index: 101;
+    overflow: hidden;
+    margin: 0;
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1.4;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  #userManagementMain > .um-header .admin-notification-wrap {
+    position: fixed;
+    top: calc(env(safe-area-inset-top, 0px) + 11px);
+    right: 14px;
+    z-index: 112;
+  }
+
+  #userManagementMain > .um-header .admin-notification-btn {
+    width: 42px;
+    height: 42px;
+    border: 1px solid #e8dfce;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 3px 10px rgba(48, 38, 22, 0.08);
+  }
+
+  #userManagementMain > .um-header .admin-notification-dropdown {
+    position: fixed;
+    top: calc(env(safe-area-inset-top, 0px) + 62px);
+    right: 12px;
+    z-index: 113;
+  }
+}
+
+@media (max-width: 520px) {
+  #userManagementMain > .um-header .admin-notification-wrap {
+    right: 10px;
+  }
+}
+
+body.staff-theme-dark #userManagementMain > .um-header .admin-notification-btn {
+  border-color: #4a4942;
+  background: #292a27;
+}
