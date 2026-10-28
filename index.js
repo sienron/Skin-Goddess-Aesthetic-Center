@@ -1,10 +1,12 @@
 require('dotenv').config();
+require('./utils/demoMode').assertValidDemoCustomerConfiguration();
 
 const express = require('express');
 const session = require('express-session');
 const path = require('path');
 const crypto = require('crypto');
 const { DASHBOARD_PER_ROLE } = require('./utils/roleRoutes');
+const { hasRoleAccess } = require('./utils/roleAccess');
 const PgSession = require('connect-pg-simple')(session);
 
 const db = require('./db');
@@ -110,7 +112,7 @@ function requireRole(...allowedRoles) {
       const localDevAccess = process.env.NODE_ENV !== 'production'
         && result.rows[0].dev_access_all === true;
 
-      if (!allowedRoles.includes(currentRole) && !localDevAccess) {
+      if (!hasRoleAccess(currentRole, allowedRoles, localDevAccess)) {
         return res.status(403).send(
           'You are not authorized to access this page.'
         );

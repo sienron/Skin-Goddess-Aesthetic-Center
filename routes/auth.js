@@ -19,6 +19,8 @@ const db = require('../db'); // used to query the database
 const { sendOtpEmail, sendPasswordResetEmail } = require('../utils/mailer'); // for sending actual emails
 const isValidPassword = require('../utils/password');
 const { DASHBOARD_PER_ROLE, STAFF_ROLES } = require('../utils/roleRoutes');
+const { isDemoCustomer, isDemoCustomerAccount } = require('../utils/demoMode');
+const { createPreserveDemoCustomerAccess } = require('../utils/demoCustomerAccess');
 
 const registerLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 5, message: { message: 'Too many registration attempts. Try again later.' } });
 const verifyOtpLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, message: { message: 'Too many verification attempts. Try again later.' } });
@@ -36,6 +38,7 @@ const REMEMBERED_DEVICE_COOKIE_PREFIX = 'sg_remembered_device_';
 const LEGACY_REMEMBERED_DEVICE_COOKIE = 'sg_remembered_device';
 const REMEMBERED_DEVICE_MAX_AGE = 1000 * 60 * 60 * 24 * 30;
 const STAY_SIGNED_IN_MAX_AGE = 1000 * 60 * 60 * 24 * 400;
+const preserveDemoCustomerAccess = createPreserveDemoCustomerAccess(db);
 
 function regenerateSession(req) {
   return new Promise((resolve, reject) => {
@@ -407,12 +410,13 @@ router.post('/login', loginLimiter, async (req, res) => {
       return res.status(403).json({ message: 'Your account role does not have an assigned destination.' });
     }
 
+    const demoCustomerMfaExempt = isDemoCustomer(user);
     const localDevMfaBypass = process.env.NODE_ENV !== 'production'
       && user.mfa_enabled === false;
-    if (localDevMfaBypass) {
+    if (demoCustomerMfaExempt || localDevMfaBypass) {
       await establishAuthenticatedSession(req, user, Boolean(staysignedin));
       return res.status(200).json({
-        message: 'Successful local development login.',
+        message: demoCustomerMfaExempt ? 'Successful login.' : 'Successful local development login.',
         userId: user.user_id,
         role: user.role,
         redirectUrl,
@@ -715,7 +719,7 @@ router.get('/profile', async (req, res) => {
 // ============================================
 // ROUTE: UPDATE PROFILE (name, contact number only — email has its own flow)
 // ============================================
-router.put('/update-profile', async (req, res) => {
+router.put('/update-profile', preserveDemoCustomerAccess, async (req, res) => {
   if (!req.session.userId) {
     return res.status(401).json({ message: 'Not logged in.' });
   }
@@ -744,7 +748,7 @@ router.put('/update-profile', async (req, res) => {
 // ============================================
 // ROUTE: REQUEST EMAIL CHANGE (sends a code to the NEW email)
 // ============================================
-router.post('/request-email-change', emailChangeLimiter, emailChangeCooldownLimiter, async (req, res) => {
+router.post('/request-email-change', emailChangeLimiter, emailChangeCooldownLimiter, preserveDemoCustomerAccess, async (req, res) => {
   if (!req.session.userId) {
     return res.status(401).json({ message: 'Not logged in.' });
   }
@@ -797,7 +801,7 @@ router.post('/request-email-change', emailChangeLimiter, emailChangeCooldownLimi
 // ============================================
 // ROUTE: CONFIRM EMAIL CHANGE (verifies the code, applies the change)
 // ============================================
-router.post('/confirm-email-change', verifyEmailChangeLimiter, async (req, res) => {
+router.post('/confirm-email-change', verifyEmailChangeLimiter, preserveDemoCustomerAccess, async (req, res) => {
   if (!req.session.userId) {
     return res.status(401).json({ message: 'Not logged in.' });
   }
@@ -859,7 +863,7 @@ router.post('/confirm-email-change', verifyEmailChangeLimiter, async (req, res) 
 // ============================================
 // ROUTE: CHANGE PASSWORD (requires current password)
 // ============================================
-router.put('/change-password', async (req, res) => {
+router.put('/change-password', preserveDemoCustomerAccess, async (req, res) => {
   if (!req.session.userId) {
     return res.status(401).json({ message: 'Not logged in.' });
   }
@@ -922,10 +926,13 @@ router.post('/forgot-password', forgotPasswordLimiter, async (req, res) => {
 
   const genericResponse = { message: 'If an account exists for this email, a reset link will be sent.' };
   try {
-    const userResult = await db.query('SELECT user_id, email FROM users WHERE LOWER(email) = $1', [normalizedEmail]);
+    const userResult = await db.query(`
+      SELECT user_id, email, role, mfa_enabled
+      FROM users WHERE LOWER(email) = $1
+    `, [normalizedEmail]);
     const user = userResult.rows[0];
     res.status(200).json(genericResponse);
-    if (user) {
+    if (user && !isDemoCustomerAccount(user)) {
       setImmediate(async () => {
         try {
       const recentTokens = await db.query(`
@@ -1003,12 +1010,19 @@ router.post('/reset-password', forgotPasswordLimiter, async (req, res) => {
 
     // Fetch the user's current password hash so we can check
     // whether the new password is the same as the old one
-    const userResult = await db.query('SELECT password_hash FROM users WHERE user_id = $1', [
+    const userResult = await db.query(`
+      SELECT password_hash, email, role, mfa_enabled
+      FROM users WHERE user_id = $1
+    `, [
       tokenRow.user_id,
     ]);
 
     if (userResult.rows.length === 0) {
       return res.status(404).json({ message: 'Account not found.' });
+    }
+
+    if (isDemoCustomerAccount(userResult.rows[0])) {
+      return res.status(403).json({ message: 'Password resets are disabled for the shared survey account.' });
     }
 
     const currentPasswordHash = userResult.rows[0].password_hash;

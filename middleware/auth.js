@@ -4,6 +4,8 @@
 // identical to what was inline in index.js before.
 
 const db = require('../db');
+const { hasRoleAccess } = require('../utils/roleAccess');
+const { createBlockDemoCustomerPayments } = require('../utils/demoCustomerAccess');
 
 function requireLogin(req, res, next) {
   if (!req.session.userId) {
@@ -39,6 +41,8 @@ async function requireActiveAccount(req, res, next) {
   }
 }
 
+const blockDemoCustomerPayments = createBlockDemoCustomerPayments(db);
+
 function requireRole(...allowedRoles) {
   return async (req, res, next) => {
     if (!req.session.userId) return requireLogin(req, res, next);
@@ -57,7 +61,7 @@ function requireRole(...allowedRoles) {
       req.session.role = currentRole;
       const localDevAccess = process.env.NODE_ENV !== 'production' && result.rows[0].dev_access_all === true;
 
-      if (!allowedRoles.includes(currentRole) && !localDevAccess) {
+      if (!hasRoleAccess(currentRole, allowedRoles, localDevAccess)) {
         if (req.accepts('html') && !req.originalUrl.startsWith('/api/')) {
           return res.status(403).send('You are not authorized to access this page.');
         }
@@ -75,4 +79,4 @@ function requireRole(...allowedRoles) {
   };
 }
 
-module.exports = { requireLogin, requireActiveAccount, requireRole };
+module.exports = { requireLogin, requireActiveAccount, blockDemoCustomerPayments, requireRole };

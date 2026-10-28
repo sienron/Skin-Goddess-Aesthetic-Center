@@ -2,31 +2,18 @@ const express = require('express');
 const router = express.Router();
 const { rateLimit } = require('express-rate-limit');
 const db = require('../db');
-const { requireActiveAccount, requireRole } = require('../middleware/auth');
+const { requireActiveAccount, blockDemoCustomerPayments, requireRole } = require('../middleware/auth');
 const { roleForCategory } = require('../utils/staffRoles');
 const { notifyUser, notifyUsers, notifyRoles } = require('../utils/notifications');
 const { notifyStockTransition } = require('../utils/inventoryNotifications');
 const { recordInventoryTransaction } = require('../utils/inventoryTransactions');
 const { canBookAppointments } = require('../utils/appointmentBookingAccess');
+const { getPayMongoConfig } = require('../utils/paymongoConfig');
+const { loadCustomerAppointmentHistory } = require('../utils/customerAppointmentHistory');
 const { createHmac, randomBytes, timingSafeEqual } = require('crypto');
 const RATING_WINDOW_DAYS = 14;
 const ratingLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, message: { message: 'Too many rating attempts. Try again later.' } });
 const { VALID_SLOTS, CLOSING_TIME, CLOSED_WEEKDAYS, MAX_ADVANCE_DAYS, MIN_BOOKING_LEAD_MINUTES, to24h, from24h, addMinutes, manilaNow, isSlotInPast, isSlotTooSoon } = require('../utils/slots');
-
-function getPayMongoConfig() {
-  const isLive = process.env.NODE_ENV === 'production';
-  const secretKey = isLive
-    ? (process.env.PAYMONGO_LIVE_SECRET_KEY || process.env.PAYMONGO_SK)
-    : (process.env.PAYMONGO_TEST_SECRET_KEY || process.env.PAYMONGO_SK);
-  const webhookSecret = isLive
-    ? process.env.PAYMONGO_LIVE_WEBHOOK_SECRET
-    : process.env.PAYMONGO_TEST_WEBHOOK_SECRET;
-  const keyPrefix = isLive ? 'sk_live_' : 'sk_test_';
-
-  if (!secretKey || !secretKey.startsWith(keyPrefix) || !webhookSecret) return null;
-
-  return { mode: isLive ? 'live' : 'test', isLive, secretKey, webhookSecret };
-}
 
 function payMongoSignatureIsValid(signatureHeader, rawBody, config) {
   if (typeof signatureHeader !== 'string' || !Buffer.isBuffer(rawBody)) return false;
@@ -245,6 +232,7 @@ router.get('/admin', requireRole('admin'), async (req, res) => {
   try {
     const result = await db.query(`
       SELECT a.appointment_id,
+             a.is_demo,
              a.service_id,
              a.aesthetician_id AS assigned_staff_id,
              a.appointment_date::text AS date,
@@ -275,7 +263,7 @@ router.get('/admin', requireRole('admin'), async (req, res) => {
              (
                SELECT COUNT(*)
                FROM appointments previous
-               WHERE previous.user_id = a.user_id
+               WHERE previous.user_id = a.user_id AND previous.is_demo = FALSE
                  AND (previous.appointment_date, previous.appointment_time) < (a.appointment_date, a.appointment_time)
              ) AS previous_appointment_count
       FROM appointments a
@@ -286,6 +274,7 @@ router.get('/admin', requireRole('admin'), async (req, res) => {
       LEFT JOIN appointment_inventory_review_drafts inventory_review
         ON inventory_review.appointment_id = a.appointment_id
       LEFT JOIN users inventory_reviewer ON inventory_reviewer.user_id = inventory_review.reviewed_by
+      WHERE a.is_demo = FALSE
       ORDER BY a.appointment_date ASC, a.appointment_time ASC, a.appointment_id ASC
     `);
     return res.json(result.rows);
@@ -306,6 +295,7 @@ router.post('/admin/advance-started', requireRole('admin'), async (_req, res) =>
       UPDATE appointments
       SET appointment_status = 'in_progress', updated_at = NOW()
       WHERE appointment_status = 'confirmed'
+        AND is_demo = FALSE
         AND appointment_date <= $1::date
         AND (appointment_date < $1::date OR appointment_time <= $2::time)
       RETURNING appointment_id, user_id
@@ -353,7 +343,7 @@ router.put('/admin/:id/edit', requireRole('admin'), async (req, res) => {
       const result = await client.query(`
         SELECT appointment_status, service_id, aesthetician_id, appointment_date::text AS appointment_date,
                appointment_time::text AS appointment_time, appointment_end_time::text AS appointment_end_time,
-               user_id
+               user_id, is_demo
         FROM appointments
         WHERE appointment_id = $1
         FOR UPDATE
@@ -365,6 +355,11 @@ router.put('/admin/:id/edit', requireRole('admin'), async (req, res) => {
       }
 
       const appointment = result.rows[0];
+      if (appointment.is_demo) {
+        const error = new Error('Synthetic survey appointments cannot be changed.');
+        error.statusCode = 403;
+        throw error;
+      }
       const currentStatus = appointment.appointment_status;
       if (['completed', 'cancelled', 'no_show'].includes(currentStatus)) {
         const error = new Error('This appointment can no longer be edited.');
@@ -1067,7 +1062,7 @@ router.post('/admin/:id/rebook', requireRole('admin'), async (req, res) => {
     const created = await db.transaction(async (client) => {
       const originalResult = await client.query(`
         SELECT appointment_id, user_id, walk_in_name, service_id,
-               booked_service_price, booked_reservation_fee, appointment_status
+               booked_service_price, booked_reservation_fee, appointment_status, is_demo
         FROM appointments
         WHERE appointment_id = $1
         FOR UPDATE
@@ -1078,6 +1073,11 @@ router.post('/admin/:id/rebook', requireRole('admin'), async (req, res) => {
         throw error;
       }
       const original = originalResult.rows[0];
+      if (original.is_demo) {
+        const error = new Error('Synthetic survey appointments cannot be rebooked.');
+        error.statusCode = 409;
+        throw error;
+      }
       if (!['completed', 'cancelled', 'no_show'].includes(original.appointment_status)) {
         const error = new Error('Only completed, cancelled, or no-show appointments can be rebooked.');
         error.statusCode = 400;
@@ -1730,10 +1730,10 @@ router.get('/mine', requireActiveAccount, async (req, res) => {
 
     const isAesthetician = ['aesthetician', 'nail_tech'].includes(userResult.rows[0].role);
 
-    const appointmentsQuery = isAesthetician
-      ? `
+    const appointmentsQuery = `
         SELECT a.appointment_id,
-               a.appointment_date::text AS date,
+         a.is_demo,
+         a.appointment_date::text AS date,
                a.appointment_time::text AS start,
                a.appointment_end_time::text AS end,
                a.appointment_status AS status,
@@ -1762,42 +1762,11 @@ router.get('/mine', requireActiveAccount, async (req, res) => {
         JOIN users aesthetician ON aesthetician.user_id = a.aesthetician_id
         WHERE a.aesthetician_id = $1
         ORDER BY a.appointment_date ASC, a.appointment_time ASC
-      `
-      : `
-        SELECT a.appointment_id,
-               a.appointment_date::text AS date,
-               a.appointment_time::text AS start,
-               a.appointment_end_time::text AS end,
-               a.appointment_status AS status,
-               a.payment_status,
-               s.service_name AS service,
-               a.booked_service_price AS fee,
-               a.booked_reservation_fee AS deposit_amount,
-               a.cancellation_request_status,
-               a.cancellation_reason,
-               a.cancellation_description,
-               a.reschedule_request_status,
-               a.reschedule_requested_date::text AS reschedule_requested_date,
-               a.reschedule_requested_time::text AS reschedule_requested_time,
-               a.reschedule_reason,
-               a.reschedule_description,
-               COALESCE(CONCAT(c.first_name, ' ', c.last_name), 'Client') AS client,
-               COALESCE(CONCAT(aesthetician.first_name, ' ', aesthetician.last_name), 'Aesthetician') AS aesthetician,
-               c.contact_number AS contact,
-               NULL::text AS remarks,
-               a.appointment_id AS apptNumber,
-               ar.rating AS my_rating,
-               ar.comment AS my_rating_comment
-        FROM appointments a
-        JOIN services s ON s.service_id = a.service_id
-        JOIN users c ON c.user_id = a.user_id
-        JOIN users aesthetician ON aesthetician.user_id = a.aesthetician_id
-        LEFT JOIN appointment_ratings ar ON ar.appointment_id = a.appointment_id
-        WHERE a.user_id = $1
-        ORDER BY a.appointment_date ASC, a.appointment_time ASC
       `;
 
-    const result = await db.query(appointmentsQuery, [req.session.userId]);
+    const result = isAesthetician
+      ? await db.query(appointmentsQuery, [req.session.userId])
+      : await loadCustomerAppointmentHistory(db, req.session.userId);
 
     const appointments = result.rows.map((row) => ({
       ...row,
@@ -1849,7 +1818,7 @@ router.post('/:id/cancel', requireRole('admin'), async (req, res) => {
 
   try {
     const result = await db.query(`
-            SELECT a.appointment_id, a.user_id, a.aesthetician_id,
+            SELECT a.appointment_id, a.user_id, a.aesthetician_id, a.is_demo,
               a.appointment_date::text AS appointment_date,
               a.appointment_time::text AS appointment_time, a.appointment_status, a.payment_status,
               s.service_name
@@ -1860,6 +1829,9 @@ router.post('/:id/cancel', requireRole('admin'), async (req, res) => {
     if (result.rows.length === 0) return res.status(404).json({ message: 'Appointment not found.' });
 
     const appointment = result.rows[0];
+    if (appointment.is_demo) {
+      return res.status(409).json({ message: 'Synthetic survey appointments cannot be changed.' });
+    }
     const isInProgress = appointment.appointment_status === 'in_progress';
     if (!['confirmed', 'in_progress'].includes(appointment.appointment_status)) {
       return res.status(400).json({ message: 'Only confirmed or In Progress appointments can be cancelled.' });
@@ -1909,7 +1881,7 @@ router.post('/:id/cancellation-request', requireActiveAccount, async (req, res) 
   try {
     const result = await db.query(`
       SELECT appointment_id, aesthetician_id, user_id, appointment_status,
-             cancellation_request_status, appointment_date::text AS appointment_date,
+             cancellation_request_status, appointment_date::text AS appointment_date, is_demo,
              appointment_time::text AS appointment_time
       FROM appointments WHERE appointment_id = $1
     `, [appointmentId]);
@@ -1918,6 +1890,9 @@ router.post('/:id/cancellation-request', requireActiveAccount, async (req, res) 
     const isAssignedAesthetician = appointment.aesthetician_id === req.session.userId;
     const isClient = appointment.user_id === req.session.userId;
     if (!isAssignedAesthetician && !isClient) return res.status(403).json({ message: 'Only the assigned aesthetician or client can request cancellation.' });
+    if (appointment.is_demo) {
+      return res.status(403).json({ message: 'Synthetic survey appointments cannot be changed.' });
+    }
     if (appointment.appointment_status !== 'confirmed') return res.status(400).json({ message: 'Only confirmed appointments can be cancelled.' });
     if (appointment.cancellation_request_status) return res.status(409).json({ message: 'A cancellation request has already been submitted for this appointment.' });
     if (isClient && minutesUntil(appointment.appointment_date, appointment.appointment_time, manilaNow()) < 24 * 60) {
@@ -2061,11 +2036,16 @@ router.post('/:id/start', requireActiveAccount, async (req, res) => {
   if (!appointmentId) return res.status(400).json({ message: 'Choose a valid appointment.' });
   try {
     const result = await db.query(`
-      SELECT appointment_date::text AS appointment_date, appointment_status
+      SELECT appointment_date::text AS appointment_date, appointment_status, is_demo
       FROM appointments
       WHERE appointment_id = $1 AND aesthetician_id = $2
     `, [appointmentId, req.session.userId]);
     if (result.rows.length === 0) return res.status(404).json({ message: 'Appointment not found.' });
+    if (result.rows[0].is_demo) {
+      return res.status(403).json({
+        message: 'Synthetic survey appointments cannot be changed.'
+      });
+    }
     if (result.rows[0].appointment_date !== manilaNow().dateStr) return res.status(400).json({ message: 'An appointment can only be started on its scheduled date.' });
     if (result.rows[0].appointment_status !== 'confirmed') return res.status(400).json({ message: 'Only confirmed appointments can be started.' });
     const updated = await db.query(`
@@ -2113,13 +2093,16 @@ router.post('/:id/rating', ratingLimiter, requireActiveAccount, async (req, res)
 
   try {
     const result = await db.query(`
-      SELECT appointment_id, user_id, aesthetician_id, service_id, appointment_status
+      SELECT appointment_id, user_id, aesthetician_id, service_id, appointment_status, is_demo
       FROM appointments
       WHERE appointment_id = $1 AND user_id = $2
     `, [appointmentId, req.session.userId]);
     if (result.rows.length === 0) return res.status(404).json({ message: 'Appointment not found.' });
 
     const appointment = result.rows[0];
+    if (appointment.is_demo) {
+      return res.status(403).json({ message: 'Synthetic survey appointments cannot be rated.' });
+    }
     if (appointment.appointment_status !== 'completed') {
       return res.status(400).json({ message: 'Only completed appointments can be rated.' });
     }
@@ -2166,6 +2149,7 @@ router.post('/:id/no-show', requireActiveAccount, async (req, res) => {
       SET appointment_status = 'no_show'
       WHERE appointment_id = $1 AND aesthetician_id = $2
         AND appointment_status = 'confirmed'
+        AND is_demo = FALSE
         AND appointment_date = (NOW() AT TIME ZONE 'Asia/Manila')::date
         AND appointment_time <= (NOW() AT TIME ZONE 'Asia/Manila')::time
       RETURNING user_id, appointment_id
@@ -2200,7 +2184,7 @@ router.post('/:id/reschedule', requireActiveAccount, async (req, res) => {
   try {
     const result = await db.query(`
             SELECT a.appointment_id, a.user_id, a.aesthetician_id, a.service_id,
-              a.appointment_status, a.reschedule_request_status, s.duration_minutes,
+              a.appointment_status, a.reschedule_request_status, a.is_demo, s.duration_minutes,
               s.service_name
       FROM appointments a
       JOIN services s ON s.service_id = a.service_id
@@ -2217,6 +2201,9 @@ router.post('/:id/reschedule', requireActiveAccount, async (req, res) => {
     const isClient = appointment.user_id === req.session.userId;
     if (!isAdmin && !isAssignedAesthetician && !isClient) {
       return res.status(403).json({ message: 'Only an admin, the assigned aesthetician, or client can reschedule this appointment.' });
+    }
+    if (appointment.is_demo) {
+      return res.status(403).json({ message: 'Synthetic survey appointments cannot be changed.' });
     }
     if (appointment.appointment_status !== 'confirmed') {
       return res.status(400).json({ message: 'Only confirmed appointments can be rescheduled.' });
@@ -2294,7 +2281,7 @@ router.post('/:id/reschedule', requireActiveAccount, async (req, res) => {
   }
 });
 
-router.post('/paymongo/checkout-session', requireActiveAccount, async (req, res) => {
+router.post('/paymongo/checkout-session', requireActiveAccount, blockDemoCustomerPayments, async (req, res) => {
   const config = getPayMongoConfig();
   if (!config) return res.status(503).json({ message: 'PayMongo is not configured for this environment.' });
 
@@ -2403,7 +2390,7 @@ router.post('/paymongo/checkout-session', requireActiveAccount, async (req, res)
   }
 });
 
-router.get('/paymongo/status/:referenceNumber', requireActiveAccount, async (req, res) => {
+router.get('/paymongo/status/:referenceNumber', requireActiveAccount, blockDemoCustomerPayments, async (req, res) => {
   const { referenceNumber } = req.params;
   if (!validPaymentReference(referenceNumber)) return res.status(400).json({ message: 'Choose a valid checkout reference.' });
 
@@ -2427,7 +2414,7 @@ router.get('/paymongo/status/:referenceNumber', requireActiveAccount, async (req
   }
 });
 
-router.post('/paymongo/confirm', requireActiveAccount, async (req, res) => {
+router.post('/paymongo/confirm', requireActiveAccount, blockDemoCustomerPayments, async (req, res) => {
   const body = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
   const referenceNumber = body.referenceNumber;
   if (!validPaymentReference(referenceNumber)) return res.status(400).json({ message: 'Choose a valid checkout reference.' });

@@ -174,7 +174,7 @@ function endpoint(handler) {
 
 const salesUnion = `
   SELECT a.appointment_date AS sale_date, a.booked_service_price::numeric AS amount
-  FROM appointments a WHERE a.appointment_status = 'completed'
+  FROM appointments a WHERE a.is_demo = FALSE AND a.appointment_status = 'completed'
     AND a.appointment_date BETWEEN $1::date AND $2::date
   UNION ALL
   SELECT (p.created_at AT TIME ZONE 'Asia/Manila')::date, p.amount
@@ -184,7 +184,7 @@ const salesUnion = `
   SELECT a.appointment_date, p.amount
   FROM appointments a JOIN payments p ON p.appointment_id = a.appointment_id
   WHERE p.payment_type = 'reservation' AND p.status = 'posted'
-    AND ${RETAINED_DEPOSIT_REVENUE} AND a.appointment_date BETWEEN $1::date AND $2::date
+    AND a.is_demo = FALSE AND ${RETAINED_DEPOSIT_REVENUE} AND a.appointment_date BETWEEN $1::date AND $2::date
 `;
 
 async function outstandingBalance() {
@@ -194,7 +194,7 @@ async function outstandingBalance() {
       SELECT appointment_id, SUM(amount) AS paid FROM payments
       WHERE status = 'posted' AND ($1::boolean OR payment_type <> 'reservation') GROUP BY appointment_id
     ) p ON p.appointment_id = a.appointment_id
-    WHERE a.appointment_status = 'completed'
+    WHERE a.is_demo = FALSE AND a.appointment_status = 'completed'
   `, [DEPOSIT_DEDUCTED_FROM_PRICE]);
   return Number(result.rows[0].amount || 0);
 }
@@ -202,13 +202,15 @@ async function outstandingBalance() {
 async function reportData(from, to) {
   const [sales, collected, expenses, daily, onlineReservations, categoryRows, deposits, services, expenseCategories] = await Promise.all([
     db.query(`SELECT COALESCE(SUM(amount), 0)::float8 AS amount FROM (${salesUnion}) sale_rows`, [from, to, NO_SHOW_DEPOSIT_IS_INCOME]),
-    db.query(`SELECT COALESCE(SUM(amount), 0)::float8 AS amount FROM payments WHERE status = 'posted' AND (created_at AT TIME ZONE 'Asia/Manila')::date BETWEEN $1::date AND $2::date`, [from, to]),
+    db.query(`SELECT COALESCE(SUM(p.amount), 0)::float8 AS amount FROM payments p LEFT JOIN appointments a ON a.appointment_id = p.appointment_id WHERE p.status = 'posted' AND COALESCE(a.is_demo, FALSE) = FALSE AND (p.created_at AT TIME ZONE 'Asia/Manila')::date BETWEEN $1::date AND $2::date`, [from, to]),
     db.query(`SELECT COALESCE(SUM(amount), 0)::float8 AS amount FROM expenses WHERE voided_at IS NULL AND expense_date BETWEEN $1::date AND $2::date`, [from, to]),
     db.query(`
       SELECT day::date::text AS date, COALESCE(c.total, 0)::float8 AS collected, COALESCE(e.total, 0)::float8 AS expenses
       FROM generate_series($1::date, $2::date, '1 day') day
-      LEFT JOIN (SELECT (created_at AT TIME ZONE 'Asia/Manila')::date AS date, SUM(amount) AS total
-        FROM payments WHERE status = 'posted' AND (created_at AT TIME ZONE 'Asia/Manila')::date BETWEEN $1::date AND $2::date GROUP BY 1) c ON c.date = day::date
+      LEFT JOIN (SELECT (p.created_at AT TIME ZONE 'Asia/Manila')::date AS date, SUM(p.amount) AS total
+        FROM payments p LEFT JOIN appointments a ON a.appointment_id = p.appointment_id
+        WHERE p.status = 'posted' AND COALESCE(a.is_demo, FALSE) = FALSE
+          AND (p.created_at AT TIME ZONE 'Asia/Manila')::date BETWEEN $1::date AND $2::date GROUP BY 1) c ON c.date = day::date
       LEFT JOIN (SELECT expense_date AS date, SUM(amount) AS total FROM expenses WHERE voided_at IS NULL AND expense_date BETWEEN $1::date AND $2::date GROUP BY 1) e ON e.date = day::date
       ORDER BY day
     `, [from, to]),
@@ -217,6 +219,7 @@ async function reportData(from, to) {
       FROM generate_series($1::date, $2::date, '1 day') day
       LEFT JOIN payments p ON (p.created_at AT TIME ZONE 'Asia/Manila')::date = day::date
         AND p.payment_type = 'reservation' AND p.status = 'posted'
+        AND EXISTS (SELECT 1 FROM appointments a WHERE a.appointment_id = p.appointment_id AND a.is_demo = FALSE)
         AND EXISTS (
           SELECT 1
           FROM paymongo_checkout_sessions checkout
@@ -227,18 +230,18 @@ async function reportData(from, to) {
     `, [from, to]),
     db.query(`SELECT category, SUM(amount)::float8 AS amount FROM (
       SELECT s.category, a.booked_service_price::numeric AS amount FROM appointments a JOIN services s ON s.service_id = a.service_id
-      WHERE a.appointment_status = 'completed' AND a.appointment_date BETWEEN $1::date AND $2::date
+      WHERE a.is_demo = FALSE AND a.appointment_status = 'completed' AND a.appointment_date BETWEEN $1::date AND $2::date
       UNION ALL
       SELECT s.category, p.amount FROM appointments a JOIN services s ON s.service_id = a.service_id JOIN payments p ON p.appointment_id = a.appointment_id
-      WHERE p.payment_type = 'reservation' AND p.status = 'posted' AND ${RETAINED_DEPOSIT_REVENUE} AND a.appointment_date BETWEEN $1::date AND $2::date
+      WHERE p.payment_type = 'reservation' AND p.status = 'posted' AND a.is_demo = FALSE AND ${RETAINED_DEPOSIT_REVENUE} AND a.appointment_date BETWEEN $1::date AND $2::date
     ) revenue GROUP BY category ORDER BY amount DESC`, [from, to, NO_SHOW_DEPOSIT_IS_INCOME]),
-    db.query(`SELECT CASE WHEN p.status = 'refunded' THEN 'refunded' WHEN p.status = 'reversed' THEN 'reversed' WHEN a.appointment_status = 'no_show' OR (a.appointment_status = 'cancelled' AND POSITION('[DEPOSIT_FORFEITED]' IN COALESCE(p.note, '')) > 0) THEN 'forfeited' ELSE 'paid' END AS status, COUNT(*)::int AS count, SUM(p.amount)::float8 AS amount FROM payments p LEFT JOIN appointments a ON a.appointment_id = p.appointment_id WHERE p.payment_type = 'reservation' AND (p.created_at AT TIME ZONE 'Asia/Manila')::date BETWEEN $1::date AND $2::date GROUP BY 1 ORDER BY 1`, [from, to]),
+    db.query(`SELECT CASE WHEN p.status = 'refunded' THEN 'refunded' WHEN p.status = 'reversed' THEN 'reversed' WHEN a.appointment_status = 'no_show' OR (a.appointment_status = 'cancelled' AND POSITION('[DEPOSIT_FORFEITED]' IN COALESCE(p.note, '')) > 0) THEN 'forfeited' ELSE 'paid' END AS status, COUNT(*)::int AS count, SUM(p.amount)::float8 AS amount FROM payments p LEFT JOIN appointments a ON a.appointment_id = p.appointment_id WHERE p.payment_type = 'reservation' AND a.is_demo = FALSE AND (p.created_at AT TIME ZONE 'Asia/Manila')::date BETWEEN $1::date AND $2::date GROUP BY 1 ORDER BY 1`, [from, to]),
     db.query(`SELECT service, SUM(amount)::float8 AS amount, COUNT(*)::int AS count FROM (
       SELECT s.service_name AS service, a.booked_service_price::numeric AS amount FROM appointments a JOIN services s ON s.service_id = a.service_id
-      WHERE a.appointment_status = 'completed' AND a.appointment_date BETWEEN $1::date AND $2::date
+      WHERE a.is_demo = FALSE AND a.appointment_status = 'completed' AND a.appointment_date BETWEEN $1::date AND $2::date
       UNION ALL
       SELECT s.service_name, p.amount FROM appointments a JOIN services s ON s.service_id = a.service_id JOIN payments p ON p.appointment_id = a.appointment_id
-      WHERE p.payment_type = 'reservation' AND p.status = 'posted' AND ${RETAINED_DEPOSIT_REVENUE} AND a.appointment_date BETWEEN $1::date AND $2::date
+      WHERE p.payment_type = 'reservation' AND p.status = 'posted' AND a.is_demo = FALSE AND ${RETAINED_DEPOSIT_REVENUE} AND a.appointment_date BETWEEN $1::date AND $2::date
     ) revenue GROUP BY service ORDER BY amount DESC LIMIT 5`, [from, to, NO_SHOW_DEPOSIT_IS_INCOME]),
     db.query(`SELECT category, SUM(amount)::float8 AS amount, COUNT(*)::int AS count FROM expenses WHERE voided_at IS NULL AND expense_date BETWEEN $1::date AND $2::date GROUP BY category ORDER BY amount DESC`, [from, to]),
   ]);
@@ -269,8 +272,8 @@ router.get('/summary', endpoint(async (req, res) => {
   const report = await reportData(from, to);
   const today = manilaDate();
   const [todayResult, noShows] = await Promise.all([
-    db.query(`SELECT COALESCE(SUM(amount), 0)::float8 AS amount FROM payments WHERE status = 'posted' AND (created_at AT TIME ZONE 'Asia/Manila')::date = $1::date`, [today]),
-    db.query(`SELECT COUNT(*)::int AS count FROM appointments WHERE appointment_status = 'no_show' AND appointment_date BETWEEN date_trunc('week', $1::date)::date AND date_trunc('week', $1::date)::date + 6`, [today]),
+    db.query(`SELECT COALESCE(SUM(p.amount), 0)::float8 AS amount FROM payments p LEFT JOIN appointments a ON a.appointment_id = p.appointment_id WHERE p.status = 'posted' AND COALESCE(a.is_demo, FALSE) = FALSE AND (p.created_at AT TIME ZONE 'Asia/Manila')::date = $1::date`, [today]),
+    db.query(`SELECT COUNT(*)::int AS count FROM appointments WHERE is_demo = FALSE AND appointment_status = 'no_show' AND appointment_date BETWEEN date_trunc('week', $1::date)::date AND date_trunc('week', $1::date)::date + 6`, [today]),
   ]);
   res.json({ ...report.income_statement, today_collections: Number(todayResult.rows[0].amount), no_shows_this_week: Number(noShows.rows[0].count), from, to });
 }));
@@ -288,8 +291,10 @@ router.get('/activity', endpoint(async (req, res) => {
         payment.method::text AS method, payment.amount::float8 AS amount,
         payment.status::text AS status
       FROM payments payment
+      LEFT JOIN appointments appointment ON appointment.appointment_id = payment.appointment_id
       WHERE payment.created_at >= ($1::date::timestamp AT TIME ZONE 'Asia/Manila')
         AND payment.created_at < (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Manila')
+        AND COALESCE(appointment.is_demo, FALSE) = FALSE
       UNION ALL
       SELECT expense.expense_date AS activity_date, expense.created_at AS sort_at,
         expense.expense_id AS source_id, 'expense'::text AS activity_type,
@@ -332,6 +337,7 @@ router.get('/appointment-trends', endpoint(async (req, res) => {
       ON appointment.appointment_date >= months.month_start
       AND appointment.appointment_date < months.month_start + INTERVAL '1 month'
       AND appointment.appointment_date <= $2::date
+      AND appointment.is_demo = FALSE
       AND appointment.appointment_status IN ('confirmed', 'in_progress', 'completed', 'cancelled', 'no_show')
     GROUP BY months.month_start
     ORDER BY months.month_start
@@ -384,11 +390,13 @@ router.get('/cash-closing', endpoint(async (req, res) => {
   if (expectedAmount === undefined) {
     const expected = await db.query(`
       SELECT COALESCE(SUM(amount), 0)::numeric(14, 2)::float8 AS expected_amount
-      FROM payments
-      WHERE method = 'cash'
-        AND status = 'posted'
-        AND created_at >= ($1::date::timestamp AT TIME ZONE 'Asia/Manila')
-        AND created_at < (($1::date + 1)::timestamp AT TIME ZONE 'Asia/Manila')
+      FROM payments payment
+      LEFT JOIN appointments appointment ON appointment.appointment_id = payment.appointment_id
+      WHERE payment.method = 'cash'
+        AND payment.status = 'posted'
+        AND COALESCE(appointment.is_demo, FALSE) = FALSE
+        AND payment.created_at >= ($1::date::timestamp AT TIME ZONE 'Asia/Manila')
+        AND payment.created_at < (($1::date + 1)::timestamp AT TIME ZONE 'Asia/Manila')
     `, [businessDate]);
     expectedAmount = Number(expected.rows[0].expected_amount);
   }
@@ -443,11 +451,13 @@ router.post('/cash-closing', endpoint(async (req, res) => {
       await lockCashBusinessDate(client, businessDate);
       const expected = await client.query(`
         SELECT COALESCE(SUM(amount), 0)::numeric(14, 2)::text AS expected_amount
-        FROM payments
-        WHERE method = 'cash'
-          AND status = 'posted'
-          AND created_at >= ($1::date::timestamp AT TIME ZONE 'Asia/Manila')
-          AND created_at < (($1::date + 1)::timestamp AT TIME ZONE 'Asia/Manila')
+        FROM payments payment
+        LEFT JOIN appointments appointment ON appointment.appointment_id = payment.appointment_id
+        WHERE payment.method = 'cash'
+          AND payment.status = 'posted'
+          AND COALESCE(appointment.is_demo, FALSE) = FALSE
+          AND payment.created_at >= ($1::date::timestamp AT TIME ZONE 'Asia/Manila')
+          AND payment.created_at < (($1::date + 1)::timestamp AT TIME ZONE 'Asia/Manila')
       `, [businessDate]);
       const result = await client.query(`
         INSERT INTO cash_closings
@@ -493,7 +503,7 @@ router.get('/monthly', endpoint(async (req, res) => {
     : new Date(Date.UTC(endYear, endMonth - months, 1)).toISOString().slice(0, 10);
   const [sales, expenses] = await Promise.all([
     db.query(`SELECT to_char(month, 'YYYY-MM') AS month, SUM(amount)::float8 AS amount FROM (
-      SELECT date_trunc('month', appointment_date)::date AS month, booked_service_price::numeric AS amount FROM appointments WHERE appointment_status = 'completed' AND appointment_date BETWEEN $1::date AND $2::date
+      SELECT date_trunc('month', appointment_date)::date AS month, booked_service_price::numeric AS amount FROM appointments WHERE is_demo = FALSE AND appointment_status = 'completed' AND appointment_date BETWEEN $1::date AND $2::date
       UNION ALL SELECT date_trunc('month', created_at AT TIME ZONE 'Asia/Manila')::date, amount FROM payments WHERE payment_type = 'product_sale' AND status = 'posted' AND (created_at AT TIME ZONE 'Asia/Manila')::date BETWEEN $1::date AND $2::date
       UNION ALL SELECT date_trunc('month', a.appointment_date)::date, p.amount FROM appointments a JOIN payments p ON p.appointment_id = a.appointment_id WHERE p.payment_type = 'reservation' AND p.status = 'posted' AND ${RETAINED_DEPOSIT_REVENUE} AND a.appointment_date BETWEEN $1::date AND $2::date
     ) s GROUP BY month`, [start, range.to, NO_SHOW_DEPOSIT_IS_INCOME]),
@@ -511,14 +521,14 @@ router.get('/monthly', endpoint(async (req, res) => {
 
 router.get('/daily', endpoint(async (req, res) => {
   const { from, to } = dateRange(req.query);
-  const result = await db.query(`SELECT day::date::text AS date, COALESCE(SUM(p.amount), 0)::float8 AS collected FROM generate_series($1::date, $2::date, '1 day') day LEFT JOIN payments p ON (p.created_at AT TIME ZONE 'Asia/Manila')::date = day::date AND p.status = 'posted' GROUP BY day ORDER BY day`, [from, to]);
+  const result = await db.query(`SELECT day::date::text AS date, COALESCE(SUM(p.amount), 0)::float8 AS collected FROM generate_series($1::date, $2::date, '1 day') day LEFT JOIN payments p ON (p.created_at AT TIME ZONE 'Asia/Manila')::date = day::date AND p.status = 'posted' AND NOT EXISTS (SELECT 1 FROM appointments a WHERE a.appointment_id = p.appointment_id AND a.is_demo = TRUE) GROUP BY day ORDER BY day`, [from, to]);
   res.json(result.rows.map((row) => ({ ...row, collected: Number(row.collected) })));
 }));
 
 router.get('/by-method', endpoint(async (req, res) => {
   const { from, to } = dateRange(req.query);
   const values = [from, to];
-  const where = ["p.status = 'posted'", "(p.created_at AT TIME ZONE 'Asia/Manila')::date BETWEEN $1::date AND $2::date"];
+  const where = ["p.status = 'posted'", "(p.created_at AT TIME ZONE 'Asia/Manila')::date BETWEEN $1::date AND $2::date", 'COALESCE(a.is_demo, FALSE) = FALSE'];
   if (req.query.type) {
     if (!PAYMENT_TYPES.includes(req.query.type)) throw new ApiError(400, 'Invalid payment type.');
     values.push(req.query.type); where.push(`p.payment_type = $${values.length}`);
@@ -537,7 +547,7 @@ router.get('/by-method', endpoint(async (req, res) => {
 
 router.get('/by-payment-type', endpoint(async (req, res) => {
   const { from, to } = dateRange(req.query);
-  const result = await db.query(`SELECT payment_type, SUM(amount)::float8 AS amount, COUNT(*)::int AS count FROM payments WHERE status = 'posted' AND (created_at AT TIME ZONE 'Asia/Manila')::date BETWEEN $1::date AND $2::date GROUP BY payment_type ORDER BY amount DESC`, [from, to]);
+  const result = await db.query(`SELECT p.payment_type, SUM(p.amount)::float8 AS amount, COUNT(*)::int AS count FROM payments p LEFT JOIN appointments a ON a.appointment_id = p.appointment_id WHERE p.status = 'posted' AND COALESCE(a.is_demo, FALSE) = FALSE AND (p.created_at AT TIME ZONE 'Asia/Manila')::date BETWEEN $1::date AND $2::date GROUP BY p.payment_type ORDER BY amount DESC`, [from, to]);
   res.json(result.rows);
 }));
 
@@ -546,10 +556,10 @@ router.get('/by-service', endpoint(async (req, res) => {
   const { limit } = pageValues({ limit: req.query.limit }, 5);
   const result = await db.query(`SELECT service, SUM(amount)::float8 AS amount, COUNT(*)::int AS count FROM (
     SELECT s.service_name AS service, a.booked_service_price::numeric AS amount FROM appointments a JOIN services s ON s.service_id = a.service_id
-    WHERE a.appointment_status = 'completed' AND a.appointment_date BETWEEN $1::date AND $2::date
+    WHERE a.is_demo = FALSE AND a.appointment_status = 'completed' AND a.appointment_date BETWEEN $1::date AND $2::date
     UNION ALL
     SELECT s.service_name, p.amount FROM appointments a JOIN services s ON s.service_id = a.service_id JOIN payments p ON p.appointment_id = a.appointment_id
-    WHERE p.payment_type = 'reservation' AND p.status = 'posted' AND ${RETAINED_DEPOSIT_REVENUE} AND a.appointment_date BETWEEN $1::date AND $2::date
+    WHERE p.payment_type = 'reservation' AND p.status = 'posted' AND a.is_demo = FALSE AND ${RETAINED_DEPOSIT_REVENUE} AND a.appointment_date BETWEEN $1::date AND $2::date
   ) revenue GROUP BY service ORDER BY amount DESC LIMIT $4`, [from, to, NO_SHOW_DEPOSIT_IS_INCOME, limit]);
   res.json(result.rows);
 }));
@@ -558,10 +568,10 @@ router.get('/by-service-category', endpoint(async (req, res) => {
   const { from, to } = dateRange(req.query);
   const result = await db.query(`SELECT category, SUM(amount)::float8 AS amount FROM (
     SELECT s.category, a.booked_service_price::numeric AS amount FROM appointments a JOIN services s ON s.service_id = a.service_id
-    WHERE a.appointment_status = 'completed' AND a.appointment_date BETWEEN $1::date AND $2::date
+    WHERE a.is_demo = FALSE AND a.appointment_status = 'completed' AND a.appointment_date BETWEEN $1::date AND $2::date
     UNION ALL
     SELECT s.category, p.amount FROM appointments a JOIN services s ON s.service_id = a.service_id JOIN payments p ON p.appointment_id = a.appointment_id
-    WHERE p.payment_type = 'reservation' AND p.status = 'posted' AND ${RETAINED_DEPOSIT_REVENUE} AND a.appointment_date BETWEEN $1::date AND $2::date
+    WHERE p.payment_type = 'reservation' AND p.status = 'posted' AND a.is_demo = FALSE AND ${RETAINED_DEPOSIT_REVENUE} AND a.appointment_date BETWEEN $1::date AND $2::date
   ) revenue GROUP BY category ORDER BY amount DESC`, [from, to, NO_SHOW_DEPOSIT_IS_INCOME]);
   const categories = result.rows.map((row) => ({ ...row, amount: Number(row.amount) }));
   const top = categories.slice(0, 4);
@@ -618,7 +628,7 @@ router.get('/expenses/machine-trend', endpoint(async (req, res) => {
 
 router.get('/deposits', endpoint(async (req, res) => {
   const { from, to } = dateRange(req.query);
-  const result = await db.query(`SELECT p.payment_id, p.appointment_id, p.amount::float8 AS amount, p.method, p.reference_no, p.note, p.status AS payment_status, (p.created_at AT TIME ZONE 'Asia/Manila')::date::text AS payment_date, a.appointment_status, a.appointment_date::text AS appointment_date, COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Client') AS client FROM payments p LEFT JOIN appointments a ON a.appointment_id = p.appointment_id LEFT JOIN users c ON c.user_id = a.user_id WHERE p.payment_type = 'reservation' AND (p.created_at AT TIME ZONE 'Asia/Manila')::date BETWEEN $1::date AND $2::date ORDER BY p.created_at DESC`, [from, to]);
+  const result = await db.query(`SELECT p.payment_id, p.appointment_id, p.amount::float8 AS amount, p.method, p.reference_no, p.note, p.status AS payment_status, (p.created_at AT TIME ZONE 'Asia/Manila')::date::text AS payment_date, a.appointment_status, a.appointment_date::text AS appointment_date, COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Client') AS client FROM payments p LEFT JOIN appointments a ON a.appointment_id = p.appointment_id LEFT JOIN users c ON c.user_id = a.user_id WHERE p.payment_type = 'reservation' AND a.is_demo = FALSE AND (p.created_at AT TIME ZONE 'Asia/Manila')::date BETWEEN $1::date AND $2::date ORDER BY p.created_at DESC`, [from, to]);
   res.json(result.rows.map((row) => ({
     ...row,
     deposit_status: row.payment_status === 'refunded'
@@ -635,7 +645,7 @@ router.get('/deposits', endpoint(async (req, res) => {
 router.get('/payments/:id', endpoint(async (req, res) => {
   dateRange(req.query);
   const paymentId = idValue(req.params.id, 'Payment ID');
-  const result = await financeQuery(`SELECT p.payment_id, p.appointment_id, p.payment_type, p.amount::float8 AS amount, p.method, p.reference_no, p.note, p.status, (p.created_at AT TIME ZONE 'Asia/Manila')::date::text AS payment_date, CONCAT('SG-RCT-', TO_CHAR(p.created_at AT TIME ZONE 'Asia/Manila', 'YYYY'), '-', LPAD(p.payment_id::text, 8, '0')) AS receipt_number, a.appointment_date::text AS appointment_date, a.appointment_status, a.booked_service_price::float8 AS service_price, COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Product sale') AS client, c.email, CASE WHEN p.payment_type = 'product_sale' THEN CASE WHEN sale.payment_id IS NOT NULL THEN CONCAT(sale.product_name, ' × ', sale.quantity) ELSE COALESCE(p.note, p.reference_no, 'Product sale') END ELSE s.service_name END AS service, sale.quantity AS product_quantity, sale.unit_price::float8 AS product_unit_price, reversal.reason AS reversal_reason, reversal.reversed_by, reversal.reversed_at FROM payments p LEFT JOIN appointments a ON a.appointment_id = p.appointment_id LEFT JOIN users c ON c.user_id = a.user_id LEFT JOIN services s ON s.service_id = a.service_id LEFT JOIN product_sale_details sale ON sale.payment_id = p.payment_id LEFT JOIN payment_reversals reversal ON reversal.payment_id = p.payment_id WHERE p.payment_id = $1`, [paymentId]);
+  const result = await financeQuery(`SELECT p.payment_id, p.appointment_id, p.payment_type, p.amount::float8 AS amount, p.method, p.reference_no, p.note, p.status, (p.created_at AT TIME ZONE 'Asia/Manila')::date::text AS payment_date, CONCAT('SG-RCT-', TO_CHAR(p.created_at AT TIME ZONE 'Asia/Manila', 'YYYY'), '-', LPAD(p.payment_id::text, 8, '0')) AS receipt_number, a.appointment_date::text AS appointment_date, a.appointment_status, a.booked_service_price::float8 AS service_price, COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Product sale') AS client, c.email, CASE WHEN p.payment_type = 'product_sale' THEN CASE WHEN sale.payment_id IS NOT NULL THEN CONCAT(sale.product_name, ' × ', sale.quantity) ELSE COALESCE(p.note, p.reference_no, 'Product sale') END ELSE s.service_name END AS service, sale.quantity AS product_quantity, sale.unit_price::float8 AS product_unit_price, reversal.reason AS reversal_reason, reversal.reversed_by, reversal.reversed_at FROM payments p LEFT JOIN appointments a ON a.appointment_id = p.appointment_id LEFT JOIN users c ON c.user_id = a.user_id LEFT JOIN services s ON s.service_id = a.service_id LEFT JOIN product_sale_details sale ON sale.payment_id = p.payment_id LEFT JOIN payment_reversals reversal ON reversal.payment_id = p.payment_id WHERE p.payment_id = $1 AND COALESCE(a.is_demo, FALSE) = FALSE`, [paymentId]);
   if (!result.rows.length) throw new ApiError(404, 'Payment not found.');
   const payment = result.rows[0];
   let history = [];
@@ -674,7 +684,7 @@ router.get('/payments/:id/receipt', endpoint(async (req, res) => {
     LEFT JOIN services service ON service.service_id = appointment.service_id
     LEFT JOIN product_sale_details sale ON sale.payment_id = payment.payment_id
     LEFT JOIN payment_reversals reversal ON reversal.payment_id = payment.payment_id
-    WHERE payment.payment_id = $1
+    WHERE payment.payment_id = $1 AND COALESCE(appointment.is_demo, FALSE) = FALSE
   `, [paymentId]);
   if (!result.rows.length) throw new ApiError(404, 'Payment not found.');
 
@@ -761,7 +771,7 @@ router.get('/payments/:id/receipt', endpoint(async (req, res) => {
 router.get('/appointments/:id', endpoint(async (req, res) => {
   dateRange(req.query);
   const appointmentId = idValue(req.params.id, 'Appointment ID');
-  const result = await db.query(`SELECT a.appointment_id, a.appointment_date::text AS appointment_date, a.appointment_status, a.booked_service_price::float8 AS service_price, COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Client') AS client, c.email, s.service_name AS service FROM appointments a LEFT JOIN users c ON c.user_id = a.user_id JOIN services s ON s.service_id = a.service_id WHERE a.appointment_id = $1`, [appointmentId]);
+  const result = await db.query(`SELECT a.appointment_id, a.appointment_date::text AS appointment_date, a.appointment_status, a.booked_service_price::float8 AS service_price, COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Client') AS client, c.email, s.service_name AS service FROM appointments a LEFT JOIN users c ON c.user_id = a.user_id JOIN services s ON s.service_id = a.service_id WHERE a.appointment_id = $1 AND a.is_demo = FALSE`, [appointmentId]);
   if (!result.rows.length) throw new ApiError(404, 'Appointment not found.');
   const appointment = result.rows[0];
   const payments = await db.query(`SELECT payment_id, payment_type, amount::float8 AS amount, method, reference_no, note, status, (created_at AT TIME ZONE 'Asia/Manila')::date::text AS payment_date FROM payments WHERE appointment_id = $1 ORDER BY created_at, payment_id`, [appointmentId]);
@@ -776,7 +786,7 @@ router.get('/transactions', endpoint(async (req, res) => {
   const { from, to } = dateRange(req.query);
   const { page, limit, offset } = pageValues(req.query);
   const values = [from, to];
-  const where = ["(p.created_at AT TIME ZONE 'Asia/Manila')::date BETWEEN $1::date AND $2::date"];
+  const where = ["(p.created_at AT TIME ZONE 'Asia/Manila')::date BETWEEN $1::date AND $2::date", 'COALESCE(a.is_demo, FALSE) = FALSE'];
   for (const [key, column, allowed, message] of [['type', 'p.payment_type', PAYMENT_TYPES, 'Invalid payment type.'], ['method', 'p.method', METHODS, 'Invalid payment method.']]) {
     if (req.query[key]) {
       if (!allowed.includes(req.query[key])) throw new ApiError(400, message);
@@ -817,7 +827,7 @@ router.get('/receivables', endpoint(async (req, res) => {
   const values = hasDateFilter
     ? [DEPOSIT_DEDUCTED_FROM_PRICE, from, to]
     : [DEPOSIT_DEDUCTED_FROM_PRICE];
-  const result = await db.query(`SELECT a.appointment_id, a.appointment_date::text AS appointment_date, a.booked_service_price::float8 AS service_price, GREATEST(a.booked_service_price - COALESCE(SUM(p.amount) FILTER (WHERE p.status = 'posted' AND ($1::boolean OR p.payment_type <> 'reservation')), 0), 0)::float8 AS outstanding, COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Client') AS client, c.email, s.service_name AS service FROM appointments a LEFT JOIN users c ON c.user_id = a.user_id JOIN services s ON s.service_id = a.service_id LEFT JOIN payments p ON p.appointment_id = a.appointment_id WHERE a.appointment_status = 'completed' ${dateClause} GROUP BY a.appointment_id, c.user_id, s.service_id HAVING GREATEST(a.booked_service_price - COALESCE(SUM(p.amount) FILTER (WHERE p.status = 'posted' AND ($1::boolean OR p.payment_type <> 'reservation')), 0), 0) > 0 ORDER BY a.appointment_date, a.appointment_id`, values);
+  const result = await db.query(`SELECT a.appointment_id, a.appointment_date::text AS appointment_date, a.booked_service_price::float8 AS service_price, GREATEST(a.booked_service_price - COALESCE(SUM(p.amount) FILTER (WHERE p.status = 'posted' AND ($1::boolean OR p.payment_type <> 'reservation')), 0), 0)::float8 AS outstanding, COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Client') AS client, c.email, s.service_name AS service FROM appointments a LEFT JOIN users c ON c.user_id = a.user_id JOIN services s ON s.service_id = a.service_id LEFT JOIN payments p ON p.appointment_id = a.appointment_id   WHERE a.is_demo = FALSE AND a.appointment_status = 'completed' ${dateClause} GROUP BY a.appointment_id, c.user_id, s.service_id HAVING GREATEST(a.booked_service_price - COALESCE(SUM(p.amount) FILTER (WHERE p.status = 'posted' AND ($1::boolean OR p.payment_type <> 'reservation')), 0), 0) > 0 ORDER BY a.appointment_date, a.appointment_id`, values);
   res.json(result.rows);
 }));
 
@@ -839,8 +849,9 @@ router.post('/payments', endpoint(async (req, res) => {
   const result = await db.transaction(async (client) => {
     if (body.method === 'cash') await lockCurrentCashBusinessDateIfOpen(client);
     if (body.payment_type === 'balance') {
-      const appointment = await client.query(`SELECT booked_service_price FROM appointments WHERE appointment_id = $1 AND appointment_status = 'completed' FOR UPDATE`, [appointmentId]);
+      const appointment = await client.query(`SELECT booked_service_price, is_demo FROM appointments WHERE appointment_id = $1 AND appointment_status = 'completed' FOR UPDATE`, [appointmentId]);
       if (!appointment.rows.length) throw new ApiError(404, 'Completed appointment not found.');
+      if (appointment.rows[0].is_demo) throw new ApiError(409, 'Payments are disabled for synthetic survey appointments.');
       const paid = await client.query(`SELECT COALESCE(SUM(amount), 0) AS paid FROM payments WHERE appointment_id = $1 AND status = 'posted' AND ($2::boolean OR payment_type <> 'reservation')`, [appointmentId, DEPOSIT_DEDUCTED_FROM_PRICE]);
       const outstanding = Math.max(0, Number(appointment.rows[0].booked_service_price) - Number(paid.rows[0].paid));
       if (amount > outstanding) throw new ApiError(400, `Payment exceeds the outstanding balance of ${outstanding.toFixed(2)}.`);
@@ -958,7 +969,7 @@ router.post('/payments/:id/refund', endpoint(async (req, res) => {
     const existing = await client.query(`
       SELECT p.payment_id, p.appointment_id, p.payment_type, p.method, p.status, p.note,
              (p.created_at AT TIME ZONE 'Asia/Manila')::date::text AS business_date,
-             a.appointment_status
+             a.appointment_status, a.is_demo
       FROM payments p
       LEFT JOIN appointments a ON a.appointment_id = p.appointment_id
       WHERE p.payment_id = $1
@@ -967,6 +978,7 @@ router.post('/payments/:id/refund', endpoint(async (req, res) => {
     if (!existing.rows.length) throw new ApiError(404, 'Reservation payment not found.');
 
     const row = existing.rows[0];
+    if (row.is_demo) throw new ApiError(409, 'Payment adjustments are disabled for synthetic survey appointments.');
     if (row.payment_type !== 'reservation') throw new ApiError(400, 'Only reservation deposits can be marked refunded.');
     if (row.status === 'refunded') throw new ApiError(409, 'This payment has already been refunded.');
     if (row.status !== 'posted') throw new ApiError(409, 'Only posted reservation payments can be refunded.');
@@ -1008,12 +1020,16 @@ router.post('/payments/:id/reverse', endpoint(async (req, res) => {
 
   const reversal = await db.transaction(async (client) => {
     const existing = await client.query(
-      `SELECT payment_id, appointment_id, payment_type, method, status,
-        (created_at AT TIME ZONE 'Asia/Manila')::date::text AS business_date
-       FROM payments WHERE payment_id = $1 FOR UPDATE`,
+      `SELECT payment.payment_id, payment.appointment_id, payment.payment_type, payment.method, payment.status,
+        appointment.is_demo,
+        (payment.created_at AT TIME ZONE 'Asia/Manila')::date::text AS business_date
+       FROM payments payment
+       LEFT JOIN appointments appointment ON appointment.appointment_id = payment.appointment_id
+       WHERE payment.payment_id = $1 FOR UPDATE OF payment`,
       [paymentId]
     );
     if (!existing.rows.length) throw new ApiError(404, 'Payment not found.');
+    if (existing.rows[0].is_demo) throw new ApiError(409, 'Payment adjustments are disabled for synthetic survey appointments.');
     if (existing.rows[0].status !== 'posted') {
       throw new ApiError(409, 'Only posted payments can be reversed. This payment may already be reversed or refunded.');
     }
@@ -1453,7 +1469,8 @@ async function salesEarnedExportRows(from, to) {
       FROM appointments appointment
       LEFT JOIN users customer ON customer.user_id = appointment.user_id
       JOIN services service ON service.service_id = appointment.service_id
-      WHERE appointment.appointment_status = 'completed'
+      WHERE appointment.is_demo = FALSE
+        AND appointment.appointment_status = 'completed'
         AND appointment.appointment_date BETWEEN $1::date AND $2::date
 
       UNION ALL
@@ -1479,6 +1496,7 @@ async function salesEarnedExportRows(from, to) {
       LEFT JOIN users customer ON customer.user_id = appointment.user_id
       LEFT JOIN product_sale_details sale ON sale.payment_id = payment.payment_id
       WHERE payment.payment_type = 'product_sale' AND payment.status = 'posted'
+        AND COALESCE(appointment.is_demo, FALSE) = FALSE
         AND (payment.created_at AT TIME ZONE 'Asia/Manila')::date BETWEEN $1::date AND $2::date
 
       UNION ALL
@@ -1507,6 +1525,7 @@ async function salesEarnedExportRows(from, to) {
       LEFT JOIN users customer ON customer.user_id = appointment.user_id
       JOIN services service ON service.service_id = appointment.service_id
       WHERE payment.payment_type = 'reservation' AND payment.status = 'posted'
+        AND appointment.is_demo = FALSE
         AND (
           (appointment.appointment_status = 'no_show' AND $3::boolean)
           OR (appointment.appointment_status = 'cancelled'
@@ -1929,7 +1948,8 @@ async function detailedReceivables() {
       WHERE status = 'posted' AND ($1::boolean OR payment_type <> 'reservation')
       GROUP BY appointment_id
     ) paid ON paid.appointment_id = appointment.appointment_id
-    WHERE appointment.appointment_status = 'completed'
+    WHERE appointment.is_demo = FALSE
+      AND appointment.appointment_status = 'completed'
       AND appointment.booked_service_price > COALESCE(paid.amount, 0)
     ORDER BY appointment.appointment_date, appointment.appointment_id
   `, [DEPOSIT_DEDUCTED_FROM_PRICE]);
@@ -1950,6 +1970,7 @@ async function refundableDepositLiabilities() {
     LEFT JOIN users customer ON customer.user_id = appointment.user_id
     WHERE payment.payment_type = 'reservation'
       AND payment.status = 'posted'
+      AND appointment.is_demo = FALSE
       AND (
         appointment.appointment_status IN ('pending', 'confirmed', 'in_progress')
         OR (appointment.appointment_status = 'cancelled'
@@ -1979,7 +2000,8 @@ async function paymentReversalExportRows(from, to) {
     JOIN payments payment ON payment.payment_id = reversal.payment_id
     LEFT JOIN appointments appointment ON appointment.appointment_id = payment.appointment_id
     LEFT JOIN users customer ON customer.user_id = appointment.user_id
-    WHERE (reversal.reversed_at AT TIME ZONE 'Asia/Manila')::date BETWEEN $1::date AND $2::date
+    WHERE COALESCE(appointment.is_demo, FALSE) = FALSE
+      AND (reversal.reversed_at AT TIME ZONE 'Asia/Manila')::date BETWEEN $1::date AND $2::date
     ORDER BY reversal.reversed_at, reversal.reversal_id
   `, [from, to]);
 }

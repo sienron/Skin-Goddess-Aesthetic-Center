@@ -25,7 +25,10 @@
 
         "test:finance:integration": "node --test tests/finance.integration.test.js",
         "test:finance:ux": "node --test tests/finance-ux.test.js",
+        "test:demo": "node --test tests/demo-mode.test.js tests/login-security.test.js tests/appointment-booking-access.test.js",
         "seed:role-test-accounts": "node scripts/seed-role-test-accounts.js",
+        "migrate:demo-customer": "node migrations/043-demo-customer-appointments.js",
+        "seed:demo-customer": "node scripts/seed-demo-customer.js",
         "seed:live-demo": "node scripts/seed-live-admin-demo.js",
         "seed:demo-testimonials": "node scripts/seed-demo-testimonials.js --confirm-demo-data",
         "postmigrate": "node migrations/042-appointment-review-timezones.js",
