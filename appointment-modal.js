@@ -118,7 +118,7 @@ function openApptModal(appt) {
     document.getElementById("apptModalAvatar").textContent = getInitials(normalizedAppt.client || "Client");
     document.getElementById("apptModalName").textContent = normalizedAppt.client || "Client";
     document.getElementById("apptModalSubtitle").textContent =
-        `Appointment #${normalizedAppt.apptNumber || normalizedAppt.id} · ${normalizedAppt.service || "—"}`;
+        `Appointment #${normalizedAppt.apptNumber || normalizedAppt.id} · ${normalizedAppt.service || "—"}${normalizedAppt.is_demo ? " · Survey sample — not a real booking" : ""}`;
 
     document.getElementById("apptModalDate").textContent = formatDateLong(normalizedAppt.date);
     document.getElementById("apptModalTime").textContent = `${formatTime(normalizedAppt.start)} – ${formatTime(normalizedAppt.end)}`;
@@ -135,7 +135,7 @@ function openApptModal(appt) {
     document.getElementById("apptModalDeposit").textContent = depositText;
     document.getElementById("apptModalContact").textContent = normalizedAppt.contact || "—";
 
-    const canManageAppointment = normalizedAppt.status === "confirmed";
+    const canManageAppointment = normalizedAppt.status === "confirmed" && normalizedAppt.is_demo !== true;
     const manilaToday = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 
     if (apptModalCancelBtn) {

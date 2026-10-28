@@ -30,7 +30,9 @@ const AGGREGATE_SQL = `
          COUNT(*) FILTER (WHERE rating = 3) AS s3,
          COUNT(*) FILTER (WHERE rating = 2) AS s2,
          COUNT(*) FILTER (WHERE rating = 1) AS s1
-  FROM appointment_ratings WHERE staff_id = $1
+  FROM appointment_ratings r
+  LEFT JOIN appointments a ON a.appointment_id = r.appointment_id
+  WHERE r.staff_id = $1 AND a.is_demo IS DISTINCT FROM TRUE
 `;
 
 // Staff member viewing their own aggregate rating.
@@ -55,7 +57,9 @@ router.get('/public', async (req, res) => {
       FROM appointment_ratings r
       JOIN services s ON s.service_id = r.service_id
       JOIN users c ON c.user_id = r.client_id
+      LEFT JOIN appointments a ON a.appointment_id = r.appointment_id
       WHERE r.is_public = TRUE AND r.comment IS NOT NULL AND BTRIM(r.comment) <> ''
+        AND a.is_demo IS DISTINCT FROM TRUE
       ORDER BY r.created_at DESC
       LIMIT 7
     `);
@@ -76,7 +80,7 @@ router.get('/public', async (req, res) => {
 
 // Admin moderation view with optional filters.
 router.get('/admin', requireRole('admin'), async (req, res) => {
-  const filters = [];
+  const filters = ['a.is_demo IS DISTINCT FROM TRUE'];
   const values = [];
 
   if (req.query.staffId && /^\d+$/.test(req.query.staffId)) {
@@ -103,6 +107,7 @@ router.get('/admin', requireRole('admin'), async (req, res) => {
       JOIN services s ON s.service_id = r.service_id
       JOIN users staff ON staff.user_id = r.staff_id
       JOIN users client ON client.user_id = r.client_id
+      LEFT JOIN appointments a ON a.appointment_id = r.appointment_id
       ${whereClause}
       ORDER BY r.created_at DESC
     `, values);

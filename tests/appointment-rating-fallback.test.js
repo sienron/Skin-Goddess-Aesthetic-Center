@@ -58,10 +58,14 @@ function createFallbackDb(appointments, ratings, manilaToday) {
   const calls = [];
   db.query = async (sql, values = []) => {
     calls.push({ sql, values });
+    if (/information_schema\.columns/.test(sql)) {
+      return { rows: [{ has_demo_marker: true }] };
+    }
     assert.match(sql, /INSERT INTO appointment_ratings/);
     assert.match(sql, /a\.appointment_status = 'completed'/);
     assert.match(sql, /a\.user_id IS NOT NULL/);
     assert.match(sql, /a\.aesthetician_id IS NOT NULL/);
+    assert.match(sql, /a\.is_demo IS DISTINCT FROM TRUE/);
     assert.match(sql, /a\.appointment_date < \(NOW\(\) AT TIME ZONE 'Asia\/Manila'\)::date - \$1::integer/);
     assert.match(sql, /NOT EXISTS\s*\(\s*SELECT 1\s+FROM appointment_ratings existing/);
     assert.match(sql, /ON CONFLICT \(appointment_id\) DO NOTHING/);
@@ -74,6 +78,7 @@ function createFallbackDb(appointments, ratings, manilaToday) {
         && appointment.user_id != null
         && appointment.aesthetician_id != null
         && age > values[0]
+        && appointment.is_demo !== true
         && !ratings.has(appointment.appointment_id)
       ) {
         ratings.set(appointment.appointment_id, {
@@ -97,7 +102,8 @@ test('fallback creates only due automatic ratings and is idempotent', async () =
     { appointment_id: 5, appointment_date: '2026-01-01', appointment_status: 'in_progress', user_id: 7, aesthetician_id: 31 },
     { appointment_id: 6, appointment_date: '2026-01-01', appointment_status: 'completed', user_id: null, aesthetician_id: 31 },
     { appointment_id: 7, appointment_date: '2026-01-01', appointment_status: 'completed', user_id: 7, aesthetician_id: null },
-    { appointment_id: 8, appointment_date: '2026-01-12', appointment_status: 'completed', user_id: 7, aesthetician_id: 31 }
+    { appointment_id: 8, appointment_date: '2026-01-12', appointment_status: 'completed', user_id: 7, aesthetician_id: 31 },
+    { appointment_id: 10, appointment_date: '2026-01-01', appointment_status: 'completed', user_id: 7, aesthetician_id: 31, is_demo: true }
   ];
   const customerRating = { rating: 3, comment: 'Customer feedback', is_automatic: false };
   const ratings = new Map([[3, customerRating]]);
@@ -113,11 +119,11 @@ test('fallback creates only due automatic ratings and is idempotent', async () =
     console.error = originalConsoleError;
   }
 
-  assert.equal(calls.length, 2);
+  assert.equal(calls.length, 4);
   assert.equal(ratings.get(1), undefined);
   assert.deepEqual(ratings.get(2), { rating: 5, comment: null, is_automatic: true });
   assert.equal(ratings.get(3), customerRating);
-  for (const id of [4, 5, 6, 7, 8]) assert.equal(ratings.has(id), false);
+  for (const id of [4, 5, 6, 7, 8, 10]) assert.equal(ratings.has(id), false);
   assert.equal([...ratings.values()].filter((rating) => rating.is_automatic).length, 1);
 });
 
@@ -132,6 +138,7 @@ test('fallback respects the exact 7-day boundary and becomes due after it', asyn
   const ratings = new Map();
   const originalConsoleError = console.error;
   console.error = () => {};
+  const originalQuery = db.query;
 
   try {
     createFallbackDb(appointments, ratings, '2026-05-08');

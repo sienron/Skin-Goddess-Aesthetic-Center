@@ -1,37 +1,5 @@
 const db = require('../db');
-
-function escapeHtml(value) {
-  return String(value).replace(/[&<>"']/g, (character) => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;',
-  })[character]);
-}
-
-async function sendNotificationEmail(email, type, message) {
-  const response = await fetch('https://api.brevo.com/v3/smtp/email', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'api-key': process.env.BREVO_API_KEY,
-    },
-    body: JSON.stringify({
-      sender: {
-        name: 'Skin Goddess Aesthetic Center',
-        email: process.env.EMAIL_USER,
-      },
-      to: [{ email }],
-      subject: 'Skin Goddess: notification',
-      htmlContent: `<div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#1A1714"><h2 style="color:#C9A84C">Skin Goddess Aesthetic Center</h2><p><strong>${escapeHtml(type.replace(/_/g, ' '))}</strong></p><p>${escapeHtml(message)}</p></div>`,
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Brevo notification email failed: ${await response.text()}`);
-  }
-}
+const { sendNotificationEmail } = require('./mailer');
 
 async function notifyUser(userId, type, message, { email = true } = {}) {
   try {

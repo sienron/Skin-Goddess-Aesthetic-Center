@@ -6,8 +6,10 @@
 // hina-block ni Render ang outbound SMTP ports (25, 465, 587) sa free tier
 // nila. Ang Brevo API ay tumatakbo sa HTTPS (port 443), kaya hindi
 // naaapektuhan ng block na 'yon.
+const { assertDemoCustomerExternalOperationAllowed } = require('./demoMode');
 
 async function sendOtpEmail(toEmail, otpCode) {
+  assertDemoCustomerExternalOperationAllowed('Brevo email delivery', toEmail);
   const response = await fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',
     headers: {
@@ -39,6 +41,7 @@ async function sendOtpEmail(toEmail, otpCode) {
 }
 
 async function sendPasswordResetEmail(toEmail, resetLink) {
+  assertDemoCustomerExternalOperationAllowed('Brevo email delivery', toEmail);
   const response = await fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',
     headers: {
@@ -84,6 +87,7 @@ function escapeHtml(value) {
 }
 
 async function sendAppointmentReminderEmail(appointment, reminderHours) {
+  assertDemoCustomerExternalOperationAllowed('Brevo email delivery', appointment.email);
   if (!process.env.BREVO_API_KEY || !process.env.EMAIL_USER) {
     throw new Error('BREVO_API_KEY and EMAIL_USER must be configured to send appointment reminders.');
   }
@@ -142,6 +146,7 @@ async function sendAppointmentReminderEmail(appointment, reminderHours) {
 }
 
 async function sendInquiryReply(toEmail, firstName, reply) {
+  assertDemoCustomerExternalOperationAllowed('Brevo email delivery', toEmail);
   const safeName = escapeHtml(firstName);
   const safeReply = escapeHtml(reply).replace(/\r?\n/g, '<br>');
   const response = await fetch('https://api.brevo.com/v3/smtp/email', {
@@ -175,6 +180,7 @@ async function sendInquiryReply(toEmail, firstName, reply) {
 }
 
 async function sendInquiryNotification(inquiry) {
+  assertDemoCustomerExternalOperationAllowed('Brevo email delivery', inquiry.email);
   const recipient = process.env.INQUIRY_NOTIFICATION_EMAIL || process.env.EMAIL_USER;
   if (!recipient) {
     throw new Error('INQUIRY_NOTIFICATION_EMAIL or EMAIL_USER must be configured.');
@@ -218,10 +224,37 @@ async function sendInquiryNotification(inquiry) {
   }
 }
 
+async function sendNotificationEmail(toEmail, type, message) {
+  assertDemoCustomerExternalOperationAllowed('Brevo email delivery', toEmail);
+  const safeType = escapeHtml(type.replace(/_/g, ' '));
+  const safeMessage = escapeHtml(message);
+  const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'api-key': process.env.BREVO_API_KEY,
+    },
+    body: JSON.stringify({
+      sender: {
+        name: 'Skin Goddess Aesthetic Center',
+        email: process.env.EMAIL_USER,
+      },
+      to: [{ email: toEmail }],
+      subject: 'Skin Goddess: notification',
+      htmlContent: `<div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#1A1714"><h2 style="color:#C9A84C">Skin Goddess Aesthetic Center</h2><p><strong>${safeType}</strong></p><p>${safeMessage}</p></div>`,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Brevo notification email failed: ${await response.text()}`);
+  }
+}
+
 module.exports = {
   sendOtpEmail,
   sendPasswordResetEmail,
   sendAppointmentReminderEmail,
   sendInquiryReply,
   sendInquiryNotification,
+  sendNotificationEmail,
 };

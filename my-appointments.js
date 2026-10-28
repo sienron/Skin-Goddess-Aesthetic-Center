@@ -212,7 +212,11 @@
   function renderRatingSection(appointment) {
     if (!ratingContainer) return;
     const isCompleted = (appointment.status === 'completed' || appointment.appointment_status === 'completed');
-    if (isCompleted && (appointment.hasRating || isWithinRatingWindow(appointment))) {
+    if (
+      isCompleted
+      && appointment.is_demo !== true
+      && (appointment.hasRating || isWithinRatingWindow(appointment))
+    ) {
       ratingContainer.hidden = false;
       ratingContainer.replaceChildren(buildRatingSection(appointment));
     } else {
@@ -265,6 +269,12 @@
       const staff = document.createElement('p');
       staff.textContent = `With ${appointment.aesthetician || 'Aesthetician'}`;
       details.append(service, when, staff);
+      if (appointment.is_demo === true) {
+        const demoNotice = document.createElement('p');
+        demoNotice.className = 'client-appointment-demo-notice';
+        demoNotice.textContent = 'Survey sample · synthetic appointment, not a real booking.';
+        details.appendChild(demoNotice);
+      }
 
       const status = document.createElement('span');
       const rawStatus = String(appointment.status || appointment.appointment_status || 'unknown').toLowerCase().replace(/_/g, '-');

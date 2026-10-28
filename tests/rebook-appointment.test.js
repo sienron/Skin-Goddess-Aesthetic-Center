@@ -20,7 +20,7 @@ function futureDate(daysAhead = 10) {
     .slice(0, 10);
 }
 
-async function invokeRebook({ staffAvailable = true, originalStatus = 'cancelled' } = {}) {
+async function invokeRebook({ staffAvailable = true, originalStatus = 'cancelled', isDemo = false } = {}) {
   const originalTransaction = db.transaction;
   const queryCalls = [];
   let statusCode = 200;
@@ -36,7 +36,8 @@ async function invokeRebook({ staffAvailable = true, originalStatus = 'cancelled
           service_id: 22,
           booked_service_price: '900.00',
           booked_reservation_fee: '300.00',
-          appointment_status: originalStatus
+          appointment_status: originalStatus,
+          is_demo: isDemo
         }] };
       }
       if (/FROM services WHERE service_id = \$1 AND is_active = TRUE/.test(sql)) {
@@ -115,5 +116,14 @@ test('rebooking does not change an appointment that is still active', async () =
 
   assert.equal(result.statusCode, 400);
   assert.match(result.responseBody.message, /Only completed, cancelled, or no-show appointments/);
+  assert.equal(result.queryCalls.some(({ sql }) => /INSERT INTO appointments/.test(sql)), false);
+});
+
+test('rebooking rejects synthetic survey appointments before loading a schedule or creating a booking', async () => {
+  const result = await invokeRebook({ isDemo: true });
+
+  assert.equal(result.statusCode, 409);
+  assert.match(result.responseBody.message, /Synthetic survey appointments cannot be rebooked/);
+  assert.equal(result.queryCalls.length, 1);
   assert.equal(result.queryCalls.some(({ sql }) => /INSERT INTO appointments/.test(sql)), false);
 });

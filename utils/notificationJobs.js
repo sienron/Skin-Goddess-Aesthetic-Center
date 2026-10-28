@@ -175,6 +175,16 @@ async function runAppointmentRatingFallback() {
   if (ratingFallbackRunning) return;
   ratingFallbackRunning = true;
   try {
+    const demoMarker = await db.query(`
+      SELECT EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_name = 'appointments' AND column_name = 'is_demo'
+      ) AS has_demo_marker
+    `);
+    const demoFilter = demoMarker.rows[0]?.has_demo_marker
+      ? 'AND a.is_demo IS DISTINCT FROM TRUE'
+      : '';
     await db.query(`
       INSERT INTO appointment_ratings (
         appointment_id, client_id, staff_id, service_id, rating, comment, is_automatic
@@ -185,6 +195,7 @@ async function runAppointmentRatingFallback() {
         AND a.user_id IS NOT NULL
         AND a.aesthetician_id IS NOT NULL
         AND a.appointment_date < (NOW() AT TIME ZONE 'Asia/Manila')::date - $1::integer
+        ${demoFilter}
         AND NOT EXISTS (
           SELECT 1
           FROM appointment_ratings existing
