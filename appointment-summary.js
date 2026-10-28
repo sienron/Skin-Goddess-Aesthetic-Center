@@ -94,7 +94,11 @@
           body: JSON.stringify({
             serviceId: booking.serviceId,
             date: booking.date,
-            time: booking.time
+          time: booking.time,
+          firstName: booking.firstName,
+          lastName: booking.lastName,
+          email: booking.email,
+          phone: booking.phone
           })
         });
         const data = await response.json().catch(() => ({}));

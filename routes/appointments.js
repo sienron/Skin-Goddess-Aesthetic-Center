@@ -9,7 +9,7 @@ const { notifyStockTransition } = require('../utils/inventoryNotifications');
 const { recordInventoryTransaction } = require('../utils/inventoryTransactions');
 const { canBookAppointments } = require('../utils/appointmentBookingAccess');
 const { createHmac, randomBytes, timingSafeEqual } = require('crypto');
-const RATING_WINDOW_DAYS = 14;
+const { RATING_WINDOW_DAYS } = require('../utils/appointmentRatings');
 const ratingLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, message: { message: 'Too many rating attempts. Try again later.' } });
 const { VALID_SLOTS, CLOSING_TIME, CLOSED_WEEKDAYS, MAX_ADVANCE_DAYS, MIN_BOOKING_LEAD_MINUTES, to24h, from24h, addMinutes, manilaNow, isSlotInPast, isSlotTooSoon } = require('../utils/slots');
 
@@ -241,6 +241,35 @@ function validRatingComment(value) {
   return { ok: true, value: value.trim() || null };
 }
 
+function sanitizeCustomerField(value) {
+  if (typeof value !== 'string') return null;
+  return value.normalize('NFKC').replace(/[\u0000-\u001f\u007f-\u009f]/g, '').replace(/\s+/g, ' ').trim();
+}
+
+function getCustomerDetails(body, user, res) {
+  const keys = ['firstName', 'lastName', 'email', 'phone'];
+  const hasSubmittedDetails = keys.some((key) => Object.prototype.hasOwnProperty.call(body, key));
+  const firstName = sanitizeCustomerField(hasSubmittedDetails ? body.firstName : user.first_name);
+  const lastName = sanitizeCustomerField(hasSubmittedDetails ? body.lastName : user.last_name);
+  const email = sanitizeCustomerField(hasSubmittedDetails ? body.email : user.email)?.toLowerCase();
+  const phone = sanitizeCustomerField(hasSubmittedDetails ? body.phone : user.contact_number);
+
+  if (!firstName || firstName.length > 100 || !/^[\p{L}\p{M} .'-]+$/u.test(firstName)
+    || !lastName || lastName.length > 100 || !/^[\p{L}\p{M} .'-]+$/u.test(lastName)) {
+    res.status(400).json({ message: 'Enter a valid first and last name for the appointment.' });
+    return null;
+  }
+  if (!email || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    res.status(400).json({ message: 'Enter a valid email address for the appointment.' });
+    return null;
+  }
+  if (!phone || phone.length > 50 || !/^\+?[0-9().\-\s]+$/.test(phone) || (phone.match(/\d/g) || []).length < 7 || (phone.match(/\d/g) || []).length > 15) {
+    res.status(400).json({ message: 'Enter a valid phone number for the appointment.' });
+    return null;
+  }
+  return { firstName, lastName, email, phone };
+}
+
 router.get('/admin', requireRole('admin'), async (req, res) => {
   try {
     const result = await db.query(`
@@ -261,11 +290,11 @@ router.get('/admin', requireRole('admin'), async (req, res) => {
              a.cancellation_description,
              a.cancellation_requested_at,
              a.user_id AS client_id,
-             COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Client') AS client,
-             c.email AS client_email,
+             COALESCE(NULLIF(BTRIM(CONCAT_WS(' ', a.customer_first_name, a.customer_last_name)), ''), NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Client') AS client,
+             COALESCE(a.customer_email, c.email) AS client_email,
              c.gender,
              c.date_of_birth::text AS date_of_birth,
-             c.contact_number AS contact,
+             COALESCE(a.customer_phone, c.contact_number) AS contact,
              COALESCE(NULLIF(BTRIM(CONCAT_WS(' ', NULLIF(BTRIM(aesthetician.first_name), ''), NULLIF(BTRIM(aesthetician.last_name), ''))), ''), 'Unassigned') AS assigned_to,
              deduction.confirmed_at AS inventory_deduction_confirmed_at,
              CASE WHEN inventory_review.reviewed_by IS NOT NULL
@@ -527,7 +556,7 @@ router.get('/inventory-officer/reviews', requireRole('inventory_officer'), async
       SELECT a.appointment_id, a.appointment_date::text AS date,
              a.appointment_time::text AS start, a.appointment_status AS status,
              s.service_name AS service,
-             COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Client') AS client,
+             COALESCE(NULLIF(BTRIM(CONCAT_WS(' ', a.customer_first_name, a.customer_last_name)), ''), NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Client') AS client,
              COALESCE(NULLIF(BTRIM(CONCAT_WS(' ', NULLIF(BTRIM(staff.first_name), ''), NULLIF(BTRIM(staff.last_name), ''))), ''), 'Unassigned') AS assigned_to,
              review.reviewed_at,
              review.reviewed_by AS reviewer_id,
@@ -568,7 +597,7 @@ const loadInventoryReview = async (req, res) => {
         SELECT a.appointment_id, a.service_id, a.appointment_status AS status,
                a.appointment_date::text AS date, a.appointment_time::text AS start,
                s.service_name AS service,
-               COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Client') AS client,
+               COALESCE(NULLIF(BTRIM(CONCAT_WS(' ', a.customer_first_name, a.customer_last_name)), ''), NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Client') AS client,
                COALESCE(NULLIF(BTRIM(CONCAT_WS(' ', NULLIF(BTRIM(staff.first_name), ''), NULLIF(BTRIM(staff.last_name), ''))), ''), 'Unassigned') AS assigned_to
         FROM appointments a
         JOIN services s ON s.service_id = a.service_id
@@ -1241,7 +1270,7 @@ router.get('/admin/cancellation-requests', requireRole('admin'), async (req, res
               a.appointment_status AS status, 'cancellation' AS request_type,
               a.cancellation_reason AS request_reason, a.cancellation_description AS request_description,
               a.cancellation_requested_at AS requested_at, NULL::text AS requested_date, NULL::text AS requested_time,
-             COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Walk-in') AS client,
+             COALESCE(NULLIF(BTRIM(CONCAT_WS(' ', a.customer_first_name, a.customer_last_name)), ''), NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Walk-in') AS client,
              CONCAT_WS(' ', aesthetician.first_name, aesthetician.last_name) AS aesthetician,
              s.service_name AS service
       FROM appointments a
@@ -1255,7 +1284,7 @@ router.get('/admin/cancellation-requests', requireRole('admin'), async (req, res
              a.reschedule_reason AS request_reason, a.reschedule_description AS request_description,
              a.reschedule_requested_at AS requested_at, a.reschedule_requested_date::text AS requested_date,
              a.reschedule_requested_time::text AS requested_time,
-             COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Walk-in') AS client,
+             COALESCE(NULLIF(BTRIM(CONCAT_WS(' ', a.customer_first_name, a.customer_last_name)), ''), NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Walk-in') AS client,
              CONCAT_WS(' ', aesthetician.first_name, aesthetician.last_name) AS aesthetician,
              s.service_name AS service
       FROM appointments a
@@ -1518,7 +1547,7 @@ async function getValidatedSchedule(queryClient, body, res, allowShortLead = fal
     return null;
   }
   if (!allowShortLead && isSlotTooSoon(appointmentDate, appointmentTime)) {
-    res.status(400).json({ message: `Please choose a time at least ${MIN_BOOKING_LEAD_MINUTES} minutes from now.` });
+    res.status(400).json({ message: `Please choose a time at least ${MIN_BOOKING_LEAD_MINUTES / 60} hours from now.` });
     return null;
   }
 
@@ -1532,7 +1561,7 @@ async function getValidatedSchedule(queryClient, body, res, allowShortLead = fal
 }
 
 async function getValidatedBooking(userId, body, res) {
-  const userResult = await db.query('SELECT user_id, email_verified, role, dev_access_all FROM users WHERE user_id = $1', [userId]);
+  const userResult = await db.query('SELECT user_id, first_name, last_name, email, contact_number, email_verified, role, dev_access_all FROM users WHERE user_id = $1', [userId]);
   if (userResult.rows.length === 0) {
     res.status(401).json({ message: 'Your session is no longer valid. Please log in again.' });
     return null;
@@ -1543,8 +1572,10 @@ async function getValidatedBooking(userId, body, res) {
     return null;
   }
 
+  const customer = getCustomerDetails(body, user, res);
+  if (!customer) return null;
   const schedule = await getValidatedSchedule(db, body, res);
-  return schedule ? { user, ...schedule } : null;
+  return schedule ? { user, customer, ...schedule } : null;
 }
 
 async function findAvailableAestheticians(queryClient, booking, excludeAppointmentId = null) {
@@ -1582,19 +1613,21 @@ async function createAppointmentFromPaidCheckout(client, payment, referenceNumbe
           user_id, service_id, booked_service_price, booked_reservation_fee,
           appointment_date, appointment_time, appointment_end_time, aesthetician_id,
           appointment_status, payment_status, reminder_24h_sent, reminder_3h_sent,
-          reminder_email_24h_sent, reminder_email_3h_sent
+          reminder_email_24h_sent, reminder_email_3h_sent,
+          customer_first_name, customer_last_name, customer_email, customer_phone
         )
         VALUES (
           $1, $2, $3, $4, $5, $6, $7, $8, 'confirmed', 'paid',
           $5::date + $6::time <= (NOW() AT TIME ZONE 'Asia/Manila') + INTERVAL '24 hours',
           FALSE,
           $5::date + $6::time <= (NOW() AT TIME ZONE 'Asia/Manila') + INTERVAL '24 hours',
-          FALSE
+          FALSE, $9, $10, $11, $12
         )
         RETURNING appointment_id, appointment_status, payment_status, aesthetician_id
       `, [payment.user_id, payment.service_id, payment.service_price,
         Number(payment.amount_cents) / 100, payment.appointment_date,
-        payment.appointment_time, payment.appointment_end_time, candidate.user_id]);
+        payment.appointment_time, payment.appointment_end_time, candidate.user_id,
+        payment.customer_first_name, payment.customer_last_name, payment.customer_email, payment.customer_phone]);
       await client.query(`
         INSERT INTO payments (appointment_id, payment_type, amount, method, reference_no, note)
         VALUES ($1, 'reservation', $2, $3, $4, 'PayMongo reservation deposit')
@@ -1750,10 +1783,10 @@ router.get('/mine', requireActiveAccount, async (req, res) => {
                a.reschedule_reason,
                a.reschedule_description,
                a.user_id AS client_id,
-               COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Walk-in') AS client,
-               c.email AS client_email,
+               COALESCE(NULLIF(BTRIM(CONCAT_WS(' ', a.customer_first_name, a.customer_last_name)), ''), NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Walk-in') AS client,
+               COALESCE(a.customer_email, c.email) AS client_email,
                COALESCE(CONCAT(aesthetician.first_name, ' ', aesthetician.last_name), 'Aesthetician') AS aesthetician,
-               c.contact_number AS contact,
+               COALESCE(a.customer_phone, c.contact_number) AS contact,
                NULL::text AS remarks,
                a.appointment_id AS apptNumber
         FROM appointments a
@@ -1781,13 +1814,14 @@ router.get('/mine', requireActiveAccount, async (req, res) => {
                a.reschedule_requested_time::text AS reschedule_requested_time,
                a.reschedule_reason,
                a.reschedule_description,
-               COALESCE(CONCAT(c.first_name, ' ', c.last_name), 'Client') AS client,
+               COALESCE(NULLIF(BTRIM(CONCAT_WS(' ', a.customer_first_name, a.customer_last_name)), ''), NULLIF(CONCAT_WS(' ', c.first_name, c.last_name), ''), 'Client') AS client,
                COALESCE(CONCAT(aesthetician.first_name, ' ', aesthetician.last_name), 'Aesthetician') AS aesthetician,
-               c.contact_number AS contact,
+               COALESCE(a.customer_phone, c.contact_number) AS contact,
                NULL::text AS remarks,
                a.appointment_id AS apptNumber,
                ar.rating AS my_rating,
-               ar.comment AS my_rating_comment
+               ar.comment AS my_rating_comment,
+               ar.is_automatic AS my_rating_is_automatic
         FROM appointments a
         JOIN services s ON s.service_id = a.service_id
         JOIN users c ON c.user_id = a.user_id
@@ -1812,6 +1846,7 @@ router.get('/mine', requireActiveAccount, async (req, res) => {
       hasRating: row.my_rating != null,
       myRating: row.my_rating,
       myRatingComment: row.my_rating_comment,
+      myRatingIsAutomatic: row.my_rating_is_automatic === true,
       fee: row.fee,
       depositAmount: row.deposit_amount,
       clientId: row.client_id,
@@ -1920,8 +1955,8 @@ router.post('/:id/cancellation-request', requireActiveAccount, async (req, res) 
     if (!isAssignedAesthetician && !isClient) return res.status(403).json({ message: 'Only the assigned aesthetician or client can request cancellation.' });
     if (appointment.appointment_status !== 'confirmed') return res.status(400).json({ message: 'Only confirmed appointments can be cancelled.' });
     if (appointment.cancellation_request_status) return res.status(409).json({ message: 'A cancellation request has already been submitted for this appointment.' });
-    if (isClient && minutesUntil(appointment.appointment_date, appointment.appointment_time, manilaNow()) < 24 * 60) {
-      return res.status(400).json({ message: 'Client cancellation requests must be submitted at least 24 hours before the appointment.' });
+    if (isClient && minutesUntil(appointment.appointment_date, appointment.appointment_time, manilaNow()) <= 24 * 60) {
+      return res.status(400).json({ message: 'Client cancellation requests must be submitted more than 24 hours before the appointment.' });
     }
 
     await db.query(`
@@ -2236,7 +2271,7 @@ router.post('/:id/reschedule', requireActiveAccount, async (req, res) => {
     }
     if (CLOSED_WEEKDAYS.includes(weekday(appointmentDate))) return res.status(400).json({ message: 'The center is closed on the selected date.' });
     if (isSlotInPast(appointmentDate, appointmentTime) || isSlotTooSoon(appointmentDate, appointmentTime)) {
-      return res.status(400).json({ message: `Choose a time at least ${MIN_BOOKING_LEAD_MINUTES} minutes from now.` });
+      return res.status(400).json({ message: `Choose a time at least ${MIN_BOOKING_LEAD_MINUTES / 60} hours from now.` });
     }
 
     const appointmentEndTime = addMinutes(appointmentTime, Number(appointment.duration_minutes));
@@ -2335,11 +2370,12 @@ router.post('/paymongo/checkout-session', requireActiveAccount, async (req, res)
       INSERT INTO paymongo_checkout_sessions
         (reference_number, user_id, service_id, service_name, service_price,
          appointment_date, appointment_time, appointment_end_time, amount_cents,
-         currency, status, livemode)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'PHP', 'pending', $10)
+         currency, status, livemode, customer_first_name, customer_last_name, customer_email, customer_phone)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'PHP', 'pending', $10, $11, $12, $13, $14)
     `, [referenceNumber, booking.user.user_id, booking.service.service_id, booking.service.service_name,
       booking.service.service_price, booking.appointmentDate, booking.appointmentTime,
-      booking.appointmentEndTime, amountCents, config.isLive]);
+      booking.appointmentEndTime, amountCents, config.isLive, booking.customer.firstName,
+      booking.customer.lastName, booking.customer.email, booking.customer.phone]);
 
     const attributes = {
       line_items: [{
@@ -2435,7 +2471,7 @@ router.post('/paymongo/confirm', requireActiveAccount, async (req, res) => {
   let payment;
   try {
     const paymentResult = await db.query(`
-      SELECT reference_number, user_id, service_id, appointment_date::text AS appointment_date,
+      SELECT reference_number, user_id, service_id, customer_first_name, customer_last_name, customer_email, customer_phone, appointment_date::text AS appointment_date,
               appointment_time::text AS appointment_time, appointment_end_time::text AS appointment_end_time,
               service_name, service_price, amount_cents, currency, status,
              checkout_session_id, appointment_id, livemode, payment_id
@@ -2497,6 +2533,7 @@ router.post('/paymongo/confirm', requireActiveAccount, async (req, res) => {
     const appointment = await db.transaction(async (client) => {
       const lockedPayment = await client.query(`
         SELECT status, appointment_id, user_id, service_id, service_name, service_price,
+               customer_first_name, customer_last_name, customer_email, customer_phone,
                appointment_date::text AS appointment_date,
                appointment_time::text AS appointment_time,
                appointment_end_time::text AS appointment_end_time,
@@ -2601,6 +2638,7 @@ router.post('/paymongo/webhook', async (req, res) => {
     const outcome = await db.transaction(async (client) => {
       const paymentResult = await client.query(`
         SELECT reference_number, user_id, service_id, service_name, service_price,
+               customer_first_name, customer_last_name, customer_email, customer_phone,
                appointment_date::text AS appointment_date,
                appointment_time::text AS appointment_time,
                appointment_end_time::text AS appointment_end_time,

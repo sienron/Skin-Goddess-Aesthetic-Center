@@ -133,7 +133,9 @@
     if (appointment.hasRating) {
       const heading = document.createElement('p');
       heading.className = 'appt-rating-heading';
-      heading.textContent = `You rated this visit ${appointment.myRating}★`;
+      heading.textContent = appointment.myRatingIsAutomatic
+        ? 'Automatic 5-star rating'
+        : `You rated this visit ${appointment.myRating}★`;
       wrap.append(heading, buildReadonlyStars(appointment.myRating));
       if (appointment.myRatingComment) {
         const comment = document.createElement('p');
@@ -193,10 +195,24 @@
     return wrap;
   }
 
+  function isWithinRatingWindow(appointment) {
+    const appointmentDate = String(appointment.appointment_date || appointment.date || '').slice(0, 10);
+    const today = manilaTodayKey();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(appointmentDate) || appointmentDate > today) return false;
+    const dateParts = (value) => value.split('-').map(Number);
+    const [appointmentYear, appointmentMonth, appointmentDay] = dateParts(appointmentDate);
+    const [todayYear, todayMonth, todayDay] = dateParts(today);
+    const daysSinceAppointment = Math.floor(
+      (Date.UTC(todayYear, todayMonth - 1, todayDay) - Date.UTC(appointmentYear, appointmentMonth - 1, appointmentDay))
+      / (24 * 60 * 60 * 1000)
+    );
+    return daysSinceAppointment <= 7;
+  }
+
   function renderRatingSection(appointment) {
     if (!ratingContainer) return;
     const isCompleted = (appointment.status === 'completed' || appointment.appointment_status === 'completed');
-    if (isCompleted) {
+    if (isCompleted && (appointment.hasRating || isWithinRatingWindow(appointment))) {
       ratingContainer.hidden = false;
       ratingContainer.replaceChildren(buildRatingSection(appointment));
     } else {

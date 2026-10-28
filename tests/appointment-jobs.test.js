@@ -97,8 +97,11 @@ test('notification jobs do not automatically mark overdue appointments as no-sho
     '*/5 * * * *',
     '*/5 * * * *',
     '* * * * *',
+    '*/5 * * * *',
     '0 9 * * *'
   ]);
+  assert.equal(schedules[3][2].timezone, 'Asia/Manila');
+  assert.equal(schedules[3][1], jobs.runAppointmentRatingFallback);
 });
 
 test('status advancement moves only confirmed appointments whose scheduled start has passed', async () => {

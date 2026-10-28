@@ -2,11 +2,13 @@ const cron = require('node-cron');
 const db = require('../db');
 const { notifyUser, notifyRoles } = require('./notifications');
 const { sendAppointmentReminderEmail } = require('./mailer');
+const { RATING_WINDOW_DAYS } = require('./appointmentRatings');
 
 let remindersRunning = false;
 let emailRemindersRunning = false;
 let appointmentStatusAdvancementRunning = false;
 let expiryRunning = false;
+let ratingFallbackRunning = false;
 
 function appointmentLabel(row) {
   return `${row.service_name} on ${row.appointment_date} at ${String(row.appointment_time).slice(0, 5)}`;
@@ -51,7 +53,8 @@ async function runAppointmentReminders() {
 async function sendAppointmentEmailReminders(flag, hours) {
   const now = "(NOW() AT TIME ZONE 'Asia/Manila')";
   const result = await db.query(`
-    SELECT a.appointment_id, u.email, u.first_name, s.service_name,
+    SELECT a.appointment_id, COALESCE(a.customer_email, u.email) AS email,
+           COALESCE(NULLIF(a.customer_first_name, ''), u.first_name) AS first_name, s.service_name,
            a.appointment_date::text AS appointment_date,
            a.appointment_time::text AS appointment_time
     FROM appointments a
@@ -168,6 +171,34 @@ async function runAppointmentStatusAdvancement() {
   }
 }
 
+async function runAppointmentRatingFallback() {
+  if (ratingFallbackRunning) return;
+  ratingFallbackRunning = true;
+  try {
+    await db.query(`
+      INSERT INTO appointment_ratings (
+        appointment_id, client_id, staff_id, service_id, rating, comment, is_automatic
+      )
+      SELECT a.appointment_id, a.user_id, a.aesthetician_id, a.service_id, 5, NULL, TRUE
+      FROM appointments a
+      WHERE a.appointment_status = 'completed'
+        AND a.user_id IS NOT NULL
+        AND a.aesthetician_id IS NOT NULL
+        AND a.appointment_date < (NOW() AT TIME ZONE 'Asia/Manila')::date - $1::integer
+        AND NOT EXISTS (
+          SELECT 1
+          FROM appointment_ratings existing
+          WHERE existing.appointment_id = a.appointment_id
+        )
+      ON CONFLICT (appointment_id) DO NOTHING
+    `, [RATING_WINDOW_DAYS]);
+  } catch (error) {
+    console.error('Appointment rating fallback job failed:', error.message);
+  } finally {
+    ratingFallbackRunning = false;
+  }
+}
+
 async function runExpiryAlerts() {
   if (expiryRunning) return;
   expiryRunning = true;
@@ -211,6 +242,7 @@ function startNotificationJobs() {
   cron.schedule('*/5 * * * *', runAppointmentReminders, { timezone: 'Asia/Manila' });
   cron.schedule('*/5 * * * *', runAppointmentEmailReminders, { timezone: 'Asia/Manila' });
   cron.schedule('* * * * *', runAppointmentStatusAdvancement, { timezone: 'Asia/Manila' });
+  cron.schedule('*/5 * * * *', runAppointmentRatingFallback, { timezone: 'Asia/Manila' });
   cron.schedule('0 9 * * *', runExpiryAlerts, { timezone: 'Asia/Manila' });
 }
 
@@ -219,5 +251,6 @@ module.exports = {
   runAppointmentReminders,
   runAppointmentEmailReminders,
   runAppointmentStatusAdvancement,
+  runAppointmentRatingFallback,
   runExpiryAlerts,
 };

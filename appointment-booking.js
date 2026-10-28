@@ -22,8 +22,7 @@
         "July", "August", "September", "October", "November", "December"
     ];
     const MORNING_SLOTS = ["9:00 AM", "10:00 AM", "11:00 AM"];
-    const AFTERNOON_SLOTS = ["1:00 PM", "2:00 PM", "3:00 PM", "4:00 PM"];
-    const ALL_SLOTS = MORNING_SLOTS.concat(AFTERNOON_SLOTS);
+    const AFTERNOON_SLOTS = ["1:00 PM", "2:00 PM", "3:00 PM", "4:00 PM", "5:00 PM"];
     const MAX_ADVANCE_DAYS = 60;
 
     function getManilaNow() {
@@ -34,6 +33,7 @@
             day: "2-digit",
             hour: "2-digit",
             minute: "2-digit",
+            second: "2-digit",
             hourCycle: "h23"
         }).formatToParts(new Date());
 
@@ -46,7 +46,8 @@
             month: Number(values.month) - 1,
             day: Number(values.day),
             hour: Number(values.hour),
-            minute: Number(values.minute)
+            minute: Number(values.minute),
+            second: Number(values.second)
         };
     }
 
@@ -74,7 +75,22 @@
 
         const slotMinutes = slotToMinutes(slot);
         const nowMinutes = now.hour * 60 + now.minute;
-        return slotMinutes !== null && slotMinutes <= nowMinutes;
+        if (slotMinutes === null) return false;
+        const remainingSeconds = (slotMinutes - nowMinutes) * 60 - now.second;
+        return remainingSeconds <= 0;
+    }
+
+    function isSlotTooSoon(dateObj, slot) {
+        const now = getManilaNow();
+        const slotDate = new Date(dateObj.year, dateObj.month, dateObj.day);
+        const today = new Date(now.year, now.month, now.day);
+        if (slotDate > today) return false;
+        if (slotDate < today) return true;
+
+        const slotMinutes = slotToMinutes(slot);
+        if (slotMinutes === null) return true;
+        const leadSeconds = (slotMinutes - (now.hour * 60 + now.minute)) * 60 - now.second;
+        return leadSeconds < 3 * 60 * 60;
     }
 
     let allServices = [];
@@ -339,9 +355,7 @@
             const key = formatAvailabilityKey(viewYear, viewMonth, day);
             const daySlots = currentAvailability[key] || [];
 
-            // Bookings close at 4 PM Manila time, so today stops being selectable past that cutoff.
-            const isPastCutoffToday = isToday && (now.hour * 60 + now.minute) >= 16 * 60;
-            const isSelectable = !isPast && !isBeyondBookingWindow && !isPastCutoffToday;
+            const isSelectable = !isPast && !isBeyondBookingWindow;
 
             if (isSelectable && daySlots.length > 0) {
                 cell.classList.add("available");
@@ -403,28 +417,31 @@
             return;
         }
 
-const key = formatAvailabilityKey(selectedDate.year, selectedDate.month, selectedDate.day);
-            const available = currentAvailability[key] || [];
-            const dateLabel = `${MONTH_NAMES[selectedDate.month].slice(0, 3).toUpperCase()} ${selectedDate.day}`;
+        const key = formatAvailabilityKey(selectedDate.year, selectedDate.month, selectedDate.day);
+        const available = currentAvailability[key] || [];
+        const dateLabel = `${MONTH_NAMES[selectedDate.month].slice(0, 3).toUpperCase()} ${selectedDate.day}`;
 
-            slotsHeading.textContent = `AVAILABLE SLOTS ${dateLabel}`;
+        slotsHeading.textContent = `AVAILABLE SLOTS ${dateLabel}`;
 
-            function buildGroup(label, slots) {
-                const heading = document.createElement("p");
-                heading.className = "slots-period";
-                heading.textContent = label;
-                slotsContainer.appendChild(heading);
+        function buildGroup(label, slots) {
+            if (slots.length === 0) return;
+            const heading = document.createElement("p");
+            heading.className = "slots-period";
+            heading.textContent = label;
+            slotsContainer.appendChild(heading);
 
-                const grid = document.createElement("div");
-                grid.className = "slot-grid";
+            const grid = document.createElement("div");
+            grid.className = "slot-grid";
 
-                slots.forEach((slot) => {
-                    const btn = document.createElement("button");
-                    btn.type = "button";
-                    btn.className = "slot-btn";
-                    btn.textContent = slot;
+            slots.forEach((slot) => {
+                const btn = document.createElement("button");
+                btn.type = "button";
+                btn.className = "slot-btn";
+                btn.textContent = slot;
 
-                    const isAvailable = available.includes(slot) && !isSlotInPast(selectedDate, slot);
+                const isAvailable = available.includes(slot)
+                    && !isSlotInPast(selectedDate, slot)
+                    && !isSlotTooSoon(selectedDate, slot);
                 if (!isAvailable) {
                     btn.classList.add("disabled");
                     btn.disabled = true;
