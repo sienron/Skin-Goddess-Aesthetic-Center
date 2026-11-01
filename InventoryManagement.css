@@ -2396,3 +2396,339 @@ body.staff-theme-dark.InventoryManagement .alert-item.critical-alert > span {
         background: #2b2c29;
     }
 }
+
+@media screen and (min-width: 861px) {
+    body.InventoryManagement > .inv-sidebar {
+        position: fixed;
+        inset: 0 auto 0 0;
+        z-index: 120;
+        width: var(--staff-sidebar-expanded-width, 236px);
+        min-width: 0;
+        height: 100vh;
+        transform: none;
+        overflow-x: hidden;
+        overflow-y: auto;
+        background: var(--staff-sidebar-bg, #f8f6f1);
+        color: var(--staff-sidebar-text, #514b43);
+        transition: width 220ms cubic-bezier(0.2, 0.7, 0.2, 1);
+    }
+
+    body.InventoryManagement > .inventory-header,
+    body.InventoryManagement > .inventory-page {
+        width: calc(100% - var(--staff-sidebar-expanded-width, 236px));
+        margin-left: var(--staff-sidebar-expanded-width, 236px);
+        transition: width 220ms cubic-bezier(0.2, 0.7, 0.2, 1), margin-left 220ms cubic-bezier(0.2, 0.7, 0.2, 1);
+    }
+
+    body.InventoryManagement > .inv-sidebar .inv-sidebar__logo {
+        justify-content: center;
+        padding: 0 12px;
+    }
+
+    body.InventoryManagement > .inv-sidebar .inv-sidebar__logo img {
+        width: 150px;
+        max-height: 46px;
+        object-fit: contain;
+    }
+
+    body.InventoryManagement > .inv-sidebar .inv-sidebar__label {
+        color: var(--staff-sidebar-muted, #8d867d);
+    }
+
+    body.InventoryManagement > .inv-sidebar .inv-nav-link {
+        min-height: 42px;
+        border: 0;
+        border-radius: 8px;
+        color: var(--staff-sidebar-text, #514b43);
+        transition: background-color 160ms ease, color 160ms ease;
+    }
+
+    body.InventoryManagement > .inv-sidebar .inv-nav-link:not(.inv-nav-link--active):hover {
+        background: var(--staff-sidebar-hover, #f1ece0);
+        color: var(--staff-sidebar-accent, #a77b27);
+    }
+
+    body.InventoryManagement > .inv-sidebar .inv-nav-link--active {
+        background: var(--staff-sidebar-active, #f6f0e3);
+        color: var(--staff-sidebar-accent, #a77b27);
+    }
+
+    body.InventoryManagement > .inv-sidebar .inv-nav-link img {
+        width: 18px;
+        height: 18px;
+        flex-basis: 18px;
+    }
+}
+
+@media screen and (min-width: 861px) and (hover: hover) and (pointer: fine) {
+    body.InventoryManagement > .inv-sidebar {
+        width: var(--staff-sidebar-rail-width, 68px);
+        padding-right: 8px;
+        padding-left: 8px;
+        border-radius: 0 15px 0 0;
+    }
+
+    body.InventoryManagement > .inv-sidebar:hover,
+    body.InventoryManagement > .inv-sidebar:focus-within {
+        width: var(--staff-sidebar-expanded-width, 236px);
+        border-radius: 0;
+    }
+
+    body.InventoryManagement > .inventory-header,
+    body.InventoryManagement > .inventory-page {
+        width: calc(100% - var(--staff-sidebar-rail-width, 68px));
+        margin-left: var(--staff-sidebar-rail-width, 68px);
+    }
+
+    body.InventoryManagement > .inv-sidebar:hover ~ .inventory-header,
+    body.InventoryManagement > .inv-sidebar:hover ~ .inventory-page,
+    body.InventoryManagement > .inv-sidebar:focus-within ~ .inventory-header,
+    body.InventoryManagement > .inv-sidebar:focus-within ~ .inventory-page {
+        width: calc(100% - var(--staff-sidebar-expanded-width, 236px));
+        margin-left: var(--staff-sidebar-expanded-width, 236px);
+    }
+
+    body.InventoryManagement > .inv-sidebar .inv-sidebar__logo img {
+        width: 42px;
+        height: 42px;
+        transition: width 180ms ease, height 180ms ease;
+    }
+
+    body.InventoryManagement > .inv-sidebar .inv-sidebar__label,
+    body.InventoryManagement > .inv-sidebar .inv-nav-link > span,
+    body.InventoryManagement > .inv-sidebar .um-sidebar__account-details {
+        width: 0;
+        overflow: hidden;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 120ms ease, visibility 0s linear 140ms;
+    }
+
+    body.InventoryManagement > .inv-sidebar .inv-nav-link {
+        justify-content: center;
+        gap: 0;
+        padding-right: 8px;
+        padding-left: 8px;
+    }
+
+    body.InventoryManagement > .inv-sidebar .inv-nav-link img {
+        width: 21px;
+        height: 21px;
+        flex-basis: 21px;
+        margin-inline: auto;
+    }
+
+    body.InventoryManagement > .inv-sidebar .inv-sidebar__account {
+        justify-content: center;
+        padding-right: 8px;
+        padding-left: 8px;
+    }
+
+    body.InventoryManagement > .inv-sidebar .um-sidebar__profile {
+        justify-content: center;
+    }
+
+    body.InventoryManagement > .inv-sidebar:hover .inv-sidebar__logo img,
+    body.InventoryManagement > .inv-sidebar:focus-within .inv-sidebar__logo img {
+        width: 142px;
+        height: auto;
+    }
+
+    body.InventoryManagement > .inv-sidebar:hover .inv-sidebar__label,
+    body.InventoryManagement > .inv-sidebar:hover .inv-nav-link > span,
+    body.InventoryManagement > .inv-sidebar:hover .um-sidebar__account-details,
+    body.InventoryManagement > .inv-sidebar:focus-within .inv-sidebar__label,
+    body.InventoryManagement > .inv-sidebar:focus-within .inv-nav-link > span,
+    body.InventoryManagement > .inv-sidebar:focus-within .um-sidebar__account-details {
+        width: auto;
+        opacity: 1;
+        visibility: visible;
+        transition-delay: 0s;
+    }
+
+    body.InventoryManagement > .inv-sidebar:hover .inv-nav-link,
+    body.InventoryManagement > .inv-sidebar:focus-within .inv-nav-link {
+        justify-content: flex-start;
+        gap: 10px;
+        padding-right: 8px;
+        padding-left: 8px;
+    }
+
+    body.InventoryManagement > .inv-sidebar:hover .inv-nav-link img,
+    body.InventoryManagement > .inv-sidebar:focus-within .inv-nav-link img {
+        width: 18px;
+        height: 18px;
+        flex-basis: 18px;
+        margin-inline: 0;
+    }
+
+    body.InventoryManagement > .inv-sidebar:hover .inv-sidebar__account,
+    body.InventoryManagement > .inv-sidebar:focus-within .inv-sidebar__account {
+        justify-content: flex-start;
+        padding-right: 8px;
+        padding-left: 8px;
+    }
+}
+
+body.staff-theme-dark.InventoryManagement > .inv-sidebar {
+    --gold-dark: #B5892A;
+    --staff-sidebar-bg: var(--gold-dark);
+    border-color: var(--staff-sidebar-border, #3d3e39);
+    background: var(--staff-sidebar-bg);
+}
+
+body.InventoryManagement > .inv-sidebar {
+    --staff-sidebar-bg: var(--gold-dark);
+    background: var(--staff-sidebar-bg);
+    color: #201c18;
+}
+
+body.staff-theme-dark.InventoryManagement > .inv-sidebar .inv-sidebar__logo,
+body.staff-theme-dark.InventoryManagement > .inv-sidebar .inv-sidebar__account {
+    border-color: rgba(32, 28, 24, 0.35);
+}
+
+body.InventoryManagement > .inv-sidebar .inv-sidebar__label,
+body.InventoryManagement > .inv-sidebar .inv-nav-link,
+body.InventoryManagement > .inv-sidebar .inv-sidebar__account-name,
+body.InventoryManagement > .inv-sidebar .inv-sidebar__account-role {
+    color: #201c18;
+}
+
+body.InventoryManagement > .inv-sidebar .inv-nav-link:not(.inv-nav-link--active):hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #201c18;
+}
+
+body.InventoryManagement > .inv-sidebar .inv-nav-link--active {
+    border-color: #201c18;
+    background: #201c18;
+    color: #fff9e8;
+}
+
+body.InventoryManagement > .inv-sidebar .inv-nav-link--active img {
+    filter: brightness(0) invert(1);
+}
+
+body.staff-theme-dark.InventoryManagement > .inv-sidebar .um-avatar {
+    background: #201c18;
+    color: #fff9e8;
+}
+
+body.InventoryManagement > .inv-sidebar,
+body.staff-theme-dark.InventoryManagement > .inv-sidebar {
+    background:
+        radial-gradient(ellipse at 24% 0%, rgba(255, 235, 174, 0.17), transparent 48%),
+        linear-gradient(165deg, rgba(101, 69, 19, 0.18), transparent 42%, rgba(79, 53, 14, 0.2)),
+        var(--gold-dark);
+}
+
+body.InventoryManagement > .inv-sidebar .inv-nav-link,
+body.staff-theme-dark.InventoryManagement > .inv-sidebar .inv-nav-link {
+    position: relative;
+    transition: background-color 180ms ease, color 180ms ease, box-shadow 180ms ease;
+}
+
+body.InventoryManagement > .inv-sidebar .inv-sidebar__label,
+body.InventoryManagement > .inv-sidebar .inv-nav-link,
+body.InventoryManagement > .inv-sidebar .inv-sidebar__account-name,
+body.InventoryManagement > .inv-sidebar .inv-sidebar__account-role,
+body.staff-theme-dark.InventoryManagement > .inv-sidebar .inv-sidebar__label,
+body.staff-theme-dark.InventoryManagement > .inv-sidebar .inv-nav-link,
+body.staff-theme-dark.InventoryManagement > .inv-sidebar .inv-sidebar__account-name,
+body.staff-theme-dark.InventoryManagement > .inv-sidebar .inv-sidebar__account-role {
+    color: #fff;
+}
+
+body.InventoryManagement > .inv-sidebar .inv-sidebar__logo,
+body.InventoryManagement > .inv-sidebar .inv-sidebar__account,
+body.staff-theme-dark.InventoryManagement > .inv-sidebar .inv-sidebar__logo,
+body.staff-theme-dark.InventoryManagement > .inv-sidebar .inv-sidebar__account {
+    border-color: rgba(255, 255, 255, 0.26);
+}
+
+body.InventoryManagement > .inv-sidebar .inv-nav-link:not(.inv-nav-link--active):hover,
+body.staff-theme-dark.InventoryManagement > .inv-sidebar .inv-nav-link:not(.inv-nav-link--active):hover {
+    background: rgba(255, 235, 174, 0.13);
+    color: #fff;
+    box-shadow: inset 0 0 12px rgba(255, 225, 133, 0.12);
+}
+
+body.InventoryManagement > .inv-sidebar .inv-nav-link--active,
+body.staff-theme-dark.InventoryManagement > .inv-sidebar .inv-nav-link--active {
+    border-color: transparent;
+    background: linear-gradient(90deg, rgba(255, 231, 153, 0.3), rgba(255, 225, 127, 0.16));
+    color: #fff;
+    box-shadow: inset 0 0 18px rgba(255, 232, 161, 0.12), 0 0 12px rgba(255, 226, 130, 0.14);
+}
+
+body.InventoryManagement > .inv-sidebar .inv-nav-link--active::before,
+body.staff-theme-dark.InventoryManagement > .inv-sidebar .inv-nav-link--active::before {
+    position: absolute;
+    top: 8px;
+    bottom: 8px;
+    left: 0;
+    width: 3px;
+    border-radius: 0 3px 3px 0;
+    background: #fff2c2;
+    box-shadow: 0 0 6px rgba(255, 244, 202, 0.96), 0 0 13px rgba(255, 219, 112, 0.76);
+    content: "";
+    pointer-events: none;
+}
+
+body.InventoryManagement > .inv-sidebar .inv-nav-link--active:hover,
+body.staff-theme-dark.InventoryManagement > .inv-sidebar .inv-nav-link--active:hover {
+    background: linear-gradient(90deg, rgba(255, 231, 153, 0.34), rgba(255, 225, 127, 0.2));
+    color: #fff;
+    box-shadow: inset 0 0 18px rgba(255, 232, 161, 0.15), 0 0 14px rgba(255, 226, 130, 0.18);
+}
+
+body.InventoryManagement > .inv-sidebar .inv-nav-link--active img,
+body.staff-theme-dark.InventoryManagement > .inv-sidebar .inv-nav-link--active img {
+    filter: brightness(0) invert(1);
+}
+
+body.InventoryManagement > .inv-sidebar .inv-nav-link img,
+body.staff-theme-dark.InventoryManagement > .inv-sidebar .inv-nav-link img {
+    filter: brightness(0) invert(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body.InventoryManagement > .inv-sidebar .inv-nav-link {
+        transition: none;
+    }
+}
+
+body.InventoryManagement > .inv-sidebar,
+body.staff-theme-dark.InventoryManagement > .inv-sidebar {
+    border-top-right-radius: 22px !important;
+}
+
+body.InventoryManagement > .inv-sidebar:hover,
+body.InventoryManagement > .inv-sidebar:focus-within,
+body.staff-theme-dark.InventoryManagement > .inv-sidebar:hover,
+body.staff-theme-dark.InventoryManagement > .inv-sidebar:focus-within {
+    border-top-right-radius: 22px !important;
+}
+
+body.InventoryManagement > .inv-sidebar .inv-sidebar__label {
+    display: none;
+}
+
+body.InventoryManagement > .inv-sidebar .inv-sidebar__logo,
+body.staff-theme-dark.InventoryManagement > .inv-sidebar .inv-sidebar__logo {
+    border: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.28);
+    margin-bottom: 18px;
+}
+
+body.InventoryManagement > .inv-sidebar .inv-nav-link,
+body.InventoryManagement > .inv-sidebar .inv-sidebar__label,
+body.InventoryManagement > .inv-sidebar .inv-sidebar__account-name,
+body.InventoryManagement > .inv-sidebar .inv-sidebar__account-role,
+body.staff-theme-dark.InventoryManagement > .inv-sidebar .inv-nav-link,
+body.staff-theme-dark.InventoryManagement > .inv-sidebar .inv-sidebar__label,
+body.staff-theme-dark.InventoryManagement > .inv-sidebar .inv-sidebar__account-name,
+body.staff-theme-dark.InventoryManagement > .inv-sidebar .inv-sidebar__account-role {
+    color: #fff !important;
+}

@@ -25136,3 +25136,1188 @@ body.staff-theme-dark #umCreateOverlay .um-modal__close:hover {
     filter: brightness(0) invert(0.9);
   }
 }
+
+/* Shared staff sidebar palette and desktop rail behavior. */
+:root {
+  --staff-sidebar-bg: var(--gold-dark);
+  --staff-sidebar-text: #fff;
+  --staff-sidebar-muted: rgba(255, 255, 255, 0.82);
+  --staff-sidebar-border: rgba(255, 255, 255, 0.24);
+  --staff-sidebar-hover: rgba(255, 236, 178, 0.12);
+  --staff-sidebar-hover-text: #fff;
+  --staff-sidebar-active: rgba(255, 229, 145, 0.23);
+  --staff-sidebar-active-text: #fff;
+  --staff-sidebar-accent: #fff;
+  --staff-sidebar-rail-width: 68px;
+  --staff-sidebar-expanded-width: 236px;
+}
+
+body.staff-theme-dark {
+  --staff-sidebar-bg: var(--gold-dark);
+  --staff-sidebar-text: #fff;
+  --staff-sidebar-muted: rgba(255, 255, 255, 0.82);
+  --staff-sidebar-border: rgba(255, 255, 255, 0.24);
+  --staff-sidebar-hover: rgba(255, 236, 178, 0.12);
+  --staff-sidebar-hover-text: #fff;
+  --staff-sidebar-active: rgba(255, 229, 145, 0.23);
+  --staff-sidebar-active-text: #fff;
+  --staff-sidebar-accent: #fff;
+}
+
+.um-sidebar,
+.inv-sidebar,
+section.staff-sidebar {
+  background: var(--staff-sidebar-bg);
+  color: var(--staff-sidebar-text);
+}
+
+.um-sidebar__label,
+.um-sidebar__account-role,
+.inv-sidebar__label,
+.inv-sidebar__account-role,
+section.staff-sidebar .sidebar-heading {
+  color: var(--staff-sidebar-muted);
+}
+
+.um-sidebar__logo,
+.um-sidebar__account,
+.inv-sidebar__logo,
+.inv-sidebar__account,
+section.staff-sidebar .profile-divider,
+section.staff-sidebar > hr {
+  border-color: var(--staff-sidebar-border);
+}
+
+.um-sidebar__account-name,
+.inv-sidebar__account-name {
+  color: var(--staff-sidebar-text);
+}
+
+.um-nav-link--active,
+.inv-nav-link--active {
+  border-color: var(--staff-sidebar-active);
+}
+
+.um-nav-link--active img,
+.admin-nav-group.is-active > .admin-nav-group-toggle img,
+.inv-nav-link--active img,
+section.staff-sidebar .nav-item.active .finance-nav-icon {
+  filter: brightness(0) invert(1);
+}
+
+.um-nav-link,
+.admin-nav-group-toggle,
+.inv-nav-link,
+section.staff-sidebar .nav-item {
+  color: var(--staff-sidebar-text);
+}
+
+.um-nav-link:not(.um-nav-link--active):hover,
+.admin-nav-group-toggle:hover,
+.inv-nav-link:not(.inv-nav-link--active):hover,
+section.staff-sidebar .nav-item:hover {
+  background: var(--staff-sidebar-hover);
+  color: var(--staff-sidebar-hover-text);
+}
+
+.um-nav-link--active,
+.inv-nav-link--active,
+section.staff-sidebar .nav-item.active {
+  background: var(--staff-sidebar-active);
+  color: var(--staff-sidebar-active-text);
+}
+
+.um-sidebar .admin-nav-group.is-active > .admin-nav-group-toggle,
+.um-sidebar .admin-nav-group-toggle.is-active {
+  background: var(--staff-sidebar-active);
+  color: var(--staff-sidebar-active-text);
+}
+
+.staff-sidebar .fin-nav-view-tab.is-active {
+  border-left-color: var(--staff-sidebar-active);
+  background: var(--staff-sidebar-active);
+  color: var(--staff-sidebar-active-text);
+}
+
+.staff-sidebar .fin-nav-view-tab:not(.is-active):hover {
+  background: var(--staff-sidebar-hover);
+  color: var(--staff-sidebar-hover-text);
+}
+
+/* Warm ambient depth and restrained active/hover glow shared by staff sidebars. */
+.um-sidebar,
+.inv-sidebar,
+section.staff-sidebar {
+  background:
+    radial-gradient(ellipse at 24% 0%, rgba(255, 235, 174, 0.17), transparent 48%),
+    linear-gradient(165deg, rgba(101, 69, 19, 0.18), transparent 42%, rgba(79, 53, 14, 0.2)),
+    var(--gold-dark);
+}
+
+.um-nav-link,
+.admin-nav-group-toggle,
+.inv-nav-link,
+section.staff-sidebar .nav-item,
+.staff-sidebar .fin-nav-view-tab {
+  transition:
+    background-color 180ms ease,
+    color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.um-nav-link:not(.um-nav-link--active):hover,
+.admin-nav-group-toggle:not(.is-active):hover,
+.inv-nav-link:not(.inv-nav-link--active):hover,
+section.staff-sidebar .nav-item:not(.active):hover,
+.staff-sidebar .fin-nav-view-tab:not(.is-active):hover {
+  background: rgba(255, 235, 174, 0.13);
+  color: #fff;
+  box-shadow: inset 0 0 12px rgba(255, 225, 133, 0.1);
+}
+
+.um-sidebar__nav > .um-nav-link--active,
+.um-sidebar .admin-nav-group.is-active > .admin-nav-group-toggle,
+.um-sidebar .admin-nav-group-toggle.is-active,
+.um-sidebar__nav .admin-nav-child.um-nav-link--active,
+.inv-nav-link--active,
+section.staff-sidebar .nav-item.active,
+.staff-sidebar .fin-nav-view-tab.is-active {
+  position: relative;
+  border-color: transparent;
+  background: linear-gradient(90deg, rgba(255, 231, 153, 0.3), rgba(255, 225, 127, 0.16));
+  color: #fff;
+  box-shadow:
+    inset 0 0 18px rgba(255, 232, 161, 0.12),
+    0 0 12px rgba(255, 226, 130, 0.14);
+}
+
+.um-sidebar__nav > .um-nav-link--active::before,
+.um-sidebar .admin-nav-group.is-active > .admin-nav-group-toggle::before,
+.um-sidebar .admin-nav-group-toggle.is-active::before,
+.um-sidebar__nav .admin-nav-child.um-nav-link--active::before,
+.inv-nav-link--active::before,
+section.staff-sidebar .nav-item.active::before,
+.staff-sidebar .fin-nav-view-tab.is-active::before {
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 0;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: #fff2c2;
+  box-shadow:
+    0 0 6px rgba(255, 244, 202, 0.96),
+    0 0 13px rgba(255, 219, 112, 0.76);
+  content: "";
+  pointer-events: none;
+}
+
+.um-sidebar__nav > .um-nav-link--active:hover,
+.um-sidebar .admin-nav-group.is-active > .admin-nav-group-toggle:hover,
+.um-sidebar .admin-nav-group-toggle.is-active:hover,
+.um-sidebar__nav .admin-nav-child.um-nav-link--active:hover,
+.inv-nav-link--active:hover,
+section.staff-sidebar .nav-item.active:hover,
+.staff-sidebar .fin-nav-view-tab.is-active:hover {
+  background: linear-gradient(90deg, rgba(255, 231, 153, 0.34), rgba(255, 225, 127, 0.2));
+  color: #fff;
+  box-shadow:
+    inset 0 0 18px rgba(255, 232, 161, 0.15),
+    0 0 14px rgba(255, 226, 130, 0.18);
+}
+
+.um-sidebar__nav > .um-nav-link--active img,
+.um-sidebar .admin-nav-group.is-active > .admin-nav-group-toggle img,
+.um-sidebar .admin-nav-group-toggle.is-active img,
+.um-sidebar__nav .admin-nav-child.um-nav-link--active img,
+.inv-nav-link--active img,
+section.staff-sidebar .nav-item.active .finance-nav-icon {
+  filter: brightness(0) saturate(100%);
+}
+
+body.staff-theme-dark .um-sidebar,
+body.staff-theme-dark .inv-sidebar,
+body.staff-theme-dark section.staff-sidebar {
+  background:
+    radial-gradient(ellipse at 24% 0%, rgba(255, 235, 174, 0.17), transparent 48%),
+    linear-gradient(165deg, rgba(101, 69, 19, 0.18), transparent 42%, rgba(79, 53, 14, 0.2)),
+    var(--gold-dark);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .um-nav-link,
+  .admin-nav-group-toggle,
+  .inv-nav-link,
+  section.staff-sidebar .nav-item,
+  .staff-sidebar .fin-nav-view-tab {
+    transition: none;
+  }
+}
+
+.um-sidebar__logo img,
+.inv-sidebar__logo img,
+section.staff-sidebar .staff-sidebar-logo {
+  content: url("images/SGLogoNoText-removebg.png");
+}
+
+body.staff-theme-dark .um-sidebar,
+body.staff-theme-dark .inv-sidebar,
+body.staff-theme-dark section.staff-sidebar {
+  background: var(--staff-sidebar-bg);
+  border-color: var(--staff-sidebar-border);
+}
+
+body.staff-theme-dark .um-sidebar__label,
+body.staff-theme-dark .um-sidebar__account-role,
+body.staff-theme-dark .inv-sidebar__label,
+body.staff-theme-dark .inv-sidebar__account-role,
+body.staff-theme-dark section.staff-sidebar .sidebar-heading {
+  color: var(--staff-sidebar-muted);
+}
+
+body.staff-theme-dark .um-sidebar__account-name,
+body.staff-theme-dark .inv-sidebar__account-name {
+  color: var(--staff-sidebar-text);
+}
+
+body.staff-theme-dark section.staff-sidebar .profile-info,
+body.staff-theme-dark section.staff-sidebar .profile-name,
+body.staff-theme-dark section.staff-sidebar .status-item span {
+  color: var(--staff-sidebar-text);
+}
+
+body.staff-theme-dark .um-sidebar__logo,
+body.staff-theme-dark .um-sidebar__account,
+body.staff-theme-dark .inv-sidebar__logo,
+body.staff-theme-dark .inv-sidebar__account,
+body.staff-theme-dark section.staff-sidebar .profile-divider,
+body.staff-theme-dark section.staff-sidebar > hr {
+  border-color: var(--staff-sidebar-border);
+}
+
+body.staff-theme-dark .um-nav-link,
+body.staff-theme-dark .admin-nav-group-toggle,
+body.staff-theme-dark .inv-nav-link,
+body.staff-theme-dark section.staff-sidebar .nav-item {
+  color: var(--staff-sidebar-text);
+}
+
+body.staff-theme-dark .um-nav-link:not(.um-nav-link--active):hover,
+body.staff-theme-dark .admin-nav-group-toggle:hover,
+body.staff-theme-dark .inv-nav-link:not(.inv-nav-link--active):hover,
+body.staff-theme-dark section.staff-sidebar .nav-item:hover {
+  background: var(--staff-sidebar-hover);
+  color: var(--staff-sidebar-hover-text);
+}
+
+body.staff-theme-dark .um-nav-link--active,
+body.staff-theme-dark .inv-nav-link--active,
+body.staff-theme-dark section.staff-sidebar .nav-item.active {
+  background: var(--staff-sidebar-active);
+  color: var(--staff-sidebar-active-text);
+}
+
+body.staff-theme-dark .um-nav-link img,
+body.staff-theme-dark .admin-nav-group-toggle img,
+body.staff-theme-dark .inv-nav-link img,
+body.staff-theme-dark section.staff-sidebar .finance-nav-icon {
+  filter: brightness(0) saturate(100%);
+}
+
+body.staff-theme-dark .um-nav-link--active img,
+body.staff-theme-dark .admin-nav-group.is-active > .admin-nav-group-toggle img,
+body.staff-theme-dark .inv-nav-link--active img,
+body.staff-theme-dark section.staff-sidebar .nav-item.active .finance-nav-icon {
+  filter: brightness(0) invert(1);
+}
+
+body.staff-theme-dark .um-sidebar__nav .um-nav-link--active,
+body.staff-theme-dark .admin-nav-group.is-active > .admin-nav-group-toggle,
+body.staff-theme-dark .admin-nav-group-toggle.is-active,
+body.staff-theme-dark .um-sidebar__nav .um-nav-link.admin-nav-child.um-nav-link--active,
+body.staff-theme-dark .staff-sidebar .fin-nav-view-tab.is-active {
+  border-color: var(--staff-sidebar-active);
+  background: var(--staff-sidebar-active);
+  color: var(--staff-sidebar-active-text);
+}
+
+body.staff-theme-dark .staff-sidebar .fin-nav-view-tab:not(.is-active):hover {
+  background: var(--staff-sidebar-hover);
+  color: var(--staff-sidebar-hover-text);
+}
+
+/* Keep shared staff navigation consistently white above legacy theme rules. */
+.um-sidebar,
+.inv-sidebar,
+section.staff-sidebar {
+  background:
+    radial-gradient(ellipse at 24% 0%, rgba(255, 235, 174, 0.17), transparent 48%),
+    linear-gradient(165deg, rgba(101, 69, 19, 0.18), transparent 42%, rgba(79, 53, 14, 0.2)),
+    var(--gold-dark);
+}
+
+.um-sidebar__label,
+.um-sidebar__account-name,
+.um-sidebar__account-role,
+.um-nav-link,
+.admin-nav-group-toggle,
+.admin-nav-child,
+.admin-nav-chevron,
+.inv-sidebar__label,
+.inv-sidebar__account-name,
+.inv-sidebar__account-role,
+.inv-nav-link,
+section.staff-sidebar .sidebar-heading,
+section.staff-sidebar .nav-item,
+section.staff-sidebar .nav-item a,
+section.staff-sidebar .status-item,
+section.staff-sidebar .profile-info,
+section.staff-sidebar .profile-name,
+section.staff-sidebar .profile-role,
+section.staff-sidebar .fin-nav-parent-link,
+section.staff-sidebar .fin-nav-dropdown-toggle,
+section.staff-sidebar .fin-nav-view-tab {
+  color: #fff;
+}
+
+.um-sidebar__nav img,
+.um-sidebar__nav svg,
+.inv-sidebar__nav img,
+section.staff-sidebar nav img,
+section.staff-sidebar nav svg {
+  color: #fff;
+  filter: brightness(0) invert(1);
+}
+
+.um-sidebar__logo,
+.um-sidebar__account,
+.inv-sidebar__logo,
+.inv-sidebar__account,
+section.staff-sidebar .profile-wrap,
+section.staff-sidebar .profile-divider,
+section.staff-sidebar > hr,
+section.staff-sidebar .fin-nav-view-list {
+  border-color: rgba(255, 255, 255, 0.26);
+}
+
+.um-sidebar__nav > .um-nav-link--active,
+.um-sidebar .admin-nav-group.is-active > .admin-nav-group-toggle,
+.um-sidebar .admin-nav-group-toggle.is-active,
+.um-sidebar__nav .admin-nav-child.um-nav-link--active,
+.inv-sidebar .inv-nav-link--active,
+section.staff-sidebar .nav-item.active,
+section.staff-sidebar .fin-nav-view-tab.is-active {
+  border-color: transparent;
+  background: linear-gradient(90deg, rgba(255, 231, 153, 0.3), rgba(255, 225, 127, 0.16));
+  color: #fff;
+  box-shadow:
+    inset 0 0 18px rgba(255, 232, 161, 0.12),
+    0 0 12px rgba(255, 226, 130, 0.14);
+}
+
+.um-sidebar__nav > .um-nav-link--active::before,
+.um-sidebar .admin-nav-group.is-active > .admin-nav-group-toggle::before,
+.um-sidebar .admin-nav-group-toggle.is-active::before,
+.um-sidebar__nav .admin-nav-child.um-nav-link--active::before,
+.inv-sidebar .inv-nav-link--active::before,
+section.staff-sidebar .nav-item.active::before,
+section.staff-sidebar .fin-nav-view-tab.is-active::before {
+  background: #fff2c2;
+  box-shadow:
+    0 0 6px rgba(255, 244, 202, 0.96),
+    0 0 13px rgba(255, 219, 112, 0.76);
+}
+
+.um-sidebar__nav > .um-nav-link--active:hover,
+.um-sidebar .admin-nav-group.is-active > .admin-nav-group-toggle:hover,
+.um-sidebar .admin-nav-group-toggle.is-active:hover,
+.um-sidebar__nav .admin-nav-child.um-nav-link--active:hover,
+.inv-sidebar .inv-nav-link--active:hover,
+section.staff-sidebar .nav-item.active:hover,
+section.staff-sidebar .fin-nav-view-tab.is-active:hover {
+  background: linear-gradient(90deg, rgba(255, 231, 153, 0.34), rgba(255, 225, 127, 0.2));
+  color: #fff;
+}
+
+.um-nav-link:not(.um-nav-link--active):hover,
+.admin-nav-group-toggle:not(.is-active):hover,
+.inv-nav-link:not(.inv-nav-link--active):hover,
+section.staff-sidebar .nav-item:not(.active):hover,
+section.staff-sidebar .fin-nav-view-tab:not(.is-active):hover {
+  background: rgba(255, 235, 174, 0.13);
+  color: #fff;
+  box-shadow: inset 0 0 12px rgba(255, 225, 133, 0.1);
+}
+
+body.staff-theme-dark .um-sidebar__nav img,
+body.staff-theme-dark .um-sidebar__nav svg,
+body.staff-theme-dark .inv-sidebar__nav img,
+body.staff-theme-dark section.staff-sidebar nav img,
+body.staff-theme-dark section.staff-sidebar nav svg {
+  filter: brightness(0) invert(1);
+}
+
+section.sidebar[aria-label="Finance navigation"] .nav-item > a,
+section.sidebar[aria-label="Finance navigation"] .fin-nav-parent-link,
+section.sidebar[aria-label="Finance navigation"] .fin-nav-dropdown-toggle,
+section.sidebar[aria-label="Finance navigation"] .fin-nav-view-tab,
+section.staff-sidebar[aria-label] .sidebar-heading,
+section.staff-sidebar[aria-label] .status-item span,
+section.staff-sidebar[aria-label] .profile-info,
+section.staff-sidebar[aria-label] .profile-name,
+section.staff-sidebar[aria-label] .profile-role {
+  color: #fff;
+}
+
+section.sidebar[aria-label="Finance navigation"] .nav-item.active:not(.fin-nav-dropdown),
+section.sidebar[aria-label="Finance navigation"] .fin-nav-dropdown.nav-item.active,
+section.sidebar[aria-label="Finance navigation"] .fin-nav-dropdown.nav-item.active .fin-nav-dropdown-head,
+section.sidebar[aria-label="Finance navigation"] .fin-nav-view-tab.is-active {
+  border-color: transparent;
+  background: linear-gradient(90deg, rgba(255, 231, 153, 0.3), rgba(255, 225, 127, 0.16));
+  color: #fff;
+  box-shadow: inset 0 0 18px rgba(255, 232, 161, 0.12), 0 0 12px rgba(255, 226, 130, 0.14);
+}
+
+section.sidebar[aria-label="Finance navigation"] .fin-nav-dropdown.nav-item.active::before {
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 0;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: #fff2c2;
+  box-shadow: 0 0 6px rgba(255, 244, 202, 0.96), 0 0 13px rgba(255, 219, 112, 0.76);
+  content: "";
+  pointer-events: none;
+}
+
+section.sidebar[aria-label="Finance navigation"] .nav-item:not(.active) > a:hover,
+section.sidebar[aria-label="Finance navigation"] .fin-nav-parent-link:hover,
+section.sidebar[aria-label="Finance navigation"] .fin-nav-dropdown-toggle:hover,
+section.sidebar[aria-label="Finance navigation"] .fin-nav-view-tab:not(.is-active):hover {
+  background: rgba(255, 235, 174, 0.13);
+  color: #fff;
+  box-shadow: inset 0 0 12px rgba(255, 225, 133, 0.1);
+}
+
+section.sidebar[aria-label="Finance navigation"] .nav-item.active > a:hover,
+section.sidebar[aria-label="Finance navigation"] .fin-nav-dropdown.nav-item.active .fin-nav-parent-link:hover,
+section.sidebar[aria-label="Finance navigation"] .fin-nav-view-tab.is-active:hover {
+  color: #fff;
+}
+
+.staff-theme-toggle--sidebar {
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.staff-theme-toggle--sidebar:hover {
+  border-color: rgba(255, 255, 255, 0.56);
+  background: rgba(255, 235, 174, 0.16);
+  color: #fff;
+}
+
+body.staff-theme-dark .um-sidebar__label,
+body.staff-theme-dark .um-sidebar__account-name,
+body.staff-theme-dark .um-sidebar__account-role,
+body.staff-theme-dark .um-sidebar .um-nav-link,
+body.staff-theme-dark .um-sidebar .admin-nav-group-toggle,
+body.staff-theme-dark .um-sidebar .admin-nav-child,
+body.staff-theme-dark .um-sidebar .admin-nav-chevron,
+body.staff-theme-dark .inv-sidebar__label,
+body.staff-theme-dark .inv-sidebar__account-name,
+body.staff-theme-dark .inv-sidebar__account-role,
+body.staff-theme-dark .inv-sidebar .inv-nav-link,
+body.staff-theme-dark section.staff-sidebar[aria-label] .sidebar-heading,
+body.staff-theme-dark section.staff-sidebar[aria-label] .nav-item,
+body.staff-theme-dark section.staff-sidebar[aria-label] .nav-item a,
+body.staff-theme-dark section.staff-sidebar[aria-label] .status-item span,
+body.staff-theme-dark section.staff-sidebar[aria-label] .profile-info,
+body.staff-theme-dark section.staff-sidebar[aria-label] .profile-name,
+body.staff-theme-dark section.staff-sidebar[aria-label] .profile-role,
+body.staff-theme-dark section.sidebar[aria-label="Finance navigation"] .fin-nav-parent-link,
+body.staff-theme-dark section.sidebar[aria-label="Finance navigation"] .fin-nav-dropdown-toggle,
+body.staff-theme-dark section.sidebar[aria-label="Finance navigation"] .fin-nav-view-tab {
+  color: #fff;
+}
+
+body.staff-theme-dark .um-sidebar__nav .um-nav-link.admin-nav-child.um-nav-link--active,
+body.staff-theme-dark .um-sidebar .admin-nav-group.is-active > .admin-nav-group-toggle:not(:hover),
+body.staff-theme-dark .um-sidebar .admin-nav-group-toggle.is-active:not(:hover),
+body.staff-theme-dark section.staff-sidebar[aria-label="Aesthetician navigation"] .nav-item.active,
+body.staff-theme-dark section.staff-sidebar[aria-label="Aesthetician navigation"] .nav-item.active a,
+body.staff-theme-dark section.staff-sidebar[aria-label="Finance navigation"] .nav-item.active:not(.fin-nav-dropdown),
+body.staff-theme-dark section.staff-sidebar[aria-label="Finance navigation"] .fin-nav-dropdown.nav-item.active,
+body.staff-theme-dark section.staff-sidebar[aria-label="Finance navigation"] .fin-nav-dropdown.nav-item.active .fin-nav-dropdown-head,
+body.staff-theme-dark section.sidebar[aria-label="Finance navigation"] .nav-item.active:not(.fin-nav-dropdown),
+body.staff-theme-dark section.sidebar[aria-label="Finance navigation"] .fin-nav-dropdown.nav-item.active .fin-nav-dropdown-head,
+body.staff-theme-dark section.sidebar[aria-label="Finance navigation"] .fin-nav-view-tab.is-active {
+  border-color: transparent;
+  background: linear-gradient(90deg, rgba(255, 231, 153, 0.3), rgba(255, 225, 127, 0.16));
+  color: #fff;
+  box-shadow: inset 0 0 18px rgba(255, 232, 161, 0.12), 0 0 12px rgba(255, 226, 130, 0.14);
+}
+
+body.staff-theme-dark section.staff-sidebar[aria-label="Aesthetician navigation"] .nav-item.active a,
+body.staff-theme-dark section.staff-sidebar[aria-label="Finance navigation"] .nav-item.active a,
+body.staff-theme-dark section.sidebar[aria-label="Finance navigation"] .fin-nav-parent-link {
+  color: #fff;
+}
+
+body.staff-theme-dark .um-sidebar__nav .um-nav-link.admin-nav-child:not(.um-nav-link--active):hover,
+body.staff-theme-dark .um-sidebar .admin-nav-group-toggle:not(.is-active):hover,
+body.staff-theme-dark section.staff-sidebar[aria-label] .nav-item:not(.active):hover,
+body.staff-theme-dark section.sidebar[aria-label="Finance navigation"] .nav-item:not(.active):hover {
+  background: rgba(255, 235, 174, 0.13);
+  color: #fff;
+  box-shadow: inset 0 0 12px rgba(255, 225, 133, 0.1);
+}
+
+body.staff-theme-dark section.sidebar[aria-label="Finance navigation"] .nav-item:not(.active) > a:hover,
+body.staff-theme-dark section.sidebar[aria-label="Finance navigation"] .fin-nav-parent-link:hover,
+body.staff-theme-dark section.sidebar[aria-label="Finance navigation"] .fin-nav-dropdown-toggle:hover,
+body.staff-theme-dark section.sidebar[aria-label="Finance navigation"] .fin-nav-view-tab:not(.is-active):hover {
+  background: rgba(255, 235, 174, 0.13);
+  color: #fff;
+  box-shadow: inset 0 0 12px rgba(255, 225, 133, 0.1);
+}
+
+body.staff-theme-dark section.sidebar[aria-label="Finance navigation"] .nav-item.active > a:hover,
+body.staff-theme-dark section.sidebar[aria-label="Finance navigation"] .fin-nav-dropdown.nav-item.active .fin-nav-parent-link:hover,
+body.staff-theme-dark section.sidebar[aria-label="Finance navigation"] .fin-nav-view-tab.is-active:hover {
+  color: #fff;
+}
+
+body.staff-theme-dark .staff-theme-toggle--sidebar {
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+@media screen and (min-width: 1025px) {
+  body:has(> main > section.staff-sidebar) > .staff-header {
+    width: calc(100% - var(--staff-sidebar-expanded-width));
+    margin-left: var(--staff-sidebar-expanded-width);
+    transition: width 220ms cubic-bezier(0.2, 0.7, 0.2, 1), margin-left 220ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+
+  .um-shell > .um-sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 120;
+    width: var(--staff-sidebar-expanded-width);
+    min-width: 0;
+    height: 100vh;
+    overflow-x: hidden;
+    overflow-y: auto;
+    transition: width 220ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+
+  .um-shell > .um-main {
+    min-width: 0;
+    margin-left: var(--staff-sidebar-expanded-width);
+    transition: margin-left 220ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+
+  .um-sidebar__logo {
+    justify-content: center;
+    padding: 0 12px;
+  }
+
+  .um-sidebar__logo .logo-container {
+    width: 100%;
+    height: 64px;
+    justify-content: center;
+    margin: 0;
+  }
+
+  .um-sidebar__logo #logo {
+    width: 100%;
+    height: 40px;
+    object-fit: contain;
+  }
+
+  .um-sidebar__nav > .um-nav-link,
+  .um-sidebar__nav .admin-nav-group-toggle {
+    display: flex;
+    min-height: 42px;
+    align-items: center;
+    gap: 10px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 8px;
+    white-space: nowrap;
+    transition: background-color 160ms ease, color 160ms ease;
+  }
+
+  .um-sidebar__nav .um-nav-link img,
+  .admin-nav-group-toggle img {
+    display: block;
+    width: 18px;
+    height: 18px;
+    flex: 0 0 18px;
+    object-fit: contain;
+  }
+
+  .admin-nav-group-toggle .admin-nav-chevron {
+    flex: 0 0 18px;
+    margin-left: auto;
+  }
+
+  .um-sidebar__account {
+    padding: 12px;
+  }
+
+  section.staff-sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 120;
+    width: var(--staff-sidebar-expanded-width);
+    height: 100vh;
+    max-height: 100vh;
+    padding: 0 8px 12px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    border-right: 1px solid var(--staff-sidebar-border);
+    box-shadow: 2px 0 12px rgba(48, 38, 22, 0.06);
+    transition: width 220ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+
+  .staff-sidebar + .main-content,
+  .staff-sidebar + main {
+    width: calc(100% - var(--staff-sidebar-expanded-width));
+    min-width: 0;
+    flex: 0 0 calc(100% - var(--staff-sidebar-expanded-width));
+    transition: width 220ms cubic-bezier(0.2, 0.7, 0.2, 1), flex-basis 220ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+
+  section.staff-sidebar .staff-sidebar-logo-wrap {
+    display: flex;
+    height: 64px;
+    flex: 0 0 64px;
+    align-items: center;
+    justify-content: center;
+    border-bottom: 1px solid var(--staff-sidebar-border);
+  }
+
+  section.staff-sidebar .staff-sidebar-logo {
+    display: block;
+    width: 150px;
+    max-height: 46px;
+    object-fit: contain;
+  }
+
+  section.staff-sidebar .sidebar-heading {
+    margin: 16px 0 10px;
+    padding: 0 10px;
+    font: 600 12px/1.35 "Raleway", sans-serif;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+
+  section.staff-sidebar nav ul {
+    display: grid;
+    gap: 4px;
+    list-style: none;
+  }
+
+  section.staff-sidebar .nav-item {
+    min-height: 42px;
+    margin: 0;
+    padding: 0 8px;
+    border: 0;
+    border-radius: 8px;
+    transition: background-color 160ms ease, color 160ms ease;
+  }
+
+  section.staff-sidebar .nav-item a {
+    display: flex;
+    min-width: 0;
+    min-height: 42px;
+    flex: 1;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    color: inherit;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  section.staff-sidebar .finance-nav-icon {
+    display: block;
+    width: 18px;
+    height: 18px;
+    flex: 0 0 18px;
+    object-fit: contain;
+  }
+
+  section.staff-sidebar .status-item {
+    min-height: 28px;
+    margin: 0;
+    padding: 0 10px;
+    white-space: nowrap;
+  }
+
+  section.staff-sidebar .profile-wrap {
+    border-top: 1px solid var(--staff-sidebar-border);
+  }
+
+  section.staff-sidebar .profile-divider {
+    display: none;
+  }
+
+  section.staff-sidebar .profile-card {
+    width: 100%;
+  }
+}
+
+@media screen and (min-width: 1025px) and (hover: hover) and (pointer: fine) {
+  .um-shell > .um-sidebar,
+  section.staff-sidebar {
+    width: var(--staff-sidebar-rail-width);
+    border-radius: 0 15px 0 0;
+  }
+
+  .um-shell > .um-sidebar:hover,
+  .um-shell > .um-sidebar:focus-within,
+  section.staff-sidebar:hover,
+  section.staff-sidebar:focus-within {
+    border-radius: 0;
+  }
+
+  body:has(> main > section.staff-sidebar) > .staff-header {
+    width: calc(100% - var(--staff-sidebar-rail-width));
+    margin-left: var(--staff-sidebar-rail-width);
+  }
+
+  .um-shell > .um-main {
+    margin-left: var(--staff-sidebar-rail-width);
+  }
+
+  .um-sidebar:hover,
+  .um-sidebar:focus-within,
+  section.staff-sidebar:hover,
+  section.staff-sidebar:focus-within {
+    width: var(--staff-sidebar-expanded-width);
+  }
+
+  .um-sidebar__logo .logo-container,
+  .um-sidebar__logo #logo {
+    width: 44px;
+  }
+
+  .um-sidebar__nav > .um-nav-link,
+  .um-sidebar__nav .admin-nav-group-toggle {
+    justify-content: center;
+    gap: 0;
+    padding: 0 8px;
+  }
+
+  .um-sidebar__nav .um-nav-link img,
+  .admin-nav-group-toggle img,
+  .inv-sidebar__nav .inv-nav-link img,
+  section.staff-sidebar .finance-nav-icon {
+    width: 21px;
+    height: 21px;
+    flex-basis: 21px;
+  }
+
+  .admin-nav-group-toggle .admin-nav-chevron {
+    width: 0;
+    flex-basis: 0;
+    margin: 0;
+    overflow: hidden;
+    opacity: 0;
+    visibility: hidden;
+  }
+
+  .staff-sidebar .fin-nav-dropdown-head {
+    justify-content: center;
+  }
+
+  .staff-sidebar .fin-nav-parent-link {
+    justify-content: center;
+    gap: 0;
+  }
+
+  .staff-sidebar .fin-nav-parent-link .finance-nav-icon {
+    margin-inline: auto;
+  }
+
+  .staff-sidebar .fin-nav-dropdown-toggle {
+    width: 0;
+    flex-basis: 0;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    opacity: 0;
+    visibility: hidden;
+  }
+
+  .um-sidebar:hover .admin-nav-group-toggle .admin-nav-chevron,
+  .um-sidebar:focus-within .admin-nav-group-toggle .admin-nav-chevron {
+    width: 18px;
+    flex-basis: 18px;
+    margin-left: auto;
+    opacity: 1;
+    visibility: visible;
+  }
+
+  section.staff-sidebar:hover .fin-nav-dropdown-head,
+  section.staff-sidebar:focus-within .fin-nav-dropdown-head {
+    justify-content: flex-start;
+  }
+
+  section.staff-sidebar:hover .fin-nav-parent-link,
+  section.staff-sidebar:focus-within .fin-nav-parent-link {
+    justify-content: flex-start;
+    gap: 10px;
+  }
+
+  section.staff-sidebar:hover .fin-nav-parent-link .finance-nav-icon,
+  section.staff-sidebar:focus-within .fin-nav-parent-link .finance-nav-icon {
+    margin-inline: 0;
+  }
+
+  section.staff-sidebar:hover .fin-nav-dropdown-toggle,
+  section.staff-sidebar:focus-within .fin-nav-dropdown-toggle {
+    width: 24px;
+    flex-basis: 24px;
+    margin-right: 2px;
+    padding: initial;
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .um-sidebar:hover .um-sidebar__nav .um-nav-link img,
+  .um-sidebar:focus-within .um-sidebar__nav .um-nav-link img,
+  .um-sidebar:hover .admin-nav-group-toggle img,
+  .um-sidebar:focus-within .admin-nav-group-toggle img,
+  section.staff-sidebar:hover .finance-nav-icon,
+  section.staff-sidebar:focus-within .finance-nav-icon {
+    width: 18px;
+    height: 18px;
+    flex-basis: 18px;
+  }
+
+  .um-sidebar__nav .um-nav-link > span,
+  .admin-nav-group-toggle > span,
+  .admin-nav-group-toggle .admin-nav-chevron,
+  .admin-nav-child > span,
+  .um-sidebar__label,
+  .um-sidebar__account-details {
+    width: 0;
+    overflow: hidden;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 120ms ease, visibility 0s linear 140ms;
+  }
+
+  .um-sidebar:hover .um-sidebar__nav > .um-nav-link,
+  .um-sidebar:hover .um-sidebar__nav .admin-nav-group-toggle,
+  .um-sidebar:focus-within .um-sidebar__nav > .um-nav-link,
+  .um-sidebar:focus-within .um-sidebar__nav .admin-nav-group-toggle {
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 0 12px;
+  }
+
+  .um-sidebar:hover .um-sidebar__nav .um-nav-link > span,
+  .um-sidebar:hover .admin-nav-group-toggle > span,
+  .um-sidebar:hover .admin-nav-group-toggle .admin-nav-chevron,
+  .um-sidebar:hover .admin-nav-child > span,
+  .um-sidebar:hover .um-sidebar__label,
+  .um-sidebar:hover .um-sidebar__account-details,
+  .um-sidebar:focus-within .um-sidebar__nav .um-nav-link > span,
+  .um-sidebar:focus-within .admin-nav-group-toggle > span,
+  .um-sidebar:focus-within .admin-nav-group-toggle .admin-nav-chevron,
+  .um-sidebar:focus-within .admin-nav-child > span,
+  .um-sidebar:focus-within .um-sidebar__label,
+  .um-sidebar:focus-within .um-sidebar__account-details {
+    width: auto;
+    opacity: 1;
+    visibility: visible;
+    transition-delay: 0s;
+  }
+
+  .um-sidebar__account {
+    padding: 12px 8px;
+  }
+
+  .um-sidebar__profile {
+    justify-content: center;
+  }
+
+  .um-sidebar:hover .um-sidebar__account,
+  .um-sidebar:focus-within .um-sidebar__account {
+    padding: 12px;
+  }
+
+  .um-sidebar:hover .um-sidebar__profile,
+  .um-sidebar:focus-within .um-sidebar__profile {
+    justify-content: flex-start;
+  }
+
+  .staff-sidebar .fin-nav-view-list {
+    display: none;
+  }
+
+  .staff-sidebar:hover .fin-nav-view-list:not([hidden]),
+  .staff-sidebar:focus-within .fin-nav-view-list:not([hidden]) {
+    display: grid;
+  }
+
+  .staff-sidebar + .main-content,
+  .staff-sidebar + main {
+    width: calc(100% - var(--staff-sidebar-rail-width));
+    flex-basis: calc(100% - var(--staff-sidebar-rail-width));
+  }
+
+  .um-sidebar:hover ~ .um-main,
+  .um-sidebar:focus-within ~ .um-main {
+    margin-left: var(--staff-sidebar-expanded-width);
+  }
+
+  section.staff-sidebar:hover + .main-content,
+  section.staff-sidebar:hover + main,
+  section.staff-sidebar:focus-within + .main-content,
+  section.staff-sidebar:focus-within + main {
+    width: calc(100% - var(--staff-sidebar-expanded-width));
+    flex-basis: calc(100% - var(--staff-sidebar-expanded-width));
+  }
+
+  body:has(> main > section.staff-sidebar:hover) > .staff-header,
+  body:has(> main > section.staff-sidebar:focus-within) > .staff-header {
+    width: calc(100% - var(--staff-sidebar-expanded-width));
+    margin-left: var(--staff-sidebar-expanded-width);
+  }
+
+  section.staff-sidebar .staff-sidebar-logo {
+    width: 42px;
+    height: 42px;
+    transition: width 180ms ease, height 180ms ease;
+  }
+
+  section.staff-sidebar .sidebar-heading,
+  section.staff-sidebar .nav-item a > span,
+  section.staff-sidebar .status-item > span:not([class*="-icon"]),
+  section.staff-sidebar .profile-info,
+  section.staff-sidebar .staff-theme-toggle__label {
+    width: 0;
+    overflow: hidden;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 120ms ease, visibility 0s linear 140ms;
+  }
+
+  section.staff-sidebar .nav-item {
+    justify-content: center;
+  }
+
+  section.staff-sidebar .nav-item a,
+  section.staff-sidebar .status-item,
+  section.staff-sidebar .profile-row,
+  section.staff-sidebar .staff-theme-toggle--sidebar {
+    justify-content: center;
+  }
+
+  section.staff-sidebar .nav-item a {
+    gap: 0;
+  }
+
+  section.staff-sidebar .nav-item a,
+  section.staff-sidebar .nav-item {
+    width: 100%;
+  }
+
+  section.staff-sidebar .nav-item a > .finance-nav-icon {
+    margin-inline: auto;
+  }
+
+  section.staff-sidebar:hover .nav-item a > .finance-nav-icon,
+  section.staff-sidebar:focus-within .nav-item a > .finance-nav-icon {
+    margin-inline: 0;
+  }
+
+  section.staff-sidebar .sidebar-heading {
+    margin: 12px 0 4px;
+    padding: 0;
+  }
+
+  section.staff-sidebar .status-item {
+    padding: 0;
+  }
+
+  section.staff-sidebar .profile-wrap {
+    padding: 10px 0 0;
+  }
+
+  section.staff-sidebar .profile-row {
+    justify-content: center;
+  }
+
+  section.staff-sidebar .staff-theme-toggle--sidebar .staff-theme-toggle__label {
+    display: none;
+  }
+
+  section.staff-sidebar:hover .staff-sidebar-logo,
+  section.staff-sidebar:focus-within .staff-sidebar-logo {
+    width: 150px;
+    height: auto;
+  }
+
+  section.staff-sidebar:hover .sidebar-heading,
+  section.staff-sidebar:hover .nav-item a > span,
+  section.staff-sidebar:hover .status-item > span:not([class*="-icon"]),
+  section.staff-sidebar:hover .profile-info,
+  section.staff-sidebar:hover .staff-theme-toggle__label,
+  section.staff-sidebar:focus-within .sidebar-heading,
+  section.staff-sidebar:focus-within .nav-item a > span,
+  section.staff-sidebar:focus-within .status-item > span:not([class*="-icon"]),
+  section.staff-sidebar:focus-within .profile-info,
+  section.staff-sidebar:focus-within .staff-theme-toggle__label {
+    width: auto;
+    opacity: 1;
+    visibility: visible;
+    transition-delay: 0s;
+  }
+
+  section.staff-sidebar:hover .nav-item,
+  section.staff-sidebar:focus-within .nav-item {
+    justify-content: flex-start;
+  }
+
+  section.staff-sidebar:hover .nav-item a,
+  section.staff-sidebar:focus-within .nav-item a {
+    justify-content: flex-start;
+    gap: 10px;
+  }
+
+  section.staff-sidebar:hover .sidebar-heading,
+  section.staff-sidebar:focus-within .sidebar-heading {
+    padding: 0 10px;
+  }
+
+  section.staff-sidebar:hover .status-item,
+  section.staff-sidebar:focus-within .status-item {
+    justify-content: flex-start;
+    padding: 0 10px;
+  }
+
+  section.staff-sidebar:hover .profile-wrap,
+  section.staff-sidebar:focus-within .profile-wrap {
+    padding: 10px 8px 0;
+  }
+
+  section.staff-sidebar:hover .profile-row,
+  section.staff-sidebar:focus-within .profile-row,
+  section.staff-sidebar:hover .staff-theme-toggle--sidebar,
+  section.staff-sidebar:focus-within .staff-theme-toggle--sidebar {
+    justify-content: flex-start;
+  }
+
+  section.staff-sidebar:hover .staff-theme-toggle--sidebar .staff-theme-toggle__label,
+  section.staff-sidebar:focus-within .staff-theme-toggle--sidebar .staff-theme-toggle__label {
+    display: inline;
+  }
+}
+
+@media screen and (min-width: 1025px) {
+  body.InventoryManagement .admin-inventory-shell > .admin-inventory-main {
+    margin-left: var(--staff-sidebar-expanded-width) !important;
+  }
+}
+
+@media screen and (min-width: 1025px) and (hover: hover) and (pointer: fine) {
+  body.InventoryManagement .admin-inventory-shell > .admin-inventory-main {
+    margin-left: var(--staff-sidebar-rail-width) !important;
+    transition: margin-left 220ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+
+  body.InventoryManagement .admin-inventory-shell > .um-sidebar:hover ~ .admin-inventory-main,
+  body.InventoryManagement .admin-inventory-shell > .um-sidebar:focus-within ~ .admin-inventory-main {
+    margin-left: var(--staff-sidebar-expanded-width) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .um-sidebar,
+  section.staff-sidebar {
+    transition: none;
+  }
+}
+
+/* Final shared sidebar polish: remove the redundant heading and unify contrast. */
+body .um-sidebar__label,
+body .inv-sidebar__label,
+body section.staff-sidebar > .sidebar-heading:first-of-type {
+  display: none;
+}
+
+body .um-sidebar,
+body .inv-sidebar,
+body section.staff-sidebar {
+  border-top-right-radius: 22px !important;
+}
+
+body .um-sidebar:hover,
+body .um-sidebar:focus-within,
+body .inv-sidebar:hover,
+body .inv-sidebar:focus-within,
+body section.staff-sidebar:hover,
+body section.staff-sidebar:focus-within {
+  border-top-right-radius: 22px !important;
+}
+
+body .um-sidebar__logo,
+body .inv-sidebar__logo,
+body section.staff-sidebar .staff-sidebar-logo-wrap {
+  margin-bottom: 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.28);
+}
+
+body .um-sidebar .um-nav-link,
+body .um-sidebar .admin-nav-group-toggle,
+body .um-sidebar .admin-nav-child,
+body .um-sidebar .admin-nav-chevron,
+body .um-sidebar .um-sidebar__account-name,
+body .um-sidebar .um-sidebar__account-role,
+body .inv-sidebar .inv-nav-link,
+body .inv-sidebar .inv-sidebar__account-name,
+body .inv-sidebar .inv-sidebar__account-role,
+body section.staff-sidebar .sidebar-heading,
+body section.staff-sidebar .nav-item,
+body section.staff-sidebar .nav-item a,
+body section.staff-sidebar .status-item,
+body section.staff-sidebar .profile-info,
+body section.staff-sidebar .profile-name,
+body section.staff-sidebar .profile-role,
+body section.staff-sidebar .fin-nav-parent-link,
+body section.staff-sidebar .fin-nav-dropdown-toggle,
+body section.staff-sidebar .fin-nav-view-tab {
+  color: #fff !important;
+}
+
+body .um-sidebar__nav img,
+body .um-sidebar__nav svg,
+body .inv-sidebar__nav img,
+body section.staff-sidebar nav img,
+body section.staff-sidebar nav svg {
+  filter: brightness(0) invert(1);
+}
+
+body .um-sidebar .admin-nav-group-toggle:hover,
+body .um-sidebar .admin-nav-group.is-active > .admin-nav-group-toggle,
+body .um-sidebar .um-nav-link--active,
+body .um-sidebar .admin-nav-child.um-nav-link--active,
+body .inv-sidebar .inv-nav-link--active,
+body section.staff-sidebar .nav-item.active,
+body section.staff-sidebar .fin-nav-view-tab.is-active {
+  color: #fff !important;
+}
+
+body .staff-theme-toggle--sidebar {
+  color: #fff;
+}
