@@ -254,7 +254,7 @@
       charts.delete(canvasId);
       canvas.hidden = true;
       empty.hidden = false;
-      empty.textContent = 'Charts are unavailable right now.';
+      if (!empty.children.length) empty.textContent = 'Charts are unavailable right now.';
       return null;
     }
     empty.hidden = hasData;
@@ -262,7 +262,7 @@
     if (!hasData) {
       existing?.destroy();
       charts.delete(canvasId);
-      empty.textContent = 'No data for this period';
+      if (!empty.children.length) empty.textContent = 'No data for this period';
       return null;
     }
     const normalized = {

@@ -1,14 +1,51 @@
 document.addEventListener("DOMContentLoaded", async () => {
   let account;
   try {
-    const response = await fetch("/api/auth/me");
-    if (!response.ok) return;
+    const response = await fetch("/api/auth/me", {
+      credentials: "same-origin",
+      cache: "no-store",
+    });
+    if (!response.ok) {
+      if (response.status !== 401) {
+        console.error(`Could not load account role for navigation (HTTP ${response.status}).`);
+      }
+      return;
+    }
     account = await response.json();
   } catch (error) {
     console.error("Could not load account role for navigation:", error);
     return;
   }
   if (account.role !== "admin") return;
+
+  const sidebar = document.querySelector(".staff-sidebar");
+  const sidebarMain = sidebar?.parentElement;
+  const pageContent = sidebar?.nextElementSibling;
+  const nav = sidebar?.querySelector("nav");
+  if (!sidebar || !sidebarMain || !pageContent || !nav) {
+    console.error("Could not apply Admin navigation: the Finance sidebar layout is incomplete.");
+    return;
+  }
+
+  document.body.classList.add("admin-navigation-context");
+  sidebar.classList.add("admin-context-sidebar");
+  sidebar.setAttribute("aria-label", "Admin navigation");
+  const logo = sidebar.querySelector(".staff-sidebar-logo-wrap");
+  logo?.classList.add("um-sidebar__logo");
+  sidebar.querySelector(".sidebar-heading")?.classList.add("um-sidebar__label");
+  sidebar.querySelector(".profile-wrap")?.classList.add("um-sidebar__account");
+  sidebar.querySelector(".profile-card")?.classList.add("um-sidebar__profile");
+  sidebar.querySelector(".profile-avatar")?.classList.add("um-avatar");
+  sidebar.querySelector(".profile-info")?.classList.add("um-sidebar__account-details");
+
+  function applyAdminDesktopLayout() {
+    const desktop = window.matchMedia("(min-width: 1025px)").matches;
+    sidebarMain.classList.toggle("um-shell", desktop);
+    sidebar.classList.toggle("um-sidebar", desktop);
+    pageContent.classList.toggle("um-main", desktop);
+  }
+  applyAdminDesktopLayout();
+  window.matchMedia("(min-width: 1025px)").addEventListener("change", applyAdminDesktopLayout);
 
   const currentPage = window.location.pathname.split("/").pop();
   const links = [
@@ -98,10 +135,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   const financeViews = document.getElementById("transactionViewMenu");
-  const nav = document.querySelector(".staff-sidebar nav, .inv-sidebar__nav");
-  if (!nav) return;
+  financeViews?.classList.add("admin-context-transaction-views");
   nav.replaceChildren();
   nav.classList.add("um-sidebar__nav");
+  nav.setAttribute("aria-label", "Main navigation");
   nav.appendChild(makeLink(links[0]));
   groups.forEach((group) => {
     nav.appendChild(groupElement(group, group.label === "Finance" ? financeViews : null));

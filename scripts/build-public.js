@@ -37,6 +37,7 @@ const browserScripts = [
   'InventoryTransactions.js',
   'login.js',
   'my-appointments.js',
+  'newsletter.js',
   'rating-widget.js',
   'registration.js',
   'public-content.js',

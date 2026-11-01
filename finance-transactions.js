@@ -4,13 +4,14 @@
   const state = { tab: 'transactions', from: common.monthStart(), to: common.manilaToday(), type: '', method: '', status: 'posted', search: '', page: 1, limit: 25, rows: [], receivables: [], deposits: [] };
   let transactionRequest = 0;
   const byId = (id) => document.getElementById(id);
-  const refs = Object.fromEntries(['transactionFrom', 'transactionTo', 'transactionType', 'transactionMethod', 'transactionStatus', 'transactionSearch', 'transactionMessage', 'transactionRows', 'transactionCount', 'transactionEmpty', 'transactionPrev', 'transactionNext', 'transactionPageLabel', 'transactionPeriodLabel', 'transactionComparison', 'ledgerHelp', 'transactionSummary', 'postedCollectionsSummary', 'paymentCountSummary', 'receivablesPanel', 'transactionsPanel', 'depositsPanel', 'methodChartSection', 'receivableRows', 'receivableEmpty', 'receivableCount', 'depositRows', 'depositEmpty', 'depositCount', 'recordPaymentModal', 'recordPaymentForm', 'balanceAppointmentId', 'balanceAmount', 'balanceMethod', 'balanceReference', 'balanceNote', 'paymentBalanceText', 'paymentFormMessage', 'saleModal', 'saleForm', 'saleProduct', 'saleQuantity', 'salePrice', 'saleTotal', 'saleMethod', 'saleReference', 'saleMessage', 'saleSubmit', 'recordSaleBtn', 'exportTransactionsXlsx', 'refundModal', 'refundForm', 'refundPaymentId', 'refundPaymentSummary', 'refundNote', 'refundFormMessage', 'reverseModal', 'reverseForm', 'reversePaymentId', 'reversePaymentSummary', 'reverseReason', 'reverseFormMessage', 'paymentDetailsModal', 'paymentDetails', 'paymentHistoryRows', 'receiptModal', 'receiptModalTitle', 'receiptFrame'].map((id) => [id, byId(id)]));
+  const refs = Object.fromEntries(['transactionFrom', 'transactionTo', 'transactionType', 'transactionMethod', 'transactionStatus', 'transactionSearch', 'transactionMessage', 'transactionRows', 'transactionTableScroll', 'transactionCount', 'transactionEmpty', 'transactionPagination', 'transactionPrev', 'transactionNext', 'transactionPageLabel', 'transactionPeriodLabel', 'transactionComparison', 'ledgerHelp', 'transactionSummary', 'postedCollectionsSummary', 'paymentCountSummary', 'receivablesPanel', 'transactionsPanel', 'depositsPanel', 'methodChartSection', 'methodChartEmpty', 'receivableRows', 'receivableEmpty', 'receivableCount', 'depositRows', 'depositEmpty', 'depositCount', 'recordPaymentModal', 'recordPaymentForm', 'balanceAppointmentId', 'balanceAmount', 'balanceMethod', 'balanceReference', 'balanceNote', 'paymentBalanceText', 'paymentFormMessage', 'saleModal', 'saleForm', 'saleProduct', 'saleQuantity', 'salePrice', 'saleTotal', 'saleMethod', 'saleReference', 'saleMessage', 'saleSubmit', 'recordSaleBtn', 'exportTransactionsXlsx', 'refundModal', 'refundForm', 'refundPaymentId', 'refundPaymentSummary', 'refundNote', 'refundFormMessage', 'reverseModal', 'reverseForm', 'reversePaymentId', 'reversePaymentSummary', 'reverseReason', 'reverseFormMessage', 'paymentDetailsModal', 'paymentDetails', 'paymentHistoryRows', 'receiptModal', 'receiptModalTitle', 'receiptFrame'].map((id) => [id, byId(id)]));
   const chartColors = ['#c9a84c', '#267447', '#3977b8', '#8c8c8c', '#8a6e2f'];
   refs.recordSaleBtn.classList.add('fin-sales-record-button');
   byId('salesHeaderAction').append(refs.recordSaleBtn);
   refs.methodChartLegend = element('ul', '', 'fin-chart-legend');
   refs.methodChartLegend.setAttribute('aria-label', 'Payment methods, amounts, and share of posted collections');
   const methodChartFrame = byId('methodChart').closest('.fin-chart-frame');
+  refs.exportTransactionsXlsx.disabled = true;
   refs.methodChartLoading = element('div', 'Updating chart…', 'fin-chart-loading');
   refs.methodChartLoading.hidden = true;
   refs.methodChartLoading.setAttribute('role', 'status');
@@ -70,8 +71,11 @@
       refs.transactionRows.append(row);
     });
     refs.transactionEmpty.hidden = state.rows.length > 0;
+    refs.transactionTableScroll.hidden = state.rows.length === 0;
     refs.transactionCount.textContent = `${state.total} payments`;
     refs.transactionPageLabel.textContent = `Page ${state.page}`;
+    refs.transactionPagination.hidden = state.total <= state.limit;
+    refs.exportTransactionsXlsx.disabled = state.total <= 0;
     refs.transactionPrev.disabled = state.page <= 1;
     refs.transactionNext.disabled = state.page * state.limit >= state.total;
   }
@@ -85,7 +89,13 @@
     refs.postedCollectionsSummary.textContent = 'Loading…';
     refs.paymentCountSummary.textContent = 'Loading…';
     refs.transactionComparison.textContent = '';
+    refs.transactionEmpty.querySelector('strong').textContent = 'No matching payments';
+    refs.transactionEmpty.querySelector('p').textContent = 'Try adjusting the dates or filters, or record a payment to get started.';
+    refs.methodChartEmpty.querySelector('strong').textContent = 'No collections in this period';
+    refs.methodChartEmpty.querySelector('span:last-child').textContent = 'Payment method totals will appear here.';
     refs.methodChartLegend.replaceChildren();
+    refs.methodChartEmpty.hidden = true;
+    refs.exportTransactionsXlsx.disabled = true;
     refs.methodChartLoading.hidden = false;
     refs.methodChartSection.setAttribute('aria-busy', 'true');
     refs.transactionSummary.setAttribute('aria-busy', 'true');
@@ -103,6 +113,7 @@
       const collected = chartRows.reduce((sum, row) => sum + Number(row.amount), 0);
       const previousCollected = previousChartRows.reduce((sum, row) => sum + Number(row.amount), 0);
       methodChartFrame.classList.toggle('is-empty', collected <= 0);
+      refs.methodChartEmpty.hidden = collected > 0;
       refs.postedCollectionsSummary.textContent = common.formatPeso(collected);
       refs.paymentCountSummary.textContent = Number(result.total).toLocaleString('en-PH');
       refs.transactionComparison.textContent = `Posted collections: ${common.formatComparison(collected, previousCollected)} · previous ${previous.from} to ${previous.to}`;
@@ -135,6 +146,8 @@
       });
     } catch (error) {
       if (requestId === transactionRequest) {
+        refs.transactionEmpty.querySelector('strong').textContent = 'Payments could not be loaded';
+        refs.transactionEmpty.querySelector('p').textContent = 'Please try again when the connection is restored.';
         state.rows = [];
         state.total = 0;
         renderTransactions();
@@ -143,6 +156,9 @@
         refs.transactionComparison.textContent = 'Posted collections could not be loaded.';
         refs.methodChartLegend.replaceChildren();
         methodChartFrame.classList.add('is-empty');
+        refs.methodChartEmpty.hidden = false;
+        refs.methodChartEmpty.querySelector('strong').textContent = 'Payment summary unavailable';
+        refs.methodChartEmpty.querySelector('span:last-child').textContent = 'Payment method totals could not be loaded.';
         common.renderChart('methodChart', { type: 'doughnut', data: { labels: [], datasets: [{ data: [] }] } });
       }
       throw error;

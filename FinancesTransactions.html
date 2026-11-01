@@ -12,7 +12,6 @@
     <header class="staff-header"><button type="button" class="staff-hamburger-btn" id="hamburgerBtn"
             aria-label="Open menu" aria-expanded="false" aria-controls="mobileNavDrawer"><img src="icons/hamburger.svg"
                 alt="" class="staff-hamburger-icon"></button>
-        <div class="logo-container"><a href="index.html"><img src="images/logo_horizontal-removebg.webp" alt="Skin Goddess logo" id="logo"></a></div>
         <div class="page-title">
             <h2>Sales &amp; Transactions</h2>
             <p>Review recorded payments and sales</p>
@@ -101,15 +100,17 @@
         </section>
         <section class="main-content staff-page-content fin-page-flow fin-transactions-page">
             <div class="fin-summary-grid fin-sales-summary" id="transactionSummary" aria-label="Payment summary">
-                <article>
-                    <span>Posted collections</span>
+                <article class="fin-kpi-card fin-kpi-card--collections">
+                    <span class="fin-kpi-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3v18m5-14.5a4 4 0 0 0-4-2.5h-2a3.5 3.5 0 0 0 0 7h2a3.5 3.5 0 0 1 0 7h-2a4 4 0 0 1-4-2.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span>
                     <strong id="postedCollectionsSummary">—</strong>
-                    <small>Posted only; type, method, and search apply, not status.</small>
+                    <span class="fin-kpi-label">Posted collections</span>
+                    <small>Posted payments for the selected filters</small>
                 </article>
-                <article>
-                    <span>Matching payments</span>
+                <article class="fin-kpi-card fin-kpi-card--payments">
+                    <span class="fin-kpi-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M6.5 4.5h11a2 2 0 0 1 2 2v13l-2.7-1.6-2.8 1.6-2.8-1.6-2.7 1.6-2.7-1.6L3 19.5v-13a2 2 0 0 1 2-2h1.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M8 9h8m-8 4h5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span>
                     <strong id="paymentCountSummary">—</strong>
-                    <small>Across the selected dates and active ledger filters.</small>
+                    <span class="fin-kpi-label">Matching payments</span>
+                    <small>Transactions matching the current ledger filters</small>
                 </article>
             </div>
             <div class="fin-filters">
@@ -118,8 +119,10 @@
                             data-period="today">Today</button><button type="button" data-period="month"
                             class="is-active">This month</button><button type="button" data-period="last-month">Last
                             month</button></div>
-                    <label>From<input id="transactionFrom" type="date"></label><label>To<input id="transactionTo"
-                            type="date"></label>
+                    <div class="fin-date-range-fields">
+                        <label>From<input id="transactionFrom" type="date"></label><label>To<input id="transactionTo"
+                                type="date"></label>
+                    </div>
                 </div><label id="typeFilterWrap">Payment type<select id="transactionType">
                         <option value="">All types</option>
                         <option value="reservation">Reservation</option>
@@ -152,7 +155,7 @@
                                 Sale</button><button class="fin-button" id="exportTransactionsXlsx" type="button">Export
                                 XLSX</button></div>
                     </div>
-                    <div class="fin-table-scroll">
+                    <div class="fin-table-scroll" id="transactionTableScroll">
                         <table class="fin-table">
                             <thead>
                                 <tr>
@@ -170,10 +173,12 @@
                             <tbody id="transactionRows"></tbody>
                         </table>
                     </div>
-                    <div class="staff-empty-state" id="transactionEmpty"><strong>No data for this period</strong>
-                        <p>Payments will appear here when recorded.</p>
+                    <div class="staff-empty-state fin-ledger-empty" id="transactionEmpty">
+                        <span class="fin-empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M5 4.5h14A1.5 1.5 0 0 1 20.5 6v14L17 18l-3 2-3-2-3 2-4-2V6A1.5 1.5 0 0 1 5 4.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 9h8m-8 4h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>
+                        <strong>No matching payments</strong>
+                        <p>Try adjusting the dates or filters, or record a payment to get started.</p>
                     </div>
-                    <div class="fin-pagination"><button class="fin-button" id="transactionPrev"
+                    <div class="fin-pagination" id="transactionPagination" hidden><button class="fin-button" id="transactionPrev"
                             type="button">Previous</button><span id="transactionPageLabel">Page 1</span><button
                             class="fin-button" id="transactionNext" type="button">Next</button></div>
                 </section>
@@ -183,7 +188,13 @@
                     </div>
                     <p class="fin-comparison" id="transactionComparison"></p>
                     <div class="fin-chart-frame fin-chart-frame--donut"><canvas id="methodChart"
-                            aria-label="Posted collections by payment method" role="img"></canvas></div>
+                            aria-label="Posted collections by payment method" role="img"></canvas>
+                        <div class="fin-chart-empty" id="methodChartEmpty" hidden>
+                            <span class="fin-empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.6"/><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                            <strong>No collections in this period</strong>
+                            <span>Payment method totals will appear here.</span>
+                        </div>
+                    </div>
                 </section>
             </div>
             <section class="staff-table-card" id="receivablesPanel" role="tabpanel"

@@ -764,12 +764,13 @@
         <h2 id="signupHeading">Join Our Newsletter</h2>
         <p class="homepage-signup__lede">Skincare tips, exclusive offers, and clinic updates delivered straight to your
           inbox. No spam, ever.</p>
-        <form class="homepage-signup__form">
+        <form class="homepage-signup__form" novalidate>
           <label class="faq-chat-sr-only" for="newsletterEmail">Email address</label>
           <input id="newsletterEmail" name="email" type="email" placeholder="your@email.com" autocomplete="email"
             required>
           <button type="submit">SUBSCRIBE</button>
         </form>
+        <p class="homepage-signup__permission" id="newsletterMessage" role="status" aria-live="polite" hidden></p>
         <p class="homepage-signup__permission">By subscribing, you agree to receive occasional emails from Skin Goddess
           Aesthetic Center. Unsubscribe anytime.</p>
       </div>
@@ -833,6 +834,7 @@
   <script src="homepage-treatments-carousel.js"></script>
   <script src="homepage-testimonials.js"></script>
   <script src="public-content.js?v=homepage-sections-20261011"></script>
+  <script src="newsletter.js" defer></script>
   <script src="faq-chatbot.js"></script>
   <script src="homepage-scroll-indicator.js?v=bottom-progress-20261011"></script>
 </body>

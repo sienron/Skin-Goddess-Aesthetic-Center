@@ -2402,15 +2402,29 @@ body.staff-theme-dark.InventoryManagement .alert-item.critical-alert > span {
         position: fixed;
         inset: 0 auto 0 0;
         z-index: 120;
-        width: var(--staff-sidebar-expanded-width, 236px);
+        width: var(--staff-sidebar-expanded-width, 236px) !important;
         min-width: 0;
         height: 100vh;
+        height: 100dvh;
+        max-height: 100vh;
+        max-height: 100dvh;
+        display: flex;
+        flex-direction: column;
         transform: none;
-        overflow-x: hidden;
-        overflow-y: auto;
+        overflow: visible;
         background: var(--staff-sidebar-bg, #f8f6f1);
         color: var(--staff-sidebar-text, #514b43);
         transition: width 220ms cubic-bezier(0.2, 0.7, 0.2, 1);
+    }
+
+    body.InventoryManagement > .inv-sidebar .inv-sidebar__nav {
+        flex: 0 1 auto;
+        min-height: 0;
+    }
+
+    body.InventoryManagement > .inv-sidebar .inv-sidebar__account {
+        flex: 0 0 auto;
+        margin-top: auto;
     }
 
     body.InventoryManagement > .inventory-header,
@@ -2429,6 +2443,10 @@ body.staff-theme-dark.InventoryManagement .alert-item.critical-alert > span {
         width: 150px;
         max-height: 46px;
         object-fit: contain;
+    }
+
+    body.InventoryManagement > .inv-sidebar .inv-sidebar__logo img#logo {
+        width: 150px;
     }
 
     body.InventoryManagement > .inv-sidebar .inv-sidebar__label {
@@ -2462,7 +2480,7 @@ body.staff-theme-dark.InventoryManagement .alert-item.critical-alert > span {
 
 @media screen and (min-width: 861px) and (hover: hover) and (pointer: fine) {
     body.InventoryManagement > .inv-sidebar {
-        width: var(--staff-sidebar-rail-width, 68px);
+        width: var(--staff-sidebar-rail-width, 68px) !important;
         padding-right: 8px;
         padding-left: 8px;
         border-radius: 0 15px 0 0;
@@ -2470,7 +2488,7 @@ body.staff-theme-dark.InventoryManagement .alert-item.critical-alert > span {
 
     body.InventoryManagement > .inv-sidebar:hover,
     body.InventoryManagement > .inv-sidebar:focus-within {
-        width: var(--staff-sidebar-expanded-width, 236px);
+        width: var(--staff-sidebar-expanded-width, 236px) !important;
         border-radius: 0;
     }
 
@@ -2492,6 +2510,11 @@ body.staff-theme-dark.InventoryManagement .alert-item.critical-alert > span {
         width: 42px;
         height: 42px;
         transition: width 180ms ease, height 180ms ease;
+    }
+
+    body.InventoryManagement > .inv-sidebar .inv-sidebar__logo img#logo {
+        width: 42px !important;
+        height: 42px;
     }
 
     body.InventoryManagement > .inv-sidebar .inv-sidebar__label,
@@ -2534,6 +2557,12 @@ body.staff-theme-dark.InventoryManagement .alert-item.critical-alert > span {
         height: auto;
     }
 
+    body.InventoryManagement > .inv-sidebar:hover .inv-sidebar__logo img#logo,
+    body.InventoryManagement > .inv-sidebar:focus-within .inv-sidebar__logo img#logo {
+        width: 142px !important;
+        height: auto;
+    }
+
     body.InventoryManagement > .inv-sidebar:hover .inv-sidebar__label,
     body.InventoryManagement > .inv-sidebar:hover .inv-nav-link > span,
     body.InventoryManagement > .inv-sidebar:hover .um-sidebar__account-details,
@@ -2541,6 +2570,9 @@ body.staff-theme-dark.InventoryManagement .alert-item.critical-alert > span {
     body.InventoryManagement > .inv-sidebar:focus-within .inv-nav-link > span,
     body.InventoryManagement > .inv-sidebar:focus-within .um-sidebar__account-details {
         width: auto;
+        min-width: 0;
+        max-width: none;
+        overflow: visible;
         opacity: 1;
         visibility: visible;
         transition-delay: 0s;
@@ -2550,8 +2582,8 @@ body.staff-theme-dark.InventoryManagement .alert-item.critical-alert > span {
     body.InventoryManagement > .inv-sidebar:focus-within .inv-nav-link {
         justify-content: flex-start;
         gap: 10px;
-        padding-right: 8px;
-        padding-left: 8px;
+        padding-right: 12px;
+        padding-left: 12px;
     }
 
     body.InventoryManagement > .inv-sidebar:hover .inv-nav-link img,
@@ -2565,8 +2597,8 @@ body.staff-theme-dark.InventoryManagement .alert-item.critical-alert > span {
     body.InventoryManagement > .inv-sidebar:hover .inv-sidebar__account,
     body.InventoryManagement > .inv-sidebar:focus-within .inv-sidebar__account {
         justify-content: flex-start;
-        padding-right: 8px;
-        padding-left: 8px;
+        padding-right: 12px;
+        padding-left: 12px;
     }
 }
 
@@ -2731,4 +2763,15 @@ body.staff-theme-dark.InventoryManagement > .inv-sidebar .inv-sidebar__label,
 body.staff-theme-dark.InventoryManagement > .inv-sidebar .inv-sidebar__account-name,
 body.staff-theme-dark.InventoryManagement > .inv-sidebar .inv-sidebar__account-role {
     color: #fff !important;
+}
+
+body.InventoryManagement > .inv-sidebar .inv-nav-link:not(.inv-nav-link--active):not(:hover),
+body.staff-theme-dark.InventoryManagement > .inv-sidebar .inv-nav-link:not(.inv-nav-link--active):not(:hover) {
+    background: transparent;
+    box-shadow: none;
+}
+
+body.InventoryManagement > .inv-sidebar .inv-nav-link:not(.inv-nav-link--active)::before,
+body.staff-theme-dark.InventoryManagement > .inv-sidebar .inv-nav-link:not(.inv-nav-link--active)::before {
+    display: none;
 }

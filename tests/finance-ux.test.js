@@ -172,6 +172,27 @@ describe('Finance UX shared helpers', () => {
     assert.equal(empty.textContent, 'No data for this period');
   });
 
+  it('preserves authored content in an existing chart empty state', () => {
+    const { common, document, window } = loadCommon();
+    const empty = makeElement();
+    empty.textContent = 'Payment method totals will appear here.';
+    empty.children.push(makeElement());
+    const frame = makeElement();
+    frame.querySelector = () => empty;
+    const canvas = makeElement();
+    canvas.closest = () => frame;
+    document.elements.set('chart', canvas);
+    window.Chart = class {};
+    const config = { type: 'doughnut', data: { datasets: [{ data: [0] }] }, options: {} };
+
+    common.renderChart('chart', config);
+    assert.equal(empty.textContent, 'Payment method totals will appear here.');
+
+    window.Chart = undefined;
+    common.renderChart('chart', { ...config, data: { datasets: [{ data: [1] }] } });
+    assert.equal(empty.textContent, 'Payment method totals will appear here.');
+  });
+
   it('traps modal tab focus, closes on Escape, and restores the opener', () => {
     const { common, document } = loadCommon();
     const opener = makeElement();
