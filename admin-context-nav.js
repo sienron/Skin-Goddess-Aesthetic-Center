@@ -71,9 +71,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   function makeLink([href, label, icon], child = false) {
     const link = document.createElement("a");
     link.href = href;
-    link.className = `um-nav-link${child ? " admin-nav-child" : ""}`;
+    link.className = `um-nav-link${child ? " admin-nav-child admin-nav-submenu-link" : ""}`;
     if (href === currentPage) {
-      link.classList.add("um-nav-link--active");
+      link.classList.add(child ? "admin-nav-submenu-link--active" : "um-nav-link--active");
       link.setAttribute("aria-current", "page");
     }
     if (!child) {
@@ -94,7 +94,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const active = group.pages.some(([href]) => href === currentPage);
     const toggle = document.createElement("button");
     toggle.type = "button";
-    toggle.className = "admin-nav-group-toggle";
+    toggle.className = `admin-nav-group-toggle admin-nav-parent${active ? " is-active" : ""}`;
     toggle.setAttribute("aria-expanded", String(active));
     const menuId = `adminContext${group.label.replace(/\s/g, "")}Menu`;
     toggle.setAttribute("aria-controls", menuId);

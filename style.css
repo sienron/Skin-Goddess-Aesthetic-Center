@@ -26934,9 +26934,12 @@ body.admin-navigation-context .admin-context-sidebar .admin-context-transaction-
 }
 
 body.admin-navigation-context .admin-context-sidebar .fin-nav-view-tab {
+  display: block;
+  box-sizing: border-box;
   width: 100%;
   min-width: 0;
   min-height: 38px;
+  padding: 8px 9px 8px 12px;
   color: #fff;
   text-align: left;
 }
@@ -27233,5 +27236,145 @@ body.staff-theme-dark .fin-transactions-page .fin-ledger-empty .fin-empty-icon {
 @media (prefers-reduced-motion: reduce) {
   .fin-transactions-page .fin-sales-summary article {
     transition: none;
+  }
+}
+
+/* Active staff parent rows span their navigation track without restyling submenus. */
+body section.staff-sidebar > nav > ul > .nav-item.active:not(.fin-nav-dropdown) {
+  background: transparent;
+  box-shadow: none;
+}
+
+body .um-sidebar .um-sidebar__nav > .um-nav-link.um-nav-link--active,
+body .um-sidebar .um-sidebar__nav > .admin-nav-group > .admin-nav-parent.is-active,
+body .um-sidebar .um-sidebar__nav > .admin-nav-group.is-active > .admin-nav-parent,
+body .um-sidebar .um-sidebar__nav > .admin-nav-group > .admin-nav-parent[aria-expanded="true"],
+body .um-sidebar .um-sidebar__nav > .admin-nav-group > .admin-nav-group-toggle.is-active,
+body .um-sidebar .um-sidebar__nav > .admin-nav-group.is-active > .admin-nav-group-toggle,
+body .um-sidebar .um-sidebar__nav > .admin-nav-group > .admin-nav-group-toggle[aria-expanded="true"],
+body .inv-sidebar .inv-sidebar__nav > .inv-nav-link.inv-nav-link--active,
+body section.staff-sidebar > nav > ul > .nav-item.active:not(.fin-nav-dropdown) > a {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  border-radius: 8px;
+  background-color: #f5e9d6 !important;
+  background-image: none !important;
+  color: #201c18 !important;
+  box-shadow: 0 3px 10px rgba(32, 28, 24, 0.12);
+}
+
+body .um-sidebar .um-sidebar__nav > .um-nav-link.um-nav-link--active img,
+body .um-sidebar .um-sidebar__nav > .admin-nav-group > .admin-nav-parent.is-active img,
+body .um-sidebar .um-sidebar__nav > .admin-nav-group.is-active > .admin-nav-parent img,
+body .um-sidebar .um-sidebar__nav > .admin-nav-group > .admin-nav-parent[aria-expanded="true"] img,
+body .um-sidebar .um-sidebar__nav > .admin-nav-group > .admin-nav-group-toggle.is-active img,
+body .um-sidebar .um-sidebar__nav > .admin-nav-group.is-active > .admin-nav-group-toggle img,
+body .um-sidebar .um-sidebar__nav > .admin-nav-group > .admin-nav-group-toggle[aria-expanded="true"] img,
+body .inv-sidebar .inv-sidebar__nav > .inv-nav-link.inv-nav-link--active img,
+body section.staff-sidebar > nav > ul > .nav-item.active:not(.fin-nav-dropdown) > a .finance-nav-icon {
+  filter: brightness(0) saturate(100%) !important;
+}
+
+body .um-sidebar .um-sidebar__nav > .um-nav-link.um-nav-link--active:hover,
+body .um-sidebar .um-sidebar__nav > .admin-nav-group > .admin-nav-parent.is-active:hover,
+body .um-sidebar .um-sidebar__nav > .admin-nav-group.is-active > .admin-nav-parent:hover,
+body .um-sidebar .um-sidebar__nav > .admin-nav-group > .admin-nav-parent[aria-expanded="true"]:hover,
+body .um-sidebar .um-sidebar__nav > .admin-nav-group > .admin-nav-group-toggle.is-active:hover,
+body .um-sidebar .um-sidebar__nav > .admin-nav-group.is-active > .admin-nav-group-toggle:hover,
+body .um-sidebar .um-sidebar__nav > .admin-nav-group > .admin-nav-group-toggle[aria-expanded="true"]:hover,
+body .inv-sidebar .inv-sidebar__nav > .inv-nav-link.inv-nav-link--active:hover,
+body section.staff-sidebar > nav > ul > .nav-item.active:not(.fin-nav-dropdown) > a:hover {
+  background-color: #f5e9d6 !important;
+  color: #201c18 !important;
+}
+
+body .um-sidebar .um-sidebar__nav > .admin-nav-group > .admin-nav-parent.is-active .admin-nav-chevron,
+body .um-sidebar .um-sidebar__nav > .admin-nav-group.is-active > .admin-nav-parent .admin-nav-chevron,
+body .um-sidebar .um-sidebar__nav > .admin-nav-group > .admin-nav-parent[aria-expanded="true"] .admin-nav-chevron,
+body .um-sidebar .um-sidebar__nav > .admin-nav-group > .admin-nav-group-toggle.is-active .admin-nav-chevron,
+body .um-sidebar .um-sidebar__nav > .admin-nav-group.is-active > .admin-nav-group-toggle .admin-nav-chevron,
+body .um-sidebar .um-sidebar__nav > .admin-nav-group > .admin-nav-group-toggle[aria-expanded="true"] .admin-nav-chevron {
+  color: #201c18 !important;
+  stroke: currentColor;
+}
+
+body .um-sidebar .um-sidebar__nav > .admin-nav-group {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+}
+
+body .um-sidebar .um-sidebar__nav > .admin-nav-group > .admin-nav-parent {
+  box-sizing: border-box;
+  width: 100%;
+}
+
+body .um-sidebar .um-sidebar__nav .admin-nav-group > .admin-nav-submenu .admin-nav-submenu-link--active,
+body .um-sidebar .um-sidebar__nav .admin-nav-group > .admin-nav-submenu .admin-nav-child.um-nav-link--active,
+body.admin-navigation-context .um-sidebar .admin-context-transaction-views .fin-nav-view-tab.is-active,
+body section.staff-sidebar .fin-nav-view-tab.is-active {
+  border-color: rgba(255, 242, 194, 0.4) !important;
+  background: #8c691f !important;
+  color: #fff !important;
+  box-shadow: inset 0 0 12px rgba(255, 232, 161, 0.12), 0 0 8px rgba(255, 226, 130, 0.12);
+  font-weight: 600;
+}
+
+body .um-sidebar .um-sidebar__nav .admin-nav-group > .admin-nav-submenu .admin-nav-submenu-link--active:hover,
+body .um-sidebar .um-sidebar__nav .admin-nav-group > .admin-nav-submenu .admin-nav-child.um-nav-link--active:hover,
+body.admin-navigation-context .um-sidebar .admin-context-transaction-views .fin-nav-view-tab.is-active:hover,
+body section.staff-sidebar .fin-nav-view-tab.is-active:hover {
+  background: #8c691f !important;
+  color: #fff !important;
+}
+
+body section.staff-sidebar > nav > ul > .nav-item.active.fin-nav-dropdown,
+body.staff-theme-dark section.staff-sidebar > nav > ul > .nav-item.active.fin-nav-dropdown {
+  background: transparent;
+  box-shadow: none;
+}
+
+body section.staff-sidebar > nav > ul > .nav-item.active.fin-nav-dropdown > .fin-nav-dropdown-head,
+body section.staff-sidebar > nav > ul > .nav-item:has(> .fin-nav-dropdown-head > .fin-nav-dropdown-toggle[aria-expanded="true"]) > .fin-nav-dropdown-head {
+  box-sizing: border-box;
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  border-radius: 8px;
+  background-color: #f5e9d6 !important;
+  background-image: none !important;
+  color: #201c18 !important;
+  box-shadow: 0 3px 10px rgba(32, 28, 24, 0.12);
+}
+
+body section.staff-sidebar > nav > ul > .nav-item.active.fin-nav-dropdown > .fin-nav-dropdown-head .fin-nav-parent-link,
+body section.staff-sidebar > nav > ul > .nav-item:has(> .fin-nav-dropdown-head > .fin-nav-dropdown-toggle[aria-expanded="true"]) > .fin-nav-dropdown-head .fin-nav-parent-link,
+body section.staff-sidebar > nav > ul > .nav-item.active.fin-nav-dropdown > .fin-nav-dropdown-head .fin-nav-dropdown-toggle,
+body section.staff-sidebar > nav > ul > .nav-item:has(> .fin-nav-dropdown-head > .fin-nav-dropdown-toggle[aria-expanded="true"]) > .fin-nav-dropdown-head .fin-nav-dropdown-toggle {
+  color: #201c18 !important;
+}
+
+body section.staff-sidebar > nav > ul > .nav-item.active.fin-nav-dropdown > .fin-nav-dropdown-head .finance-nav-icon,
+body section.staff-sidebar > nav > ul > .nav-item:has(> .fin-nav-dropdown-head > .fin-nav-dropdown-toggle[aria-expanded="true"]) > .fin-nav-dropdown-head .finance-nav-icon {
+  filter: brightness(0) saturate(100%) !important;
+}
+
+body section.staff-sidebar > nav > ul > .nav-item.active.fin-nav-dropdown > .fin-nav-dropdown-head:hover,
+body section.staff-sidebar > nav > ul > .nav-item:has(> .fin-nav-dropdown-head > .fin-nav-dropdown-toggle[aria-expanded="true"]) > .fin-nav-dropdown-head:hover {
+  background-color: #f5e9d6 !important;
+  color: #201c18 !important;
+}
+
+@media screen and (min-width: 1025px) and (hover: hover) and (pointer: fine) {
+  body section.staff-sidebar:hover > nav > ul > .nav-item.active.fin-nav-dropdown,
+  body section.staff-sidebar:focus-within > nav > ul > .nav-item.active.fin-nav-dropdown {
+    padding-right: 0;
+    padding-left: 0;
+  }
+
+  body section.staff-sidebar:hover > nav > ul > .nav-item.active.fin-nav-dropdown > .fin-nav-view-list,
+  body section.staff-sidebar:focus-within > nav > ul > .nav-item.active.fin-nav-dropdown > .fin-nav-view-list {
+    margin-left: 33px;
   }
 }
