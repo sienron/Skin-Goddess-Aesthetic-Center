@@ -72,6 +72,16 @@ test('manual stock adjustments apply a relative database update and log a manual
   assert.deepEqual(transaction.values.slice(3, 6), [2, 5, 3]);
 });
 
+test("adding stock logs a restock so it is included in today's restocked total", async () => {
+  const result = await adjustStock(3, 5);
+  const transaction = result.queries.find(({ sql }) => /INSERT INTO inventory_transactions/.test(sql));
+
+  assert.equal(result.statusCode, 200);
+  assert.equal(result.responseBody.stock_quantity, 8);
+  assert.equal(transaction.values[2], 'Restock');
+  assert.deepEqual(transaction.values.slice(3, 6), [3, 5, 8]);
+});
+
 test('manual stock adjustments reject a negative resulting quantity before updating', async () => {
   const result = await adjustStock(-6, 5);
   assert.equal(result.statusCode, 409);

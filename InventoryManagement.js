@@ -2098,15 +2098,19 @@ confirmAddProduct.addEventListener("click", async () => {
         const invSidebar = document.getElementById("invSidebar");
         const sidebarBackdrop = document.getElementById("sidebarBackdrop");
 
-        sidebarToggle.addEventListener("click", () => {
-            invSidebar.classList.toggle("sidebar-open");
-            sidebarBackdrop.classList.toggle("show");
-        });
+        if (sidebarToggle && invSidebar && sidebarBackdrop) {
+            sidebarToggle.addEventListener("click", () => {
+                invSidebar.classList.toggle("sidebar-open");
+                sidebarBackdrop.classList.toggle("show");
+            });
+        }
 
-        sidebarBackdrop.addEventListener("click", () => {
-            invSidebar.classList.remove("sidebar-open");
-            sidebarBackdrop.classList.remove("show");
-        });
+        if (sidebarBackdrop && invSidebar) {
+            sidebarBackdrop.addEventListener("click", () => {
+                invSidebar.classList.remove("sidebar-open");
+                sidebarBackdrop.classList.remove("show");
+            });
+        }
 
 loadInventory();
 loadRestockedToday();

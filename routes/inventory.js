@@ -379,11 +379,11 @@ async function updateInventoryProduct(productId, stockAdjustment, details, userI
             await recordInventoryTransaction(client, {
                 productId,
                 productName: result.rows[0].product_name,
-                transactionType: targetStock === null
-                    ? 'Adjustment'
-                    : appliedStockAdjustment > 0
-                      ? 'Restock'
-                      : 'Manual Stock Deduction',
+                transactionType: appliedStockAdjustment > 0
+                    ? 'Restock'
+                    : targetStock !== null && appliedStockAdjustment < 0
+                      ? 'Manual Stock Deduction'
+                      : 'Adjustment',
                 quantity: Math.abs(appliedStockAdjustment),
                 previousStock,
                 newStock: Number(result.rows[0].stock_quantity),

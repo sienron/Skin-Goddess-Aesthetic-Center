@@ -5,12 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stock Transaction Log</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="InventoryManagement.css">
 </head>
-<body class="InventoryManagement">
+<body class="InventoryManagement inventory-transactions-page sg-admin-typography">
     <aside class="inv-sidebar" id="invSidebar">
         <a href="InventoryManagement.html" class="inv-sidebar__logo">
             <div class="logo-container">
@@ -25,11 +24,16 @@
             <a href="InventoryTransactions.html" class="inv-nav-link inv-nav-link--active" aria-current="page"><img src="icons/finance-transactions.svg" alt=""><span>Stock Transaction Log</span></a>
         </nav>
 
-        <div class="inv-sidebar__account">
-            <div class="inv-avatar">A</div>
-            <div>
-                <p class="inv-sidebar__account-name">Admin User</p>
-                <p class="inv-sidebar__account-role">Owner</p>
+        <div class="inv-sidebar__account um-sidebar__account">
+            <button class="um-sidebar__profile" id="adminProfileBtn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="adminProfileMenu">
+                <span class="inv-avatar um-avatar">A</span>
+                <span class="um-sidebar__account-details">
+                    <span class="inv-sidebar__account-name um-sidebar__account-name">Admin User</span>
+                    <span class="inv-sidebar__account-role um-sidebar__account-role">Owner</span>
+                </span>
+            </button>
+            <div class="um-sidebar__account-menu" id="adminProfileMenu" role="menu">
+                <button class="um-sidebar__logout" id="adminLogoutBtn" type="button" role="menuitem">Log out</button>
             </div>
         </div>
     </aside>
@@ -38,7 +42,6 @@
 
     <header class="inventory-header">
         <div class="header-left">
-            <button class="sidebar-toggle" id="sidebarToggle" type="button" aria-label="Open menu">☰</button>
             <div class="header-title">
                 <h1>Stock Transaction Log</h1>
                 <p>All stock movements recorded here</p>
@@ -111,6 +114,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js" integrity="sha384-Pqp51FUN2/qzfxZxBCtF0stpc9ONI6MYZpVqmo8m20SoaQCzf+arZvACkLkirlPz" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="InventoryTransactions.js"></script>
+    <script src="admin-dashboard.js"></script>
     <script src="admin-notifications.js"></script>
     <script src="admin-context-nav.js"></script>
 </body>

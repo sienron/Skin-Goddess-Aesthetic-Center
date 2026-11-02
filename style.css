@@ -7671,8 +7671,13 @@ body.services {
 }
 
 .um-sidebar__account-details {
-  display: block;
+  display: flex;
+  flex-direction: column;
   min-width: 0;
+}
+
+section.staff-sidebar .profile-info {
+  flex-direction: column;
 }
 
 .um-sidebar__account-menu {
@@ -14386,10 +14391,31 @@ textarea.cm-editor__input {
 }
 
 /* Finance module */
+.fin-page-header {
+  box-sizing: border-box;
+  min-height: 74px;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 24px;
+}
+
 .fin-page-flow {
   display: grid;
   gap: 18px;
   min-width: 0;
+}
+
+@media (max-width: 860px) {
+  .fin-page-header {
+    gap: 8px;
+    padding: 8px 12px;
+  }
+}
+
+@media (max-width: 620px) {
+  .fin-page-header {
+    padding: 10px 16px;
+  }
 }
 
 .fin-page-toolbar,
@@ -17996,7 +18022,7 @@ body.halo-off .cursor-halo {
   #appointmentsMain .um-header__actions-row .um-btn,
   #userManagementMain .um-header__actions-row .um-btn,
   #contentManagementMain .um-header__actions-row .um-btn,
-  .inquiries-main > .um-header > .um-btn {
+  .inquiries-main > .um-header .um-header__actions .um-btn {
     width: 100%;
     min-width: 0;
     min-height: 42px;
@@ -18017,10 +18043,6 @@ body.halo-off .cursor-halo {
 
   #contentManagementMain .um-header__actions-row {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .inquiries-main > .um-header > .um-btn {
-    order: 1;
   }
 
   #adminDashboardMain .um-btn--primary,
@@ -27377,4 +27399,105 @@ body section.staff-sidebar > nav > ul > .nav-item:has(> .fin-nav-dropdown-head >
   body section.staff-sidebar:focus-within > nav > ul > .nav-item.active.fin-nav-dropdown > .fin-nav-view-list {
     margin-left: 33px;
   }
+}
+
+body.sg-admin-typography {
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif !important;
+}
+
+body.sg-admin-typography *:not(i) {
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif !important;
+}
+
+body.sg-admin-typography .page-title h1,
+body.sg-admin-typography .page-title h2,
+body.sg-admin-typography .header-title h1,
+body.sg-admin-typography .um-header__title,
+body.sg-admin-typography main > h1 {
+  font-size: 22px !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.025em !important;
+  line-height: 1.2 !important;
+}
+
+body.sg-admin-typography .page-title p,
+body.sg-admin-typography .header-title p,
+body.sg-admin-typography .um-header__subtitle {
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  line-height: 1.5 !important;
+}
+
+body.sg-admin-typography .um-sidebar__nav a,
+body.sg-admin-typography .um-sidebar__nav button,
+body.sg-admin-typography .inv-sidebar__nav a,
+body.sg-admin-typography .inv-sidebar__nav button,
+body.sg-admin-typography .staff-sidebar nav a,
+body.sg-admin-typography .staff-sidebar nav button {
+  font-family: 'Raleway', sans-serif !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+}
+
+body.sg-admin-typography .um-sidebar__nav ul ul a,
+body.sg-admin-typography .inv-sidebar__nav ul ul a,
+body.sg-admin-typography .staff-sidebar nav ul ul a {
+  font-size: 13px !important;
+}
+
+body.sg-admin-typography .um-sidebar .fin-nav-view-tab,
+body.sg-admin-typography .staff-sidebar .fin-nav-view-tab {
+  font-family: 'Raleway', sans-serif !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+}
+
+body.sg-admin-typography label {
+  font-family: 'Raleway', sans-serif !important;
+  font-size: 11.2px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.03em !important;
+}
+
+body.sg-admin-typography form input:not([type="checkbox"]):not([type="radio"]),
+body.sg-admin-typography form select,
+body.sg-admin-typography form textarea,
+body.sg-admin-typography label:not(.um-search):not(.um-status-filter):not(.cm-search-field):not(.cm-select-field) > input,
+body.sg-admin-typography label:not(.um-search):not(.um-status-filter):not(.cm-search-field):not(.cm-select-field) > select,
+body.sg-admin-typography label:not(.um-search):not(.um-status-filter):not(.cm-search-field):not(.cm-select-field) > textarea {
+  font-family: 'Raleway', sans-serif !important;
+  font-size: 12.8px !important;
+  font-weight: 400 !important;
+}
+
+body.sg-admin-typography table th {
+  font-size: 9px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.045em !important;
+}
+
+body.sg-admin-typography table td {
+  font-size: 12px !important;
+  font-weight: 400 !important;
+}
+
+body.sg-admin-typography .um-btn,
+body.sg-admin-typography .fin-button,
+body.sg-admin-typography .btn,
+body.sg-admin-typography .client-detail-action,
+body.sg-admin-typography .um-modal__btn-outline-red {
+  font-size: 11px !important;
+  font-weight: 500 !important;
+}
+
+body.sg-admin-typography .um-tab,
+body.sg-admin-typography .inquiry-filter {
+  font-size: 10px !important;
+  font-weight: 600 !important;
+}
+
+body.sg-admin-typography .dashboard-sort-button {
+  font-size: 9px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.045em !important;
 }

@@ -8,7 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="sg-admin-typography">
   <div class="um-shell">
     <button class="um-sidebar-toggle um-sidebar-toggle--admin" id="umSidebarToggle" type="button" aria-label="Toggle menu" aria-expanded="false">
       <span></span><span></span><span></span>
@@ -66,7 +66,9 @@
           <h1 class="um-header__title">Customer Inquiries</h1>
           <p class="um-header__subtitle">Messages submitted through the Contact Us page</p>
         </div>
-        <button class="um-btn um-btn--ghost" type="button" id="refreshInquiries" aria-label="Refresh inquiries">Refresh</button>
+        <div class="um-header__actions">
+          <button class="um-btn um-btn--ghost" type="button" id="refreshInquiries" aria-label="Refresh inquiries">Refresh</button>
+        </div>  
       </header>
 
       <section class="inquiries-workspace" aria-label="Customer inquiries">

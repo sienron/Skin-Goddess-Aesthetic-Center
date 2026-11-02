@@ -1,17 +1,28 @@
 #userManagementMain {
-  width: min(100%, 1560px);
-  margin-inline: auto;
-  padding: 28px 32px 32px;
+  width: auto;
+  max-width: none;
+  margin: 0;
+  padding: 20px 24px 32px;
   background: #f8f6f2;
   color: #25211d;
   font-family: 'Poppins', sans-serif;
 }
 
+#userManagementMain > :not(.um-header) {
+  box-sizing: border-box;
+  width: min(100%, 1560px);
+  margin-right: auto;
+  margin-left: auto;
+  padding-right: 32px;
+  padding-left: 32px;
+}
+
 #userManagementMain .um-header {
   min-height: 72px;
   height: auto;
-  margin: 0 0 24px;
-  padding: 14px 20px;
+  flex-shrink: 0;
+  margin: -20px -24px 24px;
+  padding: 0 32px;
   border: 1px solid #eae5dc;
   border-radius: 10px;
   background: #fff;
@@ -22,7 +33,7 @@
 
 #userManagementMain .um-header__title {
   color: #25211d;
-  font-size: clamp(24px, 2vw, 30px);
+  font-size: 20px;
   font-weight: 600;
   letter-spacing: -.035em;
   line-height: 1.2;
@@ -31,7 +42,7 @@
 #userManagementMain .um-header__subtitle {
   margin-top: 7px;
   color: #766e64;
-  font-size: 13px;
+  font-size: 11px;
 }
 
 #userManagementMain .um-header__actions {
@@ -106,6 +117,8 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
   margin-bottom: 22px;
+  padding-right: 0;
+  padding-left: 0;
 }
 
 #userManagementMain .um-stat-card {
@@ -636,11 +649,18 @@
     padding: 20px 18px 26px;
   }
 
+  #userManagementMain > :not(.um-header) {
+    width: 100%;
+    padding-right: 0;
+    padding-left: 0;
+  }
+
   #userManagementMain .um-header {
     flex-direction: column;
     align-items: stretch;
     gap: 16px;
-    margin-bottom: 20px;
+    margin: 0 0 20px;
+    padding-block: 0;
   }
 
   #userManagementMain .um-header > div:first-child {

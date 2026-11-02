@@ -31,8 +31,8 @@
     --white:        #FFFFFF;
     --boder:        #EEEAE3;
 
-    --font-display: 'Poppins', sans-serif;
-    --font-body:    'Inter', sans-serif;
+    --font-display: "Playfair Display", serif;
+    --font-body:    "Raleway", sans-serif;
 }
 
 
@@ -69,6 +69,11 @@ button{
     width: 100%;
     min-height: 100vh;
     padding: 0 28px 40px;
+}
+
+body.inventory-transactions-page > .inventory-page {
+    display: block;
+    min-width: 0;
 }
 
 
@@ -2252,7 +2257,7 @@ body.InventoryManagement .staff-theme-toggle {
     border-radius: 8px;
     background: #fff;
     color: #705725;
-    font: 600 12px "Inter", sans-serif;
+    font: 600 12px var(--font-body);
     cursor: pointer;
 }
 
