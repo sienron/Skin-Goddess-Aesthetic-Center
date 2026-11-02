@@ -193,13 +193,6 @@
     popup.setAttribute('aria-label', 'Promotion or event announcement');
     document.body.append(popupBackdrop, popup);
 
-    try {
-        const navigation = performance.getEntriesByType('navigation')[0];
-        if (navigation?.type === 'reload') sessionStorage.removeItem(popupSuppressedKey);
-    } catch (error) {
-        console.warn('Could not reset announcement pop-up preference after reload:', error.message);
-    }
-
     function savePreferenceSet(key, values, description) {
         try {
             localStorage.setItem(key, JSON.stringify([...values]));
@@ -208,8 +201,12 @@
         }
     }
 
+    function isAnnouncementRead(announcement) {
+        return readAnnouncementKeys.has(`${announcement.announcement_id}:${announcement.updated_at}`);
+    }
+
     function unreadAnnouncements() {
-        return announcements.filter((announcement) => !readAnnouncementKeys.has(`${announcement.announcement_id}:${announcement.updated_at}`));
+        return announcements.filter((announcement) => !isAnnouncementRead(announcement));
     }
 
     function updateBadge() {
@@ -258,10 +255,11 @@
     function renderNotificationList() {
         if (!notificationList) return;
         notificationList.replaceChildren();
-        unreadAnnouncements().forEach((announcement) => {
+        announcements.forEach((announcement) => {
+            const isRead = isAnnouncementRead(announcement);
             const item = document.createElement('button');
             item.type = 'button';
-            item.className = 'notification-item notification-item--announcement unread';
+            item.className = `notification-item notification-item--announcement${isRead ? '' : ' unread'}`;
             item.dataset.announcementId = announcement.announcement_id;
             const type = document.createElement('span');
             type.className = 'notification-item__type';
@@ -273,7 +271,7 @@
             message.textContent = announcement.message;
             item.append(type, title, message);
             appendTimestamp(item, announcement.updated_at);
-            appendUnreadLabel(item);
+            if (!isRead) appendUnreadLabel(item);
             notificationList.append(item);
         });
 
@@ -306,7 +304,7 @@
         } catch (error) {
             console.warn('Could not read announcement pop-up preference:', error.message);
         }
-        const announcement = announcements[0];
+        const announcement = unreadAnnouncements()[0];
         if (!announcement || popupSuppressed) {
             popup.hidden = true;
             popupBackdrop.hidden = true;

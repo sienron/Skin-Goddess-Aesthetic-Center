@@ -8631,8 +8631,22 @@ body:not(.profile-ready) .mobile-nav-profile {
   border-top: 1px solid #e7e2d7;
 }
 
+.deposit-warning {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid #e7d49e;
+  border-left: 3px solid #b38a3d;
+  border-radius: 6px;
+  background: #fff8e6;
+  color: #59451a;
+  font-family: "Raleway", sans-serif;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
 .checkout-back-link {
   display: block;
+  margin-top: 28px;
   font-family: "Raleway", sans-serif;
   font-size: 0.78rem;
   font-weight: 600;
@@ -24002,6 +24016,13 @@ body.customer-theme-dark #paymongoCheckout,
 body.customer-theme-dark .summary-location,
 body.customer-theme-dark .summary-location strong {
   color: #e9e4da;
+}
+
+body.customer-theme-dark .deposit-warning {
+  border-color: #6b5b36;
+  border-left-color: #d8bb73;
+  background: #373126;
+  color: #f0dfb0;
 }
 
 body.customer-theme-dark .summary-list li::before {

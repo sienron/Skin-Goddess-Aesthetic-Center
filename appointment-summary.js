@@ -74,6 +74,11 @@
     heading.className = 'checkout-section-title';
     heading.textContent = 'CONFIRM APPOINTMENT';
 
+    const depositWarning = document.createElement('p');
+    depositWarning.className = 'deposit-warning';
+    depositWarning.setAttribute('role', 'note');
+    depositWarning.textContent = 'Please note: The reservation deposit is non-refundable. Cancellations must be requested more than 24 hours before your appointment.';
+
     const confirmButton = document.createElement('button');
     confirmButton.type = 'button';
     confirmButton.id = 'confirmBookingBtn';
@@ -202,7 +207,7 @@
       }
     });
 
-    paymentContainer.append(heading, confirmButton);
+    paymentContainer.append(heading, depositWarning, confirmButton);
 
     const query = new URLSearchParams(window.location.search);
     const returnedReference = query.get('reference');
