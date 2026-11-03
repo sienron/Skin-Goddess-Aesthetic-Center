@@ -42,6 +42,7 @@ const browserScripts = [
   'registration.js',
   'public-content.js',
   'reset-password.js',
+  'services-page.js',
   'staff-clients.js',
   'staff-dashboard.js',
   'staff-treatment-history.js',
