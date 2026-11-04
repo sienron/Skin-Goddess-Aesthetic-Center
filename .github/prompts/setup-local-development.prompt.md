@@ -29,8 +29,6 @@ Then run `node scripts/seed-local-dev-user.js` to create or refresh the dedicate
 
 The local development admin can also use the client booking flow locally. Appointment booking must still require a verified account and pass the normal service, availability, and scheduling validations; do not grant this booking exception to other admin accounts or in production.
 
-For finance sample data, first count rows tagged with `note = 'DEMO'` and expenses whose description starts with `DEMO:`. If tagged demo data already exists, ask whether to keep it or clear it before reseeding. If the user chooses to seed and no existing demo set would be duplicated, run `node scripts/seed-finance-demo.js`. The seed script must refuse production. Never run `--clear` without the user's confirmation.
-
 ## Start and verify
 
 Run `node scripts/build-public.js`, check the changed JavaScript with `node --check`, then start the app with `npm start`. If port 3000 is already occupied, identify the listener before stopping anything; otherwise use an alternate local `PORT` without killing unrelated processes.
