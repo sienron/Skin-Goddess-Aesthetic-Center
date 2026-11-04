@@ -13437,8 +13437,8 @@ main.my-appointments-main .booking-intro {
   transform: translate(-50%, -50%);
   width: min(600px, calc(100vw - 32px));
   max-width: calc(100vw - 32px);
-  max-height: min(86vh, 760px);
   box-sizing: border-box;
+  overflow: hidden;
   margin: 0;
   padding: 0;
   border: 1px solid var(--um-border);
@@ -13737,6 +13737,15 @@ textarea.cm-editor__input {
   overflow: visible;
   line-clamp: unset;
   -webkit-line-clamp: unset;
+}
+
+.cm-announcement-card__schedule {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-top: 8px;
+  color: var(--text-muted);
+  font-size: 12px;
 }
 
 @media (max-width: 640px) {
@@ -17582,12 +17591,11 @@ body.client-header .announcement-popup__close {
   font-size: 22px;
   line-height: 1;
   cursor: pointer;
-  transition: background-color 160ms ease, color 160ms ease, transform 160ms ease;
+  transition: background-color 160ms ease, color 160ms ease;
 }
 
 body.homepage .announcement-popup__close:hover,
 body.client-header .announcement-popup__close:hover {
-  transform: rotate(90deg);
   background: #f6f0e4;
   color: #302a23;
 }
@@ -24172,6 +24180,27 @@ body.customer-theme-dark .account-section-header {
 body.customer-theme-dark .index-footer,
 body.customer-theme-dark .public-footer {
   border-color: #41413b;
+}
+
+body.customer-theme-dark .index-footer .footer-col-title,
+body.customer-theme-dark .index-footer .footer-portals,
+body.customer-theme-dark .index-footer .footer-col-body,
+body.customer-theme-dark .index-footer .footer-col-body-time,
+body.customer-theme-dark .index-footer .footer-col-body-location,
+body.customer-theme-dark .index-footer .footer-lede,
+body.customer-theme-dark .index-footer .footer-copyright,
+body.customer-theme-dark .index-footer .footer-sg-label-title,
+body.customer-theme-dark .index-footer .footer-sg-label-title span,
+body.customer-theme-dark .public-footer .footer-heading,
+body.customer-theme-dark .public-footer .footer-tagline,
+body.customer-theme-dark .public-footer .footer-links a,
+body.customer-theme-dark .public-footer .footer-contact-line,
+body.customer-theme-dark .public-footer .footer-bottom {
+  color: #f3eee5;
+}
+
+body.homepage.customer-theme-dark .homepage-signup__content h2 {
+  color: #f3eee5;
 }
 
 body.customer-theme-dark .mobile-nav-overlay {

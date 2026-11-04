@@ -151,12 +151,12 @@
 
     const notificationList = notificationDropdown.querySelector('.notification-list');
     const badge = notificationBtn.querySelector('.badge') || document.createElement('span');
-    const readStorageKey = 'skinGoddess.readAnnouncements';
     const popupSuppressedKey = 'skinGoddess.suppressAnnouncementPopup';
     let announcements = [];
     let personalNotifications = [];
     let personalUnreadCount = 0;
     let displayedAnnouncement = null;
+    let isClientAccount = false;
 
     if (!badge.classList.contains('badge')) {
         badge.className = 'badge';
@@ -167,18 +167,6 @@
     notificationBtn.setAttribute('aria-haspopup', 'true');
     notificationBtn.setAttribute('aria-expanded', 'false');
     notificationBtn.setAttribute('aria-label', 'View notifications');
-
-    function readPreferenceSet(key, description) {
-        try {
-            const saved = JSON.parse(localStorage.getItem(key) || '[]');
-            return Array.isArray(saved) ? new Set(saved.map(String)) : new Set();
-        } catch (error) {
-            console.warn(`Could not read ${description}:`, error.message);
-            return new Set();
-        }
-    }
-
-    const readAnnouncementKeys = readPreferenceSet(readStorageKey, 'read announcements');
 
     const popupBackdrop = document.createElement('div');
     popupBackdrop.className = 'announcement-popup-backdrop';
@@ -193,20 +181,22 @@
     popup.setAttribute('aria-label', 'Promotion or event announcement');
     document.body.append(popupBackdrop, popup);
 
-    function savePreferenceSet(key, values, description) {
-        try {
-            localStorage.setItem(key, JSON.stringify([...values]));
-        } catch (error) {
-            console.warn(`Could not save ${description}:`, error.message);
-        }
-    }
-
     function isAnnouncementRead(announcement) {
-        return readAnnouncementKeys.has(`${announcement.announcement_id}:${announcement.updated_at}`);
+        return announcement.is_read === true;
     }
 
     function unreadAnnouncements() {
         return announcements.filter((announcement) => !isAnnouncementRead(announcement));
+    }
+
+    function isAnnouncementPopupSuppressed(announcement) {
+        try {
+            const version = new Date(announcement.updated_at).getTime();
+            return sessionStorage.getItem(`${popupSuppressedKey}:${announcement.announcement_id}:${version}`) === '1';
+        } catch (error) {
+            console.warn('Could not read announcement pop-up preference:', error.message);
+            return false;
+        }
     }
 
     function updateBadge() {
@@ -270,7 +260,7 @@
             message.className = 'notification-item__message';
             message.textContent = announcement.message;
             item.append(type, title, message);
-            appendTimestamp(item, announcement.updated_at);
+            appendTimestamp(item, announcement.starts_at);
             if (!isRead) appendUnreadLabel(item);
             notificationList.append(item);
         });
@@ -298,14 +288,8 @@
 
     function renderAnnouncementsPopup() {
         popup.replaceChildren();
-        let popupSuppressed = false;
-        try {
-            popupSuppressed = sessionStorage.getItem(popupSuppressedKey) === '1';
-        } catch (error) {
-            console.warn('Could not read announcement pop-up preference:', error.message);
-        }
-        const announcement = unreadAnnouncements()[0];
-        if (!announcement || popupSuppressed) {
+        const announcement = unreadAnnouncements().find((item) => !isAnnouncementPopupSuppressed(item));
+        if (!announcement) {
             popup.hidden = true;
             popupBackdrop.hidden = true;
             displayedAnnouncement = null;
@@ -330,7 +314,11 @@
         close.type = 'button';
         close.className = 'announcement-popup__close';
         close.setAttribute('aria-label', 'Dismiss announcement');
-        close.textContent = '×';
+        const closeIcon = document.createElement('span');
+        closeIcon.className = 'announcement-popup__close-icon';
+        closeIcon.setAttribute('aria-hidden', 'true');
+        closeIcon.textContent = '×';
+        close.appendChild(closeIcon);
         close.addEventListener('click', dismissAnnouncement);
 
         const type = document.createElement('span');
@@ -351,10 +339,16 @@
     }
 
     function dismissAnnouncement() {
-        try {
-            sessionStorage.setItem(popupSuppressedKey, '1');
-        } catch (error) {
-            console.warn('Could not suppress announcement pop-up for this session:', error.message);
+        if (displayedAnnouncement) {
+            try {
+                const version = new Date(displayedAnnouncement.updated_at).getTime();
+                sessionStorage.setItem(
+                    `${popupSuppressedKey}:${displayedAnnouncement.announcement_id}:${version}`,
+                    '1'
+                );
+            } catch (error) {
+                console.warn('Could not suppress announcement pop-up for this session:', error.message);
+            }
         }
         renderAnnouncementsPopup();
         renderNotificationList();
@@ -371,14 +365,16 @@
         }
     });
 
-    function markAnnouncementRead(announcement) {
-        const key = `${announcement.announcement_id}:${announcement.updated_at}`;
-        readAnnouncementKeys.add(key);
-        savePreferenceSet(readStorageKey, readAnnouncementKeys, 'read announcements');
+    async function markAnnouncementRead(announcement) {
         try {
-            sessionStorage.setItem(popupSuppressedKey, '1');
+            const response = await fetch(`/api/announcements/${encodeURIComponent(announcement.announcement_id)}/read`, {
+                method: 'PATCH'
+            });
+            if (!response.ok) throw new Error(`Could not mark announcement as read (${response.status}).`);
+            announcement.is_read = true;
         } catch (error) {
-            console.warn('Could not suppress announcement pop-up for this session:', error.message);
+            console.error('Could not mark announcement as read:', error);
+            return;
         }
         renderAnnouncementsPopup();
         renderNotificationList();
@@ -396,6 +392,20 @@
         updateBadge();
     }
 
+    async function loadCustomerAnnouncements() {
+        announcements = [];
+        renderAnnouncementsPopup();
+
+        const response = await fetch('/api/auth/me');
+        if (response.status === 401) return;
+        if (!response.ok) throw new Error(`Could not verify account role (${response.status}).`);
+        const user = await response.json();
+        isClientAccount = user.role === 'client';
+        if (!isClientAccount) return;
+
+        await loadPublicAnnouncements();
+    }
+
     async function loadPersonalNotifications() {
         const response = await fetch('/api/notifications');
         if (response.status === 401) {
@@ -410,7 +420,7 @@
     }
 
     async function loadNotifications() {
-        const results = await Promise.allSettled([loadPublicAnnouncements(), loadPersonalNotifications()]);
+        const results = await Promise.allSettled([loadCustomerAnnouncements(), loadPersonalNotifications()]);
         results.forEach((result, index) => {
             if (result.status === 'rejected') {
                 console.error(index === 0 ? 'Could not load announcements:' : 'Could not load notifications:', result.reason);
@@ -424,7 +434,7 @@
         const announcementItem = event.target.closest('[data-announcement-id]');
         if (announcementItem) {
             const announcement = announcements.find((item) => String(item.announcement_id) === announcementItem.dataset.announcementId);
-            if (announcement) markAnnouncementRead(announcement);
+            if (announcement && !isAnnouncementRead(announcement)) await markAnnouncementRead(announcement);
             return;
         }
         const notificationItem = event.target.closest('[data-notification-id]');
@@ -469,6 +479,12 @@
     });
 
     loadNotifications();
+    window.setInterval(() => {
+        if (!isClientAccount) return;
+        loadPublicAnnouncements().catch((error) => {
+            console.error('Could not refresh promotional announcements:', error);
+        });
+    }, 60_000);
 })();
 
 (function () {

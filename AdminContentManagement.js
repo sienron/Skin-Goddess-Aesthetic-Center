@@ -78,6 +78,25 @@ document.addEventListener('DOMContentLoaded', () => {
     return `₱${amount.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
   }
 
+  function toLocalDateTimeInputValue(value) {
+    if (!value) return '';
+    const date = new Date(value);
+    if (!Number.isFinite(date.getTime())) return '';
+    return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
+  }
+
+  function getDateTimeInputMinimum() {
+    const minimumTime = Math.ceil(Date.now() / 60_000) * 60_000 + 2 * 60_000;
+    return toLocalDateTimeInputValue(new Date(minimumTime));
+  }
+
+  function formatAnnouncementDate(value) {
+    if (!value) return 'Not set';
+    const date = new Date(value);
+    if (!Number.isFinite(date.getTime())) return 'Invalid date';
+    return date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  }
+
   function renderServices() {
     const select = document.getElementById('cmServiceCategorySelect');
     const list = document.getElementById('cmServiceList');
@@ -430,18 +449,26 @@ document.addEventListener('DOMContentLoaded', () => {
       details.appendChild(el('p', 'cm-content-card__label', announcement.type.toUpperCase()));
       details.appendChild(el('h3', 'cm-content-card__title', announcement.title));
       details.appendChild(el('p', 'cm-content-card__body', announcement.message));
+      const schedule = el('div', 'cm-announcement-card__schedule');
+      schedule.append(
+        el('span', '', `Starts: ${formatAnnouncementDate(announcement.starts_at)}`),
+        el('span', '', `Ends: ${formatAnnouncementDate(announcement.ends_at)}`)
+      );
+      details.appendChild(schedule);
 
       const controls = el('div', 'cm-content-card__controls');
-      controls.appendChild(statusBadge(announcement.is_published ? 'published' : 'draft'));
+      const status = statusBadge(announcement.is_published ? 'published' : 'draft');
+      if (!announcement.is_published) status.textContent = 'UNPUBLISHED';
+      controls.appendChild(status);
       const editBtn = el('button', 'apt-action apt-action--view', 'Edit');
       editBtn.type = 'button';
       editBtn.dataset.section = 'announcements';
       editBtn.dataset.action = 'edit';
       editBtn.dataset.id = announcement.announcement_id;
       controls.append(editBtn, actionButton(
-        announcement.is_published ? 'Unpublish' : 'Publish',
+        announcement.is_published ? 'Unpublish' : announcement.is_expired ? 'Republish' : 'Publish',
         'announcements',
-        'toggle',
+        announcement.is_expired ? 'republish' : 'toggle',
         announcement.announcement_id
       ));
       const deleteBtn = actionButton('Delete', 'announcements', 'delete', announcement.announcement_id);
@@ -456,6 +483,18 @@ document.addEventListener('DOMContentLoaded', () => {
     ANNOUNCEMENTS = await apiRequest('/api/announcements/admin');
     renderAnnouncements();
   }
+
+  setInterval(() => {
+    let statusChanged = false;
+    ANNOUNCEMENTS.forEach((announcement) => {
+      if (!announcement.is_expired && announcement.ends_at && new Date(announcement.ends_at).getTime() <= Date.now()) {
+        announcement.is_expired = true;
+        announcement.is_published = false;
+        statusChanged = true;
+      }
+    });
+    if (statusChanged) renderAnnouncements();
+  }, 30_000);
 
   function testimonialActionCell(rating) {
     const td = el('td');
@@ -677,9 +716,29 @@ document.addEventListener('DOMContentLoaded', () => {
       addEditorField('title', 'Title', item?.title, { required: true, maxLength: 160 });
       addEditorField('message', 'Details', item?.message, { required: true, multiline: true, maxLength: 2000 });
       addImageEditorField(item);
-      addEditorField('startsAt', 'Starts at (optional)', item?.starts_at ? new Date(item.starts_at).toISOString().slice(0, 16) : '', { type: 'datetime-local' });
-      addEditorField('endsAt', 'Ends at (optional)', item?.ends_at ? new Date(item.ends_at).toISOString().slice(0, 16) : '', { type: 'datetime-local' });
-      addEditorCheckbox('isPublished', 'Publish to customer pages', item?.is_published ?? true);
+      const minimumDateTime = getDateTimeInputMinimum();
+      addEditorField('startsAt', 'Starts at', toLocalDateTimeInputValue(item?.starts_at), {
+        type: 'datetime-local',
+        required: true,
+        min: minimumDateTime,
+      });
+      addEditorField('endsAt', 'Ends at', toLocalDateTimeInputValue(item?.ends_at), {
+        type: 'datetime-local',
+        required: true,
+        min: minimumDateTime,
+      });
+      const startsAtField = editorFields.querySelector('[name="startsAt"]');
+      const endsAtField = editorFields.querySelector('[name="endsAt"]');
+      const updateEndMinimum = () => {
+        const startDate = startsAtField.value ? new Date(startsAtField.value) : null;
+        const afterStart = startDate && Number.isFinite(startDate.getTime())
+          ? toLocalDateTimeInputValue(new Date(startDate.getTime() + 60_000))
+          : minimumDateTime;
+        endsAtField.min = afterStart > minimumDateTime ? afterStart : minimumDateTime;
+      };
+      startsAtField.addEventListener('input', updateEndMinimum);
+      updateEndMinimum();
+      addEditorCheckbox('isPublished', 'Publish to customer pages', item?.is_expired ? true : item?.is_published ?? true);
     } else if (section === 'homepage') {
       addEditorField('title', 'Title', item.title, { required: true, maxLength: 500, multiline: item.key === 'hero' });
       addEditorField('body', 'Supporting text', item.body, { multiline: true, maxLength: 2000 });
@@ -819,6 +878,10 @@ document.addEventListener('DOMContentLoaded', () => {
       await apiRequest(`/api/content/admin/team/${id}/status`, { method: 'PATCH', body: JSON.stringify({ isPublished: !item.isPublished }) });
     } else if (section === 'announcements') {
       const item = ANNOUNCEMENTS.find((announcement) => String(announcement.announcement_id) === String(id));
+      if (item.is_expired && !item.is_published) {
+        openEditor('announcements', item);
+        return;
+      }
       await apiRequest(`/api/announcements/admin/${id}`, {
         method: 'PATCH',
         body: JSON.stringify({ isPublished: !item.is_published }),
@@ -922,6 +985,9 @@ document.addEventListener('DOMContentLoaded', () => {
       } else if (actionName === 'toggle') {
         action.disabled = true;
         await toggleItem(section, id);
+      } else if (actionName === 'republish' && section === 'announcements') {
+        const item = ANNOUNCEMENTS.find((announcement) => String(announcement.announcement_id) === String(id));
+        if (item) openEditor('announcements', item);
       } else if (actionName === 'defaults' && section === 'services') {
         await openServiceDefaults(id);
       } else if (actionName === 'delete' && section === 'announcements') {
