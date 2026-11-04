@@ -17797,42 +17797,6 @@ body.client-header .notification .badge {
   }
 }
 
-@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-  .cursor-halo {
-    position: fixed;
-    z-index: 1;
-    top: 0;
-    left: 0;
-    width: 150px;
-    height: 150px;
-    border-radius: 50%;
-    pointer-events: none;
-    opacity: 0;
-    background: radial-gradient(
-      circle,
-      rgba(241, 229, 172, 0.38) 0%,
-      rgba(212, 169, 55, 0.2) 40%,
-      rgba(212, 169, 55, 0) 74%
-    );
-    filter: blur(12px);
-    transform: translate(-200px, -200px);
-    transition: opacity 250ms ease;
-    will-change: transform, opacity;
-  }
-
-  .cursor-halo.is-visible {
-    opacity: 0.9;
-  }
-
-  body.homepage .hero-copy .hero-letter {
-    display: inline-block;
-    color: color-mix(in srgb, var(--ink) calc(100% - var(--letter-light, 0%)), #B5892A var(--letter-light, 0%));
-    transform: scale(var(--letter-scale, 1));
-    transform-origin: center bottom;
-    transition: color 180ms ease, transform 180ms ease;
-  }
-}
-
 .announcement-popup-backdrop {
   position: fixed;
   z-index: 4999;
@@ -17897,23 +17861,6 @@ body.homepage .notification,
 body.client-header .notification {
   border-radius: 50%;
   box-sizing: border-box;
-}
-
-body.homepage .halo-toggle .theme-toggle-icon {
-  opacity: 0.45;
-  transition: opacity 0.2s ease;
-}
-
-body.homepage .halo-toggle[aria-pressed="true"] {
-  background-color: rgb(201, 168, 76);
-}
-
-body.homepage .halo-toggle[aria-pressed="true"] .theme-toggle-icon {
-  opacity: 1;
-}
-
-body.halo-off .cursor-halo {
-  display: none;
 }
 
 /* Admin pages: cohesive phone layout */
@@ -20026,18 +19973,6 @@ body.homepage .treatments-section > .treatments-carousel-wrap {
   z-index: 1;
 }
 
-body.homepage .treatments-section__butterflies {
-  position: absolute;
-  z-index: 2;
-  top: -62px;
-  left: 50%;
-  width: min(320px, 54vw);
-  height: 52px;
-  color: rgba(112, 83, 20, .78);
-  pointer-events: none;
-  transform: translateX(-50%);
-}
-
 body.homepage .treatments-section__header {
   margin: 0 5vw clamp(18px, 2.5vw, 34px);
 }
@@ -20094,11 +20029,6 @@ body.homepage .treatments-section .treatments-carousel {
 @media (max-width: 700px) {
   body.homepage .treatments-section {
     padding: 60px 0 72px;
-  }
-
-  body.homepage .treatments-section__butterflies {
-    top: -56px;
-    width: min(280px, 68vw);
   }
 
   body.homepage .treatments-section__header {
