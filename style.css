@@ -23845,6 +23845,36 @@ body.customer-theme-dark .notification-list {
   color: #e9e4da;
 }
 
+body.customer-theme-dark .announcement-popup {
+  border-color: #41413b;
+  background: #222421;
+  color: #e9e4da;
+}
+
+body.customer-theme-dark .announcement-popup__close {
+  border-color: #41413b;
+  background: #292a27;
+  color: #c9c2b7;
+}
+
+body.customer-theme-dark .announcement-popup__close:hover {
+  background: #373126;
+  color: #f1dfaa;
+}
+
+body.customer-theme-dark .announcement-popup__type {
+  background: #373126;
+  color: #d8bb73;
+}
+
+body.customer-theme-dark .announcement-popup__title {
+  color: #eee8dd;
+}
+
+body.customer-theme-dark .announcement-popup__message {
+  color: #c9c2b7;
+}
+
 body.customer-theme-dark .booking-main,
 body.customer-theme-dark .my-appointments-main,
 body.customer-theme-dark .summary-page-main,
