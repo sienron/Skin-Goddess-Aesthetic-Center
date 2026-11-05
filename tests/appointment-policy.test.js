@@ -74,7 +74,7 @@ function validCustomerDetails() {
   };
 }
 
-async function invokeCheckout(body) {
+async function invokeCheckout(body, isoDate = '2026-01-05T00:00:00.000Z', serviceOverrides = {}) {
   const queryCalls = [];
   let checkoutValues;
   db.query = async (sql, values = []) => {
@@ -97,8 +97,10 @@ async function invokeCheckout(body) {
         service_name: 'Facial',
         category: 'facial',
         duration_minutes: 60,
+        buffer_minutes: 30,
         service_price: '1000.00',
-        reservation_fee: '500.00'
+        reservation_fee: '500.00',
+        ...serviceOverrides
       }] };
     }
     if (/SELECT category FROM services/.test(sql)) return { rows: [{ category: 'facial' }] };
@@ -121,8 +123,8 @@ async function invokeCheckout(body) {
 
   const response = responseCapture();
   try {
-    await withFrozenDate('2026-01-05T00:00:00.000Z', () => routeHandler('/paymongo/checkout-session', 'post')({
-      body: { serviceId: 3, date: '2026-01-05', time: '11:00 AM', ...body },
+    await withFrozenDate(isoDate, () => routeHandler('/paymongo/checkout-session', 'post')({
+      body: { serviceId: 3, date: '2026-01-05', time: '9:00 AM', ...body },
       session: { userId: 7 }
     }, response));
   } finally {
@@ -132,31 +134,75 @@ async function invokeCheckout(body) {
   return { response, queryCalls, checkoutValues };
 }
 
-test('the shared booking rule accepts the exact three-hour boundary and rejects earlier slots', async () => {
-  assert.equal(MIN_BOOKING_LEAD_MINUTES, 180);
+test('the shared booking rule accepts the exact 30-minute boundary and exposes half-hour intervals', async () => {
+  assert.equal(MIN_BOOKING_LEAD_MINUTES, 30);
   assert.ok(VALID_SLOTS.includes('5:00 PM'));
+  assert.ok(VALID_SLOTS.includes('9:30 AM'));
+  assert.ok(VALID_SLOTS.includes('1:30 PM'));
+  assert.equal(VALID_SLOTS.includes('12:00 PM'), false);
   await withFrozenDate('2026-01-05T00:00:00.000Z', async () => {
-    assert.equal(isSlotTooSoon('2026-01-05', '10:59'), true);
-    assert.equal(isSlotTooSoon('2026-01-05', '11:00'), false);
+    assert.equal(isSlotTooSoon('2026-01-05', '08:29'), true);
+    assert.equal(isSlotTooSoon('2026-01-05', '08:30'), false);
     assert.equal(isSlotTooSoon('2026-01-05', '1:00 PM'), false);
   });
 });
 
-test('checkout rejects a booking inside three hours and accepts the boundary and later valid slots', async () => {
+test('checkout rejects a booking inside 30 minutes and accepts the boundary with its treatment and buffer end', async () => {
   setTestPayMongoEnvironment();
-  const early = await invokeCheckout({ ...validCustomerDetails(), time: '10:00 AM' });
+  const early = await invokeCheckout({ ...validCustomerDetails(), time: '9:00 AM' }, '2026-01-05T00:45:00.000Z');
   assert.equal(early.response.statusCode, 400);
-  assert.match(early.response.body.message, /at least 3 hours/);
+  assert.match(early.response.body.message, /at least 30 minutes/);
   assert.equal(early.checkoutValues, undefined);
 
-  const boundary = await invokeCheckout({ ...validCustomerDetails() });
+  const boundary = await invokeCheckout({ ...validCustomerDetails() }, '2026-01-05T00:30:00.000Z');
   assert.equal(boundary.response.statusCode, 201, JSON.stringify(boundary.response.body));
   assert.equal(boundary.checkoutValues[5], '2026-01-05');
-  assert.equal(boundary.checkoutValues[6], '11:00');
+  assert.equal(boundary.checkoutValues[6], '09:00');
+  assert.equal(boundary.checkoutValues[7], '10:30');
+  assert.equal(boundary.checkoutValues[8], 60);
+  assert.equal(boundary.checkoutValues[9], 30);
 
-  const afterFour = await invokeCheckout({ ...validCustomerDetails(), time: '5:00 PM' });
+  const afterFour = await invokeCheckout({ ...validCustomerDetails(), time: '4:30 PM' });
   assert.equal(afterFour.response.statusCode, 201);
-  assert.equal(afterFour.checkoutValues[6], '17:00');
+  assert.equal(afterFour.checkoutValues[6], '16:30');
+  assert.equal(afterFour.checkoutValues[7], '18:00');
+});
+
+test('checkout reserves service duration plus buffer and rejects lunch or closing overruns', async () => {
+  setTestPayMongoEnvironment();
+  const ninetyMinuteService = await invokeCheckout(
+    { ...validCustomerDetails(), time: '9:30 AM' },
+    '2026-01-05T00:00:00.000Z',
+    { duration_minutes: 90 }
+  );
+  assert.equal(ninetyMinuteService.response.statusCode, 201);
+  assert.equal(ninetyMinuteService.checkoutValues[7], '11:30');
+  assert.equal(ninetyMinuteService.checkoutValues[8], 90);
+  assert.equal(ninetyMinuteService.checkoutValues[9], 30);
+
+  const threeHourAfternoon = await invokeCheckout(
+    { ...validCustomerDetails(), time: '1:00 PM' },
+    '2026-01-05T00:00:00.000Z',
+    { duration_minutes: 180 }
+  );
+  assert.equal(threeHourAfternoon.response.statusCode, 201);
+  assert.equal(threeHourAfternoon.checkoutValues[7], '16:30');
+
+  const lunchOverrun = await invokeCheckout(
+    { ...validCustomerDetails(), time: '11:00 AM' },
+    '2026-01-05T00:00:00.000Z',
+    { duration_minutes: 90 }
+  );
+  assert.equal(lunchOverrun.response.statusCode, 400);
+  assert.match(lunchOverrun.response.body.message, /operating hours/);
+
+  const closingOverrun = await invokeCheckout(
+    { ...validCustomerDetails(), time: '3:30 PM' },
+    '2026-01-05T00:00:00.000Z',
+    { duration_minutes: 180 }
+  );
+  assert.equal(closingOverrun.response.statusCode, 400);
+  assert.match(closingOverrun.response.body.message, /operating hours/);
 });
 
 test('checkout uses submitted customer details, validates them, and preserves self-booking fallback', async () => {
@@ -164,12 +210,13 @@ test('checkout uses submitted customer details, validates them, and preserves se
   const otherCustomer = await invokeCheckout(validCustomerDetails());
   assert.equal(otherCustomer.response.statusCode, 201, JSON.stringify(otherCustomer.response.body));
   assert.deepEqual(otherCustomer.checkoutValues.slice(10), [
+    50000, false,
     'Jamie', 'Client', 'jamie@example.test', '+63 917 123 4567'
   ]);
 
   const sanitized = await invokeCheckout({ ...validCustomerDetails(), firstName: ' Jamie\u0000 ' });
   assert.equal(sanitized.response.statusCode, 201);
-  assert.equal(sanitized.checkoutValues[10], 'Jamie');
+  assert.equal(sanitized.checkoutValues[12], 'Jamie');
 
   const invalid = await invokeCheckout({ ...validCustomerDetails(), email: 'not-an-email' });
   assert.equal(invalid.response.statusCode, 400);
@@ -188,6 +235,7 @@ test('checkout uses submitted customer details, validates them, and preserves se
   const selfBooking = await invokeCheckout({});
   assert.equal(selfBooking.response.statusCode, 201);
   assert.deepEqual(selfBooking.checkoutValues.slice(10), [
+    50000, false,
     'Account', 'Holder', 'account@example.test', '+63 917 000 0000'
   ]);
 });
@@ -205,8 +253,10 @@ test('verified checkout creates the appointment with the submitted customer deta
     customer_email: 'jamie@example.test',
     customer_phone: '+63 917 123 4567',
     appointment_date: '2026-01-06',
-    appointment_time: '17:00:00',
-    appointment_end_time: '18:00:00',
+    appointment_time: '09:00:00',
+    appointment_end_time: '10:30:00',
+    booked_duration_minutes: 60,
+    booked_buffer_minutes: 30,
     amount_cents: 50000,
     currency: 'PHP',
     status: 'paid',
@@ -214,6 +264,8 @@ test('verified checkout creates the appointment with the submitted customer deta
     payment_id: 'pay_test'
   };
   const appointmentValues = [];
+  const assignmentQueries = [];
+  const staffLocks = [];
   db.query = async (sql) => {
     if (/FROM paymongo_checkout_sessions/.test(sql)) return { rows: [payment] };
     return { rows: [] };
@@ -222,7 +274,15 @@ test('verified checkout creates the appointment with the submitted customer deta
     async query(sql, values = []) {
       if (/FROM paymongo_checkout_sessions/.test(sql)) return { rows: [payment] };
       if (/SELECT category FROM services/.test(sql)) return { rows: [{ category: 'facial' }] };
-      if (/SELECT u\.user_id/.test(sql)) return { rows: [{ user_id: 31 }] };
+      if (/SELECT user_id FROM users\s+WHERE role/.test(sql)) return { rows: [{ user_id: 31 }] };
+      if (/pg_advisory_xact_lock/.test(sql)) {
+        staffLocks.push(values);
+        return { rows: [] };
+      }
+      if (/SELECT u\.user_id/.test(sql)) {
+        assignmentQueries.push(sql);
+        return { rows: [{ user_id: 31 }] };
+      }
       if (/INSERT INTO appointments/.test(sql)) {
         appointmentValues.push(...values);
         return { rows: [{ appointment_id: 99, appointment_status: 'confirmed', payment_status: 'paid', aesthetician_id: 31 }] };
@@ -243,6 +303,11 @@ test('verified checkout creates the appointment with the submitted customer deta
 
   assert.equal(response.statusCode, 201);
   assert.ok(appointmentValues.length);
+  assert.equal(appointmentValues[7], 60);
+  assert.equal(appointmentValues[8], 30);
+  assert.match(assignmentQueries[0], /GREATEST\(a\.appointment_end_time, COALESCE\(a\.adjusted_expected_end_time/);
+  assert.match(assignmentQueries[0], /appointment_status IN \('confirmed', 'in_progress', 'completed'\)/);
+  assert.deepEqual(staffLocks, [[1042026, 31]]);
   assert.deepEqual(appointmentValues.slice(-4), [
     'Jamie', 'Client', 'jamie@example.test', '+63 917 123 4567'
   ]);
@@ -329,7 +394,123 @@ test('client cancellation requires strictly more than 24 hours, including at the
   assert.ok(over24.queries.some((sql) => /UPDATE appointments/.test(sql)));
 });
 
-test('migration scripts reference the existing inventory migration and the new customer migration', () => {
+test('rescheduling uses the original treatment and buffer snapshots without changing the booked appointment', async () => {
+  const handler = routeHandler('/:id/reschedule', 'post');
+  async function submit(time) {
+    let updateValues;
+    const queries = [];
+    db.query = async (sql, values = []) => {
+      queries.push(sql);
+      if (/SELECT a\.appointment_id, a\.user_id, a\.aesthetician_id/.test(sql)) {
+        return { rows: [{
+          appointment_id: 42,
+          user_id: 7,
+          aesthetician_id: null,
+          service_id: 3,
+          appointment_status: 'confirmed',
+          reschedule_request_status: null,
+          is_demo: false,
+          booked_duration_minutes: 90,
+          booked_buffer_minutes: 30,
+          service_name: 'Facial'
+        }] };
+      }
+      if (/SELECT role FROM users/.test(sql)) return { rows: [{ role: 'client' }] };
+      if (/UPDATE appointments\s+SET reschedule_request_status/.test(sql)) {
+        updateValues = values;
+        return { rows: [] };
+      }
+      return { rows: [] };
+    };
+    const response = responseCapture();
+    try {
+      await withFrozenDate('2026-01-05T00:00:00.000Z', () => handler({
+        params: { id: '42' },
+        body: {
+          date: '2026-01-06',
+          time,
+          reason: 'Schedule change',
+          description: 'Please move this appointment.'
+        },
+        session: { userId: 7 }
+      }, response));
+    } finally {
+      db.query = originalQuery;
+    }
+    return { response, queries, updateValues };
+  }
+
+  const valid = await submit('09:30');
+  assert.equal(valid.response.statusCode, 200);
+  assert.equal(valid.updateValues[1], '09:30');
+  assert.equal(valid.updateValues[2], '11:30');
+  assert.equal(valid.queries.some((sql) => /SET appointment_date =/.test(sql)), false);
+
+  const lunchOverrun = await submit('11:00');
+  assert.equal(lunchOverrun.response.statusCode, 400);
+  assert.equal(lunchOverrun.updateValues, undefined);
+});
+
+test('admin rescheduling rejects a slot blocked by an adjusted expected end', async () => {
+  const handler = routeHandler('/:id/reschedule', 'post');
+  const transactionQueries = [];
+  const staffLocks = [];
+  db.query = async (sql) => {
+    if (/SELECT a\.appointment_id, a\.user_id, a\.aesthetician_id/.test(sql)) {
+      return { rows: [{
+        appointment_id: 42,
+        user_id: 7,
+        aesthetician_id: 31,
+        service_id: 3,
+        appointment_status: 'confirmed',
+        reschedule_request_status: null,
+        is_demo: false,
+        booked_duration_minutes: 60,
+        booked_buffer_minutes: 30,
+        service_name: 'Facial'
+      }] };
+    }
+    if (/SELECT role FROM users/.test(sql)) return { rows: [{ role: 'admin' }] };
+    return { rows: [] };
+  };
+  db.transaction = async (callback) => callback({
+    async query(sql, values = []) {
+      transactionQueries.push({ sql, values });
+      if (/SELECT appointment_status, aesthetician_id/.test(sql)) {
+        return { rows: [{ appointment_status: 'confirmed', aesthetician_id: 31 }] };
+      }
+      if (/pg_advisory_xact_lock/.test(sql)) {
+        staffLocks.push(values);
+        return { rows: [] };
+      }
+      if (/SELECT 1\s+FROM appointments/.test(sql)) return { rows: [{ exists: 1 }] };
+      return { rows: [] };
+    }
+  });
+  const response = responseCapture();
+  try {
+    await withFrozenDate('2026-01-05T00:00:00.000Z', () => handler({
+      params: { id: '42' },
+      body: {
+        date: '2026-01-05',
+        time: '13:00',
+        reason: 'Schedule change',
+        description: 'Move away from the adjusted appointment.'
+      },
+      session: { userId: 99 }
+    }, response));
+  } finally {
+    db.query = originalQuery;
+    db.transaction = originalTransaction;
+  }
+  assert.equal(response.statusCode, 409, JSON.stringify(response.body));
+  assert.deepEqual(staffLocks, [[1042026, 31]]);
+  assert.match(transactionQueries.find(({ sql }) => /SELECT 1\s+FROM appointments/.test(sql)).sql,
+    /GREATEST\(appointment_end_time, COALESCE\(adjusted_expected_end_time/);
+  assert.equal(transactionQueries.some(({ sql }) => /SET appointment_date =/.test(sql)), false);
+});
+
+test('migration scripts reference inventory, customer, and flexible scheduling migrations', () => {
   const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
   const allScripts = Object.values(packageJson.scripts).join('\n');
   const correctMigration = '040-enable-service-inventory-suggestions.js';
@@ -342,8 +523,12 @@ test('migration scripts reference the existing inventory migration and the new c
   assert.match(packageJson.scripts.migrate, /040-enable-service-inventory-suggestions\.js/);
   assert.match(packageJson.scripts.migrate, /039-appointment-inventory-mappings\.js.*040-enable-service-inventory-suggestions\.js/);
   assert.match(packageJson.scripts.postmigrate, /042-appointment-review-timezones\.js.*043-appointment-customer-details\.js/);
+  assert.match(packageJson.scripts.postmigrate, /046-announcement-reads\.js.*047-flexible-appointment-scheduling\.js.*048-appointment-delay-retries\.js/);
+  assert.match(packageJson.scripts['migrate:appointment-scheduling'], /047-flexible-appointment-scheduling\.js.*048-appointment-delay-retries\.js/);
   assert.doesNotMatch(packageJson.scripts.migrate, /043-appointment-customer-details\.js/);
   assert.equal(fs.existsSync(path.join(__dirname, '..', 'migrations', '043-appointment-customer-details.js')), true);
+  assert.equal(fs.existsSync(path.join(__dirname, '..', 'migrations', '047-flexible-appointment-scheduling.js')), true);
+  assert.equal(fs.existsSync(path.join(__dirname, '..', 'migrations', '048-appointment-delay-retries.js')), true);
 });
 
 test('customer detail migration is additive and idempotent', async () => {
@@ -362,6 +547,33 @@ test('customer detail migration is additive and idempotent', async () => {
   assert.ok(statements.every((sql) => /ADD COLUMN IF NOT EXISTS/.test(sql)));
   assert.ok(statements.some((sql) => /ALTER TABLE appointments/.test(sql)));
   assert.ok(statements.some((sql) => /ALTER TABLE paymongo_checkout_sessions/.test(sql)));
+});
+
+test('flexible scheduling migration backfills historical ends, adds audit tables, and can be rolled back', async () => {
+  const { migrate, down } = require('../migrations/047-flexible-appointment-scheduling');
+  const statements = [];
+  db.transaction = async (callback) => callback({
+    async query(sql) {
+      statements.push(sql);
+      return { rows: [] };
+    }
+  });
+  try {
+    await migrate();
+    assert.ok(statements.some((sql) => /SET buffer_minutes = 30/.test(sql)));
+    assert.ok(statements.some((sql) => /scheduled_end_time = a\.appointment_end_time/.test(sql)));
+    assert.ok(statements.some((sql) => /booked_duration_minutes = s\.duration_minutes/.test(sql)));
+    assert.ok(statements.some((sql) => /CREATE TABLE IF NOT EXISTS appointment_end_time_adjustments/.test(sql)));
+    assert.ok(statements.some((sql) => /CREATE TABLE IF NOT EXISTS appointment_delay_notifications/.test(sql)));
+    assert.ok(statements.some((sql) => /appointments_adjusted_expected_end_valid/.test(sql)));
+
+    statements.length = 0;
+    await down();
+    assert.ok(statements.some((sql) => /DROP TABLE IF EXISTS appointment_delay_notifications/.test(sql)));
+    assert.ok(statements.some((sql) => /DROP COLUMN IF EXISTS adjusted_expected_end_time/.test(sql)));
+  } finally {
+    db.transaction = originalTransaction;
+  }
 });
 
 test.after(async () => {

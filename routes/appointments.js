@@ -5,6 +5,7 @@ const db = require('../db');
 const { requireActiveAccount, blockDemoCustomerPayments, requireRole } = require('../middleware/auth');
 const { roleForCategory } = require('../utils/staffRoles');
 const { notifyUser, notifyUsers, notifyRoles } = require('../utils/notifications');
+const { reconcileAppointmentDelayNotifications } = require('../utils/appointmentDelayNotifications');
 const { notifyStockTransition } = require('../utils/inventoryNotifications');
 const { recordInventoryTransaction } = require('../utils/inventoryTransactions');
 const { canBookAppointments } = require('../utils/appointmentBookingAccess');
@@ -13,7 +14,7 @@ const { loadCustomerAppointmentHistory } = require('../utils/customerAppointment
 const { createHmac, randomBytes, timingSafeEqual } = require('crypto');
 const { RATING_WINDOW_DAYS } = require('../utils/appointmentRatings');
 const ratingLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, message: { message: 'Too many rating attempts. Try again later.' } });
-const { VALID_SLOTS, CLOSING_TIME, CLOSED_WEEKDAYS, MAX_ADVANCE_DAYS, MIN_BOOKING_LEAD_MINUTES, to24h, from24h, addMinutes, manilaNow, isSlotInPast, isSlotTooSoon } = require('../utils/slots');
+const { VALID_SLOTS, CLOSING_TIME, CLOSED_WEEKDAYS, MAX_ADVANCE_DAYS, MIN_BOOKING_LEAD_MINUTES, DEFAULT_BUFFER_MINUTES, to24h, from24h, addMinutes, overlapsLunchBreak, manilaNow, isSlotInPast, isSlotTooSoon } = require('../utils/slots');
 
 function payMongoSignatureIsValid(signatureHeader, rawBody, config) {
   if (typeof signatureHeader !== 'string' || !Buffer.isBuffer(rawBody)) return false;
@@ -267,10 +268,14 @@ router.get('/admin', requireRole('admin'), async (req, res) => {
              a.appointment_date::text AS date,
              a.appointment_time::text AS start,
              a.appointment_end_time::text AS end,
+             a.scheduled_end_time::text AS scheduled_end,
+             GREATEST(a.appointment_end_time, COALESCE(a.adjusted_expected_end_time, a.appointment_end_time))::text AS expected_end,
              a.appointment_status AS status,
              a.payment_status,
              s.service_name AS service,
-             s.duration_minutes,
+             CASE WHEN a.booked_duration_is_estimated THEN NULL ELSE a.booked_duration_minutes END AS duration_minutes,
+             a.booked_duration_is_estimated AS duration_is_estimated,
+             a.booked_buffer_minutes AS buffer_minutes,
              a.booked_service_price AS fee,
              a.booked_reservation_fee AS deposit_amount,
              a.cancellation_request_status,
@@ -350,6 +355,147 @@ router.post('/admin/advance-started', requireRole('admin'), async (_req, res) =>
   }
 });
 
+router.put('/admin/:id/expected-end', requireRole('admin'), async (req, res) => {
+  const appointmentId = validAppointmentId(req.params.id);
+  if (!appointmentId) return res.status(400).json({ message: 'Choose a valid appointment.' });
+  const expectedEnd = typeof req.body?.expectedEndTime === 'string'
+    && /^([01]\d|2[0-3]):[0-5]\d$/.test(req.body.expectedEndTime)
+    ? req.body.expectedEndTime
+    : null;
+  if (!expectedEnd) return res.status(400).json({ message: 'Choose a valid expected end time.' });
+
+  try {
+    const adjustment = await db.transaction(async (client) => {
+      const result = await client.query(`
+        SELECT appointment_id, appointment_date::text AS appointment_date,
+               appointment_time::text AS appointment_time,
+               appointment_end_time::text AS scheduled_end_time,
+               GREATEST(appointment_end_time, COALESCE(adjusted_expected_end_time, appointment_end_time))::text AS previous_expected_end_time,
+               aesthetician_id, appointment_status, is_demo
+        FROM appointments
+        WHERE appointment_id = $1
+        FOR UPDATE
+      `, [appointmentId]);
+      if (!result.rows.length) {
+        const error = new Error('Appointment not found.');
+        error.statusCode = 404;
+        throw error;
+      }
+
+      const appointment = result.rows[0];
+      if (appointment.is_demo) {
+        const error = new Error('Synthetic survey appointments cannot be changed.');
+        error.statusCode = 403;
+        throw error;
+      }
+      if (appointment.appointment_status !== 'in_progress') {
+        const error = new Error('Only In Progress appointments can have their expected end time adjusted.');
+        error.statusCode = 409;
+        throw error;
+      }
+      if (!appointment.aesthetician_id) {
+        const error = new Error('The appointment has no assigned staff member.');
+        error.statusCode = 409;
+        throw error;
+      }
+      if (expectedEnd <= appointment.appointment_time.slice(0, 5)) {
+        const error = new Error('The expected end time must be later than the appointment start time.');
+        error.statusCode = 400;
+        throw error;
+      }
+      if (expectedEnd < appointment.scheduled_end_time.slice(0, 5)) {
+        const error = new Error('The expected end time cannot be earlier than the original scheduled end time.');
+        error.statusCode = 400;
+        throw error;
+      }
+
+      await client.query('SELECT pg_advisory_xact_lock($1, $2)', [1042026, appointment.aesthetician_id]);
+      const previousEndTime = appointment.previous_expected_end_time.slice(0, 5);
+      if (previousEndTime === expectedEnd) {
+        return {
+          changed: false,
+          appointmentDate: appointment.appointment_date,
+          aestheticianId: appointment.aesthetician_id,
+          affected: []
+        };
+      }
+
+      await client.query(`
+        UPDATE appointments
+        SET adjusted_expected_end_time = $1, updated_at = NOW()
+        WHERE appointment_id = $2
+      `, [expectedEnd, appointmentId]);
+      await client.query(`
+        INSERT INTO appointment_end_time_adjustments (
+          appointment_id, administrator_id, previous_end_time, new_end_time
+        )
+        VALUES ($1, $2, $3, $4)
+      `, [appointmentId, req.session.userId, previousEndTime, expectedEnd]);
+
+      return {
+        changed: true,
+        appointmentDate: appointment.appointment_date,
+        aestheticianId: appointment.aesthetician_id,
+        expectedEndTime: expectedEnd,
+        affected: []
+      };
+    });
+
+    if (!adjustment.changed) {
+      return res.json({ message: 'The expected end time is unchanged.', affectedCount: 0 });
+    }
+
+    let notificationResults = { sent: 0, failed: 0 };
+    try {
+      notificationResults = await reconcileAppointmentDelayNotifications(
+        adjustment.aestheticianId,
+        adjustment.appointmentDate,
+      );
+    } catch (error) {
+      console.error(`Appointment delay notification processing failed for appointment ${appointmentId}:`, error);
+      notificationResults.failed = 1;
+    }
+    return res.json({
+      message: 'Expected end time updated. Affected appointments were not rescheduled.',
+      expectedEndTime: adjustment.expectedEndTime,
+      affectedCount: notificationResults.affectedAppointments?.length || 0,
+      affectedAppointments: (notificationResults.affectedAppointments || []).map((appointment) => ({
+        appointmentId: appointment.appointment_id,
+        client: appointment.client,
+        appointmentTime: appointment.appointment_time,
+        estimatedStartTime: appointment.estimated_start_time
+      })),
+      notifications: notificationResults
+    });
+  } catch (error) {
+    if (error.statusCode) return res.status(error.statusCode).json({ message: error.message });
+    console.error('Error adjusting appointment expected end time:', error);
+    return res.status(500).json({ message: 'Could not adjust the expected end time.' });
+  }
+});
+
+router.get('/admin/:id/end-adjustments', requireRole('admin'), async (req, res) => {
+  const appointmentId = validAppointmentId(req.params.id);
+  if (!appointmentId) return res.status(400).json({ message: 'Choose a valid appointment.' });
+  try {
+    const result = await db.query(`
+      SELECT adjustment.previous_end_time::text AS previous_end_time,
+             adjustment.new_end_time::text AS new_end_time,
+             adjustment.created_at,
+             NULLIF(BTRIM(CONCAT_WS(' ', administrator.first_name, administrator.last_name)), '') AS administrator
+      FROM appointment_end_time_adjustments adjustment
+      JOIN users administrator ON administrator.user_id = adjustment.administrator_id
+      WHERE adjustment.appointment_id = $1
+      ORDER BY adjustment.created_at DESC
+      LIMIT 20
+    `, [appointmentId]);
+    return res.json(result.rows);
+  } catch (error) {
+    console.error('Error loading appointment end-time audit history:', error);
+    return res.status(500).json({ message: 'Could not load appointment adjustment history.' });
+  }
+});
+
 router.put('/admin/:id/edit', requireRole('admin'), async (req, res) => {
   const appointmentId = validAppointmentId(req.params.id);
   if (!appointmentId) return res.status(400).json({ message: 'Choose a valid appointment.' });
@@ -372,6 +518,7 @@ router.put('/admin/:id/edit', requireRole('admin'), async (req, res) => {
       const result = await client.query(`
         SELECT appointment_status, service_id, aesthetician_id, appointment_date::text AS appointment_date,
                appointment_time::text AS appointment_time, appointment_end_time::text AS appointment_end_time,
+               booked_duration_minutes, booked_buffer_minutes,
                user_id, is_demo
         FROM appointments
         WHERE appointment_id = $1
@@ -417,10 +564,18 @@ router.put('/admin/:id/edit', requireRole('admin'), async (req, res) => {
         service: { service_id: appointment.service_id },
         appointmentDate: appointment.appointment_date,
         appointmentTime: appointment.appointment_time.slice(0, 5),
-        appointmentEndTime: appointment.appointment_end_time.slice(0, 5)
+        appointmentEndTime: appointment.appointment_end_time.slice(0, 5),
+        durationMinutes: Number(appointment.booked_duration_minutes),
+        bufferMinutes: Number(appointment.booked_buffer_minutes)
       };
       if (scheduleChanged) {
-        const validatedSchedule = await getValidatedSchedule(client, body, res, !scheduleTimeChanged);
+        const scheduleSnapshot = serviceId === appointment.service_id
+          ? {
+            durationMinutes: Number(appointment.booked_duration_minutes),
+            bufferMinutes: Number(appointment.booked_buffer_minutes)
+          }
+          : null;
+        const validatedSchedule = await getValidatedSchedule(client, body, res, !scheduleTimeChanged, scheduleSnapshot);
         if (!validatedSchedule) return null;
         booking = validatedSchedule;
       }
@@ -449,11 +604,13 @@ router.put('/admin/:id/edit', requireRole('admin'), async (req, res) => {
         error.statusCode = 409;
         throw error;
       }
-      if (scheduleChanged) {
+      const needsAvailabilityValidation = scheduleChanged
+        || (nextStatus === 'confirmed' && currentStatus !== 'confirmed');
+      if (needsAvailabilityValidation) {
         const availability = await findAvailableAestheticians(client, {
           ...booking,
           serviceId: booking.service.service_id
-        }, appointmentId);
+        }, appointmentId, true, [appointment.aesthetician_id]);
         if (!availability.rows.some((staff) => String(staff.user_id) === String(staffId))) {
           const error = new Error('That staff member is not available for this service and time. Choose another slot or staff member.');
           error.statusCode = 409;
@@ -467,6 +624,11 @@ router.put('/admin/:id/edit', requireRole('admin'), async (req, res) => {
             appointment_date = $2,
             appointment_time = $3,
             appointment_end_time = $4,
+            scheduled_end_time = $4,
+            adjusted_expected_end_time = NULL,
+            booked_duration_minutes = $8,
+            booked_buffer_minutes = $9,
+            booked_duration_is_estimated = FALSE,
             service_id = $5,
             aesthetician_id = $6,
             reminder_24h_sent = CASE
@@ -495,7 +657,9 @@ router.put('/admin/:id/edit', requireRole('admin'), async (req, res) => {
         booking.appointmentEndTime,
         booking.service.service_id,
         staffId,
-        appointmentId
+        appointmentId,
+        booking.durationMinutes,
+        booking.bufferMinutes
       ]);
       return {
         ...update.rows[0],
@@ -1123,7 +1287,7 @@ router.post('/admin/:id/rebook', requireRole('admin'), async (req, res) => {
       const availableStaff = await findAvailableAestheticians(client, {
         ...booking,
         serviceId: original.service_id
-      });
+      }, null, true);
       if (!availableStaff.rows.some((staff) => staff.user_id === staffId)) {
         const error = new Error('That staff member is not available for this service and time. Choose another slot or staff member.');
         error.statusCode = 409;
@@ -1133,9 +1297,10 @@ router.post('/admin/:id/rebook', requireRole('admin'), async (req, res) => {
       const result = await client.query(`
         INSERT INTO appointments
           (user_id, walk_in_name, service_id, booked_service_price, booked_reservation_fee,
-           appointment_date, appointment_time, appointment_end_time, aesthetician_id,
+           appointment_date, appointment_time, appointment_end_time, scheduled_end_time,
+           booked_duration_minutes, booked_buffer_minutes, aesthetician_id,
            appointment_status, payment_status)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'confirmed', 'unpaid')
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8, $9, $10, $11, 'confirmed', 'unpaid')
         RETURNING appointment_id, appointment_status, payment_status
       `, [
         original.user_id,
@@ -1146,6 +1311,8 @@ router.post('/admin/:id/rebook', requireRole('admin'), async (req, res) => {
         booking.appointmentDate,
         booking.appointmentTime,
         booking.appointmentEndTime,
+        booking.durationMinutes,
+        booking.bufferMinutes,
         staffId
       ]);
       return result.rows[0];
@@ -1220,7 +1387,7 @@ router.post('/admin/walk-in', requireRole('admin'), async (req, res) => {
       const availableStaff = await findAvailableAestheticians(client, {
         ...booking,
         serviceId: booking.service.service_id
-      });
+      }, null, true);
       if (!availableStaff.rows.some((staff) => staff.user_id === staffId)) {
         const error = new Error('That staff member is not available for this service and time. Choose another slot or staff member.');
         error.statusCode = 409;
@@ -1230,9 +1397,10 @@ router.post('/admin/walk-in', requireRole('admin'), async (req, res) => {
       const result = await client.query(`
         INSERT INTO appointments
           (user_id, walk_in_name, service_id, booked_service_price, booked_reservation_fee,
-           appointment_date, appointment_time, appointment_end_time, aesthetician_id,
+           appointment_date, appointment_time, appointment_end_time, scheduled_end_time,
+           booked_duration_minutes, booked_buffer_minutes, aesthetician_id,
            appointment_status, payment_status)
-        VALUES (NULL, $1, $2, $3, $4, $5, $6, $7, $8, 'confirmed', 'unpaid')
+        VALUES (NULL, $1, $2, $3, $4, $5, $6, $7, $7, $8, $9, $10, 'confirmed', 'unpaid')
         RETURNING appointment_id, appointment_status, payment_status
       `, [
         clientName,
@@ -1242,6 +1410,8 @@ router.post('/admin/walk-in', requireRole('admin'), async (req, res) => {
         booking.appointmentDate,
         booking.appointmentTime,
         booking.appointmentEndTime,
+        booking.durationMinutes,
+        booking.bufferMinutes,
         staffId
       ]);
       return result.rows[0];
@@ -1501,7 +1671,7 @@ function minutesUntil(dateStr, timeStr, now) {
     - (now.second + now.millisecond / 1000) / 60;
 }
 
-async function getValidatedSchedule(queryClient, body, res, allowShortLead = false) {
+async function getValidatedSchedule(queryClient, body, res, allowShortLead = false, durationSnapshot = null) {
   const serviceId = validServiceId(body.serviceId);
   const appointmentDate = normalizeDate(body.date);
   if (!serviceId) {
@@ -1510,7 +1680,7 @@ async function getValidatedSchedule(queryClient, body, res, allowShortLead = fal
   }
 
   const serviceResult = await queryClient.query(`
-    SELECT service_id, service_name, category, duration_minutes, service_price, reservation_fee
+    SELECT service_id, service_name, category, duration_minutes, buffer_minutes, service_price, reservation_fee
     FROM services WHERE service_id = $1 AND is_active = TRUE
   `, [serviceId]);
   if (serviceResult.rows.length === 0) {
@@ -1547,17 +1717,20 @@ async function getValidatedSchedule(queryClient, body, res, allowShortLead = fal
     return null;
   }
   if (!allowShortLead && isSlotTooSoon(appointmentDate, appointmentTime)) {
-    res.status(400).json({ message: `Please choose a time at least ${MIN_BOOKING_LEAD_MINUTES / 60} hours from now.` });
+    res.status(400).json({ message: `Please choose a time at least ${MIN_BOOKING_LEAD_MINUTES} minutes from now.` });
     return null;
   }
 
-  const appointmentEndTime = addMinutes(appointmentTime, Number(service.duration_minutes));
-  if (!appointmentEndTime || appointmentEndTime > CLOSING_TIME) {
+  const durationMinutes = Number(durationSnapshot?.durationMinutes ?? service.duration_minutes);
+  const bufferMinutes = Number(durationSnapshot?.bufferMinutes ?? service.buffer_minutes ?? DEFAULT_BUFFER_MINUTES);
+  const appointmentEndTime = addMinutes(appointmentTime, durationMinutes + bufferMinutes);
+  if (!appointmentEndTime || appointmentEndTime > CLOSING_TIME
+    || overlapsLunchBreak(appointmentTime, appointmentEndTime)) {
     res.status(400).json({ message: 'This service does not fit within the center’s operating hours at the selected time.' });
     return null;
   }
 
-  return { service, appointmentDate, appointmentTime, appointmentEndTime };
+  return { service, appointmentDate, appointmentTime, appointmentEndTime, durationMinutes, bufferMinutes };
 }
 
 async function getValidatedBooking(userId, body, res) {
@@ -1578,9 +1751,29 @@ async function getValidatedBooking(userId, body, res) {
   return schedule ? { user, customer, ...schedule } : null;
 }
 
-async function findAvailableAestheticians(queryClient, booking, excludeAppointmentId = null) {
+async function findAvailableAestheticians(
+  queryClient,
+  booking,
+  excludeAppointmentId = null,
+  lockStaffSchedules = false,
+  additionalStaffIds = [],
+) {
   const serviceResult = await queryClient.query('SELECT category FROM services WHERE service_id = $1', [booking.serviceId]);
   const staffRole = roleForCategory(serviceResult.rows[0]?.category);
+  if (lockStaffSchedules) {
+    const staffResult = await queryClient.query(`
+      SELECT user_id FROM users
+      WHERE role = $1 AND status = 'active' AND email_verified = TRUE
+      ORDER BY user_id
+    `, [staffRole]);
+    const staffIds = new Set([
+      ...staffResult.rows.map((staff) => Number(staff.user_id)),
+      ...additionalStaffIds.map(Number).filter(Number.isSafeInteger)
+    ]);
+    for (const staffId of [...staffIds].sort((left, right) => left - right)) {
+      await queryClient.query('SELECT pg_advisory_xact_lock($1, $2)', [1042026, staffId]);
+    }
+  }
   return queryClient.query(`
     SELECT u.user_id, u.first_name, u.last_name, u.role FROM users u
     WHERE u.role = $4 AND u.status = 'active' AND u.email_verified = TRUE
@@ -1589,7 +1782,10 @@ async function findAvailableAestheticians(queryClient, booking, excludeAppointme
         WHERE a.aesthetician_id = u.user_id
           AND ($5::integer IS NULL OR a.appointment_id <> $5)
           AND a.appointment_status IN ('confirmed', 'in_progress', 'completed')
-          AND tsrange(a.appointment_date + a.appointment_time, a.appointment_date + a.appointment_end_time) && tsrange($1::date + $2::time, $1::date + $3::time)
+          AND tsrange(
+            a.appointment_date + a.appointment_time,
+            a.appointment_date + GREATEST(a.appointment_end_time, COALESCE(a.adjusted_expected_end_time, a.appointment_end_time))
+          ) && tsrange($1::date + $2::time, $1::date + $3::time)
       )
     ORDER BY u.user_id
   `, [booking.appointmentDate, booking.appointmentTime, booking.appointmentEndTime, staffRole, excludeAppointmentId]);
@@ -1603,7 +1799,7 @@ async function createAppointmentFromPaidCheckout(client, payment, referenceNumbe
     appointmentTime: payment.appointment_time,
     appointmentEndTime: payment.appointment_end_time,
     serviceId: payment.service_id,
-  });
+  }, null, true);
 
   for (const candidate of candidates.rows) {
     await client.query('SAVEPOINT appointment_candidate');
@@ -1611,22 +1807,24 @@ async function createAppointmentFromPaidCheckout(client, payment, referenceNumbe
       const result = await client.query(`
         INSERT INTO appointments (
           user_id, service_id, booked_service_price, booked_reservation_fee,
-          appointment_date, appointment_time, appointment_end_time, aesthetician_id,
+          appointment_date, appointment_time, appointment_end_time, scheduled_end_time,
+          booked_duration_minutes, booked_buffer_minutes, aesthetician_id,
           appointment_status, payment_status, reminder_24h_sent, reminder_3h_sent,
           reminder_email_24h_sent, reminder_email_3h_sent,
           customer_first_name, customer_last_name, customer_email, customer_phone
         )
         VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8, 'confirmed', 'paid',
+          $1, $2, $3, $4, $5, $6, $7, $7, $8, $9, $10, 'confirmed', 'paid',
           $5::date + $6::time <= (NOW() AT TIME ZONE 'Asia/Manila') + INTERVAL '24 hours',
           FALSE,
           $5::date + $6::time <= (NOW() AT TIME ZONE 'Asia/Manila') + INTERVAL '24 hours',
-          FALSE, $9, $10, $11, $12
+          FALSE, $11, $12, $13, $14
         )
         RETURNING appointment_id, appointment_status, payment_status, aesthetician_id
       `, [payment.user_id, payment.service_id, payment.service_price,
         Number(payment.amount_cents) / 100, payment.appointment_date,
-        payment.appointment_time, payment.appointment_end_time, candidate.user_id,
+        payment.appointment_time, payment.appointment_end_time,
+        payment.booked_duration_minutes, payment.booked_buffer_minutes, candidate.user_id,
         payment.customer_first_name, payment.customer_last_name, payment.customer_email, payment.customer_phone]);
       await client.query(`
         INSERT INTO payments (appointment_id, payment_type, amount, method, reference_no, note)
@@ -1769,7 +1967,13 @@ router.get('/mine', requireActiveAccount, async (req, res) => {
          a.appointment_date::text AS date,
                a.appointment_time::text AS start,
                a.appointment_end_time::text AS end,
-               a.appointment_status AS status,
+         CASE WHEN a.booked_duration_is_estimated THEN NULL
+           ELSE (a.appointment_time + (a.booked_duration_minutes * INTERVAL '1 minute'))::time::text
+         END AS treatment_end,
+         CASE WHEN a.booked_duration_is_estimated THEN NULL ELSE a.booked_duration_minutes END AS duration_minutes,
+         a.booked_duration_is_estimated AS duration_is_estimated,
+         GREATEST(a.appointment_end_time, COALESCE(a.adjusted_expected_end_time, a.appointment_end_time))::text AS expected_end,
+         a.appointment_status AS status,
                a.payment_status,
                s.service_name AS service,
                a.booked_service_price AS fee,
@@ -1824,7 +2028,11 @@ router.get('/mine', requireActiveAccount, async (req, res) => {
       appointment_id: row.appointment_id,
       appointment_date: row.date,
       appointment_time: row.start,
-      appointment_end_time: row.end,
+      appointment_end_time: row.treatment_end || row.end,
+      treatment_end_time: row.treatment_end || row.end,
+      duration_minutes: row.duration_minutes,
+      duration_is_estimated: row.duration_is_estimated,
+      expected_end_time: row.expected_end || row.end,
       appointment_status: row.status,
       service_name: row.service,
       booked_service_price: row.fee,
@@ -1983,44 +2191,68 @@ router.post('/:id/cancellation-request/review', requireRole('admin'), async (req
     if (requestStatus !== 'pending') return res.status(400).json({ message: 'This request is no longer pending.' });
 
     if (requestType === 'reschedule' && decision === 'allow') {
-      const conflictResult = await db.query(`
-        SELECT 1
-        FROM appointments
-        WHERE aesthetician_id = $1
-          AND appointment_id <> $2
-          AND appointment_status IN ('confirmed', 'in_progress', 'completed')
-          AND tsrange(
-            appointment_date + appointment_time,
-            appointment_date + appointment_end_time
-          ) && tsrange(
-            $3::date + $4::time,
-            $3::date + $5::time
-          )
-        LIMIT 1
-      `, [
-        appointment.aesthetician_id,
-        appointmentId,
-        appointment.reschedule_requested_date,
-        appointment.reschedule_requested_time,
-        appointment.reschedule_requested_end_time
-      ]);
-      if (conflictResult.rows.length > 0) {
-        return res.status(409).json({ message: 'The requested slot is no longer available. Choose another slot.' });
-      }
+      await db.transaction(async (client) => {
+        const current = await client.query(`
+          SELECT appointment_id, appointment_status, aesthetician_id,
+                 reschedule_request_status, reschedule_requested_date,
+                 reschedule_requested_time, reschedule_requested_end_time
+          FROM appointments
+          WHERE appointment_id = $1
+          FOR UPDATE
+        `, [appointmentId]);
+        if (!current.rows.length
+          || current.rows[0].appointment_status !== 'confirmed'
+          || current.rows[0].reschedule_request_status !== 'pending'
+          || !current.rows[0].aesthetician_id) {
+          const error = new Error('This appointment is no longer available for rescheduling.');
+          error.statusCode = 409;
+          throw error;
+        }
+        const currentAppointment = current.rows[0];
+        await client.query('SELECT pg_advisory_xact_lock($1, $2)', [1042026, currentAppointment.aesthetician_id]);
+        const conflictResult = await client.query(`
+          SELECT 1
+          FROM appointments
+          WHERE aesthetician_id = $1
+            AND appointment_id <> $2
+            AND appointment_status IN ('confirmed', 'in_progress', 'completed')
+            AND tsrange(
+              appointment_date + appointment_time,
+              appointment_date + GREATEST(appointment_end_time, COALESCE(adjusted_expected_end_time, appointment_end_time))
+            ) && tsrange(
+              $3::date + $4::time,
+              $3::date + $5::time
+            )
+          LIMIT 1
+        `, [
+          currentAppointment.aesthetician_id,
+          appointmentId,
+          currentAppointment.reschedule_requested_date,
+          currentAppointment.reschedule_requested_time,
+          currentAppointment.reschedule_requested_end_time
+        ]);
+        if (conflictResult.rows.length > 0) {
+          const error = new Error('The requested slot is no longer available. Choose another slot.');
+          error.statusCode = 409;
+          throw error;
+        }
 
-      await db.query(`
-        UPDATE appointments
-        SET appointment_date = reschedule_requested_date,
-            appointment_time = reschedule_requested_time,
-            appointment_end_time = reschedule_requested_end_time,
-          reminder_24h_sent = reschedule_requested_date + reschedule_requested_time <= (NOW() AT TIME ZONE 'Asia/Manila') + INTERVAL '24 hours',
-          reminder_3h_sent = FALSE,
-          reminder_email_24h_sent = reschedule_requested_date + reschedule_requested_time <= (NOW() AT TIME ZONE 'Asia/Manila') + INTERVAL '24 hours',
-          reminder_email_3h_sent = FALSE,
-            reschedule_request_status = 'approved', reschedule_reviewed_by = $1,
-            reschedule_reviewed_at = NOW()
-        WHERE appointment_id = $2
-      `, [req.session.userId, appointmentId]);
+        await client.query(`
+          UPDATE appointments
+          SET appointment_date = reschedule_requested_date,
+              appointment_time = reschedule_requested_time,
+              appointment_end_time = reschedule_requested_end_time,
+              scheduled_end_time = reschedule_requested_end_time,
+              adjusted_expected_end_time = NULL,
+              reminder_24h_sent = reschedule_requested_date + reschedule_requested_time <= (NOW() AT TIME ZONE 'Asia/Manila') + INTERVAL '24 hours',
+              reminder_3h_sent = FALSE,
+              reminder_email_24h_sent = reschedule_requested_date + reschedule_requested_time <= (NOW() AT TIME ZONE 'Asia/Manila') + INTERVAL '24 hours',
+              reminder_email_3h_sent = FALSE,
+              reschedule_request_status = 'approved', reschedule_reviewed_by = $1,
+              reschedule_reviewed_at = NOW()
+          WHERE appointment_id = $2
+        `, [req.session.userId, appointmentId]);
+      });
     } else if (requestType === 'reschedule') {
       await db.query(`
         UPDATE appointments
@@ -2057,6 +2289,7 @@ router.post('/:id/cancellation-request/review', requireRole('admin'), async (req
     const label = requestType === 'reschedule' ? 'Reschedule' : 'Cancellation';
     return res.json({ message: decision === 'allow' ? `${label} allowed.` : `${label} request rejected.` });
   } catch (error) {
+    if (error.statusCode) return res.status(error.statusCode).json({ message: error.message });
     if (error.code === '23P01' || error.code === '23505') {
       return res.status(409).json({ message: 'The requested slot is no longer available. Choose another slot.' });
     }
@@ -2218,7 +2451,8 @@ router.post('/:id/reschedule', requireActiveAccount, async (req, res) => {
   try {
     const result = await db.query(`
             SELECT a.appointment_id, a.user_id, a.aesthetician_id, a.service_id,
-              a.appointment_status, a.reschedule_request_status, a.is_demo, s.duration_minutes,
+              a.appointment_status, a.reschedule_request_status, a.is_demo,
+              a.booked_duration_minutes, a.booked_buffer_minutes,
               s.service_name
       FROM appointments a
       JOIN services s ON s.service_id = a.service_id
@@ -2244,10 +2478,10 @@ router.post('/:id/reschedule', requireActiveAccount, async (req, res) => {
     }
     const reason = validRequestText(body.reason, 255);
     const description = validRequestText(body.description, 2000);
-    if ((isAssignedAesthetician || isClient) && appointment.reschedule_request_status) {
+    if (!isAdmin && (isAssignedAesthetician || isClient) && appointment.reschedule_request_status) {
       return res.status(409).json({ message: 'A reschedule request has already been submitted for this appointment.' });
     }
-    if ((isAssignedAesthetician || isClient) && (!reason || !description)) {
+    if (!isAdmin && (isAssignedAesthetician || isClient) && (!reason || !description)) {
       return res.status(400).json({ message: 'Reason and description are required for a reschedule request.' });
     }
 
@@ -2257,15 +2491,19 @@ router.post('/:id/reschedule', requireActiveAccount, async (req, res) => {
     }
     if (CLOSED_WEEKDAYS.includes(weekday(appointmentDate))) return res.status(400).json({ message: 'The center is closed on the selected date.' });
     if (isSlotInPast(appointmentDate, appointmentTime) || isSlotTooSoon(appointmentDate, appointmentTime)) {
-      return res.status(400).json({ message: `Choose a time at least ${MIN_BOOKING_LEAD_MINUTES / 60} hours from now.` });
+      return res.status(400).json({ message: `Choose a time at least ${MIN_BOOKING_LEAD_MINUTES} minutes from now.` });
     }
 
-    const appointmentEndTime = addMinutes(appointmentTime, Number(appointment.duration_minutes));
-    if (!appointmentEndTime || appointmentEndTime > CLOSING_TIME) {
+    const appointmentEndTime = addMinutes(
+      appointmentTime,
+      Number(appointment.booked_duration_minutes) + Number(appointment.booked_buffer_minutes),
+    );
+    if (!appointmentEndTime || appointmentEndTime > CLOSING_TIME
+      || overlapsLunchBreak(appointmentTime, appointmentEndTime)) {
       return res.status(400).json({ message: 'This service does not fit within operating hours at the selected time.' });
     }
 
-    if (isAssignedAesthetician || isClient) {
+    if (!isAdmin && (isAssignedAesthetician || isClient)) {
       await db.query(`
         UPDATE appointments
         SET reschedule_request_status = 'pending', reschedule_requested_date = $1,
@@ -2291,15 +2529,44 @@ router.post('/:id/reschedule', requireActiveAccount, async (req, res) => {
       return res.json({ message: 'Reschedule request sent to the admin.' });
     }
 
-    await db.query(`
-      UPDATE appointments
+    const rescheduled = await db.transaction(async (client) => {
+      const current = await client.query(`
+        SELECT appointment_status, aesthetician_id
+        FROM appointments
+        WHERE appointment_id = $1
+        FOR UPDATE
+      `, [appointmentId]);
+      if (!current.rows.length || current.rows[0].appointment_status !== 'confirmed') return false;
+      await client.query('SELECT pg_advisory_xact_lock($1, $2)', [1042026, current.rows[0].aesthetician_id]);
+      const conflict = await client.query(`
+        SELECT 1
+        FROM appointments
+        WHERE aesthetician_id = $1
+          AND appointment_id <> $2
+          AND appointment_status IN ('confirmed', 'in_progress', 'completed')
+          AND tsrange(
+            appointment_date + appointment_time,
+            appointment_date + GREATEST(appointment_end_time, COALESCE(adjusted_expected_end_time, appointment_end_time))
+          ) && tsrange($3::date + $4::time, $3::date + $5::time)
+        LIMIT 1
+      `, [current.rows[0].aesthetician_id, appointmentId, appointmentDate, appointmentTime, appointmentEndTime]);
+      if (conflict.rows.length) return false;
+
+      await client.query(`
+        UPDATE appointments
         SET appointment_date = $1, appointment_time = $2, appointment_end_time = $3,
-          reminder_24h_sent = $1::date + $2::time <= (NOW() AT TIME ZONE 'Asia/Manila') + INTERVAL '24 hours',
-          reminder_3h_sent = FALSE,
-          reminder_email_24h_sent = $1::date + $2::time <= (NOW() AT TIME ZONE 'Asia/Manila') + INTERVAL '24 hours',
-          reminder_email_3h_sent = FALSE
-      WHERE appointment_id = $4
-    `, [appointmentDate, appointmentTime, appointmentEndTime, appointmentId]);
+            scheduled_end_time = $3, adjusted_expected_end_time = NULL,
+            reminder_24h_sent = $1::date + $2::time <= (NOW() AT TIME ZONE 'Asia/Manila') + INTERVAL '24 hours',
+            reminder_3h_sent = FALSE,
+            reminder_email_24h_sent = $1::date + $2::time <= (NOW() AT TIME ZONE 'Asia/Manila') + INTERVAL '24 hours',
+            reminder_email_3h_sent = FALSE
+        WHERE appointment_id = $4
+      `, [appointmentDate, appointmentTime, appointmentEndTime, appointmentId]);
+      return true;
+    });
+    if (!rescheduled) {
+      return res.status(409).json({ message: 'That time is no longer available. Choose another slot.' });
+    }
     await notifyUsers(
       [appointment.user_id, appointment.aesthetician_id].filter((userId) => userId && userId !== req.session.userId),
       'appointment_rescheduled',
@@ -2355,12 +2622,14 @@ router.post('/paymongo/checkout-session', requireActiveAccount, blockDemoCustome
     await db.query(`
       INSERT INTO paymongo_checkout_sessions
         (reference_number, user_id, service_id, service_name, service_price,
-         appointment_date, appointment_time, appointment_end_time, amount_cents,
+         appointment_date, appointment_time, appointment_end_time,
+         booked_duration_minutes, booked_buffer_minutes, amount_cents,
          currency, status, livemode, customer_first_name, customer_last_name, customer_email, customer_phone)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'PHP', 'pending', $10, $11, $12, $13, $14)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'PHP', 'pending', $12, $13, $14, $15, $16)
     `, [referenceNumber, booking.user.user_id, booking.service.service_id, booking.service.service_name,
       booking.service.service_price, booking.appointmentDate, booking.appointmentTime,
-      booking.appointmentEndTime, amountCents, config.isLive, booking.customer.firstName,
+      booking.appointmentEndTime, booking.durationMinutes, booking.bufferMinutes, amountCents,
+      config.isLive, booking.customer.firstName,
       booking.customer.lastName, booking.customer.email, booking.customer.phone]);
 
     const attributes = {
@@ -2459,6 +2728,7 @@ router.post('/paymongo/confirm', requireActiveAccount, blockDemoCustomerPayments
     const paymentResult = await db.query(`
       SELECT reference_number, user_id, service_id, customer_first_name, customer_last_name, customer_email, customer_phone, appointment_date::text AS appointment_date,
               appointment_time::text AS appointment_time, appointment_end_time::text AS appointment_end_time,
+              booked_duration_minutes, booked_buffer_minutes,
               service_name, service_price, amount_cents, currency, status,
              checkout_session_id, appointment_id, livemode, payment_id
       FROM paymongo_checkout_sessions
@@ -2523,6 +2793,7 @@ router.post('/paymongo/confirm', requireActiveAccount, blockDemoCustomerPayments
                appointment_date::text AS appointment_date,
                appointment_time::text AS appointment_time,
                appointment_end_time::text AS appointment_end_time,
+               booked_duration_minutes, booked_buffer_minutes,
                amount_cents, payment_id, payment_method
         FROM paymongo_checkout_sessions
         WHERE reference_number = $1 AND user_id = $2
@@ -2628,6 +2899,7 @@ router.post('/paymongo/webhook', async (req, res) => {
                appointment_date::text AS appointment_date,
                appointment_time::text AS appointment_time,
                appointment_end_time::text AS appointment_end_time,
+               booked_duration_minutes, booked_buffer_minutes,
                amount_cents, status, appointment_id, payment_method
         FROM paymongo_checkout_sessions
         WHERE reference_number = $1 AND checkout_session_id = $2 AND livemode = $3

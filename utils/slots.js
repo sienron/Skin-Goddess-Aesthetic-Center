@@ -1,9 +1,12 @@
 // Shared appointment-slot rules. Update this one file if operating hours change.
-const VALID_SLOTS = ['9:00 AM', '10:00 AM', '11:00 AM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM'];
 const CLOSING_TIME = '18:00';
+const LUNCH_BREAK_START = '12:00';
+const LUNCH_BREAK_END = '13:00';
 const CLOSED_WEEKDAYS = [];
 const MAX_ADVANCE_DAYS = 60;
-const MIN_BOOKING_LEAD_MINUTES = 180;
+const MIN_BOOKING_LEAD_MINUTES = 30;
+const DEFAULT_BUFFER_MINUTES = 30;
+const BOOKING_INTERVAL_MINUTES = 30;
 
 function to24h(slot) {
   if (typeof slot !== 'string') return null;
@@ -28,6 +31,18 @@ function from24h(time) {
   return `${hour12}:${match[2]} ${hour24 < 12 ? 'AM' : 'PM'}`;
 }
 
+function buildValidSlots() {
+  const slots = [];
+  for (const [start, end] of [[9 * 60, 12 * 60], [13 * 60, 18 * 60]]) {
+    for (let minute = start; minute < end; minute += BOOKING_INTERVAL_MINUTES) {
+      slots.push(from24h(`${String(Math.floor(minute / 60)).padStart(2, '0')}:${String(minute % 60).padStart(2, '0')}`));
+    }
+  }
+  return slots;
+}
+
+const VALID_SLOTS = buildValidSlots();
+
 function addMinutes(time24, minutes) {
   if (typeof time24 !== 'string' || !Number.isInteger(minutes)) return null;
   const match = time24.match(/^([01]\d|2[0-3]):([0-5]\d)$/);
@@ -36,6 +51,10 @@ function addMinutes(time24, minutes) {
   const totalMinutes = Number(match[1]) * 60 + Number(match[2]) + minutes;
   if (totalMinutes < 0 || totalMinutes >= 24 * 60) return null;
   return `${String(Math.floor(totalMinutes / 60)).padStart(2, '0')}:${String(totalMinutes % 60).padStart(2, '0')}`;
+}
+
+function overlapsLunchBreak(startTime, endTime) {
+  return startTime < LUNCH_BREAK_END && endTime > LUNCH_BREAK_START;
 }
 
 function manilaNow() {
@@ -73,12 +92,17 @@ function isSlotTooSoon(dateStr, timeStr24) {
 module.exports = {
   VALID_SLOTS,
   CLOSING_TIME,
+  LUNCH_BREAK_START,
+  LUNCH_BREAK_END,
   CLOSED_WEEKDAYS,
   MAX_ADVANCE_DAYS,
   MIN_BOOKING_LEAD_MINUTES,
+  DEFAULT_BUFFER_MINUTES,
+  BOOKING_INTERVAL_MINUTES,
   to24h,
   from24h,
   addMinutes,
+  overlapsLunchBreak,
   manilaNow,
   isSlotInPast,
   isSlotTooSoon,

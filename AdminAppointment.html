@@ -309,13 +309,21 @@
             <select id="newAppointmentTime" name="time" required>
               <option value="">Choose a time</option>
               <option>9:00 AM</option>
+              <option>9:30 AM</option>
               <option>10:00 AM</option>
+              <option>10:30 AM</option>
               <option>11:00 AM</option>
+              <option>11:30 AM</option>
               <option>1:00 PM</option>
+              <option>1:30 PM</option>
               <option>2:00 PM</option>
+              <option>2:30 PM</option>
               <option>3:00 PM</option>
+              <option>3:30 PM</option>
               <option>4:00 PM</option>
+              <option>4:30 PM</option>
               <option>5:00 PM</option>
+              <option>5:30 PM</option>
             </select>
           </div>
         </div>
@@ -349,10 +357,26 @@
         <div><dt>Client / Walk-in</dt><dd id="appointmentDetailsClient"></dd></div>
         <div><dt>Service</dt><dd id="appointmentDetailsService"></dd></div>
         <div><dt>Appointment date</dt><dd id="appointmentDetailsDate"></dd></div>
+        <div><dt>Treatment duration</dt><dd id="appointmentDetailsDuration"></dd></div>
+        <div><dt>Reserved end (incl. buffer)</dt><dd id="appointmentDetailsScheduledEnd"></dd></div>
+        <div><dt>Expected end</dt><dd id="appointmentDetailsExpectedEnd"></dd></div>
+        <div><dt>Reserved buffer</dt><dd id="appointmentDetailsBuffer"></dd></div>
         <div><dt>Assigned staff</dt><dd id="appointmentDetailsStaff"></dd></div>
         <div><dt>Status</dt><dd id="appointmentDetailsStatus"></dd></div>
         <div><dt>Product-use review</dt><dd id="appointmentDetailsProductReview"></dd></div>
       </dl>
+      <section id="appointmentEndAdjustmentSection" class="appointment-end-adjustment" hidden>
+        <h3>Adjust Expected End Time</h3>
+        <p>Only changes the estimate for this ongoing treatment. It does not change the original schedule, service duration, or price.</p>
+        <form id="appointmentExpectedEndForm">
+          <label for="appointmentExpectedEndTime">EXPECTED END TIME</label>
+          <input id="appointmentExpectedEndTime" name="expectedEndTime" type="time" required>
+          <button class="um-btn um-btn--primary" id="appointmentExpectedEndSave" type="submit">Update Estimate</button>
+        </form>
+        <p class="appointment-inventory-message" id="appointmentEndAdjustmentMessage" role="status" aria-live="polite"></p>
+        <h4>Adjustment history</h4>
+        <ul id="appointmentEndAdjustmentHistory"></ul>
+      </section>
       <p class="appointment-inventory-message" id="appointmentDetailsMessage" role="status" aria-live="polite"></p>
       <footer class="appointment-inventory-actions">
         <button class="um-btn um-btn--ghost" id="appointmentDetailsDone" type="button">Close</button>
@@ -387,13 +411,21 @@
             <select id="appointmentEditTime" name="time" required>
               <option value="">Choose a time</option>
               <option>9:00 AM</option>
+              <option>9:30 AM</option>
               <option>10:00 AM</option>
+              <option>10:30 AM</option>
               <option>11:00 AM</option>
+              <option>11:30 AM</option>
               <option>1:00 PM</option>
+              <option>1:30 PM</option>
               <option>2:00 PM</option>
+              <option>2:30 PM</option>
               <option>3:00 PM</option>
+              <option>3:30 PM</option>
               <option>4:00 PM</option>
+              <option>4:30 PM</option>
               <option>5:00 PM</option>
+              <option>5:30 PM</option>
             </select>
           </div>
           <div class="form-group">

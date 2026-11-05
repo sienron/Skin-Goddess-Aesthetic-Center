@@ -21,11 +21,12 @@
         "January", "February", "March", "April", "May", "June",
         "July", "August", "September", "October", "November", "December"
     ];
-    const MORNING_SLOTS = ["9:00 AM", "10:00 AM", "11:00 AM"];
-    const AFTERNOON_SLOTS = ["1:00 PM", "2:00 PM", "3:00 PM", "4:00 PM", "5:00 PM"];
+    const MORNING_SLOTS = ["9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM"];
+    const AFTERNOON_SLOTS = ["1:00 PM", "1:30 PM", "2:00 PM", "2:30 PM", "3:00 PM", "3:30 PM", "4:00 PM", "4:30 PM", "5:00 PM", "5:30 PM"];
     const MAX_ADVANCE_DAYS = 60;
 
     function getManilaNow() {
+        const instant = new Date();
         const parts = new Intl.DateTimeFormat("en-CA", {
             timeZone: "Asia/Manila",
             year: "numeric",
@@ -35,7 +36,7 @@
             minute: "2-digit",
             second: "2-digit",
             hourCycle: "h23"
-        }).formatToParts(new Date());
+        }).formatToParts(instant);
 
         const values = Object.fromEntries(
             parts.filter((part) => part.type !== "literal").map((part) => [part.type, part.value])
@@ -47,7 +48,8 @@
             day: Number(values.day),
             hour: Number(values.hour),
             minute: Number(values.minute),
-            second: Number(values.second)
+            second: Number(values.second),
+            millisecond: instant.getMilliseconds()
         };
     }
 
@@ -89,12 +91,13 @@
 
         const slotMinutes = slotToMinutes(slot);
         if (slotMinutes === null) return true;
-        const leadSeconds = (slotMinutes - (now.hour * 60 + now.minute)) * 60 - now.second;
-        return leadSeconds < 3 * 60 * 60;
+        const leadSeconds = (slotMinutes - (now.hour * 60 + now.minute)) * 60
+            - now.second - now.millisecond / 1000;
+        return leadSeconds < 30 * 60;
     }
 
     let allServices = [];
-    let selectedService = { id: null, name: null, price: 0, reservationFee: 100 };
+    let selectedService = { id: null, name: null, price: 0, reservationFee: 100, durationMinutes: 0 };
 
     const today = getManilaNow();
     let viewYear = today.year;
@@ -179,7 +182,7 @@
                 ? "No services match your search."
                 : "No options available for this treatment yet.";
             serviceList.appendChild(placeholder);
-            if (!isSearching) selectedService = { id: null, name: null, price: 0, reservationFee: 100 };
+            if (!isSearching) selectedService = { id: null, name: null, price: 0, reservationFee: 100, durationMinutes: 0 };
             return;
         }
 
@@ -190,6 +193,7 @@
             card.dataset.service = service.service_name;
             card.dataset.price = service.service_price;
             card.dataset.reservationFee = service.reservation_fee;
+            card.dataset.durationMinutes = service.duration_minutes;
             card.dataset.category = service.category || "Other";
 
             const name = document.createElement("span");
@@ -226,7 +230,8 @@
                     id: selectedCard.dataset.serviceId,
                     name: selectedCard.dataset.service,
                     price: Number(selectedCard.dataset.price),
-                    reservationFee: Number(selectedCard.dataset.reservationFee)
+                    reservationFee: Number(selectedCard.dataset.reservationFee),
+                    durationMinutes: Number(selectedCard.dataset.durationMinutes)
                 };
             }
         }
@@ -240,7 +245,8 @@
                     id: card.dataset.serviceId,
                     name: card.dataset.service,
                     price: Number(card.dataset.price),
-                    reservationFee: Number(card.dataset.reservationFee)
+                    reservationFee: Number(card.dataset.reservationFee),
+                    durationMinutes: Number(card.dataset.durationMinutes)
                 };
                 selectedDate = null;
                 selectedTime = null;
@@ -483,6 +489,7 @@
             serviceId: Number(selectedService.id),
             service: selectedService.name,
             servicePrice: selectedService.price,
+            durationMinutes: selectedService.durationMinutes,
             reservationFee: selectedService.reservationFee,
             date: `${selectedDate.year}-${String(selectedDate.month + 1).padStart(2, "0")}-${String(selectedDate.day).padStart(2, "0")}`,
             time: selectedTime,

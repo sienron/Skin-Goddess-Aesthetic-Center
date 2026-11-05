@@ -157,6 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const pills = el('div', 'cm-service-pills');
       pills.appendChild(el('span', 'cm-mini-tag', service.category || 'General'));
       pills.appendChild(el('span', 'cm-mini-tag cm-mini-tag--muted', `${service.duration_minutes || 0} min`));
+      pills.appendChild(el('span', 'cm-mini-tag cm-mini-tag--muted', `${service.buffer_minutes ?? 30} min buffer`));
       summary.appendChild(title);
       summary.appendChild(pills);
 
@@ -686,6 +687,7 @@ document.addEventListener('DOMContentLoaded', () => {
       addEditorField('category', 'Category', item?.category, { required: true, maxLength: 255 });
       addEditorField('description', 'Description', item?.description, { multiline: true, maxLength: 2000 });
       addEditorField('durationMinutes', 'Duration (minutes)', item?.duration_minutes, { type: 'number', required: true, min: 1, step: '1' });
+      addEditorField('bufferMinutes', 'Buffer (minutes)', item?.buffer_minutes ?? 30, { type: 'number', required: true, min: 0, max: 1440, step: '1' });
       addEditorField('servicePrice', 'Service price (PHP)', item?.service_price, { type: 'number', required: true, min: 0.01, max: 999999, step: '0.01' });
       addEditorField('reservationFee', 'Reservation fee (PHP)', item?.reservation_fee, { type: 'number', required: true, min: 0.01, step: '0.01' });
     } else if (section === 'team') {
@@ -790,6 +792,7 @@ document.addEventListener('DOMContentLoaded', () => {
         category: values.category,
         description: values.description,
         durationMinutes: number('durationMinutes'),
+        bufferMinutes: number('bufferMinutes'),
         servicePrice: number('servicePrice'),
         reservationFee: number('reservationFee'),
       };

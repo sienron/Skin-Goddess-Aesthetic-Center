@@ -46,6 +46,7 @@ async function invokeRebook({ staffAvailable = true, originalStatus = 'cancelled
           service_name: 'Facial',
           category: 'facial',
           duration_minutes: 60,
+          buffer_minutes: 30,
           service_price: '900.00',
           reservation_fee: '300.00'
         }] };
@@ -53,6 +54,10 @@ async function invokeRebook({ staffAvailable = true, originalStatus = 'cancelled
       if (/SELECT category FROM services/.test(sql)) {
         return { rows: [{ category: 'facial' }] };
       }
+      if (/SELECT user_id FROM users\s+WHERE role/.test(sql)) {
+        return { rows: staffAvailable ? [{ user_id: 31 }] : [] };
+      }
+      if (/SELECT pg_advisory_xact_lock/.test(sql)) return { rows: [] };
       if (/SELECT u\.user_id, u\.first_name/.test(sql)) {
         return { rows: staffAvailable ? [{ user_id: 31 }] : [] };
       }
@@ -72,7 +77,7 @@ async function invokeRebook({ staffAvailable = true, originalStatus = 'cancelled
   try {
     await rebookRoute({
       params: { id: '14' },
-      body: { date: futureDate(), time: '11:00 AM', staffId: '31' }
+      body: { date: futureDate(), time: '10:00 AM', staffId: '31' }
     }, {
       status(code) {
         statusCode = code;
@@ -98,7 +103,7 @@ test('rebooking preserves client, service, and booked prices without changing pa
   assert.match(result.responseBody.message, /original appointment and its payment history were not changed/);
   assert.deepEqual(insert.values, [
     7, null, 22, '900.00', '300.00',
-    futureDate(), '11:00', '12:00', 31
+    futureDate(), '10:00', '11:30', 60, 30, 31
   ]);
   assert.equal(result.queryCalls.some(({ sql }) => /INSERT INTO payments|UPDATE appointments/.test(sql)), false);
 });

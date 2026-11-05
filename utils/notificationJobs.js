@@ -3,12 +3,14 @@ const db = require('../db');
 const { notifyUser, notifyRoles } = require('./notifications');
 const { sendAppointmentReminderEmail } = require('./mailer');
 const { RATING_WINDOW_DAYS } = require('./appointmentRatings');
+const { processPendingAppointmentDelayNotifications } = require('./appointmentDelayNotifications');
 
 let remindersRunning = false;
 let emailRemindersRunning = false;
 let appointmentStatusAdvancementRunning = false;
 let expiryRunning = false;
 let ratingFallbackRunning = false;
+let delayNotificationsRunning = false;
 
 function appointmentLabel(row) {
   return `${row.service_name} on ${row.appointment_date} at ${String(row.appointment_time).slice(0, 5)}`;
@@ -210,6 +212,33 @@ async function runAppointmentRatingFallback() {
   }
 }
 
+async function runAppointmentDelayNotificationRetries() {
+  if (delayNotificationsRunning) return;
+  delayNotificationsRunning = true;
+
+  let client;
+  let lockAcquired = false;
+  try {
+    client = await db.pool.connect();
+    const lockResult = await client.query('SELECT pg_try_advisory_lock($1, $2) AS acquired', [203004171, 2]);
+    lockAcquired = lockResult.rows[0].acquired;
+    if (!lockAcquired) return;
+    await processPendingAppointmentDelayNotifications({ limit: 50 });
+  } catch (error) {
+    console.error('Appointment delay notification retry job failed:', error.message);
+  } finally {
+    if (lockAcquired && client) {
+      try {
+        await client.query('SELECT pg_advisory_unlock($1, $2)', [203004171, 2]);
+      } catch (error) {
+        console.error('Could not release appointment delay notification retry lock:', error.message);
+      }
+    }
+    if (client) client.release();
+    delayNotificationsRunning = false;
+  }
+}
+
 async function runExpiryAlerts() {
   if (expiryRunning) return;
   expiryRunning = true;
@@ -254,6 +283,7 @@ function startNotificationJobs() {
   cron.schedule('*/5 * * * *', runAppointmentEmailReminders, { timezone: 'Asia/Manila' });
   cron.schedule('* * * * *', runAppointmentStatusAdvancement, { timezone: 'Asia/Manila' });
   cron.schedule('*/5 * * * *', runAppointmentRatingFallback, { timezone: 'Asia/Manila' });
+  cron.schedule('* * * * *', runAppointmentDelayNotificationRetries, { timezone: 'Asia/Manila' });
   cron.schedule('0 9 * * *', runExpiryAlerts, { timezone: 'Asia/Manila' });
 }
 
@@ -263,5 +293,6 @@ module.exports = {
   runAppointmentEmailReminders,
   runAppointmentStatusAdvancement,
   runAppointmentRatingFallback,
+  runAppointmentDelayNotificationRetries,
   runExpiryAlerts,
 };

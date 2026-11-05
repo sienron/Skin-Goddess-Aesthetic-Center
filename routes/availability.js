@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const { VALID_SLOTS, CLOSING_TIME, CLOSED_WEEKDAYS, MAX_ADVANCE_DAYS, to24h, addMinutes, manilaNow, isSlotInPast, isSlotTooSoon } = require('../utils/slots');
+const { VALID_SLOTS, CLOSING_TIME, CLOSED_WEEKDAYS, MAX_ADVANCE_DAYS, DEFAULT_BUFFER_MINUTES, to24h, addMinutes, overlapsLunchBreak, manilaNow, isSlotInPast, isSlotTooSoon } = require('../utils/slots');
 const { roleForCategory } = require('../utils/staffRoles');
 
 function isLeapYear(year) { return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0); }
@@ -42,9 +42,10 @@ router.get('/', async (req, res) => {
   if (year < 1 || month < 1 || month > 12) return res.status(400).json({ message: 'month must use YYYY-MM.' });
 
   try {
-    const serviceResult = await db.query('SELECT duration_minutes, category FROM services WHERE service_id = $1 AND is_active = TRUE', [serviceId]);
+    const serviceResult = await db.query('SELECT duration_minutes, buffer_minutes, category FROM services WHERE service_id = $1 AND is_active = TRUE', [serviceId]);
     if (serviceResult.rows.length === 0) return res.status(404).json({ message: 'Service not found.' });
-    const duration = Number(serviceResult.rows[0].duration_minutes);
+    const duration = Number(serviceResult.rows[0].duration_minutes)
+      + Number(serviceResult.rows[0].buffer_minutes ?? DEFAULT_BUFFER_MINUTES);
     const staffRole = roleForCategory(serviceResult.rows[0].category);
     const aestheticians = await db.query('SELECT user_id FROM users WHERE role = $1 AND status = \'active\' AND email_verified = TRUE ORDER BY user_id', [staffRole]);
     if (aestheticians.rows.length === 0) return res.json({});
@@ -52,7 +53,9 @@ router.get('/', async (req, res) => {
     const firstDate = formatDate(year, month, 1);
     const lastDate = formatDate(year, month, daysInMonth(year, month));
     const appointments = await db.query(`
-      SELECT aesthetician_id, appointment_date::text AS appointment_date, appointment_time::text AS appointment_time, appointment_end_time::text AS appointment_end_time
+      SELECT aesthetician_id, appointment_date::text AS appointment_date,
+             appointment_time::text AS appointment_time,
+             GREATEST(appointment_end_time, COALESCE(adjusted_expected_end_time, appointment_end_time))::text AS appointment_end_time
       FROM appointments
       WHERE appointment_status IN ('confirmed', 'in_progress', 'completed')
         AND appointment_date BETWEEN $1::date AND $2::date
@@ -68,7 +71,8 @@ router.get('/', async (req, res) => {
       const slots = VALID_SLOTS.filter((slot) => {
         const start = to24h(slot);
         const end = addMinutes(start, duration);
-        if (!end || end > CLOSING_TIME || isSlotInPast(dateStr, start) || isSlotTooSoon(dateStr, start)) return false;
+        if (!end || end > CLOSING_TIME || overlapsLunchBreak(start, end)
+          || isSlotInPast(dateStr, start) || isSlotTooSoon(dateStr, start)) return false;
         return aestheticians.rows.some(({ user_id }) => !appointments.rows.some((appointment) => (
           appointment.aesthetician_id === user_id
           && appointment.appointment_date === dateStr

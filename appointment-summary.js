@@ -55,6 +55,9 @@
 
   function renderSummary() {
     setText('summaryService', booking.service);
+    setText('summaryDuration', Number.isSafeInteger(Number(booking.durationMinutes)) && Number(booking.durationMinutes) > 0
+      ? `${Number(booking.durationMinutes)} minutes`
+      : '—');
     setText('summaryFee', formatPeso(booking.reservationFee));
     setText('summaryDate', booking.date);
     setText('summaryTime', booking.time);

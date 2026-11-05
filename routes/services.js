@@ -2,28 +2,33 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const { requireRole } = require('../middleware/auth');
+const { DEFAULT_BUFFER_MINUTES } = require('../utils/slots');
 
 function readServiceInput(body) {
     const serviceName = String(body.serviceName || '').trim();
     const category = String(body.category || '').trim();
     const description = String(body.description || '').trim();
     const durationMinutes = Number(body.durationMinutes);
+    const bufferMinutes = body.bufferMinutes === undefined
+        ? DEFAULT_BUFFER_MINUTES
+        : Number(body.bufferMinutes);
     const servicePrice = Number(body.servicePrice);
     const reservationFee = Number(body.reservationFee);
 
     if (!serviceName || serviceName.length > 255) throw new Error('Enter a service name up to 255 characters.');
     if (!category || category.length > 255) throw new Error('Enter a category up to 255 characters.');
     if (!Number.isInteger(durationMinutes) || durationMinutes < 1 || durationMinutes > 1440) throw new Error('Duration must be between 1 and 1440 minutes.');
+    if (!Number.isInteger(bufferMinutes) || bufferMinutes < 0 || bufferMinutes > 1440) throw new Error('Buffer must be between 0 and 1440 minutes.');
     if (!Number.isFinite(servicePrice) || servicePrice <= 0 || servicePrice > 999999) throw new Error('Enter a valid service price.');
     if (!Number.isFinite(reservationFee) || reservationFee <= 0 || reservationFee > 999999) throw new Error('Enter a valid reservation fee.');
 
-    return { serviceName, category, description, durationMinutes, servicePrice, reservationFee };
+    return { serviceName, category, description, durationMinutes, bufferMinutes, servicePrice, reservationFee };
 }
 
 router.get('/admin', requireRole('admin'), async (req, res) => {
     try {
         const result = await db.query(
-            'SELECT service_id, service_name, category, description, duration_minutes, service_price, reservation_fee, is_active FROM services ORDER BY category, service_name'
+            'SELECT service_id, service_name, category, description, duration_minutes, buffer_minutes, service_price, reservation_fee, is_active FROM services ORDER BY category, service_name'
         );
         res.json(result.rows);
     } catch (error) {
@@ -171,10 +176,10 @@ router.post('/', requireRole('admin'), async (req, res) => {
 
     try {
         const result = await db.query(`
-            INSERT INTO services (service_name, category, description, duration_minutes, service_price, reservation_fee, is_active)
-            VALUES ($1, $2, $3, $4, $5, $6, TRUE)
-            RETURNING service_id, service_name, category, description, duration_minutes, service_price, reservation_fee, is_active
-        `, [service.serviceName, service.category, service.description, service.durationMinutes, service.servicePrice, service.reservationFee]);
+            INSERT INTO services (service_name, category, description, duration_minutes, buffer_minutes, service_price, reservation_fee, is_active)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE)
+            RETURNING service_id, service_name, category, description, duration_minutes, buffer_minutes, service_price, reservation_fee, is_active
+        `, [service.serviceName, service.category, service.description, service.durationMinutes, service.bufferMinutes, service.servicePrice, service.reservationFee]);
         return res.status(201).json(result.rows[0]);
     } catch (error) {
         if (error.code === '23505') return res.status(409).json({ message: 'A service with that name already exists.' });
@@ -250,10 +255,10 @@ router.put('/:id', requireRole('admin'), async (req, res) => {
         const result = await db.query(`
             UPDATE services
             SET service_name = $1, category = $2, description = $3, duration_minutes = $4,
-                service_price = $5, reservation_fee = $6, updated_at = NOW()
-            WHERE service_id = $7
-            RETURNING service_id, service_name, category, description, duration_minutes, service_price, reservation_fee, is_active
-        `, [service.serviceName, service.category, service.description, service.durationMinutes, service.servicePrice, service.reservationFee, serviceId]);
+                buffer_minutes = $5, service_price = $6, reservation_fee = $7, updated_at = NOW()
+            WHERE service_id = $8
+            RETURNING service_id, service_name, category, description, duration_minutes, buffer_minutes, service_price, reservation_fee, is_active
+        `, [service.serviceName, service.category, service.description, service.durationMinutes, service.bufferMinutes, service.servicePrice, service.reservationFee, serviceId]);
         if (!result.rows.length) return res.status(404).json({ message: 'Service not found.' });
         return res.json(result.rows[0]);
     } catch (error) {
@@ -285,7 +290,7 @@ router.patch('/:id/status', requireRole('admin'), async (req, res) => {
 router.get('/', async (req, res) => {
     try {
         const result = await db.query(
-            'SELECT service_id, service_name, category, description, duration_minutes, service_price, reservation_fee FROM services WHERE is_active = true ORDER BY category, service_name'
+            'SELECT service_id, service_name, category, description, duration_minutes, buffer_minutes, service_price, reservation_fee FROM services WHERE is_active = true ORDER BY category, service_name'
         );
         res.json(result.rows);
     } catch (error) {

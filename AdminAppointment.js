@@ -91,10 +91,13 @@ document.addEventListener('DOMContentLoaded', () => {
       service: String(record.service || record.service_name || 'Service unavailable'),
       serviceId: String(record.service_id || ''),
       staffId: String(record.assigned_staff_id || ''),
-      duration: (Number(record.duration_minutes) || 0) + ' min',
+      duration: record.duration_is_estimated ? 'Not recorded' : (Number(record.duration_minutes) || 0) + ' min',
+      buffer: record.duration_is_estimated ? 'Not recorded' : (Number(record.buffer_minutes) || 0) + ' min',
       dateKey,
       date: displayDate(dateKey),
       time: displayTime(record.start || record.appointment_time),
+      scheduledEnd: String(record.scheduled_end || record.end || '').slice(0, 5),
+      expectedEnd: String(record.expected_end || record.end || '').slice(0, 5),
       assignedTo: String(record.assigned_to || record.aesthetician || 'Unassigned'),
       status: String(record.status || record.appointment_status || '').toLowerCase().replace(/_/g, '-'),
       isToday: dateKey === manilaDateKey(),
@@ -211,8 +214,21 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('appointmentDetailsClient').textContent = appointment.client;
     document.getElementById('appointmentDetailsService').textContent = appointment.service;
     document.getElementById('appointmentDetailsDate').textContent = `${appointment.date} · ${appointment.time}`;
+    document.getElementById('appointmentDetailsDuration').textContent = appointment.duration;
+    document.getElementById('appointmentDetailsScheduledEnd').textContent = displayTime(appointment.scheduledEnd);
+    document.getElementById('appointmentDetailsExpectedEnd').textContent = displayTime(appointment.expectedEnd);
+    document.getElementById('appointmentDetailsBuffer').textContent = appointment.buffer;
     document.getElementById('appointmentDetailsStaff').textContent = appointment.assignedTo;
     document.getElementById('appointmentDetailsStatus').textContent = STATUS_LABELS[appointment.status] || appointment.status.toUpperCase();
+    const adjustmentSection = document.getElementById('appointmentEndAdjustmentSection');
+    const adjustmentMessage = document.getElementById('appointmentEndAdjustmentMessage');
+    const adjustmentHistory = document.getElementById('appointmentEndAdjustmentHistory');
+    adjustmentSection.hidden = appointment.status !== 'in-progress';
+    document.getElementById('appointmentExpectedEndTime').value = appointment.expectedEnd;
+    adjustmentMessage.textContent = '';
+    adjustmentMessage.classList.remove('appointment-inventory-message--error');
+    adjustmentHistory.replaceChildren();
+    if (appointment.status === 'in-progress') loadAppointmentEndAdjustmentHistory(appointment);
     const message = document.getElementById('appointmentDetailsMessage');
     const reviewButton = document.getElementById('appointmentProductsReviewBtn');
     reviewButton.hidden = appointment.status !== 'in-progress';
@@ -237,6 +253,33 @@ document.addEventListener('DOMContentLoaded', () => {
       message.classList.remove('appointment-inventory-message--error');
     }
     setAppointmentModalOpen(detailsModal, true);
+  }
+
+  async function loadAppointmentEndAdjustmentHistory(appointment) {
+    const historyList = document.getElementById('appointmentEndAdjustmentHistory');
+    const message = document.getElementById('appointmentEndAdjustmentMessage');
+    try {
+      const response = await fetch(`/api/appointments/admin/${appointment.id}/end-adjustments`, {
+        headers: { Accept: 'application/json' },
+        cache: 'no-store'
+      });
+      const history = await readApiResponse(response);
+      if (!response.ok) throw new Error(history.message || 'Could not load adjustment history.');
+      if (!Array.isArray(history) || history.length === 0) {
+        historyList.appendChild(el('li', '', 'No end-time adjustments recorded.'));
+        return;
+      }
+      history.forEach((entry) => {
+        historyList.appendChild(el(
+          'li',
+          '',
+          `${displayTime(entry.previous_end_time)} → ${displayTime(entry.new_end_time)} by ${entry.administrator || 'Admin'} · ${formatManilaDateTime(entry.created_at)}`
+        ));
+      });
+    } catch (error) {
+      message.textContent = error.message || 'Could not load adjustment history.';
+      message.classList.add('appointment-inventory-message--error');
+    }
   }
 
   async function loadEditServices(selectedServiceId) {
@@ -711,6 +754,44 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('appointmentDetailsClose').addEventListener('click', () => {
     setAppointmentModalOpen(detailsModal, false);
+  });
+  document.getElementById('appointmentExpectedEndForm').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!selectedAppointment || selectedAppointment.status !== 'in-progress') return;
+    const form = event.currentTarget;
+    if (!form.reportValidity()) return;
+
+    const saveButton = document.getElementById('appointmentExpectedEndSave');
+    const message = document.getElementById('appointmentEndAdjustmentMessage');
+    saveButton.disabled = true;
+    message.textContent = 'Updating expected end time…';
+    message.classList.remove('appointment-inventory-message--error');
+    try {
+      const result = await requestJson(`/api/appointments/admin/${selectedAppointment.id}/expected-end`, {
+        method: 'PUT',
+        body: JSON.stringify({ expectedEndTime: form.elements.expectedEndTime.value })
+      });
+      await loadAppointments();
+      const refreshedAppointment = APPOINTMENTS.find((appointment) => appointment.id === selectedAppointment.id);
+      if (refreshedAppointment) openAppointmentDetails(refreshedAppointment);
+      const failedCount = Number(result.notifications?.failed) || 0;
+      const affectedSummary = Array.isArray(result.affectedAppointments)
+        ? result.affectedAppointments.map((item) => `${item.client} at ${displayTime(item.appointmentTime)} (estimated ${displayTime(item.estimatedStartTime)})`).join('; ')
+        : '';
+      const notificationMessage = failedCount
+        ? ` ${failedCount} delay notification(s) could not be delivered.`
+        : '';
+      const affectedMessage = affectedSummary
+        ? ` Affected clients were not rescheduled: ${affectedSummary}.`
+        : '';
+      message.textContent = `${result.message || 'Expected end time updated.'}${affectedMessage}${notificationMessage}`;
+      message.classList.toggle('appointment-inventory-message--error', failedCount > 0);
+    } catch (error) {
+      message.textContent = error.message || 'Could not update the expected end time.';
+      message.classList.add('appointment-inventory-message--error');
+    } finally {
+      saveButton.disabled = false;
+    }
   });
   document.getElementById('appointmentDetailsDone').addEventListener('click', () => {
     setAppointmentModalOpen(detailsModal, false);

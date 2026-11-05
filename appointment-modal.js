@@ -62,6 +62,7 @@ function normalizeAppt(appt) {
     appointment.date = appointment.date ?? appointment.appointment_date;
     appointment.start = appointment.start ?? appointment.appointment_time;
     appointment.end = appointment.end ?? appointment.appointment_end_time;
+    appointment.treatmentEnd = appointment.treatmentEnd ?? appointment.treatment_end_time ?? appointment.appointment_end_time ?? appointment.end;
     appointment.service = appointment.service ?? appointment.service_name;
     const fallbackClientName = [appointment.first_name, appointment.last_name].filter(Boolean).join(" ");
     appointment.client = appointment.client ?? (fallbackClientName || "Client");
@@ -78,10 +79,13 @@ function normalizeAppt(appt) {
 }
 
 function getDurationLabel(appt) {
+    if (appt.duration_is_estimated) return "Historical duration unavailable";
+    if (Number.isSafeInteger(Number(appt.duration_minutes)) && Number(appt.duration_minutes) > 0) {
+        return `${Number(appt.duration_minutes)} minutes`;
+    }
     const [startH, startM] = (appt.start || "00:00").split(":").map(Number);
-    const [endH, endM] = (appt.end || "00:00").split(":").map(Number);
+    const [endH, endM] = (appt.treatmentEnd || appt.end || "00:00").split(":").map(Number);
     const minutes = (endH * 60 + endM) - (startH * 60 + startM);
-    if (minutes % 60 === 0) return `${minutes / 60 * 60} minutes`.replace(/^60 minutes$/, "60 minutes");
     return `${minutes} minutes`;
 }
 
@@ -121,7 +125,7 @@ function openApptModal(appt) {
         `Appointment #${normalizedAppt.apptNumber || normalizedAppt.id} · ${normalizedAppt.service || "—"}${normalizedAppt.is_demo ? " · Survey sample — not a real booking" : ""}`;
 
     document.getElementById("apptModalDate").textContent = formatDateLong(normalizedAppt.date);
-    document.getElementById("apptModalTime").textContent = `${formatTime(normalizedAppt.start)} – ${formatTime(normalizedAppt.end)}`;
+    document.getElementById("apptModalTime").textContent = `${formatTime(normalizedAppt.start)} – ${formatTime(normalizedAppt.treatmentEnd)}`;
 
     document.getElementById("apptModalAesthetician").textContent = normalizedAppt.aesthetician || "—";
     document.getElementById("apptModalDuration").textContent = getDurationLabel(normalizedAppt);
