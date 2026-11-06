@@ -159,7 +159,7 @@ function createMonthChip(appt) {
 
     const time = document.createElement("span");
     time.className = "appt-time";
-    time.textContent = formatTime(appt.start);
+    time.textContent = formatStaffAppointmentTime(appt.start);
 
     chip.appendChild(client);
     chip.appendChild(time);
@@ -173,7 +173,7 @@ function formatDateKey(date) {
     return `${y}-${m}-${d}`;
 }
 
-function formatTime(time24) {
+function formatStaffAppointmentTime(time24) {
     const [h, m] = time24.split(":").map(Number);
     const period = h >= 12 ? "PM" : "AM";
     const hour12 = h % 12 === 0 ? 12 : h % 12;
@@ -275,7 +275,7 @@ function createWeekChip(appt, startHour) {
 
     const timeRange = document.createElement("span");
     timeRange.className = "appt-time-range";
-    timeRange.textContent = `${formatTime(appt.start)} - ${formatTime(appt.end)}`;
+    timeRange.textContent = `${formatStaffAppointmentTime(appt.start)} - ${formatStaffAppointmentTime(appt.end)}`;
 
     chip.appendChild(client);
     chip.appendChild(document.createElement("br"));
@@ -368,7 +368,7 @@ function renderSuggestions(matches) {
 
         const meta = document.createElement("span");
         meta.className = "suggestion-meta";
-        meta.textContent = `${formatDateDisplay(appt.date)} · ${formatTime(appt.start)}`;
+        meta.textContent = `${formatDateDisplay(appt.date)} · ${formatStaffAppointmentTime(appt.start)}`;
 
         li.appendChild(client);
         li.appendChild(meta);

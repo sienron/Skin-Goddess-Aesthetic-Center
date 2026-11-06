@@ -35,7 +35,6 @@ const teamMembers = [
   ['Ms. Honeylet D. Martus', 'Clinic Cleanliness & Machine Maintenance Officer'],
   ['Ms. Gerasel Ragudo', 'Head Aesthetician & Training Supervisor'],
   ['Ms. Jade Arevalo', 'Policy Implementation, Income Reporting & Fund Management Officer'],
-  ['Nail Tech', 'Nail Technician'],
   ['Mr. John Paul Cabrera', 'Administrator'],
 ];
 

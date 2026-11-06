@@ -6,7 +6,6 @@ test('staff dashboard roles are exempt from login OTP while clients are not', ()
   assert.deepEqual(STAFF_ROLES, [
     'admin',
     'aesthetician',
-    'nail_tech',
     'inventory_officer',
     'finance_officer',
     'staff',

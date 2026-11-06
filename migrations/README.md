@@ -11,11 +11,14 @@ invoice batch uploads.
 
 The standard `npm run migrate` command runs `postmigrate`, which applies
 `047-flexible-appointment-scheduling.js` and
-`048-appointment-delay-retries.js`. Migration 047 adds configurable service
+`048-appointment-delay-retries.js` and
+`049-consolidate-aesthetician-roles.js`. Migration 047 adds configurable service
 buffers, appointment duration snapshots and expected-end audit/notification
 tables while preserving existing appointment end times. Migration 048
 consolidates delay tracking to one row per affected appointment, adds bounded
 retry state, and marks durations backfilled from legacy records as estimates.
+Migration 049 converts former nail-service staff accounts to the aesthetician
+role while preserving their account IDs and existing appointment assignments.
 The original treatment duration for historical appointments cannot be
 reconstructed reliably from the old schema; the reserved appointment period
 remains intact, but the service duration is exposed as unavailable for those

@@ -27,7 +27,6 @@ function badgeClass(role) {
   return {
     client: 'client',
     aesthetician: 'doctor',
-    nail_tech: 'nail-tech',
     admin: 'admin',
     finance_officer: 'finance',
     inventory_officer: 'inventory',
@@ -402,7 +401,6 @@ function enterEditMode() {
       umPiRole: [
         ['client', 'Client'],
         ['aesthetician', 'Aesthetician'],
-        ['nail_tech', 'Nail Tech'],
         ['admin', 'Admin'],
         ['finance_officer', 'Finance Officer'],
         ['inventory_officer', 'Inventory Procurement Officer'],

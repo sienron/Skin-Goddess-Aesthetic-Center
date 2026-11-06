@@ -10,7 +10,7 @@
    openApptModal()/closeApptModal() simply do nothing instead of throwing.
 */
 
-const STATUS_LABELS = {
+const APPT_MODAL_STATUS_LABELS = {
     "confirmed": "CONFIRMED",
     "in-progress": "IN PROGRESS",
     "completed": "COMPLETED",
@@ -18,7 +18,7 @@ const STATUS_LABELS = {
     no_show: "NO SHOW"
 };
 
-function formatTime(time24) {
+function formatApptModalTime(time24) {
     if (!time24) return "—";
     const [h, m] = String(time24).split(":").map(Number);
     const period = h >= 12 ? "PM" : "AM";
@@ -110,7 +110,7 @@ function openApptModal(appt) {
     const normalizedAppt = normalizeAppt(appt);
 
     const statusClass = `status-${normalizedAppt.status.replace(/_/g, "-")}`;
-    const statusLabel = STATUS_LABELS[normalizedAppt.status] || (normalizedAppt.status || "UNKNOWN").toUpperCase();
+    const statusLabel = APPT_MODAL_STATUS_LABELS[normalizedAppt.status] || (normalizedAppt.status || "UNKNOWN").toUpperCase();
 
     // Top bar + status badge color reflect the appointment's actual status
     apptModalTopbar.className = `appt-modal-topbar ${statusClass}`;
@@ -125,7 +125,7 @@ function openApptModal(appt) {
         `Appointment #${normalizedAppt.apptNumber || normalizedAppt.id} · ${normalizedAppt.service || "—"}${normalizedAppt.is_demo ? " · Survey sample — not a real booking" : ""}`;
 
     document.getElementById("apptModalDate").textContent = formatDateLong(normalizedAppt.date);
-    document.getElementById("apptModalTime").textContent = `${formatTime(normalizedAppt.start)} – ${formatTime(normalizedAppt.treatmentEnd)}`;
+    document.getElementById("apptModalTime").textContent = `${formatApptModalTime(normalizedAppt.start)} – ${formatApptModalTime(normalizedAppt.treatmentEnd)}`;
 
     document.getElementById("apptModalAesthetician").textContent = normalizedAppt.aesthetician || "—";
     document.getElementById("apptModalDuration").textContent = getDurationLabel(normalizedAppt);
@@ -140,6 +140,7 @@ function openApptModal(appt) {
     document.getElementById("apptModalContact").textContent = normalizedAppt.contact || "—";
 
     const canManageAppointment = normalizedAppt.status === "confirmed" && normalizedAppt.is_demo !== true;
+    const canMarkNoShow = ["confirmed", "in_progress"].includes(normalizedAppt.status) && normalizedAppt.is_demo !== true;
     const manilaToday = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 
     if (apptModalCancelBtn) {
@@ -157,7 +158,7 @@ function openApptModal(appt) {
     }
     if (apptModalNoShowBtn) {
         apptModalNoShowBtn.dataset.apptId = normalizedAppt.id;
-        apptModalNoShowBtn.disabled = !canManageAppointment || normalizedAppt.date !== manilaToday;
+        apptModalNoShowBtn.disabled = !canMarkNoShow || normalizedAppt.date !== manilaToday;
     }
 
     if (apptRescheduleForm) {

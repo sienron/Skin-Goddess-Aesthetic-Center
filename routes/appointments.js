@@ -3,7 +3,6 @@ const router = express.Router();
 const { rateLimit } = require('express-rate-limit');
 const db = require('../db');
 const { requireActiveAccount, blockDemoCustomerPayments, requireRole } = require('../middleware/auth');
-const { roleForCategory } = require('../utils/staffRoles');
 const { notifyUser, notifyUsers, notifyRoles } = require('../utils/notifications');
 const { reconcileAppointmentDelayNotifications } = require('../utils/appointmentDelayNotifications');
 const { notifyStockTransition } = require('../utils/inventoryNotifications');
@@ -140,6 +139,17 @@ async function refundAppointmentDeposit(appointmentId) {
     await client.query(`UPDATE appointments SET payment_status = 'refunded' WHERE appointment_id = $1`, [appointmentId]);
     return { refunded: true };
   });
+}
+
+async function recordAppointmentDepositForfeiture(appointmentId, userId, recordedAt = null) {
+  await db.query(`
+    UPDATE payments
+    SET note = CONCAT_WS(E'\\n', NULLIF(note, ''),
+      FORMAT('[DEPOSIT_FORFEITED] Late cancellation recorded by user %s at %s',
+        $1, COALESCE($2::timestamptz, NOW())))
+    WHERE appointment_id = $3 AND payment_type = 'reservation' AND status = 'posted'
+      AND POSITION('[DEPOSIT_FORFEITED]' IN COALESCE(note, '')) = 0
+  `, [userId, recordedAt, appointmentId]);
 }
 
 function isLeapYear(year) {
@@ -1758,14 +1768,12 @@ async function findAvailableAestheticians(
   lockStaffSchedules = false,
   additionalStaffIds = [],
 ) {
-  const serviceResult = await queryClient.query('SELECT category FROM services WHERE service_id = $1', [booking.serviceId]);
-  const staffRole = roleForCategory(serviceResult.rows[0]?.category);
   if (lockStaffSchedules) {
     const staffResult = await queryClient.query(`
       SELECT user_id FROM users
-      WHERE role = $1 AND status = 'active' AND email_verified = TRUE
+      WHERE role = 'aesthetician' AND status = 'active' AND email_verified = TRUE
       ORDER BY user_id
-    `, [staffRole]);
+    `);
     const staffIds = new Set([
       ...staffResult.rows.map((staff) => Number(staff.user_id)),
       ...additionalStaffIds.map(Number).filter(Number.isSafeInteger)
@@ -1776,11 +1784,11 @@ async function findAvailableAestheticians(
   }
   return queryClient.query(`
     SELECT u.user_id, u.first_name, u.last_name, u.role FROM users u
-    WHERE u.role = $4 AND u.status = 'active' AND u.email_verified = TRUE
+    WHERE u.role = 'aesthetician' AND u.status = 'active' AND u.email_verified = TRUE
       AND NOT EXISTS (
         SELECT 1 FROM appointments a
         WHERE a.aesthetician_id = u.user_id
-          AND ($5::integer IS NULL OR a.appointment_id <> $5)
+          AND ($4::integer IS NULL OR a.appointment_id <> $4)
           AND a.appointment_status IN ('confirmed', 'in_progress', 'completed')
           AND tsrange(
             a.appointment_date + a.appointment_time,
@@ -1788,7 +1796,7 @@ async function findAvailableAestheticians(
           ) && tsrange($1::date + $2::time, $1::date + $3::time)
       )
     ORDER BY u.user_id
-  `, [booking.appointmentDate, booking.appointmentTime, booking.appointmentEndTime, staffRole, excludeAppointmentId]);
+  `, [booking.appointmentDate, booking.appointmentTime, booking.appointmentEndTime, excludeAppointmentId]);
 }
 
 async function createAppointmentFromPaidCheckout(client, payment, referenceNumber, paymentId = null, paymentMethod = null) {
@@ -1959,7 +1967,7 @@ router.get('/mine', requireActiveAccount, async (req, res) => {
     const userResult = await db.query('SELECT role FROM users WHERE user_id = $1', [req.session.userId]);
     if (userResult.rows.length === 0) return res.status(401).json({ message: 'Your session is no longer valid. Please log in again.' });
 
-    const isAesthetician = ['aesthetician', 'nail_tech'].includes(userResult.rows[0].role);
+    const isAesthetician = userResult.rows[0].role === 'aesthetician';
 
     const appointmentsQuery = `
         SELECT a.appointment_id,
@@ -2085,21 +2093,16 @@ router.post('/:id/cancel', requireRole('admin'), async (req, res) => {
 
     await db.query(`UPDATE appointments SET appointment_status = 'cancelled' WHERE appointment_id = $1`, [appointmentId]);
 
-    // Cancellations made at least 24 hours ahead qualify for an automatic refund, per the Terms.
+    // Cancellations made more than 24 hours ahead qualify for an automatic refund.
     let refundMessage = '';
-    if (appointment.payment_status === 'paid' && minutesToAppointment >= 24 * 60) {
+    if (appointment.payment_status === 'paid' && minutesToAppointment > 24 * 60) {
       const refundOutcome = await refundAppointmentDeposit(appointmentId);
       refundMessage = refundOutcome.refunded
         ? ' The reservation fee was automatically refunded.'
         : ' The reservation fee could not be refunded automatically; process it manually.';
     } else if (appointment.payment_status === 'paid') {
-      await db.query(`
-        UPDATE payments
-        SET note = CONCAT_WS(E'\\n', NULLIF(note, ''),
-          FORMAT('[DEPOSIT_FORFEITED] Late cancellation recorded by user %s at %s', $1, NOW()))
-        WHERE appointment_id = $2 AND payment_type = 'reservation' AND status = 'posted'
-          AND POSITION('[DEPOSIT_FORFEITED]' IN COALESCE(note, '')) = 0
-      `, [req.session.userId, appointmentId]);
+      await recordAppointmentDepositForfeiture(appointmentId, req.session.userId);
+      refundMessage = ' The reservation fee was forfeited because cancellation occurred 24 hours or less before the appointment.';
     }
 
     const message = `Your ${appointment.service_name} appointment on ${appointment.appointment_date} at ${String(appointment.appointment_time).slice(0, 5)} was cancelled.${refundMessage}`;
@@ -2137,8 +2140,8 @@ router.post('/:id/cancellation-request', requireActiveAccount, async (req, res) 
     }
     if (appointment.appointment_status !== 'confirmed') return res.status(400).json({ message: 'Only confirmed appointments can be cancelled.' });
     if (appointment.cancellation_request_status) return res.status(409).json({ message: 'A cancellation request has already been submitted for this appointment.' });
-    if (isClient && minutesUntil(appointment.appointment_date, appointment.appointment_time, manilaNow()) <= 24 * 60) {
-      return res.status(400).json({ message: 'Client cancellation requests must be submitted more than 24 hours before the appointment.' });
+    if (minutesUntil(appointment.appointment_date, appointment.appointment_time, manilaNow()) <= 24 * 60) {
+      return res.status(400).json({ message: 'Cancellation requests must be submitted more than 24 hours before the appointment.' });
     }
 
     await db.query(`
@@ -2179,23 +2182,33 @@ router.post('/:id/cancellation-request/review', requireRole('admin'), async (req
 
   try {
     const result = await db.query(`
-                  SELECT appointment_status, service_id, user_id, aesthetician_id, payment_status,
-                    cancellation_request_status, reschedule_request_status,
-                    reschedule_requested_date, reschedule_requested_time,
-                    reschedule_requested_end_time
-      FROM appointments WHERE appointment_id = $1
+      SELECT a.appointment_status, a.service_id, a.user_id, a.aesthetician_id, a.payment_status,
+             a.cancellation_request_status, a.reschedule_request_status,
+             a.reschedule_requested_date, a.reschedule_requested_time,
+             a.reschedule_requested_end_time, a.cancellation_requested_by,
+             a.cancellation_requested_at,
+             CASE WHEN a.cancellation_requested_at IS NOT NULL THEN
+               a.appointment_date + a.appointment_time >
+                 (a.cancellation_requested_at AT TIME ZONE 'Asia/Manila') + INTERVAL '24 hours'
+               ELSE FALSE
+             END AS cancellation_refundable
+      FROM appointments a
+      WHERE a.appointment_id = $1
     `, [appointmentId]);
     if (result.rows.length === 0) return res.status(404).json({ message: 'Appointment not found.' });
     const appointment = result.rows[0];
     const requestStatus = requestType === 'cancellation' ? appointment.cancellation_request_status : appointment.reschedule_request_status;
     if (requestStatus !== 'pending') return res.status(400).json({ message: 'This request is no longer pending.' });
+    let cancellationMessage = '';
 
     if (requestType === 'reschedule' && decision === 'allow') {
       await db.transaction(async (client) => {
         const current = await client.query(`
           SELECT appointment_id, appointment_status, aesthetician_id,
-                 reschedule_request_status, reschedule_requested_date,
-                 reschedule_requested_time, reschedule_requested_end_time
+                 booked_duration_minutes, booked_buffer_minutes,
+                 reschedule_request_status, reschedule_requested_date::text AS reschedule_requested_date,
+                 reschedule_requested_time::text AS reschedule_requested_time,
+                 reschedule_requested_end_time::text AS reschedule_requested_end_time
           FROM appointments
           WHERE appointment_id = $1
           FOR UPDATE
@@ -2209,6 +2222,36 @@ router.post('/:id/cancellation-request/review', requireRole('admin'), async (req
           throw error;
         }
         const currentAppointment = current.rows[0];
+        const requestedDate = currentAppointment.reschedule_requested_date;
+        const requestedTime = String(currentAppointment.reschedule_requested_time || '').slice(0, 5);
+        const storedRequestedEndTime = String(currentAppointment.reschedule_requested_end_time || '').slice(0, 5);
+        const now = manilaNow();
+        const requestedDuration = Number(currentAppointment.booked_duration_minutes);
+        const requestedBuffer = Number(currentAppointment.booked_buffer_minutes);
+        if (!requestedDate || !VALID_SLOTS.includes(from24h(requestedTime))
+          || requestedDate < now.dateStr
+          || requestedDate > addCalendarDays(now.dateStr, MAX_ADVANCE_DAYS)
+          || CLOSED_WEEKDAYS.includes(weekday(requestedDate))
+          || isSlotInPast(requestedDate, requestedTime)
+          || isSlotTooSoon(requestedDate, requestedTime)) {
+          const error = new Error('The requested appointment time is no longer valid. Submit a new reschedule request.');
+          error.statusCode = 409;
+          throw error;
+        }
+        if (!Number.isSafeInteger(requestedDuration) || requestedDuration <= 0
+          || !Number.isSafeInteger(requestedBuffer) || requestedBuffer < 0) {
+          const error = new Error('The appointment duration snapshot is unavailable. Contact an administrator.');
+          error.statusCode = 409;
+          throw error;
+        }
+        const requestedEndTime = addMinutes(requestedTime, requestedDuration + requestedBuffer);
+        if (!requestedEndTime || requestedEndTime > CLOSING_TIME
+          || overlapsLunchBreak(requestedTime, requestedEndTime)
+          || requestedEndTime !== storedRequestedEndTime) {
+          const error = new Error("The requested time no longer matches the appointment's booked duration and buffer. Submit a new reschedule request.");
+          error.statusCode = 409;
+          throw error;
+        }
         await client.query('SELECT pg_advisory_xact_lock($1, $2)', [1042026, currentAppointment.aesthetician_id]);
         const conflictResult = await client.query(`
           SELECT 1
@@ -2227,9 +2270,9 @@ router.post('/:id/cancellation-request/review', requireRole('admin'), async (req
         `, [
           currentAppointment.aesthetician_id,
           appointmentId,
-          currentAppointment.reschedule_requested_date,
-          currentAppointment.reschedule_requested_time,
-          currentAppointment.reschedule_requested_end_time
+          requestedDate,
+          requestedTime,
+          requestedEndTime
         ]);
         if (conflictResult.rows.length > 0) {
           const error = new Error('The requested slot is no longer available. Choose another slot.');
@@ -2239,19 +2282,19 @@ router.post('/:id/cancellation-request/review', requireRole('admin'), async (req
 
         await client.query(`
           UPDATE appointments
-          SET appointment_date = reschedule_requested_date,
-              appointment_time = reschedule_requested_time,
-              appointment_end_time = reschedule_requested_end_time,
-              scheduled_end_time = reschedule_requested_end_time,
+          SET appointment_date = $3,
+              appointment_time = $4,
+              appointment_end_time = $5,
+              scheduled_end_time = $5,
               adjusted_expected_end_time = NULL,
-              reminder_24h_sent = reschedule_requested_date + reschedule_requested_time <= (NOW() AT TIME ZONE 'Asia/Manila') + INTERVAL '24 hours',
+              reminder_24h_sent = $3::date + $4::time <= (NOW() AT TIME ZONE 'Asia/Manila') + INTERVAL '24 hours',
               reminder_3h_sent = FALSE,
-              reminder_email_24h_sent = reschedule_requested_date + reschedule_requested_time <= (NOW() AT TIME ZONE 'Asia/Manila') + INTERVAL '24 hours',
+              reminder_email_24h_sent = $3::date + $4::time <= (NOW() AT TIME ZONE 'Asia/Manila') + INTERVAL '24 hours',
               reminder_email_3h_sent = FALSE,
               reschedule_request_status = 'approved', reschedule_reviewed_by = $1,
               reschedule_reviewed_at = NOW()
           WHERE appointment_id = $2
-        `, [req.session.userId, appointmentId]);
+        `, [req.session.userId, appointmentId, requestedDate, requestedTime, requestedEndTime]);
       });
     } else if (requestType === 'reschedule') {
       await db.query(`
@@ -2270,15 +2313,28 @@ router.post('/:id/cancellation-request/review', requireRole('admin'), async (req
       `, [nextStatus, decision === 'allow' ? 'approved' : 'rejected', req.session.userId, appointmentId]);
     }
     if (decision === 'allow' && requestType === 'cancellation') {
-      // The aesthetician initiated this cancellation, so the client is refunded regardless of the 24-hour window.
+      let refundMessage = '';
       if (appointment.payment_status === 'paid') {
-        await refundAppointmentDeposit(appointmentId);
+        if (appointment.cancellation_refundable) {
+          const refundOutcome = await refundAppointmentDeposit(appointmentId);
+          refundMessage = refundOutcome.refunded
+            ? ' The reservation fee was automatically refunded.'
+            : ' The reservation fee is eligible for a refund, but automatic processing failed; process it manually.';
+        } else {
+          await recordAppointmentDepositForfeiture(
+            appointmentId,
+            appointment.cancellation_requested_by ?? req.session.userId,
+            appointment.cancellation_requested_at,
+          );
+          refundMessage = ' The reservation fee was forfeited because the cancellation request was not submitted more than 24 hours before the appointment.';
+        }
       }
       await notifyUsers(
         [appointment.user_id, appointment.aesthetician_id].filter(Boolean),
         'appointment_cancelled',
-        `Appointment ${appointmentId} was cancelled after admin review.`,
+        `Appointment ${appointmentId} was cancelled after admin review.${refundMessage}`,
       );
+      cancellationMessage = refundMessage;
     } else if (decision === 'allow' && requestType === 'reschedule') {
       await notifyUsers(
         [appointment.user_id, appointment.aesthetician_id].filter(Boolean),
@@ -2287,7 +2343,11 @@ router.post('/:id/cancellation-request/review', requireRole('admin'), async (req
       );
     }
     const label = requestType === 'reschedule' ? 'Reschedule' : 'Cancellation';
-    return res.json({ message: decision === 'allow' ? `${label} allowed.` : `${label} request rejected.` });
+    return res.json({
+      message: decision === 'allow'
+        ? `${label} allowed.${cancellationMessage}`
+        : `${label} request rejected.`
+    });
   } catch (error) {
     if (error.statusCode) return res.status(error.statusCode).json({ message: error.message });
     if (error.code === '23P01' || error.code === '23505') {
@@ -2415,14 +2475,14 @@ router.post('/:id/no-show', requireActiveAccount, async (req, res) => {
       UPDATE appointments
       SET appointment_status = 'no_show'
       WHERE appointment_id = $1 AND aesthetician_id = $2
-        AND appointment_status = 'confirmed'
+        AND appointment_status IN ('confirmed', 'in_progress')
         AND is_demo = FALSE
         AND appointment_date = (NOW() AT TIME ZONE 'Asia/Manila')::date
         AND appointment_time <= (NOW() AT TIME ZONE 'Asia/Manila')::time
       RETURNING user_id, appointment_id
     `, [appointmentId, req.session.userId]);
     if (result.rows.length === 0) {
-      return res.status(409).json({ message: 'Only a confirmed appointment that has started today can be marked as no show.' });
+      return res.status(409).json({ message: 'Only a confirmed or in-progress appointment that has started today can be marked as no show.' });
     }
     await notifyUser(
       result.rows[0].user_id,
@@ -2464,7 +2524,7 @@ router.post('/:id/reschedule', requireActiveAccount, async (req, res) => {
     const userResult = await db.query('SELECT role FROM users WHERE user_id = $1', [req.session.userId]);
     if (userResult.rows.length === 0) return res.status(401).json({ message: 'Your session is no longer valid.' });
     const isAdmin = userResult.rows[0].role === 'admin';
-    const isAssignedAesthetician = ['aesthetician', 'nail_tech'].includes(userResult.rows[0].role)
+    const isAssignedAesthetician = userResult.rows[0].role === 'aesthetician'
       && appointment.aesthetician_id === req.session.userId;
     const isClient = appointment.user_id === req.session.userId;
     if (!isAdmin && !isAssignedAesthetician && !isClient) {

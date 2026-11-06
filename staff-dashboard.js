@@ -19,7 +19,18 @@
     };
 
     function localDateString(date = new Date()) {
-        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+        const parts = new Intl.DateTimeFormat("en-CA", {
+            timeZone: "Asia/Manila",
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit"
+        }).formatToParts(date);
+        const values = Object.fromEntries(parts.filter((part) => part.type !== "literal").map((part) => [part.type, part.value]));
+        return `${values.year}-${values.month}-${values.day}`;
+    }
+
+    function manilaMonthKey(date = new Date()) {
+        return localDateString(date).slice(0, 7);
     }
 
     function formatDate(date, time) {
@@ -77,11 +88,20 @@
     }
 
     function renderSummary() {
-        const thisMonth = new Date().toISOString().slice(0, 7);
+        const now = new Date();
+        const thisMonth = manilaMonthKey(now);
         const count = (status) => appointments.filter((item) => String(item.status || "").toLowerCase() === status).length;
         document.getElementById("dashboardConfirmedCount").textContent = count("confirmed");
         document.getElementById("dashboardCancelledCount").textContent = appointments.filter((item) => String(item.status || "").toLowerCase() === "cancelled" && String(item.date || "").startsWith(thisMonth)).length;
         document.getElementById("dashboardClientTotal").textContent = `(${appointments.length})`;
+        const currentMonth = document.getElementById("current-month");
+        if (currentMonth) {
+            currentMonth.textContent = new Intl.DateTimeFormat("en-US", {
+                timeZone: "Asia/Manila",
+                month: "long",
+                year: "numeric"
+            }).format(now);
+        }
     }
 
     function renderClientPage() {

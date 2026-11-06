@@ -341,8 +341,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       staffSelect.replaceChildren(el('option', '', staff.length ? 'Choose available staff' : 'No staff available for this slot'));
       staff.forEach((person) => {
-        const roleLabel = person.role === 'nail_tech' ? 'Nail Tech' : 'Aesthetician';
-        const option = el('option', '', `${person.full_name || 'Staff member'} — ${roleLabel}`);
+        const option = el('option', '', `${person.full_name || 'Staff member'} — Aesthetician`);
         option.value = String(person.user_id);
         staffSelect.appendChild(option);
       });
@@ -1746,8 +1745,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       newAppointmentStaff.replaceChildren(el('option', '', staff.length ? 'Choose available staff' : 'No staff available for this slot'));
       staff.forEach((person) => {
-        const roleLabel = person.role === 'nail_tech' ? 'Nail Tech' : 'Aesthetician';
-        const option = el('option', '', `${person.full_name || 'Staff member'} — ${roleLabel}`);
+        const option = el('option', '', `${person.full_name || 'Staff member'} — Aesthetician`);
         option.value = String(person.user_id);
         newAppointmentStaff.appendChild(option);
       });

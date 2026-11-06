@@ -290,7 +290,7 @@ test('staff calendar and scheduling paths prefer effective ends while retaining 
   const migration = fs.readFileSync(path.join(root, 'migrations', '048-appointment-delay-retries.js'), 'utf8');
   const migrationReadme = fs.readFileSync(path.join(root, 'migrations', 'README.md'), 'utf8');
   assert.match(staffCalendar, /end: appt\.expected_end_time \?\? appt\.expected_end/);
-  assert.match(staffCalendar, /formatTime\(appt\.start\).*formatTime\(appt\.end\)/s);
+  assert.match(staffCalendar, /formatStaffAppointmentTime\(appt\.start\).*formatStaffAppointmentTime\(appt\.end\)/s);
   assert.match(availability, /GREATEST\(appointment_end_time, COALESCE\(adjusted_expected_end_time/);
   assert.ok((appointments.match(/GREATEST\(appointment_end_time, COALESCE\(adjusted_expected_end_time/g) || []).length >= 2);
   assert.match(appointments, /pg_advisory_xact_lock\(\$1, \$2\)/);

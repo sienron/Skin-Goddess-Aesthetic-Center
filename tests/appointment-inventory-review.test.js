@@ -33,6 +33,9 @@ const adminEditRoute = appointmentsRouter.stack
 const adminCancelRoute = appointmentsRouter.stack
   .find((layer) => layer.route?.path === '/:id/cancel' && layer.route.methods.post)
   .route.stack.at(-1).handle;
+const staffNoShowRoute = appointmentsRouter.stack
+  .find((layer) => layer.route?.path === '/:id/no-show' && layer.route.methods.post)
+  .route.stack.at(-1).handle;
 
 async function editAppointmentStatus({ currentStatus, requestedStatus, appointmentDate }) {
   const originalTransaction = db.transaction;
@@ -453,6 +456,90 @@ test('admin cannot mark a future appointment as no-show', async () => {
   assert.equal(result.statusCode, 409);
   assert.match(result.responseBody.message, /appointment that has started/i);
   assert.equal(result.queryCalls.some(({ sql }) => /UPDATE appointments/.test(sql)), false);
+});
+
+test('admin cannot mark terminal, pending, or otherwise ineligible appointments as no-show', async () => {
+  for (const currentStatus of ['completed', 'cancelled', 'no_show', 'pending']) {
+    const result = await editAppointmentStatus({
+      currentStatus,
+      requestedStatus: 'no_show',
+      appointmentDate: '2000-01-01'
+    });
+
+    assert.equal(result.statusCode, 409, `${currentStatus} must not transition to no-show`);
+    assert.equal(result.queryCalls.some(({ sql }) => /UPDATE appointments/.test(sql)), false);
+  }
+});
+
+test('staff can mark a started in-progress appointment as no-show after cron advancement', async () => {
+  const originalQuery = db.query;
+  const queryCalls = [];
+  let statusCode = 200;
+  let responseBody;
+  db.query = async (sql) => {
+    queryCalls.push(sql);
+    if (/UPDATE appointments/.test(sql)
+      && /appointment_status IN \('confirmed', 'in_progress'\)/.test(sql)) {
+      return { rows: [{ user_id: 7, appointment_id: 42 }] };
+    }
+    return { rows: [] };
+  };
+
+  try {
+    await staffNoShowRoute({
+      params: { id: '42' },
+      session: { userId: 4 }
+    }, {
+      status(code) {
+        statusCode = code;
+        return this;
+      },
+      json(body) {
+        responseBody = body;
+        return this;
+      }
+    });
+  } finally {
+    db.query = originalQuery;
+  }
+
+  assert.equal(statusCode, 200);
+  assert.match(responseBody.message, /marked as no show/i);
+  assert.match(queryCalls[0], /appointment_status IN \('confirmed', 'in_progress'\)/);
+  assert.match(queryCalls[0], /appointment_date = \(NOW\(\) AT TIME ZONE 'Asia\/Manila'\)::date/);
+  assert.match(queryCalls[0], /appointment_time <= \(NOW\(\) AT TIME ZONE 'Asia\/Manila'\)::time/);
+  assert.match(queryCalls[0], /is_demo = FALSE/);
+});
+
+test('staff no-show transition excludes completed, cancelled, and other ineligible statuses', async () => {
+  const originalQuery = db.query;
+  let statusCode = 200;
+  let statement;
+  db.query = async (sql) => {
+    statement = sql;
+    return { rows: [] };
+  };
+
+  try {
+    await staffNoShowRoute({
+      params: { id: '42' },
+      session: { userId: 4 }
+    }, {
+      status(code) {
+        statusCode = code;
+        return this;
+      },
+      json() {
+        return this;
+      }
+    });
+  } finally {
+    db.query = originalQuery;
+  }
+
+  assert.equal(statusCode, 409);
+  assert.match(statement, /appointment_status IN \('confirmed', 'in_progress'\)/);
+  assert.doesNotMatch(statement, /appointment_status\s*=\s*'completed'|appointment_status\s*=\s*'cancelled'/);
 });
 
 test('admin can cancel an in-progress appointment after it has started', async () => {

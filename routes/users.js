@@ -19,16 +19,11 @@ router.use(requireRole('admin'));
 const ROLE_BADGE = {
   client: 'CLIENT',
   aesthetician: 'AESTHETICIAN',
-  nail_tech: 'NAIL TECH',
   admin: 'ADMIN',
   finance_officer: 'FINANCE OFFICER',
   inventory_officer: 'INVENTORY PROCUREMENT',
   staff: 'STAFF',
 };
-
-// Only one active account per staff role can be assigned appointments (mirrors the
-// single-aesthetician business rule, extended to the nail tech role).
-const SINGLE_ACTIVE_STAFF_ROLES = ['aesthetician', 'nail_tech'];
 
 function toInitials(firstName, lastName) {
   const a = (firstName || '').trim().charAt(0);
@@ -183,23 +178,14 @@ router.post('/', async (req, res) => {
   if (!trimmedName || !normalizedEmail || !role) {
     return res.status(400).json({ message: 'Full name, email, and role are required.' });
   }
+  if (!Object.hasOwn(ROLE_BADGE, role)) {
+    return res.status(400).json({ message: 'Invalid user role.' });
+  }
 
   const [firstName, ...rest] = trimmedName.split(' ');
   const lastName = rest.join(' ') || '';
 
   try {
-    if (SINGLE_ACTIVE_STAFF_ROLES.includes(role) && (status || 'active') === 'active') {
-      const activeStaffMember = await db.query(
-        `SELECT user_id FROM users
-         WHERE role = $1 AND status = 'active' AND email_verified = TRUE
-         LIMIT 1`,
-        [role]
-      );
-      if (activeStaffMember.rows.length > 0) {
-        return res.status(409).json({ message: `Only one active ${ROLE_BADGE[role] || role} can be assigned appointments.` });
-      }
-    }
-
     const existing = await db.query('SELECT user_id FROM users WHERE LOWER(email) = $1', [normalizedEmail]);
     if (existing.rows.length > 0) {
       return res.status(409).json({ message: 'This email is already registered.' });
@@ -251,24 +237,6 @@ router.put('/:id', async (req, res) => {
   const lastName = rest.join(' ') || '';
 
   try {
-    if (role !== undefined && SINGLE_ACTIVE_STAFF_ROLES.includes(role)) {
-      const target = await db.query('SELECT status FROM users WHERE user_id = $1', [req.params.id]);
-      if (target.rows.length === 0) {
-        return res.status(404).json({ message: 'User not found.' });
-      }
-      if (target.rows[0].status === 'active') {
-        const activeStaffMember = await db.query(
-          `SELECT user_id FROM users
-           WHERE role = $1 AND status = 'active' AND email_verified = TRUE AND user_id <> $2
-           LIMIT 1`,
-          [role, req.params.id]
-        );
-        if (activeStaffMember.rows.length > 0) {
-          return res.status(409).json({ message: `Only one active ${ROLE_BADGE[role]} can be assigned appointments.` });
-        }
-      }
-    }
-
     const passwordHash = password === undefined ? null : await bcrypt.hash(password, 10);
     const result = await db.query(
       `UPDATE users SET
@@ -328,21 +296,8 @@ router.patch('/:id/status', async (req, res) => {
   }
 
   try {
-    const target = await db.query('SELECT role FROM users WHERE user_id = $1', [req.params.id]);
+    const target = await db.query('SELECT user_id FROM users WHERE user_id = $1', [req.params.id]);
     if (target.rows.length === 0) return res.status(404).json({ message: 'User not found.' });
-
-    if (status === 'active' && SINGLE_ACTIVE_STAFF_ROLES.includes(target.rows[0].role)) {
-      const activeStaffMember = await db.query(
-        `SELECT user_id FROM users
-         WHERE role = $1 AND status = 'active' AND email_verified = TRUE
-           AND user_id <> $2
-         LIMIT 1`,
-        [target.rows[0].role, req.params.id]
-      );
-      if (activeStaffMember.rows.length > 0) {
-        return res.status(409).json({ message: `Only one active ${ROLE_BADGE[target.rows[0].role] || target.rows[0].role} can be assigned appointments.` });
-      }
-    }
 
     const result = await db.query(
       `UPDATE users SET status = $1, updated_at = NOW() WHERE user_id = $2

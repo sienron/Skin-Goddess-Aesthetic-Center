@@ -80,7 +80,7 @@
     const depositWarning = document.createElement('p');
     depositWarning.className = 'deposit-warning';
     depositWarning.setAttribute('role', 'note');
-    depositWarning.textContent = 'Please note: The reservation deposit is non-refundable. Cancellations must be requested more than 24 hours before your appointment.';
+    depositWarning.textContent = 'Reservation deposits are refundable only for cancellation requests submitted more than 24 hours before the appointment. Requests submitted 24 hours or less before the appointment are not refundable.';
 
     const confirmButton = document.createElement('button');
     confirmButton.type = 'button';

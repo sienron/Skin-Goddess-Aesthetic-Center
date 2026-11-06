@@ -147,6 +147,12 @@ test('the shared booking rule accepts the exact 30-minute boundary and exposes h
   });
 });
 
+test('the booking notice matches the backend minimum lead time', () => {
+  const bookingPage = fs.readFileSync(path.join(__dirname, '..', 'UserAppointment.html'), 'utf8');
+  assert.match(bookingPage, new RegExp(`at least ${MIN_BOOKING_LEAD_MINUTES} minutes in advance`));
+  assert.doesNotMatch(bookingPage, /at least 3 hours in advance/i);
+});
+
 test('checkout rejects a booking inside 30 minutes and accepts the boundary with its treatment and buffer end', async () => {
   setTestPayMongoEnvironment();
   const early = await invokeCheckout({ ...validCustomerDetails(), time: '9:00 AM' }, '2026-01-05T00:45:00.000Z');
@@ -349,9 +355,9 @@ test('ratings remain eligible on day seven and are rejected after the deadline',
   assert.equal(dayEight.queries.some((sql) => /INSERT INTO appointment_ratings/.test(sql)), false);
 });
 
-test('client cancellation requires strictly more than 24 hours, including at the server endpoint', async () => {
+test('all cancellation requests require strictly more than 24 hours, including at the server endpoint', async () => {
   const handler = routeHandler('/:id/cancellation-request', 'post');
-  async function submitAt(appointmentTime) {
+  async function submitAt(appointmentTime, userId = 7) {
     const queries = [];
     db.query = async (sql) => {
       queries.push(sql);
@@ -366,6 +372,7 @@ test('client cancellation requires strictly more than 24 hours, including at the
           appointment_time: `${appointmentTime}:00`
         }] };
       }
+      if (/UPDATE appointments/.test(sql)) return { rows: [] };
       return { rows: [] };
     };
     const response = responseCapture();
@@ -373,7 +380,7 @@ test('client cancellation requires strictly more than 24 hours, including at the
       await withFrozenDate('2026-01-05T00:00:00.000Z', () => handler({
         params: { id: '42' },
         body: { reason: 'Schedule change', description: 'Please cancel this visit.' },
-        session: { userId: 7 }
+        session: { userId }
       }, response));
     } finally {
       db.query = originalQuery;
@@ -392,6 +399,141 @@ test('client cancellation requires strictly more than 24 hours, including at the
   const over24 = await submitAt('08:01');
   assert.equal(over24.response.statusCode, 200);
   assert.ok(over24.queries.some((sql) => /UPDATE appointments/.test(sql)));
+
+  const staffUnder24 = await submitAt('07:59', 31);
+  assert.equal(staffUnder24.response.statusCode, 400);
+  assert.equal(staffUnder24.queries.some((sql) => /UPDATE appointments/.test(sql)), false);
+});
+
+test('approved cancellation refunds only requests submitted more than 24 hours ahead', async () => {
+  const handler = routeHandler('/:id/cancellation-request/review', 'post');
+  async function review(refundEligible) {
+    const queries = [];
+    const transactionQueries = [];
+    const refundCalls = [];
+    let response;
+    setTestPayMongoEnvironment();
+    global.fetch = async (url) => {
+      refundCalls.push(url);
+      return {
+        ok: true,
+        async json() {
+          return { data: { id: 're_test_local' } };
+        }
+      };
+    };
+    db.query = async (sql, values = []) => {
+      queries.push({ sql, values });
+      if (/SELECT a\.appointment_status, a\.service_id/.test(sql)) {
+        return { rows: [{
+          appointment_status: 'confirmed',
+          service_id: 3,
+          user_id: 7,
+          aesthetician_id: 31,
+          payment_status: 'paid',
+          cancellation_request_status: 'pending',
+          reschedule_request_status: null,
+          cancellation_requested_by: 7,
+          cancellation_requested_at: '2026-01-04T00:00:00.000Z',
+          cancellation_refundable: refundEligible
+        }] };
+      }
+      return { rows: [] };
+    };
+    db.transaction = async (callback) => callback({
+      async query(sql, values = []) {
+        transactionQueries.push({ sql, values });
+        if (/SELECT reference_number, payment_id, amount_cents/.test(sql)) {
+          return { rows: [{ reference_number: 'SGREFUNDTEST', payment_id: 'pay_test_local', amount_cents: 50000 }] };
+        }
+        if (/SELECT payment_id\s+FROM payments/.test(sql)) return { rows: [{ payment_id: 72 }] };
+        if (/UPDATE payments/.test(sql)) return { rows: [{ payment_id: 72 }] };
+        return { rows: [] };
+      }
+    });
+    response = responseCapture();
+    try {
+      await withFrozenDate('2026-01-05T00:00:00.000Z', () => handler({
+        params: { id: '42' },
+        body: { decision: 'allow', requestType: 'cancellation' },
+        session: { userId: 99 }
+      }, response));
+    } finally {
+      db.query = originalQuery;
+      db.transaction = originalTransaction;
+      global.fetch = originalFetch;
+    }
+    return { response, queries, transactionQueries, refundCalls };
+  }
+
+  const eligible = await review(true);
+  assert.equal(eligible.response.statusCode, 200);
+  assert.match(eligible.queries[0].sql, />\s*\(a\.cancellation_requested_at AT TIME ZONE 'Asia\/Manila'\) \+ INTERVAL '24 hours'/);
+  assert.deepEqual(eligible.refundCalls, ['https://api.paymongo.com/v1/refunds']);
+  assert.ok(eligible.transactionQueries.some(({ sql }) => /UPDATE payments\s+SET status = 'refunded'/.test(sql)));
+  assert.equal(eligible.queries.some(({ sql }) => /DEPOSIT_FORFEITED/.test(sql)), false);
+
+  const ineligible = await review(false);
+  assert.equal(ineligible.response.statusCode, 200);
+  assert.match(ineligible.response.body.message, /reservation fee was forfeited/i);
+  assert.equal(ineligible.refundCalls.length, 0);
+  assert.ok(ineligible.queries.some(({ sql, values }) => /DEPOSIT_FORFEITED/.test(sql)
+    && values[0] === 7 && values[1] === '2026-01-04T00:00:00.000Z' && values[2] === 42));
+});
+
+test('direct admin cancellation forfeits a paid deposit at exactly 24 hours', async () => {
+  const handler = routeHandler('/:id/cancel', 'post');
+  const queries = [];
+  db.query = async (sql, values = []) => {
+    queries.push({ sql, values });
+    if (/SELECT a\.appointment_id, a\.user_id/.test(sql)) {
+      return { rows: [{
+        appointment_id: 42,
+        user_id: 7,
+        aesthetician_id: 31,
+        is_demo: false,
+        appointment_date: '2026-01-06',
+        appointment_time: '08:00:00',
+        appointment_status: 'confirmed',
+        payment_status: 'paid',
+        service_name: 'Facial'
+      }] };
+    }
+    return { rows: [] };
+  };
+  const response = responseCapture();
+  try {
+    await withFrozenDate('2026-01-05T00:00:00.000Z', () => handler({
+      params: { id: '42' },
+      session: { userId: 99 }
+    }, response));
+  } finally {
+    db.query = originalQuery;
+  }
+
+  assert.equal(response.statusCode, 200);
+  assert.match(response.body.message, /forfeited because cancellation occurred 24 hours or less/i);
+  assert.ok(queries.some(({ sql }) => /DEPOSIT_FORFEITED/.test(sql)));
+  assert.equal(queries.some(({ sql }) => /UPDATE paymongo_checkout_sessions/.test(sql)), false);
+});
+
+test('booking summary, terms, and cancellation forms describe the confirmed refund policy', () => {
+  const policyFiles = [
+    'LoginPage.html',
+    'Registration.html',
+    'appointment-summary.js',
+    'AppointmentSummary.html',
+    'MyAppointments.html',
+    'AestheticianAppointmentPage.html',
+    'StaffAppointmentPage.html'
+  ];
+  const content = policyFiles.map((file) => fs.readFileSync(path.join(__dirname, '..', file), 'utf8'));
+  for (const text of content) assert.match(text, /more than 24 hours/i);
+  assert.match(content[0], /deposits are refundable only/i);
+  assert.match(content[1], /deposits are refundable only/i);
+  assert.match(content[2], /deposits are refundable only/i);
+  assert.match(content[4], /24 hours or less.*not refundable/i);
+  assert.doesNotMatch(content[2], /reservation deposit is non-refundable/i);
 });
 
 test('rescheduling uses the original treatment and buffer snapshots without changing the booked appointment', async () => {
@@ -449,6 +591,185 @@ test('rescheduling uses the original treatment and buffer snapshots without chan
   const lunchOverrun = await submit('11:00');
   assert.equal(lunchOverrun.response.statusCode, 400);
   assert.equal(lunchOverrun.updateValues, undefined);
+});
+
+test('reschedule approval uses booked duration and buffer snapshots and rechecks the slot under lock', async () => {
+  const handler = routeHandler('/:id/cancellation-request/review', 'post');
+  const transactionQueries = [];
+  let update;
+  db.query = async (sql) => {
+    if (/SELECT a\.appointment_status, a\.service_id/.test(sql)) {
+      return { rows: [{
+        appointment_status: 'confirmed',
+        service_id: 3,
+        user_id: 7,
+        aesthetician_id: 31,
+        payment_status: 'paid',
+        cancellation_request_status: null,
+        reschedule_request_status: 'pending',
+        reschedule_requested_date: '2026-01-06',
+        reschedule_requested_time: '09:30:00'
+      }] };
+    }
+    return { rows: [] };
+  };
+  db.transaction = async (callback) => callback({
+    async query(sql, values = []) {
+      transactionQueries.push({ sql, values });
+      if (/SELECT appointment_id, appointment_status, aesthetician_id/.test(sql)) {
+        return { rows: [{
+          appointment_id: 42,
+          appointment_status: 'confirmed',
+          aesthetician_id: 31,
+          booked_duration_minutes: 90,
+          booked_buffer_minutes: 15,
+          reschedule_request_status: 'pending',
+          reschedule_requested_date: '2026-01-06',
+          reschedule_requested_time: '09:30:00',
+          reschedule_requested_end_time: '11:15:00'
+        }] };
+      }
+      if (/UPDATE appointments/.test(sql)) update = { sql, values };
+      return { rows: [] };
+    }
+  });
+  const response = responseCapture();
+  try {
+    await withFrozenDate('2026-01-05T00:00:00.000Z', () => handler({
+      params: { id: '42' },
+      body: { decision: 'allow', requestType: 'reschedule' },
+      session: { userId: 99 }
+    }, response));
+  } finally {
+    db.query = originalQuery;
+    db.transaction = originalTransaction;
+  }
+
+  assert.equal(response.statusCode, 200, JSON.stringify(response.body));
+  const lockIndex = transactionQueries.findIndex(({ sql }) => /pg_advisory_xact_lock/.test(sql));
+  const availabilityIndex = transactionQueries.findIndex(({ sql }) => /SELECT 1\s+FROM appointments/.test(sql));
+  assert.ok(lockIndex >= 0);
+  assert.ok(availabilityIndex > lockIndex);
+  assert.deepEqual(transactionQueries[availabilityIndex].values, [31, 42, '2026-01-06', '09:30', '11:15']);
+  assert.ok(update);
+  assert.deepEqual(update.values, [99, 42, '2026-01-06', '09:30', '11:15']);
+  assert.doesNotMatch(update.sql, /booked_duration_minutes\s*=|booked_buffer_minutes\s*=/);
+  assert.equal(transactionQueries.some(({ sql }) => /FROM services/.test(sql)), false);
+});
+
+test('reschedule approval rejects a stored end time that no longer matches the booked snapshots', async () => {
+  const handler = routeHandler('/:id/cancellation-request/review', 'post');
+  const transactionQueries = [];
+  db.query = async (sql) => {
+    if (/SELECT a\.appointment_status, a\.service_id/.test(sql)) {
+      return { rows: [{
+        appointment_status: 'confirmed',
+        service_id: 3,
+        user_id: 7,
+        aesthetician_id: 31,
+        payment_status: 'paid',
+        cancellation_request_status: null,
+        reschedule_request_status: 'pending',
+        reschedule_requested_date: '2026-01-06',
+        reschedule_requested_time: '09:30:00'
+      }] };
+    }
+    return { rows: [] };
+  };
+  db.transaction = async (callback) => callback({
+    async query(sql, values = []) {
+      transactionQueries.push({ sql, values });
+      if (/SELECT appointment_id, appointment_status, aesthetician_id/.test(sql)) {
+        return { rows: [{
+          appointment_id: 42,
+          appointment_status: 'confirmed',
+          aesthetician_id: 31,
+          booked_duration_minutes: 90,
+          booked_buffer_minutes: 15,
+          reschedule_request_status: 'pending',
+          reschedule_requested_date: '2026-01-06',
+          reschedule_requested_time: '09:30:00',
+          reschedule_requested_end_time: '10:30:00'
+        }] };
+      }
+      return { rows: [] };
+    }
+  });
+  const response = responseCapture();
+  try {
+    await withFrozenDate('2026-01-05T00:00:00.000Z', () => handler({
+      params: { id: '42' },
+      body: { decision: 'allow', requestType: 'reschedule' },
+      session: { userId: 99 }
+    }, response));
+  } finally {
+    db.query = originalQuery;
+    db.transaction = originalTransaction;
+  }
+
+  assert.equal(response.statusCode, 409);
+  assert.match(response.body.message, /booked duration and buffer/i);
+  assert.equal(transactionQueries.some(({ sql }) => /pg_advisory_xact_lock|SELECT 1\s+FROM appointments|UPDATE appointments/.test(sql)), false);
+});
+
+test('reschedule approval rejects a slot taken before review while holding the staff schedule lock', async () => {
+  const handler = routeHandler('/:id/cancellation-request/review', 'post');
+  const transactionQueries = [];
+  let updated = false;
+  db.query = async (sql) => {
+    if (/SELECT a\.appointment_status, a\.service_id/.test(sql)) {
+      return { rows: [{
+        appointment_status: 'confirmed',
+        service_id: 3,
+        user_id: 7,
+        aesthetician_id: 31,
+        payment_status: 'paid',
+        cancellation_request_status: null,
+        reschedule_request_status: 'pending'
+      }] };
+    }
+    return { rows: [] };
+  };
+  db.transaction = async (callback) => callback({
+    async query(sql, values = []) {
+      transactionQueries.push({ sql, values });
+      if (/SELECT appointment_id, appointment_status, aesthetician_id/.test(sql)) {
+        return { rows: [{
+          appointment_id: 42,
+          appointment_status: 'confirmed',
+          aesthetician_id: 31,
+          booked_duration_minutes: 90,
+          booked_buffer_minutes: 15,
+          reschedule_request_status: 'pending',
+          reschedule_requested_date: '2026-01-06',
+          reschedule_requested_time: '09:30:00',
+          reschedule_requested_end_time: '11:15:00'
+        }] };
+      }
+      if (/SELECT 1\s+FROM appointments/.test(sql)) return { rows: [{ exists: 1 }] };
+      if (/UPDATE appointments/.test(sql)) updated = true;
+      return { rows: [] };
+    }
+  });
+  const response = responseCapture();
+  try {
+    await withFrozenDate('2026-01-05T00:00:00.000Z', () => handler({
+      params: { id: '42' },
+      body: { decision: 'allow', requestType: 'reschedule' },
+      session: { userId: 99 }
+    }, response));
+  } finally {
+    db.query = originalQuery;
+    db.transaction = originalTransaction;
+  }
+
+  const lockIndex = transactionQueries.findIndex(({ sql }) => /pg_advisory_xact_lock/.test(sql));
+  const availabilityIndex = transactionQueries.findIndex(({ sql }) => /SELECT 1\s+FROM appointments/.test(sql));
+  assert.equal(response.statusCode, 409);
+  assert.match(response.body.message, /no longer available/i);
+  assert.ok(lockIndex >= 0);
+  assert.ok(availabilityIndex > lockIndex);
+  assert.equal(updated, false);
 });
 
 test('admin rescheduling rejects a slot blocked by an adjusted expected end', async () => {

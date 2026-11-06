@@ -58,7 +58,7 @@ async function loadAvailability({ service, staff, existingAppointments }) {
   const queries = [];
   db.query = async (sql, values = []) => {
     queries.push({ sql, values });
-    if (/SELECT duration_minutes, buffer_minutes, category FROM services/.test(sql)) {
+    if (/SELECT duration_minutes, buffer_minutes FROM services/.test(sql)) {
       return { rows: [service] };
     }
     if (/SELECT user_id FROM users WHERE role/.test(sql)) {
@@ -82,7 +82,7 @@ async function loadAvailability({ service, staff, existingAppointments }) {
   return { response, queries };
 }
 
-test('availability applies treatment plus buffer, staff role, and reserved-time overlap rules', async () => {
+test('availability applies treatment plus buffer and shared aesthetician availability', async () => {
   const facial = await loadAvailability({
     service: { duration_minutes: 60, buffer_minutes: 30, category: 'facial' },
     staff: [{ user_id: 31 }],
@@ -99,15 +99,23 @@ test('availability applies treatment plus buffer, staff role, and reserved-time 
   assert.equal(todaySlots.includes('10:00 AM'), false);
   assert.equal(todaySlots.includes('10:30 AM'), true);
   assert.equal(todaySlots.includes('12:00 PM'), false);
-  assert.equal(facial.queries[1].values[0], 'aesthetician');
+  assert.equal(facial.queries[1].values.length, 0);
+  assert.match(facial.queries[1].sql, /role = 'aesthetician'/);
   assert.match(facial.queries[2].sql, /GREATEST\(appointment_end_time, COALESCE\(adjusted_expected_end_time/);
 
   const nailService = await loadAvailability({
     service: { duration_minutes: 90, buffer_minutes: 30, category: 'Soft Gel Nail Extensions' },
-    staff: [{ user_id: 44 }],
-    existingAppointments: []
+    staff: [{ user_id: 44 }, { user_id: 45 }],
+    existingAppointments: [{
+      aesthetician_id: 44,
+      appointment_date: '2026-01-05',
+      appointment_time: '09:00:00',
+      appointment_end_time: '10:30:00'
+    }]
   });
-  assert.equal(nailService.queries[1].values[0], 'nail_tech');
+  assert.equal(nailService.queries[1].values.length, 0);
+  assert.match(nailService.queries[1].sql, /role = 'aesthetician'/);
+  assert.ok(nailService.response.body['2026-0-5'].includes('9:00 AM'));
   assert.ok(nailService.response.body['2026-0-5'].includes('1:00 PM'));
   assert.equal(nailService.response.body['2026-0-5'].includes('5:00 PM'), false);
 

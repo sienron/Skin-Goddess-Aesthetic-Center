@@ -36,7 +36,7 @@ const AGGREGATE_SQL = `
 `;
 
 // Staff member viewing their own aggregate rating.
-router.get('/mine', requireRole('aesthetician', 'nail_tech'), async (req, res) => {
+router.get('/mine', requireRole('aesthetician'), async (req, res) => {
   try {
     const result = await db.query(AGGREGATE_SQL, [req.session.userId]);
     return res.json(aggregateResponse(result.rows[0]));

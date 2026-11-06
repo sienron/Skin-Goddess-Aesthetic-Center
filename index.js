@@ -186,12 +186,12 @@ const protectedPages = [
   { path: '/MyAppointments.html', roles: ['client'] },
   { path: '/UserDashboard.html', roles: ['client'] },
 
-  { path: '/AestheticianAppointmentPage.html', roles: ['aesthetician', 'nail_tech', 'staff'] },
-  { path: '/StaffAppointmentPage.html', roles: ['aesthetician', 'nail_tech', 'staff'] },
-  { path: '/StaffDashboard.html', roles: ['aesthetician', 'nail_tech', 'staff'] },
-  { path: '/StaffTreatmentHistory.html', roles: ['aesthetician', 'nail_tech', 'staff'] },
-  { path: '/StaffTreatmentNotes.html', roles: ['aesthetician', 'nail_tech', 'staff'] },
-  { path: '/StaffUserManagement.html', roles: ['aesthetician', 'nail_tech', 'staff'] },
+  { path: '/AestheticianAppointmentPage.html', roles: ['aesthetician', 'staff'] },
+  { path: '/StaffAppointmentPage.html', roles: ['aesthetician', 'staff'] },
+  { path: '/StaffDashboard.html', roles: ['aesthetician', 'staff'] },
+  { path: '/StaffTreatmentHistory.html', roles: ['aesthetician', 'staff'] },
+  { path: '/StaffTreatmentNotes.html', roles: ['aesthetician', 'staff'] },
+  { path: '/StaffUserManagement.html', roles: ['aesthetician', 'staff'] },
 
   { path: '/AdminDashboard.html', roles: ['admin'] },
   { path: '/AdminAppointment.html', roles: ['admin'] },
