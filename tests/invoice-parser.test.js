@@ -207,6 +207,37 @@ test('parses all rows from quantity-first invoices without retaining OCR unit la
     assert.equal(rows.every(row => !row.needsReview), true);
 });
 
+test('separates category-column values from invoice descriptions and maps category variants', () => {
+    const rows = parseInvoiceText([
+        'QTY CATEGORY DESCRIPTION UNIT PRICE AMOUNT',
+        '12 Medical/Injection Supplies Hyaluronic Acid Serum 30ml 385.00 4,620.00',
+        '10 Skincare Products (Retail / Aftercare) Vitamin C Brightening Serum 30ml 420.00 4,200.00',
+        '24 Skincare Products (Retail / Aftercare) Sunscreen SPF50 PA+++ 50g 295.00 7,080.00',
+        '6 Cotton Pads Cotton Pads 100s 65.00 390.00',
+        '20 Skincare Products (Retail / Aftercare) Collagen Sheet Mask 48.50 970.00',
+        '5 Facial/Treatment Prep Products Gentle Foam Cleanser 150ml 330.00 1,650.00',
+        '8 Skin care Products (Retail / Aftercare) Niacinamide Toner 120ml 360.00 2,880.00',
+        '3 Medical/Injection Supplies Disposable Gloves M 100s 215.00 645.00',
+        '15 Skincare Products (Retail / Aftercare) Aloe Soothing Gel 200g 175.00 2,625.00',
+        '4 Medical/Injection Supplies Alcohol 70% 500ml 98.00 392.00',
+        'TOTAL AMOUNT DUE PHP 25,452.00'
+    ].join('\n'));
+
+    assert.deepEqual(rows.map(row => [row.product_name, row.category]), [
+        ['Hyaluronic Acid Serum 30ml', 'Medical/Injection Supplies'],
+        ['Vitamin C Brightening Serum 30ml', 'Skincare Products (Retail / Aftercare)'],
+        ['Sunscreen SPF50 PA+++ 50g', 'Skincare Products (Retail / Aftercare)'],
+        ['Cotton Pads 100s', 'Disposables & Clinic Consumables'],
+        ['Collagen Sheet Mask', 'Skincare Products (Retail / Aftercare)'],
+        ['Gentle Foam Cleanser 150ml', 'Facial/Treatment Prep Products'],
+        ['Niacinamide Toner 120ml', 'Skincare Products (Retail / Aftercare)'],
+        ['Disposable Gloves M 100s', 'Medical/Injection Supplies'],
+        ['Aloe Soothing Gel 200g', 'Skincare Products (Retail / Aftercare)'],
+        ['Alcohol 70% 500ml', 'Medical/Injection Supplies']
+    ]);
+    assert.ok(rows.every(row => !row.needsReview));
+});
+
 test('flags OCR values that conflict with the printed line amount', () => {
     const rows = parseInvoiceText([
         'QTY UNIT ARTICLES PRICE AMOUNT',

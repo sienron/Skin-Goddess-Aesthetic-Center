@@ -82,6 +82,54 @@ const INVOICE_PARSER_CONFIG = {
     minimumTextLength: 8
 };
 
+const INVOICE_CATEGORY_PREFIXES = [
+    {
+        pattern: /^Medical\s*\/\s*Injection\s+Supplies\s*/i,
+        category: 'Medical/Injection Supplies'
+    },
+    {
+        pattern: /^Disposables\s*&\s*Clinic\s+Consumables\s*/i,
+        category: 'Disposables & Clinic Consumables'
+    },
+    {
+        pattern: /^Facial\s*\/\s*Treatment\s+Prep\s+Products\s*/i,
+        category: 'Facial/Treatment Prep Products'
+    },
+    {
+        pattern: /^Facial\s+Treatment\s+Products\s*\(\s*Professional\s+Use\s*\)\s*/i,
+        category: 'Facial Treatment Products (Professional Use)'
+    },
+    {
+        pattern: /^Skin\s*care\s+Products\s*\(\s*Retail\s*\/\s*Aftercare\s*\)\s*/i,
+        category: 'Skincare Products (Retail / Aftercare)'
+    },
+    {
+        pattern: /^Soaps\s*&\s*Cleansers\s*/i,
+        category: 'Soaps & Cleansers'
+    },
+    {
+        pattern: /^Tools\s*\/\s*Equipment\s*\/\s*Misc\.?\s*/i,
+        category: 'Tools/Equipment/Misc.'
+    },
+    {
+        pattern: /^Cotton\s+Pads\s+/i,
+        category: 'Disposables & Clinic Consumables'
+    }
+];
+
+function extractLeadingCategory(productName) {
+    for (const { pattern, category } of INVOICE_CATEGORY_PREFIXES) {
+        const match = productName.match(pattern);
+        if (match) {
+            return {
+                category,
+                productName: productName.slice(match[0].length).trim()
+            };
+        }
+    }
+    return { category: '', productName };
+}
+
 function parseNumberToken(token) {
     const normalized = token
         .replace(/^(?:₱|PHP|P|\$)/i, '')
@@ -147,7 +195,7 @@ function parseExpiryDate(line) {
     };
 }
 
-function parseInvoiceLine(line, { hasAmountColumn, quantityFirst }) {
+function parseInvoiceLine(line, { hasAmountColumn, quantityFirst, hasCategoryColumn }) {
     const cleanedLine = line
         .replace(/[|]+/g, ' ')
         .replace(/\s+/g, ' ')
@@ -241,6 +289,13 @@ function parseInvoiceLine(line, { hasAmountColumn, quantityFirst }) {
         productName = tokens.slice(hasLeadingUnit ? 1 : 0, productEnd).join(' ').trim();
     }
 
+    let category = '';
+    if (hasCategoryColumn && quantityFirst) {
+        const extracted = extractLeadingCategory(productName || '');
+        category = extracted.category;
+        productName = extracted.productName;
+    }
+
     productName = (productName || '')
         .replace(/^[#*'"“”‘’.-]+/, '')
         .replace(/[|]+/g, ' ')
@@ -272,7 +327,7 @@ function parseInvoiceLine(line, { hasAmountColumn, quantityFirst }) {
         product_name: productName,
         quantity,
         unit_price: unitPrice,
-        category: '',
+        category,
         expiry_date: expiry.date,
         existing: false,
         needsReview: reasons.length > 0,
@@ -292,6 +347,7 @@ function parseInvoiceText(text) {
     const tableLines = lines.slice(headerIndex + 1);
     const hasAmountColumn = /\bamount\b/i.test(header);
     const quantityFirst = /^\s*(?:qty|quantity|unit)\b/i.test(header);
+    const hasCategoryColumn = /\bcategory\b/i.test(header);
     const rows = [];
     let pendingProduct = '';
 
@@ -305,7 +361,11 @@ function parseInvoiceText(text) {
         }
         if (/^\s*exp(?:iry)?\.?\b/i.test(line)) continue;
 
-        const row = parseInvoiceLine(line, { hasAmountColumn, quantityFirst });
+        const row = parseInvoiceLine(line, {
+            hasAmountColumn,
+            quantityFirst,
+            hasCategoryColumn
+        });
         if (!row) {
             const description = expiry.text
                 .replace(/\bexp(?:iry)?\.?\s*:?\s*/i, ' ')

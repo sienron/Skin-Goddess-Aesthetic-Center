@@ -50,7 +50,7 @@
                 <div class="batch-table-wrap">
                     <table class="batch-review-table">
                         <thead><tr>
-                            <th>Product</th><th>Quantity</th><th>Unit price</th>
+                            <th>Description</th><th>Quantity</th><th>Unit price</th>
                             <th>Category</th><th>Expiry date</th><th>Match</th><th></th>
                         </tr></thead>
                         <tbody></tbody>
