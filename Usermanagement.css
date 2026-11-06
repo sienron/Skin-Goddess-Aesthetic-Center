@@ -116,17 +116,17 @@
 #userManagementMain .um-stats {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
-  margin-bottom: 22px;
+  margin-bottom: 18px;
   padding-right: 0;
   padding-left: 0;
 }
 
 #userManagementMain .um-stat-card {
   display: flex;
-  min-height: 126px;
-  align-items: flex-start;
-  gap: 15px;
-  padding: 20px;
+  min-height: 104px;
+  align-items: center;
+  gap: 13px;
+  padding: 16px;
   border: 1px solid #eae5dc;
   border-radius: 12px;
   background: #fff;
@@ -135,16 +135,16 @@
 
 #userManagementMain .um-stat-card__icon {
   display: grid;
-  width: 44px;
-  height: 44px;
-  flex: 0 0 44px;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
   place-items: center;
   border-radius: 12px;
 }
 
 #userManagementMain .um-stat-card__icon svg {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
 }
 
 #userManagementMain .um-stat-card__icon--gold {
@@ -180,9 +180,9 @@
 }
 
 #userManagementMain .um-stat-card__value {
-  margin: 0 0 5px;
+  margin: 0 0 4px;
   color: #29241f;
-  font-size: 30px;
+  font-size: 26px;
   font-weight: 600;
   line-height: 1.15;
 }
@@ -317,7 +317,8 @@
 }
 
 #userManagementMain .um-table-wrap {
-  overflow-x: auto;
+  max-height: min(56vh, 430px);
+  overflow: auto;
   border: 1px solid #e8e3d9;
   border-radius: 12px;
   background: #fff;
@@ -327,19 +328,26 @@
 
 #userManagementMain .um-table {
   width: 100%;
-  min-width: 1120px;
+  min-width: 1185px;
   table-layout: fixed;
   border-collapse: separate;
   border-spacing: 0;
 }
 
 #userManagementMain .um-table thead tr {
-  background: #faf8f4;
+  background: transparent;
 }
 
 #userManagementMain .um-table th {
-  padding: 13px 14px;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  box-sizing: border-box;
+  height: 40px;
+  padding: 10px 12px;
+  border-right: 1px solid #eae5dc;
   border-bottom: 1px solid #eae5dc;
+  background: #faf8f4;
   color: #746b60;
   font-size: 11px;
   font-weight: 600;
@@ -351,25 +359,40 @@
 #userManagementMain .um-table th:first-child,
 #userManagementMain .um-table td:first-child {
   width: 44px;
+  text-align: center;
   padding-right: 8px;
-  padding-left: 16px;
+  padding-left: 8px;
 }
 
 #userManagementMain .um-table th:nth-child(2) { width: 205px; }
 #userManagementMain .um-table th:nth-child(3) { width: 150px; }
-#userManagementMain .um-table th:nth-child(4) { width: 235px; }
-#userManagementMain .um-table th:nth-child(5) { width: 125px; }
-#userManagementMain .um-table th:nth-child(6) { width: 110px; }
-#userManagementMain .um-table th:nth-child(7) { width: 130px; }
-#userManagementMain .um-table th:nth-child(8) { width: 125px; }
-#userManagementMain .um-table th:nth-child(9) { width: 142px; }
+#userManagementMain .um-table th:nth-child(4) { width: 215px; }
+#userManagementMain .um-table th:nth-child(5) { width: 120px; }
+#userManagementMain .um-table th:nth-child(6) { width: 100px; }
+#userManagementMain .um-table th:nth-child(7) { width: 120px; }
+#userManagementMain .um-table th:nth-child(8) { width: 110px; }
+#userManagementMain .um-table th:nth-child(9) { width: 121px; }
 
 #userManagementMain .um-table td {
-  padding: 13px 14px;
+  box-sizing: border-box;
+  height: 54px;
+  padding: 8px 12px;
+  border-right: 1px solid #f0ece5;
   border-bottom: 1px solid #f0ece5;
   color: #4a443d;
   font-size: 13px;
   vertical-align: middle;
+}
+
+#userManagementMain .um-table th:last-child,
+#userManagementMain .um-table td:last-child {
+  border-right: 0;
+}
+
+#userManagementMain .um-table td:nth-child(4) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 #userManagementMain .um-table tbody tr:last-child td {
@@ -389,13 +412,20 @@
 }
 
 #userManagementMain .um-user-cell {
+  display: table-cell;
   min-width: 0;
-  gap: 11px;
+  white-space: nowrap;
+}
+
+#userManagementMain .um-user-cell > .um-avatar--sm {
+  display: inline-flex;
+  margin-right: 8px;
+  vertical-align: middle;
 }
 
 #userManagementMain .um-avatar--sm {
-  width: 38px;
-  height: 38px;
+  width: 34px;
+  height: 34px;
   background: #f5eddd;
   color: #8e6a2c;
   font-size: 12px;
@@ -407,7 +437,10 @@
 }
 
 #userManagementMain .um-user-cell__info {
+  display: inline-flex;
   min-width: 0;
+  flex-direction: column;
+  vertical-align: middle;
 }
 
 #userManagementMain .um-user-cell__name {
@@ -708,13 +741,13 @@
   }
 
   #userManagementMain .um-table-wrap {
-    overflow-x: auto;
+    overflow: auto;
   }
 
   #userManagementMain .um-table {
     display: table;
     width: 100%;
-    min-width: 1120px;
+    min-width: 1185px;
     table-layout: fixed;
   }
 
@@ -952,6 +985,16 @@ body.staff-theme-dark #userManagementMain .um-pagination button {
   border-color: #4a4942;
   background: #292a27;
   color: #c9c2b7;
+}
+
+body.staff-theme-dark .um-modal__grid div span,
+body.staff-theme-dark .um-modal__grid-label {
+  color: #aaa398;
+}
+
+body.staff-theme-dark .um-modal__grid div strong,
+body.staff-theme-dark .um-allergy-tags {
+  color: #eee8dd;
 }
 
 @media (max-width: 640px) {
