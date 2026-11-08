@@ -3307,7 +3307,11 @@ hr {
   flex: 0 0 18px;
   width: 18px;
   height: 18px;
-  object-fit: contain;
+  color: #756c62;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .service-search {
@@ -24047,6 +24051,10 @@ body.customer-theme-dark .service-search-wrap {
   background-color: #292a27;
 }
 
+body.customer-theme-dark .service-search-icon {
+  color: #c9c2b7;
+}
+
 body.customer-theme-dark .service-search {
   border: 0;
   background: transparent;
@@ -27517,4 +27525,731 @@ body.sg-admin-typography .dashboard-sort-button {
   font-size: 9px !important;
   font-weight: 600 !important;
   letter-spacing: 0.045em !important;
+}
+
+/* Admin metric cards share the tinted, icon-led summary treatment. */
+#adminDashboardMain .admin-dashboard-stat,
+#appointmentsMain .apt-stats .um-stat-card,
+body #userManagementMain .um-stats .um-stat-card,
+body .admin-clients-main .client-summary-card,
+body.InventoryManagement .admin-inventory-main .summary-card,
+.fin-expenses-page .fin-expense-overview article,
+.fin-reports-page .fin-report-stat,
+.fin-dashboard .fin-dashboard-kpi {
+  --admin-metric-bg: #fbf2d8;
+  --admin-metric-border: #eee1b9;
+  --admin-metric-accent: #80621f;
+  --admin-metric-icon-bg: rgba(255, 255, 255, .72);
+  --admin-metric-orb: rgba(255, 255, 255, .42);
+  --admin-metric-orb-accent: rgba(201, 168, 76, .2);
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid var(--admin-metric-border) !important;
+  border-radius: 14px;
+  background: var(--admin-metric-bg) !important;
+  box-shadow: 0 5px 16px rgba(89, 68, 28, .06);
+}
+
+#adminDashboardMain .admin-dashboard-stat::before,
+#adminDashboardMain .admin-dashboard-stat::after,
+#appointmentsMain .apt-stats .um-stat-card::before,
+#appointmentsMain .apt-stats .um-stat-card::after,
+body #userManagementMain .um-stats .um-stat-card::before,
+body #userManagementMain .um-stats .um-stat-card::after,
+body .admin-clients-main .client-summary-card::before,
+body .admin-clients-main .client-summary-card::after,
+body.InventoryManagement .admin-inventory-main .summary-card::before,
+body.InventoryManagement .admin-inventory-main .summary-card::after,
+.fin-expenses-page .fin-expense-overview article::before,
+.fin-expenses-page .fin-expense-overview article::after,
+.fin-reports-page .fin-report-stat::before,
+.fin-reports-page .fin-report-stat::after,
+.fin-dashboard .fin-dashboard-kpi::before,
+.fin-dashboard .fin-dashboard-kpi::after {
+  position: absolute;
+  z-index: 0;
+  border: 0;
+  border-radius: 50%;
+  content: "";
+  pointer-events: none;
+}
+
+#adminDashboardMain .admin-dashboard-stat::before,
+#appointmentsMain .apt-stats .um-stat-card::before,
+body #userManagementMain .um-stats .um-stat-card::before,
+body .admin-clients-main .client-summary-card::before,
+body.InventoryManagement .admin-inventory-main .summary-card::before,
+.fin-expenses-page .fin-expense-overview article::before,
+.fin-reports-page .fin-report-stat::before,
+.fin-dashboard .fin-dashboard-kpi::before {
+  top: -72px;
+  right: -24px;
+  width: 142px;
+  height: 142px;
+  background: var(--admin-metric-orb);
+}
+
+#adminDashboardMain .admin-dashboard-stat::after,
+#appointmentsMain .apt-stats .um-stat-card::after,
+body #userManagementMain .um-stats .um-stat-card::after,
+body .admin-clients-main .client-summary-card::after,
+body.InventoryManagement .admin-inventory-main .summary-card::after,
+.fin-expenses-page .fin-expense-overview article::after,
+.fin-reports-page .fin-report-stat::after,
+.fin-dashboard .fin-dashboard-kpi::after {
+  top: 28px;
+  right: -42px;
+  width: 108px;
+  height: 108px;
+  background: var(--admin-metric-orb-accent);
+}
+
+#adminDashboardMain .admin-dashboard-stat > *,
+#appointmentsMain .apt-stats .um-stat-card > *,
+body #userManagementMain .um-stats .um-stat-card > *,
+body .admin-clients-main .client-summary-card > *,
+body.InventoryManagement .admin-inventory-main .summary-card > *,
+.fin-expenses-page .fin-expense-overview article > *,
+.fin-reports-page .fin-report-stat > *,
+.fin-dashboard .fin-dashboard-kpi > * {
+  position: relative;
+  z-index: 1;
+}
+
+#adminDashboardMain .admin-dashboard-stat:hover {
+  box-shadow: 0 9px 22px rgba(89, 68, 28, .12);
+}
+
+#adminDashboardMain .admin-dashboard-stat--requests,
+body .admin-clients-main .client-summary-card--rescheduled,
+body.InventoryManagement .admin-inventory-main #lowStockCard,
+body.InventoryManagement .admin-inventory-main #criticalStockCard {
+  --admin-metric-bg: #fbf0df;
+  --admin-metric-border: #ecd9b7;
+  --admin-metric-accent: #93612d;
+  --admin-metric-orb-accent: rgba(193, 138, 71, .2);
+}
+
+#adminDashboardMain .admin-dashboard-stat--users,
+#appointmentsMain .apt-stats .um-stat-card:nth-child(2),
+body #userManagementMain .um-stats .um-stat-card:nth-child(2),
+.fin-expenses-page .fin-expense-card--electricity,
+.fin-reports-page .fin-report-stat--collected,
+.fin-dashboard .fin-dashboard-kpi--collected {
+  --admin-metric-bg: #eaf3ec;
+  --admin-metric-border: #dce8df;
+  --admin-metric-accent: #467450;
+  --admin-metric-icon-bg: rgba(255, 255, 255, .68);
+  --admin-metric-orb-accent: rgba(70, 116, 80, .16);
+}
+
+#appointmentsMain .apt-stats .um-stat-card:nth-child(3),
+body .admin-clients-main .client-summary-card--cancelled,
+body #userManagementMain .um-stats .um-stat-card:nth-child(4),
+body.InventoryManagement .admin-inventory-main #outOfStockCard,
+body.InventoryManagement .admin-inventory-main #expiredItemsCard,
+.fin-reports-page .fin-report-stat--expenses,
+.fin-dashboard .fin-dashboard-kpi--expenses {
+  --admin-metric-bg: #f8eae7;
+  --admin-metric-border: #ead2ce;
+  --admin-metric-accent: #a14f49;
+  --admin-metric-orb-accent: rgba(161, 79, 73, .15);
+}
+
+body #userManagementMain .um-stats .um-stat-card:nth-child(3),
+body.InventoryManagement .admin-inventory-main #expiringSoonCard,
+.fin-expenses-page .fin-expense-card--machine {
+  --admin-metric-bg: #edf1f4;
+  --admin-metric-border: #dce3e8;
+  --admin-metric-accent: #536b79;
+  --admin-metric-orb-accent: rgba(83, 107, 121, .16);
+}
+
+#adminDashboardMain .admin-dashboard-stat--appointments,
+#appointmentsMain .apt-stats .um-stat-card:nth-child(1),
+body .admin-clients-main .client-summary-card:not(.client-summary-card--rescheduled):not(.client-summary-card--cancelled),
+body #userManagementMain .um-stats .um-stat-card:nth-child(1),
+body.InventoryManagement .admin-inventory-main #totalProductsCard,
+.fin-expenses-page .fin-expense-summary-total,
+.fin-reports-page .fin-report-stat--sales,
+.fin-reports-page .fin-report-stat--net,
+.fin-dashboard .fin-dashboard-kpi--sales,
+.fin-dashboard .fin-dashboard-kpi--net {
+  --admin-metric-bg: #fbf2d8;
+  --admin-metric-border: #eee1b9;
+  --admin-metric-accent: #80621f;
+}
+
+body.InventoryManagement .admin-inventory-main #criticalStockCard,
+body.InventoryManagement .admin-inventory-main #expiringSoonCard {
+  --admin-metric-bg: #fbf0df;
+  --admin-metric-border: #ecd9b7;
+  --admin-metric-accent: #93612d;
+}
+
+.admin-metric-icon {
+  position: absolute !important;
+  top: 14px;
+  right: 14px;
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 1px solid var(--admin-metric-border);
+  border-radius: 11px;
+  background: var(--admin-metric-icon-bg);
+}
+
+.admin-metric-icon img {
+  display: block;
+  width: 19px;
+  height: 19px;
+}
+
+body.InventoryManagement .admin-inventory-main .summary-card {
+  min-height: 116px;
+  padding: 16px 18px;
+}
+
+body.InventoryManagement .admin-inventory-main .summary-label {
+  max-width: calc(100% - 44px);
+  color: #716b62;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+body.InventoryManagement .admin-inventory-main .summary-value,
+#appointmentsMain .um-stat-card__value,
+body #userManagementMain .um-stat-card__value,
+.fin-reports-page .fin-report-stat strong,
+.fin-dashboard .fin-dashboard-kpi > strong {
+  color: var(--admin-metric-accent);
+}
+
+body .admin-clients-main .client-summary-card {
+  min-height: 96px;
+  padding: 16px;
+}
+
+body .admin-clients-main .client-summary-label,
+body .admin-clients-main .client-summary-hint {
+  color: #716b62;
+}
+
+body .admin-clients-main .client-summary-value,
+body .admin-clients-main .client-summary-value--cancelled {
+  color: var(--admin-metric-accent);
+}
+
+.fin-expenses-page .fin-expense-overview article {
+  padding-right: 58px;
+}
+
+.fin-expenses-page .fin-expense-overview article > span:not(.admin-metric-icon),
+.fin-expenses-page .fin-expense-overview article > strong {
+  color: var(--admin-metric-accent);
+}
+
+.fin-expenses-page .fin-expense-overview article strong#expenseTotal {
+  color: var(--admin-metric-accent);
+}
+
+.fin-expenses-page .fin-expense-overview article span#machineExpenseTotal,
+.fin-expenses-page .fin-expense-overview article span#utilitiesExpenseTotal {
+  color: var(--admin-metric-accent);
+}
+
+.fin-reports-page .fin-report-stat {
+  padding-right: 58px;
+}
+
+.fin-reports-page .fin-report-stat > span:not(.admin-metric-icon) {
+  color: #716b62;
+}
+
+.fin-reports-page .fin-report-stat strong {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.fin-dashboard .fin-dashboard-kpi {
+  padding-right: 58px;
+}
+
+#appointmentsMain .apt-stats .um-stat-card {
+  border-left: 1px solid var(--admin-metric-border) !important;
+}
+
+#appointmentsMain .apt-stats .um-stat-card .apt-stat-icon {
+  position: absolute;
+  z-index: 2;
+  top: 17px;
+  left: 16px;
+}
+
+#appointmentsMain .apt-stats .um-stat-card .apt-stat-link {
+  position: absolute;
+  z-index: 2;
+  top: 19px;
+  right: 17px;
+  left: auto;
+  color: var(--admin-metric-accent);
+}
+
+body.staff-theme-dark #adminDashboardMain .admin-dashboard-stat,
+body.staff-theme-dark #appointmentsMain .apt-stats .um-stat-card,
+body.staff-theme-dark #userManagementMain .um-stats .um-stat-card,
+body.staff-theme-dark .admin-clients-main .client-summary-card,
+body.staff-theme-dark.InventoryManagement .admin-inventory-main .summary-card,
+body.staff-theme-dark .fin-expenses-page .fin-expense-overview article,
+body.staff-theme-dark .fin-reports-page .fin-report-stat,
+body.staff-theme-dark .fin-dashboard .fin-dashboard-kpi {
+  --admin-metric-bg: #433a26;
+  --admin-metric-border: rgba(232, 199, 110, .26);
+  --admin-metric-accent: #f0d58f;
+  --admin-metric-icon-bg: rgba(20, 21, 19, .32);
+  --admin-metric-orb: rgba(245, 215, 146, .15);
+  --admin-metric-orb-accent: rgba(255, 255, 255, .08);
+  background: var(--admin-metric-bg) !important;
+  color: #f3eee4;
+  box-shadow: 0 5px 16px rgba(0, 0, 0, .14);
+}
+
+body.staff-theme-dark #adminDashboardMain .admin-dashboard-stat--requests,
+body.staff-theme-dark .admin-clients-main .client-summary-card--rescheduled,
+body.staff-theme-dark.InventoryManagement .admin-inventory-main #lowStockCard,
+body.staff-theme-dark.InventoryManagement .admin-inventory-main #criticalStockCard {
+  --admin-metric-bg: #403326;
+  --admin-metric-border: rgba(213, 160, 94, .25);
+  --admin-metric-accent: #e9bd7a;
+  --admin-metric-orb-accent: rgba(193, 138, 71, .15);
+}
+
+body.staff-theme-dark #adminDashboardMain .admin-dashboard-stat--users,
+body.staff-theme-dark #appointmentsMain .apt-stats .um-stat-card:nth-child(2),
+body.staff-theme-dark #userManagementMain .um-stats .um-stat-card:nth-child(2),
+body.staff-theme-dark.InventoryManagement .admin-inventory-main #totalProductsCard,
+body.staff-theme-dark .fin-expenses-page .fin-expense-card--electricity,
+body.staff-theme-dark .fin-reports-page .fin-report-stat--collected,
+body.staff-theme-dark .fin-dashboard .fin-dashboard-kpi--collected {
+  --admin-metric-bg: #293a30;
+  --admin-metric-border: rgba(133, 178, 145, .25);
+  --admin-metric-accent: #a9d0b1;
+  --admin-metric-orb-accent: rgba(133, 178, 145, .13);
+}
+
+body.staff-theme-dark #appointmentsMain .apt-stats .um-stat-card:nth-child(3),
+body.staff-theme-dark .admin-clients-main .client-summary-card--cancelled,
+body.staff-theme-dark #userManagementMain .um-stats .um-stat-card:nth-child(4),
+body.staff-theme-dark.InventoryManagement .admin-inventory-main #outOfStockCard,
+body.staff-theme-dark.InventoryManagement .admin-inventory-main #expiredItemsCard,
+body.staff-theme-dark .fin-reports-page .fin-report-stat--expenses,
+body.staff-theme-dark .fin-dashboard .fin-dashboard-kpi--expenses {
+  --admin-metric-bg: #422d2b;
+  --admin-metric-border: rgba(210, 135, 125, .24);
+  --admin-metric-accent: #e6aaa3;
+  --admin-metric-orb-accent: rgba(161, 79, 73, .16);
+}
+
+body.staff-theme-dark #userManagementMain .um-stats .um-stat-card:nth-child(3),
+body.staff-theme-dark.InventoryManagement .admin-inventory-main #expiringSoonCard,
+body.staff-theme-dark .fin-expenses-page .fin-expense-card--machine {
+  --admin-metric-bg: #2b353a;
+  --admin-metric-border: rgba(146, 174, 190, .23);
+  --admin-metric-accent: #b5cbd6;
+  --admin-metric-orb-accent: rgba(83, 107, 121, .15);
+}
+
+body.staff-theme-dark #adminDashboardMain .admin-dashboard-stat--appointments,
+body.staff-theme-dark #appointmentsMain .apt-stats .um-stat-card:nth-child(1),
+body.staff-theme-dark .admin-clients-main .client-summary-card:not(.client-summary-card--rescheduled):not(.client-summary-card--cancelled),
+body.staff-theme-dark #userManagementMain .um-stats .um-stat-card:nth-child(1),
+body.staff-theme-dark .fin-expenses-page .fin-expense-summary-total,
+body.staff-theme-dark .fin-reports-page .fin-report-stat--sales,
+body.staff-theme-dark .fin-reports-page .fin-report-stat--net,
+body.staff-theme-dark .fin-dashboard .fin-dashboard-kpi--sales,
+body.staff-theme-dark .fin-dashboard .fin-dashboard-kpi--net {
+  --admin-metric-bg: #433a26;
+  --admin-metric-border: rgba(232, 199, 110, .26);
+  --admin-metric-accent: #f0d58f;
+}
+
+body.staff-theme-dark.InventoryManagement .admin-inventory-main .summary-label,
+body.staff-theme-dark #adminDashboardMain .admin-dashboard-stat__label,
+body.staff-theme-dark #adminDashboardMain .admin-dashboard-stat__hint,
+body.staff-theme-dark #appointmentsMain .um-stat-card__label,
+body.staff-theme-dark #appointmentsMain .um-stat-card__hint,
+body.staff-theme-dark #userManagementMain .um-stat-card__label,
+body.staff-theme-dark #userManagementMain .um-stat-card__hint,
+body.staff-theme-dark .admin-clients-main .client-summary-label,
+body.staff-theme-dark .admin-clients-main .client-summary-hint,
+body.staff-theme-dark .fin-expenses-page .fin-expense-overview article > span:not(.admin-metric-icon),
+body.staff-theme-dark .fin-expenses-page .fin-expense-overview article small,
+body.staff-theme-dark .fin-reports-page .fin-report-stat > span:not(.admin-metric-icon),
+body.staff-theme-dark .fin-reports-page .fin-report-stat small,
+body.staff-theme-dark .fin-dashboard .fin-dashboard-kpi > span,
+body.staff-theme-dark .fin-dashboard .fin-dashboard-kpi > small {
+  color: #c9c2b7;
+}
+
+body.staff-theme-dark #adminDashboardMain .admin-dashboard-stat strong,
+body.staff-theme-dark #appointmentsMain .um-stat-card__value,
+body.staff-theme-dark #userManagementMain .um-stats .um-stat-card__value,
+body.staff-theme-dark .admin-clients-main .client-summary-value,
+body.staff-theme-dark.InventoryManagement .admin-inventory-main .summary-value,
+body.staff-theme-dark .fin-expenses-page .fin-expense-overview article strong#expenseTotal,
+body.staff-theme-dark .fin-expenses-page .fin-expense-overview article > strong,
+body.staff-theme-dark .fin-expenses-page .fin-expense-overview article span#machineExpenseTotal,
+body.staff-theme-dark .fin-expenses-page .fin-expense-overview article span#utilitiesExpenseTotal,
+body.staff-theme-dark .fin-reports-page .fin-report-stat strong,
+body.staff-theme-dark .fin-dashboard .fin-dashboard-kpi > strong {
+  color: var(--admin-metric-accent);
+}
+
+body.staff-theme-dark .admin-metric-icon {
+  border-color: rgba(255, 255, 255, .13);
+  background: var(--admin-metric-icon-bg);
+}
+
+body.staff-theme-dark .admin-metric-icon img {
+  filter: brightness(0) invert(.82);
+}
+
+body.staff-theme-dark.InventoryManagement .admin-inventory-main .summary-info.positive {
+  color: #a9d0b1;
+}
+
+body.staff-theme-dark.InventoryManagement .admin-inventory-main .summary-info.warning {
+  color: #e9bd7a;
+}
+
+body.staff-theme-dark.InventoryManagement .admin-inventory-main .summary-info.danger {
+  color: #e6aaa3;
+}
+
+@media (max-width: 480px) {
+  .fin-expenses-page .fin-expense-overview article,
+  .fin-reports-page .fin-report-stat,
+  .fin-dashboard .fin-dashboard-kpi {
+    min-height: 126px;
+    padding: 58px 12px 12px;
+  }
+
+  .fin-expenses-page .admin-metric-icon,
+  .fin-reports-page .admin-metric-icon,
+  .fin-dashboard .admin-metric-icon {
+    top: 10px;
+    right: 10px;
+  }
+
+  .fin-expenses-page .fin-expense-overview article strong#expenseTotal {
+    font-size: 1.2rem;
+  }
+
+  .fin-expenses-page .fin-expense-overview article span#machineExpenseTotal,
+  .fin-expenses-page .fin-expense-overview article span#utilitiesExpenseTotal {
+    font-size: 1.05rem;
+  }
+
+  .fin-reports-page .fin-report-stat strong,
+  .fin-dashboard .fin-dashboard-kpi > strong {
+    font-size: 1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #adminDashboardMain .admin-dashboard-stat {
+    transition: none;
+  }
+}
+
+/* Aesthetician and inventory-officer metric cards use the same summary treatment. */
+body.aesthetician-page .dashboard-summary-card,
+body.aesthetician-page .client-summary-card,
+body.inventory-officer-page .summary-card {
+  --admin-metric-bg: #fbf2d8;
+  --admin-metric-border: #eee1b9;
+  --admin-metric-accent: #80621f;
+  --admin-metric-icon-bg: rgba(255, 255, 255, .72);
+  --admin-metric-orb: rgba(255, 255, 255, .42);
+  --admin-metric-orb-accent: rgba(201, 168, 76, .2);
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid var(--admin-metric-border);
+  border-radius: 14px;
+  background: var(--admin-metric-bg);
+  box-shadow: 0 5px 16px rgba(89, 68, 28, .06);
+}
+
+body.aesthetician-page .dashboard-summary-card::before,
+body.aesthetician-page .dashboard-summary-card::after,
+body.aesthetician-page .client-summary-card::before,
+body.aesthetician-page .client-summary-card::after,
+body.inventory-officer-page .summary-card::before,
+body.inventory-officer-page .summary-card::after {
+  position: absolute;
+  z-index: 0;
+  border: 0;
+  border-radius: 50%;
+  content: "";
+  pointer-events: none;
+}
+
+body.aesthetician-page .dashboard-summary-card::before,
+body.aesthetician-page .client-summary-card::before,
+body.inventory-officer-page .summary-card::before {
+  top: -72px;
+  right: -24px;
+  width: 142px;
+  height: 142px;
+  background: var(--admin-metric-orb);
+}
+
+body.aesthetician-page .dashboard-summary-card::after,
+body.aesthetician-page .client-summary-card::after,
+body.inventory-officer-page .summary-card::after {
+  top: 28px;
+  right: -42px;
+  width: 108px;
+  height: 108px;
+  background: var(--admin-metric-orb-accent);
+}
+
+body.aesthetician-page .dashboard-summary-card > *,
+body.aesthetician-page .client-summary-card > *,
+body.inventory-officer-page .summary-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+body.aesthetician-dashboard-page .dashboard-summary-card {
+  display: block;
+  min-height: 122px;
+  padding: 16px;
+}
+
+body.aesthetician-dashboard-page .dashboard-summary-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+body.aesthetician-dashboard-page .dashboard-summary-card > div {
+  position: relative;
+  z-index: 1;
+  padding-right: 0;
+  padding-bottom: 20px;
+}
+
+body.aesthetician-dashboard-page .dashboard-summary-card > div > p {
+  color: #716b62;
+  font-weight: 600;
+}
+
+body.aesthetician-dashboard-page .dashboard-summary-card strong {
+  color: var(--admin-metric-accent);
+}
+
+body.aesthetician-dashboard-page .dashboard-summary-card small {
+  color: #81786b;
+}
+
+body.aesthetician-dashboard-page .dashboard-summary-card > .dashboard-view-link {
+  position: absolute;
+  z-index: 2;
+  top: auto;
+  right: 16px;
+  bottom: 14px;
+  color: var(--admin-metric-accent);
+}
+
+body.aesthetician-dashboard-page .dashboard-summary-card:nth-child(2) {
+  --admin-metric-bg: #eaf3ec;
+  --admin-metric-border: #dce8df;
+  --admin-metric-accent: #467450;
+  --admin-metric-icon-bg: rgba(255, 255, 255, .68);
+  --admin-metric-orb-accent: rgba(70, 116, 80, .16);
+}
+
+body.aesthetician-dashboard-page .dashboard-summary-card:nth-child(3),
+body.aesthetician-clients-page .client-summary-card:nth-child(3) {
+  --admin-metric-bg: #f8eae7;
+  --admin-metric-border: #ead2ce;
+  --admin-metric-accent: #a14f49;
+  --admin-metric-orb-accent: rgba(161, 79, 73, .15);
+}
+
+body.aesthetician-clients-page .client-summary-card:nth-child(2) {
+  --admin-metric-bg: #fbf0df;
+  --admin-metric-border: #ecd9b7;
+  --admin-metric-accent: #93612d;
+  --admin-metric-orb-accent: rgba(193, 138, 71, .2);
+}
+
+body.aesthetician-clients-page .client-summary-card {
+  min-height: 96px;
+  padding: 16px;
+}
+
+body.aesthetician-clients-page .client-summary-label,
+body.aesthetician-clients-page .client-summary-hint {
+  color: #716b62;
+}
+
+body.aesthetician-clients-page .client-summary-value,
+body.aesthetician-clients-page .client-summary-value--cancelled {
+  color: var(--admin-metric-accent);
+}
+
+body.inventory-officer-page .summary-card {
+  min-height: 116px;
+  padding: 16px 18px;
+}
+
+body.inventory-officer-page .summary-label {
+  max-width: calc(100% - 44px);
+  color: #716b62;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+body.inventory-officer-page .summary-value {
+  color: var(--admin-metric-accent);
+}
+
+body.inventory-officer-page #lowStockCard,
+body.inventory-officer-page #criticalStockCard {
+  --admin-metric-bg: #fbf0df;
+  --admin-metric-border: #ecd9b7;
+  --admin-metric-accent: #93612d;
+  --admin-metric-orb-accent: rgba(193, 138, 71, .2);
+}
+
+body.inventory-officer-page #outOfStockCard,
+body.inventory-officer-page #expiredItemsCard {
+  --admin-metric-bg: #f8eae7;
+  --admin-metric-border: #ead2ce;
+  --admin-metric-accent: #a14f49;
+  --admin-metric-orb-accent: rgba(161, 79, 73, .15);
+}
+
+body.inventory-officer-page #expiringSoonCard {
+  --admin-metric-bg: #edf1f4;
+  --admin-metric-border: #dce3e8;
+  --admin-metric-accent: #536b79;
+  --admin-metric-orb-accent: rgba(83, 107, 121, .16);
+}
+
+body.inventory-officer-page .summary-info.positive {
+  color: #467450;
+}
+
+body.inventory-officer-page .summary-info.warning {
+  color: #93612d;
+}
+
+body.inventory-officer-page .summary-info.danger {
+  color: #a14f49;
+}
+
+body.staff-theme-dark.aesthetician-page .dashboard-summary-card,
+body.staff-theme-dark.aesthetician-page .client-summary-card,
+body.staff-theme-dark.inventory-officer-page .summary-card {
+  --admin-metric-bg: #433a26;
+  --admin-metric-border: rgba(232, 199, 110, .26);
+  --admin-metric-accent: #f0d58f;
+  --admin-metric-icon-bg: rgba(20, 21, 19, .32);
+  --admin-metric-orb: rgba(245, 215, 146, .15);
+  --admin-metric-orb-accent: rgba(255, 255, 255, .08);
+  border-color: var(--admin-metric-border);
+  background: var(--admin-metric-bg);
+  box-shadow: 0 5px 16px rgba(0, 0, 0, .14);
+}
+
+body.staff-theme-dark.aesthetician-dashboard-page .dashboard-summary-card > div > p,
+body.staff-theme-dark.aesthetician-dashboard-page .dashboard-summary-card small,
+body.staff-theme-dark.aesthetician-clients-page .client-summary-label,
+body.staff-theme-dark.aesthetician-clients-page .client-summary-hint,
+body.staff-theme-dark.inventory-officer-page .summary-label {
+  color: #c9c2b7;
+}
+
+body.staff-theme-dark.aesthetician-dashboard-page .dashboard-summary-card strong,
+body.staff-theme-dark.aesthetician-dashboard-page .dashboard-summary-card > .dashboard-view-link,
+body.staff-theme-dark.aesthetician-clients-page .client-summary-value,
+body.staff-theme-dark.aesthetician-clients-page .client-summary-value--cancelled,
+body.staff-theme-dark.inventory-officer-page .summary-value {
+  color: var(--admin-metric-accent);
+}
+
+body.staff-theme-dark.aesthetician-clients-page .client-summary-card:nth-child(2),
+body.staff-theme-dark.inventory-officer-page #lowStockCard,
+body.staff-theme-dark.inventory-officer-page #criticalStockCard {
+  --admin-metric-bg: #403326;
+  --admin-metric-border: rgba(213, 160, 94, .25);
+  --admin-metric-accent: #e9bd7a;
+  --admin-metric-orb-accent: rgba(193, 138, 71, .15);
+}
+
+body.staff-theme-dark.aesthetician-dashboard-page .dashboard-summary-card:nth-child(2) {
+  --admin-metric-bg: #293a30;
+  --admin-metric-border: rgba(133, 178, 145, .25);
+  --admin-metric-accent: #a9d0b1;
+  --admin-metric-orb-accent: rgba(133, 178, 145, .13);
+}
+
+body.staff-theme-dark.aesthetician-dashboard-page .dashboard-summary-card:nth-child(3),
+body.staff-theme-dark.aesthetician-clients-page .client-summary-card:nth-child(3),
+body.staff-theme-dark.inventory-officer-page #outOfStockCard,
+body.staff-theme-dark.inventory-officer-page #expiredItemsCard {
+  --admin-metric-bg: #422d2b;
+  --admin-metric-border: rgba(210, 135, 125, .24);
+  --admin-metric-accent: #e6aaa3;
+  --admin-metric-orb-accent: rgba(161, 79, 73, .16);
+}
+
+body.staff-theme-dark.inventory-officer-page #expiringSoonCard {
+  --admin-metric-bg: #2b353a;
+  --admin-metric-border: rgba(146, 174, 190, .23);
+  --admin-metric-accent: #b5cbd6;
+  --admin-metric-orb-accent: rgba(83, 107, 121, .15);
+}
+
+body.staff-theme-dark.inventory-officer-page .summary-info.positive {
+  color: #a9d0b1;
+}
+
+body.staff-theme-dark.inventory-officer-page .summary-info.warning {
+  color: #e9bd7a;
+}
+
+body.staff-theme-dark.inventory-officer-page .summary-info.danger {
+  color: #e6aaa3;
+}
+
+@media (max-width: 760px) {
+  body.aesthetician-dashboard-page .dashboard-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  body.aesthetician-dashboard-page .dashboard-summary-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+body.staff-theme-dark .admin-metric-icon {
+  border-color: rgba(255, 255, 255, .13);
+  background: var(--admin-metric-icon-bg);
+}
+
+body.staff-theme-dark .admin-metric-icon img {
+  filter: brightness(0) invert(.82);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.inventory-officer-page .summary-card {
+    transition: none;
+  }
 }
