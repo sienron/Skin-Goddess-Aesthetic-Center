@@ -492,13 +492,33 @@
     const sidebarBackdrop = document.getElementById("sidebarBackdrop");
     if (sidebarToggle && invSidebar && sidebarBackdrop) {
         sidebarToggle.addEventListener("click", () => {
-            invSidebar.classList.toggle("sidebar-open");
-            sidebarBackdrop.classList.toggle("show");
+            const isOpen = invSidebar.classList.toggle("sidebar-open");
+            sidebarBackdrop.classList.toggle("show", isOpen);
+            sidebarToggle.setAttribute("aria-expanded", String(isOpen));
+            sidebarToggle.setAttribute("aria-label", isOpen ? "Close inventory menu" : "Open inventory menu");
         });
 
         sidebarBackdrop.addEventListener("click", () => {
             invSidebar.classList.remove("sidebar-open");
             sidebarBackdrop.classList.remove("show");
+            sidebarToggle.setAttribute("aria-expanded", "false");
+            sidebarToggle.setAttribute("aria-label", "Open inventory menu");
+        });
+
+        document.addEventListener("keydown", event => {
+            if (event.key !== "Escape" || !invSidebar.classList.contains("sidebar-open")) return;
+            invSidebar.classList.remove("sidebar-open");
+            sidebarBackdrop.classList.remove("show");
+            sidebarToggle.setAttribute("aria-expanded", "false");
+            sidebarToggle.setAttribute("aria-label", "Open inventory menu");
+        });
+
+        window.addEventListener("resize", () => {
+            if (window.innerWidth <= 860) return;
+            invSidebar.classList.remove("sidebar-open");
+            sidebarBackdrop.classList.remove("show");
+            sidebarToggle.setAttribute("aria-expanded", "false");
+            sidebarToggle.setAttribute("aria-label", "Open inventory menu");
         });
     }
 

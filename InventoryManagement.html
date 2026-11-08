@@ -70,6 +70,11 @@
     <header class="inventory-header">
 
         <div class="header-left">
+            <button class="sidebar-toggle" id="sidebarToggle" type="button" aria-label="Open inventory menu" aria-controls="invSidebar" aria-expanded="false">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
 
             <div class="header-title">
                 <h1>Inventory Management</h1>
@@ -455,7 +460,8 @@
                             Category
                         </label>
                 
-                        <select id="editCategory">
+                        <select id="editCategory" required>
+                            <option value="" disabled>Select a category</option>
                 
                             <option value="Medical/Injection Supplies">
                                 Medical/Injection Supplies
@@ -605,7 +611,8 @@
                             Category
                         </label>
 
-                        <select id="addCategory">
+                        <select id="addCategory" required>
+                            <option value="" disabled selected>Select a category</option>
 
                             <option value="Medical/Injection Supplies">
                                 Medical/Injection Supplies

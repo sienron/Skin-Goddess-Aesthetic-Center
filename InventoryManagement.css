@@ -84,7 +84,7 @@ body.inventory-transactions-page > .inventory-page {
 
     flex-shrink: 0;
 
-    display: flex;
+    display: none;
     align-items: center;
     justify-content: center;
 
@@ -97,6 +97,18 @@ body.inventory-transactions-page > .inventory-page {
     cursor: pointer;
 
     transition: 0.2s ease;
+}
+
+.sidebar-toggle span {
+    display: block;
+    width: 16px;
+    height: 2px;
+    background: currentColor;
+}
+
+.inventory-header .sidebar-toggle {
+    flex-direction: column;
+    gap: 4px;
 }
 
 .sidebar-toggle:hover {
@@ -1177,6 +1189,12 @@ body.inventory-transactions-page > .inventory-page {
 
     
 
+}
+
+@media (max-width: 860px) {
+    body.inventory-officer-page .inventory-header .sidebar-toggle {
+        display: flex;
+    }
 }
 
 

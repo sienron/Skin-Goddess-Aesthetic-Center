@@ -4,7 +4,7 @@ const LUNCH_BREAK_START = '12:00';
 const LUNCH_BREAK_END = '13:00';
 const CLOSED_WEEKDAYS = [];
 const MAX_ADVANCE_DAYS = 60;
-const MIN_BOOKING_LEAD_MINUTES = 30;
+const MIN_BOOKING_LEAD_MINUTES = 3 * 60;
 const DEFAULT_BUFFER_MINUTES = 30;
 const BOOKING_INTERVAL_MINUTES = 30;
 
@@ -77,6 +77,10 @@ function isSlotInPast(dateStr, timeStr24) {
   return dateStr < now.dateStr || (dateStr === now.dateStr && timeStr24 <= now.timeStr);
 }
 
+function isAppointmentStartedToday(dateStr, timeStr24, now = manilaNow()) {
+  return dateStr === now.dateStr && timeStr24 <= now.timeStr;
+}
+
 // Same-day bookings need at least the configured lead time before they begin.
 function isSlotTooSoon(dateStr, timeStr24) {
   const now = manilaNow();
@@ -104,6 +108,7 @@ module.exports = {
   addMinutes,
   overlapsLunchBreak,
   manilaNow,
+  isAppointmentStartedToday,
   isSlotInPast,
   isSlotTooSoon,
 };

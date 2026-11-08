@@ -11400,6 +11400,13 @@ body:not(.profile-ready) .mobile-nav-profile {
   color: var(--text-muted) !important;
 }
 
+.apt-load-warning {
+  padding: 10px 12px !important;
+  color: #7a4b00 !important;
+  background: #fff8e7;
+  font-size: 12px;
+}
+
 .apt-row--live {
   background: #fdfaf1;
 }

@@ -54,7 +54,12 @@ async function withFrozenDate(isoDate, callback) {
   }
 }
 
-async function loadAvailability({ service, staff, existingAppointments }) {
+async function loadAvailability({
+  service,
+  staff,
+  existingAppointments,
+  now = '2026-01-04T21:00:00.000Z'
+}) {
   const queries = [];
   db.query = async (sql, values = []) => {
     queries.push({ sql, values });
@@ -72,7 +77,7 @@ async function loadAvailability({ service, staff, existingAppointments }) {
 
   const response = responseCapture();
   try {
-    await withFrozenDate('2026-01-05T00:00:00.000Z', () => routeLayer(availabilityRouter, '/', 'get').stack.at(-1).handle({
+    await withFrozenDate(now, () => routeLayer(availabilityRouter, '/', 'get').stack.at(-1).handle({
       session: { userId: 7 },
       query: { month: '2026-01', serviceId: '3' }
     }, response));
@@ -131,6 +136,19 @@ test('availability applies treatment plus buffer and shared aesthetician availab
   });
   assert.equal(afterExtension.response.body['2026-0-5'].includes('10:30 AM'), false);
   assert.equal(afterExtension.response.body['2026-0-5'].includes('1:00 PM'), true);
+});
+
+test('same-day availability excludes starts inside three hours and includes the exact boundary', async () => {
+  const result = await loadAvailability({
+    service: { duration_minutes: 30, buffer_minutes: 0 },
+    staff: [{ user_id: 31 }],
+    existingAppointments: [],
+    now: '2026-01-05T00:00:00.000Z'
+  });
+  const todaySlots = result.response.body['2026-0-5'];
+
+  assert.equal(todaySlots.includes('10:30 AM'), false);
+  assert.equal(todaySlots.includes('11:00 AM'), true);
 });
 
 async function runAdjustment({

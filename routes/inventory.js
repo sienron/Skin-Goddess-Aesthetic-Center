@@ -9,6 +9,7 @@ const { notifyStockTransition } = require('../utils/inventoryNotifications');
 const { recordInventoryTransaction } = require('../utils/inventoryTransactions');
 const { recognizeImage } = require('../utils/invoiceOcr');
 const { parseInvoiceText, INVOICE_PARSER_CONFIG } = require('../utils/invoiceParser');
+const { isInventoryCategory } = require('../utils/inventoryCategories');
 
 router.use(requireRole('inventory_officer', 'admin'));
 
@@ -69,9 +70,8 @@ function validateBatchRows(rows) {
             || Number(row.unit_price) < 0 || Number(row.unit_price) > 99999999.99) {
             return `Row ${index + 1} unit price must be a non-negative number.`;
         }
-        if (typeof row.category !== 'string' || !row.category.trim()
-            || row.category.trim().length > 100) {
-            return `Row ${index + 1} needs a category of 1 to 100 characters.`;
+        if (!isInventoryCategory(row.category)) {
+            return `Row ${index + 1} needs a valid inventory category.`;
         }
         if (!validExpiryDate(row.expiry_date)) {
             return `Row ${index + 1} expiration date must be a valid date.`;
@@ -505,7 +505,14 @@ router.get('/restocked-today', async (req, res) => {
                 COALESCE(SUM(quantity), 0) AS total_restocked
             FROM inventory_transactions
             WHERE transaction_type = 'Restock'
-            AND created_at::date = CURRENT_DATE
+              AND created_at >= (
+                (NOW() AT TIME ZONE 'Asia/Manila')::date::timestamp
+                AT TIME ZONE 'Asia/Manila'
+              )::timestamp
+              AND created_at < (
+                ((NOW() AT TIME ZONE 'Asia/Manila')::date + 1)::timestamp
+                AT TIME ZONE 'Asia/Manila'
+              )::timestamp
         `);
 
         res.json({
@@ -664,6 +671,12 @@ router.post('/', async (req, res) => {
             stock,
             expiry_date
         } = req.body;
+
+        if (!isInventoryCategory(category)) {
+            return res.status(400).json({
+                message: 'Choose a valid inventory category.'
+            });
+        }
 
         // Check product name
         if (!product_name || product_name.trim() === "") {
@@ -884,6 +897,11 @@ router.put("/:id", async (req, res) => {
             expiry_date
         } = body;
 
+        if (!isInventoryCategory(category)) {
+            return res.status(400).json({
+                message: "Choose a valid inventory category."
+            });
+        }
 
         // Check product name
         if (!product_name || product_name.trim() === "") {

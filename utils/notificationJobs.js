@@ -63,6 +63,7 @@ async function sendAppointmentEmailReminders(flag, hours) {
     JOIN users u ON u.user_id = a.user_id
     JOIN services s ON s.service_id = a.service_id
     WHERE a.appointment_status = 'confirmed'
+      AND a.is_demo = FALSE
       AND a.${flag} = FALSE
       AND a.appointment_date + a.appointment_time > ${now}
       AND a.appointment_date + a.appointment_time <= ${now} + ($1 * INTERVAL '1 hour')
@@ -76,6 +77,7 @@ async function sendAppointmentEmailReminders(flag, hours) {
       SET ${flag} = TRUE
       WHERE appointment_id = $1 AND ${flag} = FALSE
         AND appointment_status = 'confirmed'
+        AND is_demo = FALSE
         AND appointment_date = $2::date AND appointment_time = $3::time
         AND appointment_date + appointment_time > ${now}
         AND appointment_date + appointment_time <= ${now} + ($4 * INTERVAL '1 hour')
@@ -155,7 +157,8 @@ async function runAppointmentStatusAdvancement() {
       UPDATE appointments
       SET appointment_status = 'in_progress', updated_at = NOW()
       WHERE appointment_status = 'confirmed'
-        AND appointment_date + appointment_time <= (NOW() AT TIME ZONE 'Asia/Manila')
+        AND appointment_date = (NOW() AT TIME ZONE 'Asia/Manila')::date
+        AND appointment_time <= (NOW() AT TIME ZONE 'Asia/Manila')::time
       RETURNING appointment_id, user_id
     `);
 

@@ -5,6 +5,7 @@ const appointmentsRouter = require('../routes/appointments');
 const servicesRouter = require('../routes/services');
 const { buildCandidates } = require('../migrations/039-appointment-inventory-mappings');
 const { migrate: enableSuggestions } = require('../migrations/040-enable-service-inventory-suggestions');
+const { isAppointmentStartedToday } = require('../utils/slots');
 
 const draftRoute = appointmentsRouter.stack
   .find((layer) => layer.route?.path === '/inventory-officer/:id/review' && layer.route.methods.put)
@@ -35,6 +36,9 @@ const adminCancelRoute = appointmentsRouter.stack
   .route.stack.at(-1).handle;
 const staffNoShowRoute = appointmentsRouter.stack
   .find((layer) => layer.route?.path === '/:id/no-show' && layer.route.methods.post)
+  .route.stack.at(-1).handle;
+const advanceStartedRoute = appointmentsRouter.stack
+  .find((layer) => layer.route?.path === '/admin/advance-started' && layer.route.methods.post)
   .route.stack.at(-1).handle;
 
 async function editAppointmentStatus({ currentStatus, requestedStatus, appointmentDate }) {
@@ -432,18 +436,62 @@ test('Inventory Officer queue includes in-progress appointments and review statu
   assert.deepEqual(responseBody.map((item) => item.review_status), ['pending', 'confirmed']);
 });
 
-test('admin can mark a past in-progress appointment as no-show', async () => {
+test('admin status advancement selects only confirmed appointments scheduled to start today', async () => {
+  const originalQuery = db.query;
+  let queryText = '';
+  let queryValues;
+  db.query = async (sql, values) => {
+    queryText = sql;
+    queryValues = values;
+    return { rows: [] };
+  };
+  const response = {
+    statusCode: 200,
+    status(code) {
+      this.statusCode = code;
+      return this;
+    },
+    json(body) {
+      this.body = body;
+      return this;
+    }
+  };
+
+  try {
+    await advanceStartedRoute({}, response);
+  } finally {
+    db.query = originalQuery;
+  }
+
+  assert.equal(response.statusCode, 200);
+  assert.match(queryText, /appointment_status = 'confirmed'/);
+  assert.match(queryText, /appointment_date = \$1::date/);
+  assert.match(queryText, /appointment_time <= \$2::time/);
+  assert.doesNotMatch(queryText, /appointment_date < \$1::date/);
+  assert.match(queryValues[0], /^\d{4}-\d{2}-\d{2}$/);
+  assert.match(queryValues[1], /^\d{2}:\d{2}$/);
+});
+
+test('appointment no-show eligibility is limited to already-started appointments today', () => {
+  const now = { dateStr: '2026-11-09', timeStr: '09:30' };
+
+  assert.equal(isAppointmentStartedToday('2026-11-09', '09:00', now), true);
+  assert.equal(isAppointmentStartedToday('2026-11-09', '09:30', now), true);
+  assert.equal(isAppointmentStartedToday('2026-11-09', '10:00', now), false);
+  assert.equal(isAppointmentStartedToday('2026-11-08', '09:00', now), false);
+  assert.equal(isAppointmentStartedToday('2026-11-10', '09:00', now), false);
+});
+
+test('admin cannot mark a past in-progress appointment as no-show', async () => {
   const result = await editAppointmentStatus({
     currentStatus: 'in_progress',
     requestedStatus: 'no_show',
     appointmentDate: '2000-01-01'
   });
 
-  assert.equal(result.statusCode, 200);
-  assert.equal(result.responseBody.status, 'no_show');
-  const update = result.queryCalls.find(({ sql }) => /UPDATE appointments/.test(sql));
-  assert.ok(update);
-  assert.equal(update.values[0], 'no_show');
+  assert.equal(result.statusCode, 409);
+  assert.match(result.responseBody.message, /started today/i);
+  assert.equal(result.queryCalls.some(({ sql }) => /UPDATE appointments/.test(sql)), false);
 });
 
 test('admin cannot mark a future appointment as no-show', async () => {

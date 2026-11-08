@@ -74,7 +74,7 @@ function validCustomerDetails() {
   };
 }
 
-async function invokeCheckout(body, isoDate = '2026-01-05T00:00:00.000Z', serviceOverrides = {}) {
+async function invokeCheckout(body, isoDate = '2026-01-04T22:00:00.000Z', serviceOverrides = {}) {
   const queryCalls = [];
   let checkoutValues;
   db.query = async (sql, values = []) => {
@@ -134,33 +134,35 @@ async function invokeCheckout(body, isoDate = '2026-01-05T00:00:00.000Z', servic
   return { response, queryCalls, checkoutValues };
 }
 
-test('the shared booking rule accepts the exact 30-minute boundary and exposes half-hour intervals', async () => {
-  assert.equal(MIN_BOOKING_LEAD_MINUTES, 30);
+test('the shared booking rule accepts the exact three-hour boundary and exposes half-hour intervals', async () => {
+  assert.equal(MIN_BOOKING_LEAD_MINUTES, 180);
   assert.ok(VALID_SLOTS.includes('5:00 PM'));
   assert.ok(VALID_SLOTS.includes('9:30 AM'));
   assert.ok(VALID_SLOTS.includes('1:30 PM'));
   assert.equal(VALID_SLOTS.includes('12:00 PM'), false);
   await withFrozenDate('2026-01-05T00:00:00.000Z', async () => {
-    assert.equal(isSlotTooSoon('2026-01-05', '08:29'), true);
-    assert.equal(isSlotTooSoon('2026-01-05', '08:30'), false);
-    assert.equal(isSlotTooSoon('2026-01-05', '1:00 PM'), false);
+    assert.equal(isSlotTooSoon('2026-01-05', '10:59'), true);
+    assert.equal(isSlotTooSoon('2026-01-05', '11:00'), false);
+    assert.equal(isSlotTooSoon('2026-01-05', '11:30'), false);
   });
 });
 
 test('the booking notice matches the backend minimum lead time', () => {
   const bookingPage = fs.readFileSync(path.join(__dirname, '..', 'UserAppointment.html'), 'utf8');
-  assert.match(bookingPage, new RegExp(`at least ${MIN_BOOKING_LEAD_MINUTES} minutes in advance`));
-  assert.doesNotMatch(bookingPage, /at least 3 hours in advance/i);
+  const bookingScript = fs.readFileSync(path.join(__dirname, '..', 'appointment-booking.js'), 'utf8');
+  assert.match(bookingPage, /at least 3 hours in advance/i);
+  assert.match(bookingScript, /const MIN_BOOKING_LEAD_MINUTES = 3 \* 60;/);
+  assert.match(bookingScript, /leadSeconds < MIN_BOOKING_LEAD_MINUTES \* 60/);
 });
 
-test('checkout rejects a booking inside 30 minutes and accepts the boundary with its treatment and buffer end', async () => {
+test('checkout rejects a booking inside three hours and accepts the boundary with its treatment and buffer end', async () => {
   setTestPayMongoEnvironment();
-  const early = await invokeCheckout({ ...validCustomerDetails(), time: '9:00 AM' }, '2026-01-05T00:45:00.000Z');
+  const early = await invokeCheckout({ ...validCustomerDetails(), time: '9:00 AM' }, '2026-01-04T22:15:00.000Z');
   assert.equal(early.response.statusCode, 400);
-  assert.match(early.response.body.message, /at least 30 minutes/);
+  assert.match(early.response.body.message, /at least 3 hours/);
   assert.equal(early.checkoutValues, undefined);
 
-  const boundary = await invokeCheckout({ ...validCustomerDetails() }, '2026-01-05T00:30:00.000Z');
+  const boundary = await invokeCheckout({ ...validCustomerDetails() }, '2026-01-04T22:00:00.000Z');
   assert.equal(boundary.response.statusCode, 201, JSON.stringify(boundary.response.body));
   assert.equal(boundary.checkoutValues[5], '2026-01-05');
   assert.equal(boundary.checkoutValues[6], '09:00');
@@ -178,7 +180,7 @@ test('checkout reserves service duration plus buffer and rejects lunch or closin
   setTestPayMongoEnvironment();
   const ninetyMinuteService = await invokeCheckout(
     { ...validCustomerDetails(), time: '9:30 AM' },
-    '2026-01-05T00:00:00.000Z',
+    '2026-01-04T21:00:00.000Z',
     { duration_minutes: 90 }
   );
   assert.equal(ninetyMinuteService.response.statusCode, 201);

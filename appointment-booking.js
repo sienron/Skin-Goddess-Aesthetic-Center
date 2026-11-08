@@ -24,6 +24,7 @@
     const MORNING_SLOTS = ["9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM"];
     const AFTERNOON_SLOTS = ["1:00 PM", "1:30 PM", "2:00 PM", "2:30 PM", "3:00 PM", "3:30 PM", "4:00 PM", "4:30 PM", "5:00 PM", "5:30 PM"];
     const MAX_ADVANCE_DAYS = 60;
+    const MIN_BOOKING_LEAD_MINUTES = 3 * 60;
 
     function getManilaNow() {
         const instant = new Date();
@@ -93,7 +94,7 @@
         if (slotMinutes === null) return true;
         const leadSeconds = (slotMinutes - (now.hour * 60 + now.minute)) * 60
             - now.second - now.millisecond / 1000;
-        return leadSeconds < 30 * 60;
+        return leadSeconds < MIN_BOOKING_LEAD_MINUTES * 60;
     }
 
     let allServices = [];

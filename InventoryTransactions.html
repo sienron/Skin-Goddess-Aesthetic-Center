@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="InventoryManagement.css">
 </head>
-<body class="InventoryManagement inventory-transactions-page sg-admin-typography">
+<body class="InventoryManagement inventory-officer-page inventory-transactions-page sg-admin-typography">
     <aside class="inv-sidebar" id="invSidebar">
         <a href="InventoryManagement.html" class="inv-sidebar__logo">
             <div class="logo-container">
@@ -42,6 +42,11 @@
 
     <header class="inventory-header">
         <div class="header-left">
+            <button class="sidebar-toggle" id="sidebarToggle" type="button" aria-label="Open inventory menu" aria-controls="invSidebar" aria-expanded="false">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
             <div class="header-title">
                 <h1>Stock Transaction Log</h1>
                 <p>All stock movements recorded here</p>
