@@ -5421,6 +5421,59 @@ select {
   filter: brightness(70%);
 }
 
+/* Login photo overlay and floating brand. */
+.login-layout .showcase-panel {
+  position: relative;
+  isolation: isolate;
+}
+
+.login-layout .showcase-panel::after {
+  content: "";
+  position: absolute;
+  inset: 10px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}
+
+.login-layout .showcase-image {
+  filter: none;
+}
+
+.login-showcase-brand {
+  position: absolute;
+  inset: 10px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.login-showcase-logo {
+  display: block;
+  width: min(72%, 420px);
+  height: auto;
+  max-height: 75%;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.35));
+}
+
+@keyframes login-logo-float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .login-showcase-logo {
+    animation: login-logo-float 4s ease-in-out infinite;
+  }
+}
+
 .showcase-frame {
   width: 100%;
   height: 100%;
@@ -24123,6 +24176,10 @@ body.customer-theme-dark .reset-layout {
   color: #e9e4da;
 }
 
+body.customer-theme-dark .login-layout .showcase-panel {
+  background-color: #222421;
+}
+
 body.customer-theme-dark .auth-form-group label,
 body.customer-theme-dark .form-field label,
 body.customer-theme-dark .auth-form-row,
@@ -24184,6 +24241,12 @@ body.customer-theme-dark .mobile-nav-overlay {
 
 body.customer-theme-dark .theme-toggle-icon {
   filter: invert(1);
+}
+
+@media (max-width: 768px) {
+  body.customer-theme-dark .public-header .hamburger-icon {
+    filter: brightness(0) invert(1);
+  }
 }
 
 body.customer-theme-dark .form-status.success,
