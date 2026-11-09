@@ -330,7 +330,7 @@ async function loadRestockedToday(){
         );
 
         restockedToday.textContent =
-            "↑ 0 units restocked today";
+            "Restock count unavailable";
 
     }
 
@@ -1586,7 +1586,7 @@ addProductButton.addEventListener("click", () => {
     addProductName.value = "";
 
     addCategory.value =
-        "Medical/Injection Supplies";
+        "";
 
     addExpiryDate.value = "";
 
@@ -1651,6 +1651,11 @@ confirmAddProduct.addEventListener("click", async () => {
     // Check product name
     if(productName === ""){
         alert("Product name is required.");
+        return;
+    }
+
+    if(!inventoryCategories.some(({ name }) => name === category)){
+        alert("Choose a valid product category.");
         return;
     }
 
@@ -1754,6 +1759,11 @@ confirmAddProduct.addEventListener("click", async () => {
         alert("Product name is required.");
         return;
 
+    }
+
+    if(!inventoryCategories.some(({ name }) => name === category)){
+        alert("Choose a valid product category.");
+        return;
     }
 
     if(!Number.isInteger(stock) || stock < 0 || !Number.isSafeInteger(stockAdjustment)){
@@ -2018,8 +2028,10 @@ confirmAddProduct.addEventListener("click", async () => {
 
         if (sidebarToggle && invSidebar && sidebarBackdrop) {
             sidebarToggle.addEventListener("click", () => {
-                invSidebar.classList.toggle("sidebar-open");
-                sidebarBackdrop.classList.toggle("show");
+                const isOpen = invSidebar.classList.toggle("sidebar-open");
+                sidebarBackdrop.classList.toggle("show", isOpen);
+                sidebarToggle.setAttribute("aria-expanded", String(isOpen));
+                sidebarToggle.setAttribute("aria-label", isOpen ? "Close inventory menu" : "Open inventory menu");
             });
         }
 
@@ -2027,8 +2039,26 @@ confirmAddProduct.addEventListener("click", async () => {
             sidebarBackdrop.addEventListener("click", () => {
                 invSidebar.classList.remove("sidebar-open");
                 sidebarBackdrop.classList.remove("show");
+                sidebarToggle?.setAttribute("aria-expanded", "false");
+                sidebarToggle?.setAttribute("aria-label", "Open inventory menu");
             });
         }
+
+        document.addEventListener("keydown", event => {
+            if (event.key !== "Escape" || !invSidebar?.classList.contains("sidebar-open")) return;
+            invSidebar.classList.remove("sidebar-open");
+            sidebarBackdrop?.classList.remove("show");
+            sidebarToggle?.setAttribute("aria-expanded", "false");
+            sidebarToggle?.setAttribute("aria-label", "Open inventory menu");
+        });
+
+        window.addEventListener("resize", () => {
+            if (window.innerWidth <= 860 || !invSidebar || !sidebarBackdrop) return;
+            invSidebar.classList.remove("sidebar-open");
+            sidebarBackdrop.classList.remove("show");
+            sidebarToggle?.setAttribute("aria-expanded", "false");
+            sidebarToggle?.setAttribute("aria-label", "Open inventory menu");
+        });
 
 loadInventory();
 loadRestockedToday();

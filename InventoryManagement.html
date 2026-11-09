@@ -70,6 +70,11 @@
     <header class="inventory-header">
 
         <div class="header-left">
+            <button class="sidebar-toggle" id="sidebarToggle" type="button" aria-label="Open inventory menu" aria-controls="invSidebar" aria-expanded="false">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
 
             <div class="header-title">
                 <h1>Inventory Management</h1>
@@ -119,6 +124,7 @@
         <section class="summary-cards">
 
             <div class="summary-card clickable-summary" id="totalProductsCard">
+                <span class="admin-metric-icon" aria-hidden="true"><img src="icons/staff-inventory.svg" alt=""></span>
                 <div class="summary-label">TOTAL PRODUCTS</div>
                 <div class="summary-value" id="totalProducts"></div>
                 <div class="summary-info positive" id="restockedToday">
@@ -130,6 +136,7 @@
             </div>
 
             <div class="summary-card clickable-summary" id="lowStockCard">
+                <span class="admin-metric-icon" aria-hidden="true"><img src="icons/staff-inventory.svg" alt=""></span>
                 <div class="summary-label">LOW STOCK ITEMS</div>
                 <div class="summary-value" id="lowStockCount"></div>
                 <div class="summary-info warning" id="lowStockToday" >
@@ -138,6 +145,7 @@
             </div>
 
             <div class="summary-card clickable-summary" id="criticalStockCard">
+                <span class="admin-metric-icon" aria-hidden="true"><img src="icons/staff-inventory.svg" alt=""></span>
                 <div class="summary-label">CRITICAL STOCK ITEMS</div>
                 <div class="summary-value" id="criticalStockCount"></div>
                 <div class="summary-info positive" id="criticalStockToday">
@@ -146,6 +154,7 @@
             </div>
 
             <div class="summary-card clickable-summary" id="outOfStockCard">
+                <span class="admin-metric-icon" aria-hidden="true"><img src="icons/staff-inventory.svg" alt=""></span>
                 <div class="summary-label">OUT OF STOCK ITEMS</div>
                 <div class="summary-value" id="outOfStockCount"></div>
                 <div class="summary-info positive" id="outOfStockToday">
@@ -154,6 +163,7 @@
             </div>
 
             <div class="summary-card clickable-summary" id="expiringSoonCard">
+                <span class="admin-metric-icon" aria-hidden="true"><img src="icons/staff-inventory.svg" alt=""></span>
                 <div class="summary-label">EXPIRING SOON</div>
                 <div class="summary-value" id="expiringSoonCount"></div>
                 <div class="summary-info danger">
@@ -162,7 +172,8 @@
             </div>
 
               <div class="summary-card clickable-summary" id="expiredItemsCard">
-                <div class="summary-label">EXPIRED ITEMS</div>
+                  <span class="admin-metric-icon" aria-hidden="true"><img src="icons/staff-inventory.svg" alt=""></span>
+                  <div class="summary-label">EXPIRED ITEMS</div>
                 <div class="summary-value" id="expiredItemsCount"></div>
                 <div class="summary-info danger">
                     Already expired
@@ -455,7 +466,8 @@
                             Category
                         </label>
                 
-                        <select id="editCategory">
+                        <select id="editCategory" required>
+                            <option value="" disabled>Select a category</option>
                 
                             <option value="Medical/Injection Supplies">
                                 Medical/Injection Supplies
@@ -605,7 +617,8 @@
                             Category
                         </label>
 
-                        <select id="addCategory">
+                        <select id="addCategory" required>
+                            <option value="" disabled selected>Select a category</option>
 
                             <option value="Medical/Injection Supplies">
                                 Medical/Injection Supplies

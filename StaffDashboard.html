@@ -8,7 +8,7 @@
     <title>Aesthetician Dashboard</title>
 </head>
 
-<body>
+<body class="aesthetician-page aesthetician-dashboard-page">
     <header class="staff-header">
         <button type="button" class="staff-hamburger-btn" id="hamburgerBtn" aria-label="Open menu" aria-expanded="false"
             aria-controls="mobileNavDrawer">
@@ -150,6 +150,7 @@
                     </div>
                 </article>
                 <article class="dashboard-summary-card">
+                    <span class="admin-metric-icon" aria-hidden="true"><img src="icons/staff-appointments.svg" alt=""></span>
                     <div>
                         <p>CONFIRMED</p><strong id="dashboardConfirmedCount">—</strong><small>Ready for
                             treatment</small>
@@ -157,6 +158,7 @@
                     <a href="#" class="dashboard-view-link" data-summary="confirmed">View</a>
                 </article>
                 <article class="dashboard-summary-card">
+                    <span class="admin-metric-icon" aria-hidden="true"><img src="icons/calendar.svg" alt=""></span>
                     <div>
                         <p>CANCELLED THIS MONTH</p><strong id="dashboardCancelledCount">—</strong><small>Cancelled
                             appointments</small>

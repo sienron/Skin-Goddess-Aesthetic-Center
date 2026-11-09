@@ -9,12 +9,13 @@ const { notifyStockTransition } = require('../utils/inventoryNotifications');
 const { recordInventoryTransaction } = require('../utils/inventoryTransactions');
 const { canBookAppointments } = require('../utils/appointmentBookingAccess');
 const { getPayMongoConfig } = require('../utils/paymongoConfig');
+const { isDemoCustomerAccount } = require('../utils/demoMode');
 const { loadCustomerAppointmentHistory } = require('../utils/customerAppointmentHistory');
 const { randomBytes } = require('crypto');
 const { verifyPayMongoWebhookSignature } = require('../utils/paymongoWebhookSecurity');
 const { RATING_WINDOW_DAYS } = require('../utils/appointmentRatings');
 const ratingLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, message: { message: 'Too many rating attempts. Try again later.' } });
-const { VALID_SLOTS, CLOSING_TIME, CLOSED_WEEKDAYS, MAX_ADVANCE_DAYS, MIN_BOOKING_LEAD_MINUTES, DEFAULT_BUFFER_MINUTES, to24h, from24h, addMinutes, overlapsLunchBreak, manilaNow, isSlotInPast, isSlotTooSoon } = require('../utils/slots');
+const { VALID_SLOTS, CLOSING_TIME, CLOSED_WEEKDAYS, MAX_ADVANCE_DAYS, MIN_BOOKING_LEAD_MINUTES, DEFAULT_BUFFER_MINUTES, to24h, from24h, addMinutes, overlapsLunchBreak, manilaNow, isAppointmentStartedToday, isSlotInPast, isSlotTooSoon } = require('../utils/slots');
 
 function checkoutReturnUrl(baseUrl, outcome, referenceNumber) {
   const url = new URL('/AppointmentSummary.html', baseUrl);
@@ -53,6 +54,19 @@ async function refundPayMongoPayment({ paymentId, amountCents, reason, config })
 // Refunds a checkout session still sitting at status 'paid' with no appointment created
 // (e.g. lost the race for a slot, or the payment arrived after the appointment started).
 async function attemptCheckoutRefund(referenceNumber, amountCents, paymentId, reason) {
+  if (!paymentId) return { refunded: false };
+  const eligibility = await db.query(`
+    SELECT u.email, u.role, a.is_demo
+    FROM paymongo_checkout_sessions p
+    LEFT JOIN users u ON u.user_id = p.user_id
+    LEFT JOIN appointments a ON a.appointment_id = p.appointment_id
+    WHERE p.reference_number = $1 AND p.payment_id = $2
+  `, [referenceNumber, paymentId]);
+  const checkout = eligibility.rows[0];
+  if (!checkout?.email || checkout.is_demo || isDemoCustomerAccount(checkout)) {
+    return { refunded: false };
+  }
+
   const config = getPayMongoConfig();
   if (!config) return { refunded: false };
   const refund = await refundPayMongoPayment({ paymentId, amountCents, reason, config });
@@ -74,6 +88,16 @@ async function refundAppointmentDeposit(appointmentId) {
   if (!config) return { refunded: false };
 
   return db.transaction(async (client) => {
+    const appointmentResult = await client.query(`
+      SELECT is_demo
+      FROM appointments
+      WHERE appointment_id = $1
+      FOR UPDATE
+    `, [appointmentId]);
+    if (appointmentResult.rows.length === 0 || appointmentResult.rows[0].is_demo) {
+      return { refunded: false };
+    }
+
     const sessionResult = await client.query(`
       SELECT reference_number, payment_id, amount_cents
       FROM paymongo_checkout_sessions
@@ -324,8 +348,8 @@ router.post('/admin/advance-started', requireRole('admin'), async (_req, res) =>
       SET appointment_status = 'in_progress', updated_at = NOW()
       WHERE appointment_status = 'confirmed'
         AND is_demo = FALSE
-        AND appointment_date <= $1::date
-        AND (appointment_date < $1::date OR appointment_time <= $2::time)
+        AND appointment_date = $1::date
+        AND appointment_time <= $2::time
       RETURNING appointment_id, user_id
     `, [now.dateStr, now.timeStr]);
 
@@ -585,11 +609,10 @@ router.put('/admin/:id/edit', requireRole('admin'), async (req, res) => {
         throw error;
       }
       const now = manilaNow();
-      const appointmentHasStarted = booking.appointmentDate < now.dateStr
-        || (booking.appointmentDate === now.dateStr && booking.appointmentTime <= now.timeStr);
       if (nextStatus === 'no_show'
-        && (!['confirmed', 'in_progress'].includes(currentStatus) || !appointmentHasStarted)) {
-        const error = new Error('Only a confirmed or In Progress appointment that has started can be marked No Show.');
+        && (!['confirmed', 'in_progress'].includes(currentStatus)
+          || !isAppointmentStartedToday(booking.appointmentDate, booking.appointmentTime, now))) {
+        const error = new Error('Only a confirmed or In Progress appointment that has started today can be marked No Show.');
         error.statusCode = 409;
         throw error;
       }
@@ -1711,7 +1734,7 @@ async function getValidatedSchedule(queryClient, body, res, allowShortLead = fal
     return null;
   }
   if (!allowShortLead && isSlotTooSoon(appointmentDate, appointmentTime)) {
-    res.status(400).json({ message: `Please choose a time at least ${MIN_BOOKING_LEAD_MINUTES} minutes from now.` });
+    res.status(400).json({ message: `Please choose a time at least ${MIN_BOOKING_LEAD_MINUTES / 60} hours from now.` });
     return null;
   }
 
@@ -2166,7 +2189,7 @@ router.post('/:id/cancellation-request/review', requireRole('admin'), async (req
 
   try {
     const result = await db.query(`
-      SELECT a.appointment_status, a.service_id, a.user_id, a.aesthetician_id, a.payment_status,
+      SELECT a.appointment_status, a.service_id, a.user_id, a.aesthetician_id, a.payment_status, a.is_demo,
              a.cancellation_request_status, a.reschedule_request_status,
              a.reschedule_requested_date, a.reschedule_requested_time,
              a.reschedule_requested_end_time, a.cancellation_requested_by,
@@ -2181,6 +2204,9 @@ router.post('/:id/cancellation-request/review', requireRole('admin'), async (req
     `, [appointmentId]);
     if (result.rows.length === 0) return res.status(404).json({ message: 'Appointment not found.' });
     const appointment = result.rows[0];
+    if (appointment.is_demo) {
+      return res.status(409).json({ message: 'Synthetic survey appointments cannot be changed.' });
+    }
     const requestStatus = requestType === 'cancellation' ? appointment.cancellation_request_status : appointment.reschedule_request_status;
     if (requestStatus !== 'pending') return res.status(400).json({ message: 'This request is no longer pending.' });
     let cancellationMessage = '';
@@ -2535,7 +2561,7 @@ router.post('/:id/reschedule', requireActiveAccount, async (req, res) => {
     }
     if (CLOSED_WEEKDAYS.includes(weekday(appointmentDate))) return res.status(400).json({ message: 'The center is closed on the selected date.' });
     if (isSlotInPast(appointmentDate, appointmentTime) || isSlotTooSoon(appointmentDate, appointmentTime)) {
-      return res.status(400).json({ message: `Choose a time at least ${MIN_BOOKING_LEAD_MINUTES} minutes from now.` });
+      return res.status(400).json({ message: `Choose a time at least ${MIN_BOOKING_LEAD_MINUTES / 60} hours from now.` });
     }
 
     const appointmentEndTime = addMinutes(

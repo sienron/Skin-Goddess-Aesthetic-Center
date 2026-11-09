@@ -9,6 +9,7 @@ const { notifyStockTransition } = require('../utils/inventoryNotifications');
 const { recordInventoryTransaction } = require('../utils/inventoryTransactions');
 const { recognizeImage } = require('../utils/invoiceOcr');
 const { parseInvoiceText, INVOICE_PARSER_CONFIG } = require('../utils/invoiceParser');
+const { isInventoryCategory } = require('../utils/inventoryCategories');
 const {
     MAX_INVOICE_UPLOAD_BYTES,
     InvoiceImageError,
@@ -64,15 +65,12 @@ function validExpiryDate(value) {
     return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }
 
-function validateProductDetails(productName, category, expiryDate) {
+function validateProductDetails(productName, expiryDate) {
     if (typeof productName !== 'string' || !productName.trim()) {
         return 'Product name is required.';
     }
     if (productName.trim().length > 255) {
         return 'Product name must be 255 characters or fewer.';
-    }
-    if (typeof category !== 'string' || !category.trim() || category.trim().length > 100) {
-        return 'Choose a category up to 100 characters.';
     }
     if (!validExpiryDate(expiryDate)) {
         return 'Enter a valid expiration date.';
@@ -102,9 +100,8 @@ function validateBatchRows(rows) {
             || Number(row.unit_price) < 0 || Number(row.unit_price) > 99999999.99) {
             return `Row ${index + 1} unit price must be a non-negative number.`;
         }
-        if (typeof row.category !== 'string' || !row.category.trim()
-            || row.category.trim().length > 100) {
-            return `Row ${index + 1} needs a category of 1 to 100 characters.`;
+        if (!isInventoryCategory(row.category)) {
+            return `Row ${index + 1} needs a valid inventory category.`;
         }
         if (!validExpiryDate(row.expiry_date)) {
             return `Row ${index + 1} expiration date must be a valid date.`;
@@ -540,7 +537,14 @@ router.get('/restocked-today', async (req, res) => {
                 COALESCE(SUM(quantity), 0) AS total_restocked
             FROM inventory_transactions
             WHERE transaction_type = 'Restock'
-            AND created_at::date = CURRENT_DATE
+              AND created_at >= (
+                (NOW() AT TIME ZONE 'Asia/Manila')::date::timestamp
+                AT TIME ZONE 'Asia/Manila'
+              )::timestamp
+              AND created_at < (
+                ((NOW() AT TIME ZONE 'Asia/Manila')::date + 1)::timestamp
+                AT TIME ZONE 'Asia/Manila'
+              )::timestamp
         `);
 
         res.json({
@@ -700,7 +704,11 @@ router.post('/', async (req, res) => {
             expiry_date
         } = req.body;
 
-        const detailsError = validateProductDetails(product_name, category, expiry_date);
+        if (!isInventoryCategory(category)) {
+            return res.status(400).json({ message: 'Choose a valid inventory category.' });
+        }
+
+        const detailsError = validateProductDetails(product_name, expiry_date);
         if (detailsError) return res.status(400).json({ message: detailsError });
 
         // Check stock
@@ -915,7 +923,11 @@ router.put("/:id", async (req, res) => {
             expiry_date
         } = body;
 
-        const detailsError = validateProductDetails(product_name, category, expiry_date);
+        if (!isInventoryCategory(category)) {
+            return res.status(400).json({ message: 'Choose a valid inventory category.' });
+        }
+
+        const detailsError = validateProductDetails(product_name, expiry_date);
         if (detailsError) return res.status(400).json({ message: detailsError });
 
         // Check stock

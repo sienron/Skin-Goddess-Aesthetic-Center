@@ -87,6 +87,9 @@ function escapeHtml(value) {
 }
 
 async function sendAppointmentReminderEmail(appointment, reminderHours) {
+  if (appointment.is_demo === true) {
+    throw new Error('Brevo email delivery is disabled for synthetic demo appointments.');
+  }
   assertDemoCustomerExternalOperationAllowed('Brevo email delivery', appointment.email);
   if (!process.env.BREVO_API_KEY || !process.env.EMAIL_USER) {
     throw new Error('BREVO_API_KEY and EMAIL_USER must be configured to send appointment reminders.');

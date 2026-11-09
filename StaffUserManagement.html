@@ -8,7 +8,7 @@
     <title>User Management</title>
 </head>
 
-<body>
+<body class="aesthetician-page aesthetician-clients-page">
     <header class="staff-header">
         <button type="button" class="staff-hamburger-btn" id="hamburgerBtn" aria-label="Open menu" aria-expanded="false" aria-controls="mobileNavDrawer">
             <img src="icons/hamburger.svg" alt="" class="staff-hamburger-icon">
@@ -155,16 +155,19 @@
 
                 <div class="client-summary-grid" aria-label="Appointment summary">
                     <article class="client-summary-card">
+                        <span class="admin-metric-icon" aria-hidden="true"><img src="icons/calendar.svg" alt=""></span>
                         <p class="client-summary-label">TODAY'S APPOINTMENT</p>
                         <p class="client-summary-value" id="todayAppointmentCount">—</p>
                         <p class="client-summary-hint">Scheduled for today</p>
                     </article>
                     <article class="client-summary-card">
+                        <span class="admin-metric-icon" aria-hidden="true"><img src="icons/staff-appointments.svg" alt=""></span>
                         <p class="client-summary-label">RESCHEDULED</p>
                         <p class="client-summary-value" id="rescheduledCount">—</p>
                         <p class="client-summary-hint">Needs a new time</p>
                     </article>
                     <article class="client-summary-card">
+                        <span class="admin-metric-icon" aria-hidden="true"><img src="icons/calendar.svg" alt=""></span>
                         <p class="client-summary-label">CANCELLED</p>
                         <p class="client-summary-value client-summary-value--cancelled" id="cancelledCount">—</p>
                         <p class="client-summary-hint">Cancelled appointments</p>

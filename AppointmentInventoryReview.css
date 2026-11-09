@@ -94,6 +94,11 @@
 }
 
 .appointment-review-dialog {
+    --ink: #201c18;
+    --ink-soft: #756c62;
+    --line: #e7ddc9;
+    --espresso-dark: #472c15;
+    color-scheme: light;
     width: min(900px, calc(100% - 28px));
     max-height: min(90vh, 900px);
     margin: auto;
@@ -101,7 +106,7 @@
     overflow: hidden;
     border: 1px solid var(--line);
     border-radius: 14px;
-    color: var(--ink);
+    color: #201c18;
     background: #fff;
     box-shadow: 0 18px 65px rgb(0 0 0 / 25%);
 }
@@ -171,6 +176,9 @@
     padding: 7px 10px;
     border: 1px solid var(--line);
     border-radius: 6px;
+    color: #201c18;
+    background: #fff;
+    color-scheme: light;
 }
 
 .appointment-review-dialog__lists {
@@ -283,6 +291,93 @@
 .appointment-review-dialog button:disabled {
     cursor: not-allowed;
     opacity: .55;
+}
+
+body.staff-theme-dark.InventoryManagement .appointment-review-dialog {
+    --ink: #e9e4da;
+    --ink-soft: #c9c2b7;
+    --line: #45453f;
+    --espresso-dark: #ead9a9;
+    color-scheme: dark;
+    border-color: #45453f;
+    color: #e9e4da;
+    background: #222421;
+}
+
+body.staff-theme-dark.InventoryManagement .appointment-review-dialog__header,
+body.staff-theme-dark.InventoryManagement .appointment-review-dialog__actions {
+    border-color: #45453f;
+    background: #222421;
+}
+
+body.staff-theme-dark.InventoryManagement .appointment-review-dialog__header h2,
+body.staff-theme-dark.InventoryManagement .appointment-review-dialog__header p,
+body.staff-theme-dark.InventoryManagement .appointment-review-dialog__body,
+body.staff-theme-dark.InventoryManagement .appointment-review-dialog__lists h3,
+body.staff-theme-dark.InventoryManagement .appointment-review-final h3,
+body.staff-theme-dark.InventoryManagement .appointment-review-final li,
+body.staff-theme-dark.InventoryManagement .appointment-review-attestation,
+body.staff-theme-dark.InventoryManagement .appointment-review-product__details strong {
+    color: #e9e4da;
+}
+
+body.staff-theme-dark.InventoryManagement .appointment-review-dialog__header p,
+body.staff-theme-dark.InventoryManagement .appointment-review-product__details span,
+body.staff-theme-dark.InventoryManagement .appointment-review-product__quantity,
+body.staff-theme-dark.InventoryManagement .appointment-review-search,
+body.staff-theme-dark.InventoryManagement .appointment-review-product-list__empty,
+body.staff-theme-dark.InventoryManagement .appointment-review-dialog__message {
+    color: #c9c2b7;
+}
+
+body.staff-theme-dark.InventoryManagement .appointment-review-dialog__close,
+body.staff-theme-dark.InventoryManagement .appointment-review-search input,
+body.staff-theme-dark.InventoryManagement .appointment-review-product__quantity input {
+    border-color: #4a4942;
+    color: #eee8dd;
+    background: #292a27;
+    color-scheme: dark;
+}
+
+body.staff-theme-dark.InventoryManagement .appointment-review-dialog__note {
+    color: #ead9a9;
+    background: #373126;
+}
+
+body.staff-theme-dark.InventoryManagement .appointment-review-product {
+    border-color: #45453f;
+    background: #292a27;
+}
+
+body.staff-theme-dark.InventoryManagement .appointment-review-product.has-stock-warning {
+    border-color: #8d6b36;
+    background: #302b20;
+}
+
+body.staff-theme-dark.InventoryManagement .appointment-review-product__tag {
+    color: #9bd3a8 !important;
+}
+
+body.staff-theme-dark.InventoryManagement .appointment-review-product__warning,
+body.staff-theme-dark.InventoryManagement .appointment-review-dialog__message.is-error {
+    color: #ffaaa2;
+}
+
+body.staff-theme-dark.InventoryManagement .appointment-review-attestation {
+    border-color: #45453f;
+    background: #292a27;
+}
+
+body.staff-theme-dark.InventoryManagement .appointment-review-dialog__actions .btn {
+    border-color: #5a5140;
+    color: #eee8dd;
+    background: #373126;
+}
+
+body.staff-theme-dark.InventoryManagement .appointment-review-dialog__actions .btn-export {
+    border-color: #a18447;
+    color: #1f1b13;
+    background: #d8bb73;
 }
 
 @media (max-width: 700px) {

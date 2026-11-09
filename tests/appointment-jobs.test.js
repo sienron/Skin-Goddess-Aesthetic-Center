@@ -73,12 +73,14 @@ test('email reminders select only registered confirmed appointments and use sepa
 
   const selects = queries.filter(({ sql }) => /^SELECT a\.appointment_id/.test(sql.trim()));
   assert.deepEqual(selects.map(({ values }) => values), [[24], [3]]);
-  assert.ok(selects.every(({ sql }) => /a\.appointment_status = 'confirmed'/.test(sql)));
+  assert.ok(selects.every(({ sql }) => /a\.appointment_status = 'confirmed'/.test(sql) && /a\.is_demo = FALSE/.test(sql)));
   assert.ok(selects.every(({ sql }) => /JOIN users u ON u\.user_id = a\.user_id/.test(sql)));
   assert.match(selects[0].sql, /appointment_time > .*INTERVAL '3 hours'/);
   assert.deepEqual(emailCalls.map(([, hours]) => hours), [24, 3]);
   assert.ok(queries.some(({ sql }) => /SET reminder_email_24h_sent = TRUE/.test(sql)));
   assert.ok(queries.some(({ sql }) => /SET reminder_email_3h_sent = TRUE/.test(sql)));
+  assert.ok(queries.filter(({ sql }) => /SET reminder_email_/.test(sql))
+    .every(({ sql }) => /is_demo = FALSE/.test(sql)));
   assert.ok(clientQueries.some(({ sql }) => /pg_try_advisory_lock/.test(sql)));
   assert.ok(clientQueries.some(({ sql }) => /pg_advisory_unlock/.test(sql)));
 });
@@ -123,7 +125,8 @@ test('status advancement moves only confirmed appointments whose scheduled start
   assert.equal(queries.length, 1);
   assert.match(queries[0].sql, /appointment_status = 'confirmed'/);
   assert.match(queries[0].sql, /SET appointment_status = 'in_progress'/);
-  assert.match(queries[0].sql, /appointment_date \+ appointment_time <= \(NOW\(\) AT TIME ZONE 'Asia\/Manila'\)/);
+  assert.match(queries[0].sql, /appointment_date = \(NOW\(\) AT TIME ZONE 'Asia\/Manila'\)::date/);
+  assert.match(queries[0].sql, /appointment_time <= \(NOW\(\) AT TIME ZONE 'Asia\/Manila'\)::time/);
   assert.match(queries[0].sql, /RETURNING appointment_id, user_id/);
 });
 

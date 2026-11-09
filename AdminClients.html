@@ -41,9 +41,9 @@
       <section class="clients-dashboard" aria-labelledby="clientsDashboardTitle">
         <div class="clients-dashboard-heading"><div><p class="clients-eyebrow">CLIENT DIRECTORY</p><h2 id="clientsDashboardTitle">Client appointments</h2></div><p class="clients-dashboard-date" id="clientsDashboardDate"></p></div>
         <div class="client-summary-grid" aria-label="Appointment summary">
-          <article class="client-summary-card"><p class="client-summary-label">TODAY'S APPOINTMENTS</p><p class="client-summary-value" id="todayAppointmentCount">—</p><p class="client-summary-hint">Scheduled for today</p></article>
-          <article class="client-summary-card"><p class="client-summary-label">RESCHEDULED</p><p class="client-summary-value" id="rescheduledCount">—</p><p class="client-summary-hint">Needs a new time</p></article>
-          <article class="client-summary-card"><p class="client-summary-label">CANCELLED</p><p class="client-summary-value client-summary-value--cancelled" id="cancelledCount">—</p><p class="client-summary-hint">Cancelled appointments</p></article>
+          <article class="client-summary-card"><span class="admin-metric-icon" aria-hidden="true"><img src="icons/calendar.svg" alt=""></span><p class="client-summary-label">TODAY'S APPOINTMENTS</p><p class="client-summary-value" id="todayAppointmentCount">—</p><p class="client-summary-hint">Scheduled for today</p></article>
+          <article class="client-summary-card client-summary-card--rescheduled"><span class="admin-metric-icon" aria-hidden="true"><img src="icons/calendar.svg" alt=""></span><p class="client-summary-label">RESCHEDULED</p><p class="client-summary-value" id="rescheduledCount">—</p><p class="client-summary-hint">Needs a new time</p></article>
+          <article class="client-summary-card client-summary-card--cancelled"><span class="admin-metric-icon" aria-hidden="true"><img src="icons/calendar.svg" alt=""></span><p class="client-summary-label">CANCELLED</p><p class="client-summary-value client-summary-value--cancelled" id="cancelledCount">—</p><p class="client-summary-hint">Cancelled appointments</p></article>
         </div>
         <section class="clients-table-section" aria-labelledby="clientsTableTitle">
           <div class="clients-table-heading"><div><p class="clients-eyebrow">CLIENT LIST</p><h2 id="clientsTableTitle">All client appointments</h2></div><p class="clients-table-count" id="clientsTableCount">Loading clients...</p></div>

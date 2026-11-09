@@ -29,6 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let APPOINTMENTS = [];
   let isLoading = true;
   let loadError = '';
+  let statusAdvanceWarning = '';
   let appointmentLoadPromise = null;
 
   function manilaDateKey(date = new Date()) {
@@ -1168,6 +1169,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const pageRows = filtered.slice(start, start + PAGE_SIZE);
 
     tbody.textContent = '';
+    if (statusAdvanceWarning) {
+      const tr = el('tr');
+      const td = el('td', 'apt-load-warning', statusAdvanceWarning);
+      td.colSpan = 7;
+      tr.appendChild(td);
+      tbody.appendChild(tr);
+    }
     if (isLoading && APPOINTMENTS.length === 0) {
       const tr = el('tr');
       const td = el('td', 'apt-empty', 'Loading appointments…');
@@ -1344,14 +1352,20 @@ document.addEventListener('DOMContentLoaded', () => {
     if (appointmentLoadPromise) return appointmentLoadPromise;
     const pendingLoad = (async () => {
       try {
-        const advanceResponse = await fetch('/api/appointments/admin/advance-started', {
-          method: 'POST',
-          headers: { Accept: 'application/json' },
-          cache: 'no-store'
-        });
-        const advanceResult = await readApiResponse(advanceResponse);
-        if (!advanceResponse.ok) {
-          throw new Error(advanceResult.message || `Could not update started appointments (HTTP ${advanceResponse.status}).`);
+        try {
+          const advanceResponse = await fetch('/api/appointments/admin/advance-started', {
+            method: 'POST',
+            headers: { Accept: 'application/json' },
+            cache: 'no-store'
+          });
+          const advanceResult = await readApiResponse(advanceResponse);
+          if (!advanceResponse.ok) {
+            throw new Error(advanceResult.message || `Could not update started appointments (HTTP ${advanceResponse.status}).`);
+          }
+          statusAdvanceWarning = '';
+        } catch (error) {
+          statusAdvanceWarning = 'Appointment statuses could not be refreshed. The appointment list is still being loaded.';
+          console.error('Could not refresh started appointment statuses:', error);
         }
 
         const response = await fetch('/api/appointments/admin', {
