@@ -122,6 +122,28 @@
       .filter((group) => group.matchingOptions.length > 0);
   }
 
+  function serviceBadge(group) {
+    const title = group.title.toLocaleLowerCase();
+    if (/eyelash|lash/.test(title)) return 'Lashes';
+    if (/nail/.test(title)) return 'Nails';
+    if (/hand|paraffin/.test(title)) return 'Hand Care';
+    if (/foot/.test(title)) return 'Foot Care';
+    if (/threading|hair removal/.test(title)) return 'Hair Removal';
+    if (/facial|peel|mesotherapy|electrocautery/.test(title)) return 'Skin';
+    if (/body|contouring/.test(title)) return 'Body';
+    if (/drip|shot/.test(title)) return 'Wellness';
+    return 'Treatments';
+  }
+
+  function bookingUrl(group) {
+    const category = group.options[0]?.category || group.categoryValue || group.title;
+    const query = new URLSearchParams({
+      category,
+      categoryType: group.categoryKey,
+    });
+    return `UserAppointment.html?${query}`;
+  }
+
   function createServiceCard(group) {
     const card = createElement('article', 'services-card');
     card.id = group.anchor;
@@ -136,32 +158,44 @@
     image.addEventListener('error', () => {
       if (image.src !== new URL(FALLBACK_IMAGE, window.location.href).href) image.src = FALLBACK_IMAGE;
     }, { once: true });
-    imageWrap.append(image);
+    const badge = createElement('span', 'services-card__badge', serviceBadge(group));
+    const imageContent = createElement('div', 'services-card__image-content');
+    const cardTitle = group.title.replace(/\s*\((?:BT|BFR)\)/gi, '');
+    const title = createElement('h3', 'services-card__title', cardTitle);
+    const divider = createElement('span', 'services-card__divider');
+    const meta = createElement('div', 'services-card__meta');
+    const prices = group.options.map((option) => Number(option.service_price));
+    const lowestPrice = Math.min(...prices);
+    const highestPrice = Math.max(...prices);
+    const priceRange = lowestPrice === highestPrice
+      ? formatPrice(lowestPrice)
+      : `${formatPrice(lowestPrice)} – ${formatPrice(highestPrice)}`;
+    meta.append(
+      createElement('span', 'services-card__price', priceRange),
+      createElement('span', 'services-card__option-count', `${group.options.length} ${group.options.length === 1 ? 'service' : 'services'}`)
+    );
+    imageContent.append(title, divider, meta);
+    imageWrap.append(image, badge, imageContent);
 
     const body = createElement('div', 'services-card__body');
-    const title = createElement('h3', 'services-card__title', group.title);
     const description = createElement('p', 'services-card__description', group.description);
-    const meta = createElement('div', 'services-card__meta');
-    const startingPrice = Math.min(...group.options.map((option) => Number(option.service_price)));
-    meta.append(
-      createElement('span', 'services-card__price', `From ${formatPrice(startingPrice)}`),
-      createElement('span', 'services-card__option-count', `${group.options.length} ${group.options.length === 1 ? 'option' : 'options'}`)
-    );
 
     const actions = createElement('div', 'services-card__actions');
     const detailsButton = createElement('button', 'services-card__details', 'View Pricing & Options');
     detailsButton.type = 'button';
     detailsButton.addEventListener('click', () => openOptions(group));
     const bookLink = createElement('a', 'services-card__book', 'Book Appointment');
-    bookLink.href = 'UserAppointment.html';
+    bookLink.href = bookingUrl(group);
     actions.append(detailsButton, bookLink);
-    body.append(title, description, meta, actions);
+    body.append(description, actions);
     card.append(imageWrap, body);
     return card;
   }
 
   function openOptions(group) {
     dialogTitle.textContent = group.title;
+    const bookLink = dialog.querySelector('.service-options-dialog__book');
+    if (bookLink) bookLink.href = bookingUrl(group);
     dialogList.replaceChildren();
     group.options.forEach((option) => {
       const row = createElement('div', 'service-options-dialog__row');
@@ -259,6 +293,7 @@
           || String(options[0]?.description || '');
         return {
           title: displayCategory(category),
+          categoryValue: category,
           categoryKey: serviceCategory(category),
           options,
           description,

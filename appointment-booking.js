@@ -115,6 +115,19 @@
         statusEl.className = `booking-status-message ${kind}`;
     }
 
+    function normalizeCategory(value) {
+        return String(value || "").trim().toLocaleLowerCase().replace(/[^a-z0-9]+/g, "");
+    }
+
+    function serviceCategoryType(value) {
+        const category = String(value || "").toLocaleLowerCase();
+        if (/eyelash|lash|nail|hand treatment|foot treatment|paraffin/.test(category)) return "beauty";
+        if (/hair removal|threading/.test(category)) return "hair-removal";
+        if (/facial|chemical peel|electrocautery|mesotherapy/.test(category)) return "facials";
+        if (/body tightening|body fat|contouring/.test(category)) return "body";
+        return "wellness";
+    }
+
     function formatAvailabilityKey(year, monthIndex, day) {
         return `${year}-${monthIndex}-${day}`;
     }
@@ -265,6 +278,24 @@
 
             allServices = await response.json();
             populateCategorySelect(allServices);
+
+            const query = new URLSearchParams(window.location.search);
+            const requestedCategory = query.get("category");
+            const requestedCategoryType = query.get("categoryType");
+            const matchingCategory = requestedCategory
+                ? [...categorySelect.options].find(
+                    (option) => normalizeCategory(option.value) === normalizeCategory(requestedCategory)
+                )
+                : null;
+            const matchingTypeCategory = requestedCategoryType
+                ? [...categorySelect.options].find((option) => serviceCategoryType(option.value) === requestedCategoryType)
+                : null;
+            const categoryToSelect = matchingCategory || matchingTypeCategory;
+            if (categoryToSelect) {
+                categorySelect.value = categoryToSelect.value;
+            } else if (requestedCategory || requestedCategoryType) {
+                console.warn("The requested service category is not available:", requestedCategory || requestedCategoryType);
+            }
 
             if (categorySelect.value) {
                 renderServiceVariants(servicesForCategory(categorySelect.value));
