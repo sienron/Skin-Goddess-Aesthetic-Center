@@ -107,7 +107,6 @@ body.services {
 }
 
 .services-category-nav__item:focus-visible,
-.services-search input:focus-visible,
 .services-search button:focus-visible,
 .services-card__actions a:focus-visible,
 .services-card__actions button:focus-visible,
@@ -177,15 +176,31 @@ body.services {
   background: var(--services-control-surface);
 }
 
+.services-search:focus-within {
+  border-color: var(--gold-dark);
+  box-shadow: 0 0 0 3px rgba(164, 132, 71, .16);
+}
+
 .services-search input {
+  appearance: none;
+  -webkit-appearance: none;
   width: 100%;
   min-width: 0;
   padding: 10px 12px;
   border: 0;
-  outline: 0;
+  outline: none;
+  box-shadow: none;
   background: transparent;
   color: var(--ink);
   font: 400 .9rem/1.4 var(--font-body);
+}
+
+.services-search input::-webkit-search-decoration,
+.services-search input::-webkit-search-results-button,
+.services-search input::-webkit-search-results-decoration,
+.services-search input::-webkit-search-cancel-button {
+  display: none;
+  -webkit-appearance: none;
 }
 
 .services-search__icon {
@@ -212,8 +227,12 @@ body.services {
   border: 0;
   background: transparent;
   color: var(--ink-soft);
-  font: 400 1.4rem/1 var(--font-body);
+  font: 400 1.25rem/1 var(--font-body);
   cursor: pointer;
+}
+
+.services-search button:hover {
+  color: var(--gold-dark);
 }
 
 .services-search button[hidden] {
@@ -246,9 +265,19 @@ body.services {
 }
 
 .services-card__image-wrap {
+  position: relative;
   aspect-ratio: 16 / 10;
   overflow: hidden;
+  border-bottom: 4px solid var(--gold);
   background: var(--cream-deep);
+}
+
+.services-card__image-wrap::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(20, 18, 15, .12) 20%, rgba(20, 18, 15, .2) 43%, rgba(20, 18, 15, .84) 100%);
+  content: "";
+  pointer-events: none;
 }
 
 .services-card__image {
@@ -256,30 +285,69 @@ body.services {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform .3s ease;
+}
+
+.services-card:hover .services-card__image {
+  transform: scale(1.025);
+}
+
+.services-card__badge {
+  position: absolute;
+  z-index: 1;
+  top: 18px;
+  left: 18px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: var(--gold);
+  color: #fff;
+  font: 600 .66rem/1.2 var(--font-body);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.services-card__image-content {
+  position: absolute;
+  z-index: 1;
+  right: 22px;
+  bottom: 20px;
+  left: 22px;
+  color: #fff;
 }
 
 .services-card__body {
   display: flex;
   flex: 1;
   flex-direction: column;
-  padding: 21px 22px 22px;
+  padding: 24px 24px 22px;
 }
 
 .services-card__title {
+  overflow: hidden;
   margin: 0;
-  color: var(--ink);
-  font-family: var(--font-display);
-  font-size: 1.3rem;
-  font-weight: 600;
+  color: #fff;
+  font-family: "Poppins", var(--font-display);
+  font-size: clamp(.88rem, 1.1vw, 1.08rem);
+  font-weight: 700;
   line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.services-card__divider {
+  display: block;
+  width: 68px;
+  height: 2px;
+  margin: 9px 0 8px;
+  background: var(--gold);
 }
 
 .services-card__description {
-  min-height: 4.7em;
-  margin: 10px 0 16px;
+  min-height: 4.5em;
+  margin: 0 0 16px;
   color: var(--services-card-copy);
-  font-size: .9rem;
-  line-height: 1.55;
+  font-size: .88rem;
+  line-height: 1.48;
 }
 
 .services-card__meta {
@@ -288,16 +356,19 @@ body.services {
   align-items: baseline;
   justify-content: space-between;
   gap: 8px 12px;
-  padding: 12px 0;
-  border-top: 1px solid var(--line);
-  color: var(--services-card-copy);
-  font-size: .82rem;
+  color: #e2c36f;
+  font-size: .78rem;
+  font-weight: 600;
 }
 
 .services-card__price {
-  color: var(--gold-dark);
-  font-size: 1rem;
+  color: inherit;
+  font-size: .84rem;
   font-weight: 600;
+}
+
+.services-card__option-count {
+  text-align: right;
 }
 
 .services-card__actions {
@@ -463,16 +534,47 @@ body.services {
 }
 
 .service-options-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  transform: translate(-50%, -50%);
+  margin: 0;
   width: min(560px, calc(100% - 32px));
   max-height: min(78vh, 700px);
   padding: 0;
-  border: 1px solid var(--line);
+  overflow: hidden;
+  border: 1px solid var(--services-card-border);
+  border-radius: 16px;
+  box-shadow: 0 24px 70px rgba(25, 24, 21, .24);
   background: var(--services-card-surface);
   color: var(--ink);
 }
 
+.service-options-dialog:not([open]) {
+  display: none;
+}
+
+.service-options-dialog[open] {
+  display: flex;
+}
+
+.service-options-dialog::before {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--gold-dark), var(--gold), #ead59a);
+  content: "";
+  pointer-events: none;
+}
+
 .service-options-dialog::backdrop {
   background: rgba(25, 24, 21, .56);
+  backdrop-filter: blur(3px);
 }
 
 .service-options-dialog__header {
@@ -480,20 +582,26 @@ body.services {
   align-items: flex-start;
   justify-content: space-between;
   gap: 20px;
-  padding: 22px 24px 18px;
+  padding: 26px 24px 20px;
   border-bottom: 1px solid var(--line);
+  background: linear-gradient(135deg, rgba(201, 168, 76, .11), transparent 70%);
 }
 
 .service-options-dialog__eyebrow {
-  margin: 0 0 6px;
+  display: inline-flex;
+  margin: 0 0 9px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: rgba(201, 168, 76, .14);
   color: var(--gold-dark);
-  font-size: .74rem;
+  font-size: .68rem;
   font-weight: 600;
-  letter-spacing: .04em;
+  letter-spacing: .08em;
 }
 
 .service-options-dialog__header h2 {
   margin: 0;
+  color: var(--ink);
   font-family: var(--font-display);
   font-size: 1.5rem;
   font-weight: 600;
@@ -504,18 +612,26 @@ body.services {
   flex: 0 0 38px;
   width: 38px;
   height: 38px;
-  border-radius: 7px;
+  border-radius: 50%;
   border: 1px solid var(--line);
-  background: transparent;
+  background: var(--services-card-surface);
   color: var(--ink);
   font: 400 1.4rem/1 var(--font-body);
   cursor: pointer;
+  transition: background-color .16s ease, border-color .16s ease;
+}
+
+.service-options-dialog__close:hover {
+  border-color: var(--gold-dark);
+  background: rgba(201, 168, 76, .12);
 }
 
 .service-options-dialog__list {
+  flex: 1 1 auto;
+  min-height: 0;
   max-height: min(48vh, 430px);
   overflow-y: auto;
-  padding: 0 24px;
+  padding: 14px 24px 8px;
 }
 
 .service-options-dialog__row {
@@ -523,8 +639,22 @@ body.services {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 14px 0;
-  border-bottom: 1px solid var(--line);
+  margin-bottom: 9px;
+  padding: 13px 15px;
+  border: 1px solid var(--services-card-border);
+  border-left: 3px solid rgba(201, 168, 76, .72);
+  border-radius: 10px;
+  background: var(--cream);
+  transition: border-color .16s ease, transform .16s ease;
+}
+
+.service-options-dialog__row:last-child {
+  margin-bottom: 0;
+}
+
+.service-options-dialog__row:hover {
+  transform: translateX(2px);
+  border-color: rgba(164, 132, 71, .55);
 }
 
 .service-options-dialog__details {
@@ -536,6 +666,7 @@ body.services {
 .service-options-dialog__name {
   color: var(--ink);
   font-size: .93rem;
+  font-weight: 500;
   line-height: 1.4;
   overflow-wrap: anywhere;
 }
@@ -549,11 +680,56 @@ body.services {
   flex: 0 0 auto;
   color: var(--gold-dark);
   font-size: .95rem;
+  font-weight: 600;
 }
 
 .service-options-dialog__book {
-  width: fit-content;
-  margin: 20px 24px 24px;
+  align-self: flex-end;
+  flex: 0 0 auto;
+  gap: 10px;
+  margin: 10px 24px 22px;
+  box-shadow: 0 4px 12px rgba(111, 85, 37, .2);
+}
+
+.service-options-dialog__book::after {
+  content: "→";
+  font-size: 1.05rem;
+  line-height: 1;
+  transition: transform .16s ease;
+}
+
+.service-options-dialog__book:hover::after {
+  transform: translateX(3px);
+}
+
+body.customer-theme-dark .service-options-dialog__header {
+  border-color: #41413b;
+  background: linear-gradient(135deg, rgba(201, 168, 76, .1), transparent 70%);
+}
+
+body.customer-theme-dark .service-options-dialog__eyebrow {
+  background: rgba(201, 168, 76, .15);
+  color: #dfc27d;
+}
+
+body.customer-theme-dark .service-options-dialog__row {
+  border-color: #41413b;
+  border-left-color: #a18447;
+  background: #292a27;
+}
+
+body.customer-theme-dark .service-options-dialog__row:hover {
+  border-color: #a18447;
+}
+
+body.customer-theme-dark .service-options-dialog__close {
+  border-color: #41413b;
+  background: #292a27;
+  color: #e9e4da;
+}
+
+body.customer-theme-dark .service-options-dialog__close:hover {
+  background: #373126;
 }
 
 body.customer-theme-dark .services-main,
@@ -600,8 +776,7 @@ body.customer-theme-dark .services-booking-cta p {
 
 body.customer-theme-dark .services-category-nav,
 body.customer-theme-dark .services-card__meta,
-body.customer-theme-dark .service-options-dialog__header,
-body.customer-theme-dark .service-options-dialog__row {
+body.customer-theme-dark .service-options-dialog__header {
   border-color: #41413b;
 }
 
@@ -635,6 +810,11 @@ body.customer-theme-dark .service-options-dialog__close {
   border-color: #41413b;
   background: #222421;
   color: #e9e4da;
+}
+
+body.customer-theme-dark .services-search:focus-within {
+  border-color: #a18447;
+  box-shadow: 0 0 0 3px rgba(161, 132, 71, .2);
 }
 
 body.customer-theme-dark .services-search input,
@@ -760,8 +940,20 @@ body.customer-theme-dark .services-booking-cta__secondary {
     gap: 16px;
   }
 
+  .services-card__image-content {
+    right: 16px;
+    bottom: 16px;
+    left: 16px;
+  }
+
   .services-card__body {
-    padding: 16px;
+    padding: 18px 16px;
+  }
+
+  .services-card__badge {
+    top: 14px;
+    left: 14px;
+    padding: 7px 11px;
   }
 
   .services-card__actions {
@@ -779,8 +971,19 @@ body.customer-theme-dark .services-booking-cta__secondary {
     aspect-ratio: 16 / 9;
   }
 
+  .services-card__image-content {
+    right: 18px;
+    bottom: 16px;
+    left: 18px;
+  }
+
+  .services-card__badge {
+    top: 14px;
+    left: 14px;
+  }
+
   .services-card__body {
-    padding: 18px;
+    padding: 20px 18px;
   }
 
   .services-card__description {
