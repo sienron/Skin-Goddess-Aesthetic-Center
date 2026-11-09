@@ -5421,13 +5421,14 @@ select {
   filter: brightness(70%);
 }
 
-/* Login photo overlay and floating brand. */
+/* Login and registration photo overlays and floating brands. */
 .login-layout .showcase-panel {
   position: relative;
   isolation: isolate;
 }
 
-.login-layout .showcase-panel::after {
+.login-layout .showcase-panel::after,
+.registration-showcase-visual::after {
   content: "";
   position: absolute;
   inset: 10px;
@@ -5440,7 +5441,8 @@ select {
   filter: none;
 }
 
-.login-showcase-brand {
+.login-showcase-brand,
+.registration-showcase-brand {
   position: absolute;
   inset: 10px;
   z-index: 1;
@@ -5450,7 +5452,8 @@ select {
   pointer-events: none;
 }
 
-.login-showcase-logo {
+.login-showcase-logo,
+.registration-showcase-logo {
   display: block;
   width: min(72%, 420px);
   height: auto;
@@ -5469,7 +5472,8 @@ select {
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .login-showcase-logo {
+  .login-showcase-logo,
+  .registration-showcase-logo {
     animation: login-logo-float 4s ease-in-out infinite;
   }
 }
@@ -5907,22 +5911,29 @@ body.modal-open {
   font-weight: 600;
 }
 
-/* ---- showcase panel override for registration page ----
-      (login page keeps the original centered/dimmed look above;
-      registration needs it to stretch full-height + stick while
-      the long form scrolls, with no dark filter) ---- */
+/* Keep the registration photo, overlay, and logo together while scrolling. */
 .page .showcase-panel {
   display: block;
   padding: 10px;
   background: var(--cream-2);
 }
 
-.page .showcase-image {
+.registration-showcase-visual {
   position: sticky;
   top: 10px;
   height: calc(100vh - 20px);
+  isolation: isolate;
+}
+
+.page .showcase-image {
+  height: 100%;
   border-radius: 8px;
-  filter: brightness(85%);
+  filter: none;
+}
+
+.registration-showcase-visual::after {
+  inset: 0;
+  border-radius: 8px;
 }
 
 
@@ -5979,7 +5990,10 @@ body.modal-open {
     grid-template-columns: 1fr;
   }
 
-  /*.image-side { display: none; }*/
+  .page .showcase-panel {
+    display: none;
+  }
+
   .form-side {
     border-right: none;
     padding: 28px 24px 32px;
