@@ -26,6 +26,16 @@ test('development booking access does not apply to admins in production', () => 
   }, 'production'), false);
 });
 
+test('development booking access requires NODE_ENV to be explicitly development', () => {
+  const admin = {
+    email_verified: true,
+    role: 'admin',
+    dev_access_all: true
+  };
+  assert.equal(canBookAppointments(admin, 'test'), false);
+  assert.equal(canBookAppointments(admin, undefined), false);
+});
+
 test('development booking access does not bypass email verification', () => {
   assert.equal(canBookAppointments({
     email_verified: false,

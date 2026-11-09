@@ -10,27 +10,11 @@ const { recordInventoryTransaction } = require('../utils/inventoryTransactions')
 const { canBookAppointments } = require('../utils/appointmentBookingAccess');
 const { getPayMongoConfig } = require('../utils/paymongoConfig');
 const { loadCustomerAppointmentHistory } = require('../utils/customerAppointmentHistory');
-const { createHmac, randomBytes, timingSafeEqual } = require('crypto');
+const { randomBytes } = require('crypto');
+const { verifyPayMongoWebhookSignature } = require('../utils/paymongoWebhookSecurity');
 const { RATING_WINDOW_DAYS } = require('../utils/appointmentRatings');
 const ratingLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, message: { message: 'Too many rating attempts. Try again later.' } });
 const { VALID_SLOTS, CLOSING_TIME, CLOSED_WEEKDAYS, MAX_ADVANCE_DAYS, MIN_BOOKING_LEAD_MINUTES, DEFAULT_BUFFER_MINUTES, to24h, from24h, addMinutes, overlapsLunchBreak, manilaNow, isSlotInPast, isSlotTooSoon } = require('../utils/slots');
-
-function payMongoSignatureIsValid(signatureHeader, rawBody, config) {
-  if (typeof signatureHeader !== 'string' || !Buffer.isBuffer(rawBody)) return false;
-  const fields = Object.fromEntries(signatureHeader.split(',').map((part) => {
-    const separator = part.indexOf('=');
-    return separator < 0 ? ['', ''] : [part.slice(0, separator).trim(), part.slice(separator + 1).trim()];
-  }));
-  if (!/^\d+$/.test(fields.t || '')) return false;
-
-  const suppliedSignature = fields[config.isLive ? 'li' : 'te'];
-  if (!suppliedSignature || !/^[a-f\d]{64}$/i.test(suppliedSignature)) return false;
-  const expectedSignature = createHmac('sha256', config.webhookSecret)
-    .update(`${fields.t}.${rawBody.toString('utf8')}`)
-    .digest();
-  const actualSignature = Buffer.from(suppliedSignature, 'hex');
-  return actualSignature.length === expectedSignature.length && timingSafeEqual(actualSignature, expectedSignature);
-}
 
 function checkoutReturnUrl(baseUrl, outcome, referenceNumber) {
   const url = new URL('/AppointmentSummary.html', baseUrl);
@@ -2920,7 +2904,7 @@ router.post('/paymongo/confirm', requireActiveAccount, blockDemoCustomerPayments
 router.post('/paymongo/webhook', async (req, res) => {
   const config = getPayMongoConfig();
   if (!config) return res.status(503).json({ message: 'PayMongo is not configured for this environment.' });
-  if (!payMongoSignatureIsValid(req.get('Paymongo-Signature'), req.body, config)) {
+  if (!verifyPayMongoWebhookSignature(req.get('Paymongo-Signature'), req.body, config)) {
     return res.status(401).json({ message: 'Invalid PayMongo webhook signature.' });
   }
 

@@ -74,67 +74,140 @@ async function fetchUsers() {
   return apiRequest(`/api/users?${params.toString()}`);
 }
 
-function rowHTML(u) {
-  const initials = escapeHtml(u.initials || '?');
-  const fullName = escapeHtml(u.fullName || '(no name)');
-  const email = escapeHtml(u.email || '');
-  const sexInitial = escapeHtml(u.sex ? u.sex.charAt(0).toUpperCase() : '');
-  const statusCell = u.status === 'suspended'
-    ? `<span class="um-status um-status--suspended">Suspended</span>`
-    : `<span class="um-status um-status--active">Active</span>`;
+function createTextElement(tagName, className, text) {
+  const element = document.createElement(tagName);
+  if (className) element.className = className;
+  element.textContent = text;
+  return element;
+}
 
-  return `
-    <tr data-id="${u.id}" class="${u.status === 'suspended' ? 'um-row--muted' : ''}">
-      <td><input type="checkbox" class="um-row-check" aria-label="Select ${fullName}"></td>
-      <td class="um-user-cell">
-        <span class="um-avatar um-avatar--sm ${u.status === 'suspended' ? 'um-avatar--muted' : ''}">${initials}</span>
-        <span class="um-user-cell__info">
-          <span class="um-user-cell__name">${fullName}</span>
-          <span class="um-user-cell__meta">USR-${String(u.id).padStart(5, '0')}${sexInitial ? ' &middot; ' + sexInitial : ''}</span>
-        </span>
-      </td>
-      <td><span class="um-badge um-badge--${badgeClass(u.role)}">${escapeHtml(u.roleLabel)}</span></td>
-      <td>${email}</td>
-      <td>${formatDate(u.joined)}</td>
-      <td class="um-visits"><span class="um-visits__count">—</span><span class="um-visits__label">not tracked yet</span></td>
-      <td>—</td>
-      <td>${statusCell}</td>
-      <td>
-        <div class="um-actions">
-          <button type="button" class="um-action um-action--view" data-action="view" data-id="${u.id}">View</button>
-          <button type="button" class="um-action um-action--danger" data-action="delete" data-id="${u.id}" aria-label="Delete ${fullName}">Delete</button>
-        </div>
-      </td>
-    </tr>`;
+function rowElement(u) {
+  const row = document.createElement('tr');
+  const fullName = u.fullName || '(no name)';
+  const suspended = u.status === 'suspended';
+  row.setAttribute('data-id', String(u.id));
+  if (suspended) row.className = 'um-row--muted';
+
+  const checkboxCell = document.createElement('td');
+  const checkbox = document.createElement('input');
+  checkbox.type = 'checkbox';
+  checkbox.className = 'um-row-check';
+  checkbox.setAttribute('aria-label', `Select ${fullName}`);
+  checkboxCell.appendChild(checkbox);
+  row.appendChild(checkboxCell);
+
+  const userCell = document.createElement('td');
+  userCell.className = 'um-user-cell';
+  userCell.appendChild(createTextElement(
+    'span',
+    `um-avatar um-avatar--sm${suspended ? ' um-avatar--muted' : ''}`,
+    u.initials || '?'
+  ));
+  const info = document.createElement('span');
+  info.className = 'um-user-cell__info';
+  info.appendChild(createTextElement('span', 'um-user-cell__name', fullName));
+  const meta = document.createElement('span');
+  meta.className = 'um-user-cell__meta';
+  const sexInitial = u.sex ? u.sex.charAt(0).toUpperCase() : '';
+  meta.textContent = `USR-${String(u.id).padStart(5, '0')}${sexInitial ? ` · ${sexInitial}` : ''}`;
+  info.appendChild(meta);
+  userCell.appendChild(info);
+  row.appendChild(userCell);
+
+  const roleBadge = createTextElement('span', `um-badge um-badge--${badgeClass(u.role)}`, u.roleLabel || '');
+  const roleCell = document.createElement('td');
+  roleCell.appendChild(roleBadge);
+  row.appendChild(roleCell);
+
+  row.appendChild(createTextElement('td', '', u.email || ''));
+  row.appendChild(createTextElement('td', '', formatDate(u.joined)));
+
+  const visitsCell = document.createElement('td');
+  visitsCell.className = 'um-visits';
+  visitsCell.appendChild(createTextElement('span', 'um-visits__count', '—'));
+  visitsCell.appendChild(createTextElement('span', 'um-visits__label', 'not tracked yet'));
+  row.appendChild(visitsCell);
+  row.appendChild(createTextElement('td', '', '—'));
+
+  const statusCell = document.createElement('td');
+  statusCell.appendChild(createTextElement(
+    'span',
+    `um-status um-status--${suspended ? 'suspended' : 'active'}`,
+    suspended ? 'Suspended' : 'Active'
+  ));
+  row.appendChild(statusCell);
+
+  const actionsCell = document.createElement('td');
+  const actions = document.createElement('div');
+  actions.className = 'um-actions';
+  for (const [action, label, className] of [
+    ['view', 'View', 'um-action um-action--view'],
+    ['delete', 'Delete', 'um-action um-action--danger'],
+  ]) {
+    const button = createTextElement('button', className, label);
+    button.type = 'button';
+    button.setAttribute('data-action', action);
+    button.setAttribute('data-id', String(u.id));
+    if (action === 'delete') button.setAttribute('aria-label', `Delete ${fullName}`);
+    actions.appendChild(button);
+  }
+  actionsCell.appendChild(actions);
+  row.appendChild(actionsCell);
+  return row;
+}
+
+function renderTableMessage(message, color = '#8a837a') {
+  const row = document.createElement('tr');
+  const cell = createTextElement('td', '', message);
+  cell.colSpan = 9;
+  cell.style.textAlign = 'center';
+  cell.style.padding = '24px';
+  cell.style.color = color;
+  row.appendChild(cell);
+  tableBody.replaceChildren(row);
 }
 
 async function renderTable() {
-  tableBody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:24px; color:#8a837a;">Loading…</td></tr>`;
+  renderTableMessage('Loading…');
 
   try {
     const { users, total } = await fetchUsers();
     const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
     if (currentPage > totalPages) currentPage = totalPages;
 
-    tableBody.innerHTML = users.length
-      ? users.map(rowHTML).join('')
-      : `<tr><td colspan="9" style="text-align:center; padding:24px; color:#8a837a;">No users match your search/filter.</td></tr>`;
+    if (users.length) {
+      tableBody.replaceChildren(...users.map(rowElement));
+    } else {
+      renderTableMessage('No users match your search/filter.');
+    }
 
     showingText.textContent = `Showing ${users.length} of ${total} users`;
     if (selectAll) selectAll.checked = false;
     renderPagination(totalPages);
   } catch (error) {
-    tableBody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:24px; color:#9b2626;">${escapeHtml(error.message)}</td></tr>`;
+    renderTableMessage(error.message, '#9b2626');
   }
 }
 
 function renderPagination(totalPages) {
-  let html = `<button type="button" data-page="prev" ${currentPage === 1 ? 'disabled' : ''}>&lsaquo;</button>`;
+  const buttons = [];
+  const previous = createTextElement('button', '', '‹');
+  previous.type = 'button';
+  previous.setAttribute('data-page', 'prev');
+  previous.disabled = currentPage === 1;
+  buttons.push(previous);
   for (let p = 1; p <= totalPages; p++) {
-    html += `<button type="button" data-page="${p}" class="${p === currentPage ? 'active' : ''}">${p}</button>`;
+    const button = createTextElement('button', p === currentPage ? 'active' : '', String(p));
+    button.type = 'button';
+    button.setAttribute('data-page', String(p));
+    buttons.push(button);
   }
-  html += `<button type="button" data-page="next" ${currentPage === totalPages ? 'disabled' : ''}>&rsaquo;</button>`;
-  paginationNav.innerHTML = html;
+  const next = createTextElement('button', '', '›');
+  next.type = 'button';
+  next.setAttribute('data-page', 'next');
+  next.disabled = currentPage === totalPages;
+  buttons.push(next);
+  paginationNav.replaceChildren(...buttons);
 }
 
 async function renderStats() {
@@ -255,10 +328,16 @@ if (exportBtn) {
     try {
       const { users } = await fetchUsers();
       const header = ['ID', 'Name', 'Role', 'Email', 'Joined', 'Status'];
-      const lines = [header.join(',')].concat(
-        users.map((u) => [u.id, `"${u.fullName}"`, u.roleLabel, u.email, formatDate(u.joined), u.status].join(','))
-      );
-      const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+      const rows = [header, ...users.map((u) => [
+        u.id,
+        u.fullName,
+        u.roleLabel,
+        u.email,
+        formatDate(u.joined),
+        u.status,
+      ])];
+      const lines = rows.map((row) => row.map(CsvExport.escapeCell).join(','));
+      const blob = new Blob([lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -390,7 +469,11 @@ function enterEditMode() {
     const el = document.getElementById(id);
     const value = el.textContent === '—' ? '' : el.textContent;
     const inputType = id === 'umPiDob' ? 'date' : id === 'umPiEmail' ? 'email' : 'text';
-    el.innerHTML = `<input type="${inputType}" class="um-edit-input" value="${escapeHtml(value)}">`;
+    const input = document.createElement('input');
+    input.type = inputType;
+    input.className = 'um-edit-input';
+    input.value = value;
+    el.replaceChildren(input);
   });
 
   EDITABLE_SELECT_FIELDS.forEach((id) => {
@@ -409,8 +492,15 @@ function enterEditMode() {
     }[id];
     const current = el.textContent;
     const currentValue = id === 'umPiRole' ? editingUserCache.role : current;
-    const opts = options.map(([value, label]) => `<option value="${value}" ${value === currentValue ? 'selected' : ''}>${label}</option>`).join('');
-    el.innerHTML = `<select class="um-edit-input">${opts}</select>`;
+    const select = document.createElement('select');
+    select.className = 'um-edit-input';
+    options.forEach(([value, label]) => {
+      const option = createTextElement('option', '', label);
+      option.value = value;
+      option.selected = value === currentValue;
+      select.appendChild(option);
+    });
+    el.replaceChildren(select);
   });
 
   setPasswordFieldsVisible(false);
@@ -489,12 +579,6 @@ async function saveEdits() {
     modalSaveBtn.disabled = false;
     modalSaveBtn.textContent = 'SAVE';
   }
-}
-
-function escapeHtml(str) {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
 }
 
 if (modalEditBtn) modalEditBtn.addEventListener('click', enterEditMode);

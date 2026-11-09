@@ -522,98 +522,15 @@ async function loadExpiringSoonCount() {
 //translate JSON to JS table row
 function renderInventory(){
 
-    inventoryBody.innerHTML = "";
+    inventoryBody.replaceChildren();
 
     inventoryProducts.forEach(product => {
-
-        const row = document.createElement("tr");
-        row.dataset.id = product.product_id;
-
-        row.dataset.category = product.category;
-        row.dataset.stock = product.stock_quantity;
-        row.dataset.expiry =
-            product.expiry_date || "none";
-
-            const status = getStockStatus(product);
-            const statusClass = status === "low" ? "low-stock" : status;
-            row.dataset.status = status;
-
-
-        row.innerHTML = `
-            <td>
-                <div class="product-name">
-                    ${product.product_name}
-                </div>
-            </td>
-
-            <td>
-                ${product.category}
-            </td>
-
-            <td>
-                <div class="stock-control">
-
-                    <span class="stock-number">
-                        ${product.stock_quantity}
-                    </span>
-
-                    <button
-                        class="action-btn decrease"
-                        type="button"
-                        title="Remove stock"
-                    >
-                        −
-                    </button>
-
-                    <button
-                        class="action-btn increase"
-                        type="button"
-                        title="Add stock"
-                    >
-                        +
-                    </button>
-
-                </div>
-            </td>
-
-            <td>
-                ${
-                    product.expiry_date
-                        ? product.expiry_date
-                        : "No Expiration"
-                }
-            </td>
-
-            <td>
-                <div class="status ${statusClass}">
-                    <span></span>
-                    ${getStockStatusLabel(product).toUpperCase()}
-                </div>
-            </td>
-
-            <td>
-            <div class="action-buttons">
-
-                <button
-                    class="action-btn edit"
-                    type="button"
-                    title="Edit product"
-                >
-                    Edit
-                </button>
-
-                <button
-                    class="action-btn delete"
-                    type="button"
-                    title="Delete product"
-                >
-                    ×
-                </button>
-
-            </div>
-        </td>
-        `;
-
+        const status = getStockStatus(product);
+        const row = InventoryRowRenderer.createInventoryProductRow(
+            product,
+            status,
+            getStockStatusLabel(product),
+        );
         inventoryBody.appendChild(row);
 
     });
@@ -623,7 +540,12 @@ function renderInventory(){
 
 }
 
-function renderInventorySidebar(){
+function setInventoryStatusLabel(element, label) {
+    const indicator = document.createElement("span");
+    element.replaceChildren(indicator, document.createTextNode(` ${label}`));
+}
+
+function renderInventorySidebar() {
     categoryStock.replaceChildren();
 
     inventoryCategories.forEach(category => {
@@ -2021,8 +1943,7 @@ confirmAddProduct.addEventListener("click", async () => {
                 "out-of-stock"
             );
         
-            statusElement.innerHTML =
-                "<span></span> OUT OF STOCK";
+            setInventoryStatusLabel(statusElement, "OUT OF STOCK");
         
         }
         
@@ -2034,8 +1955,7 @@ confirmAddProduct.addEventListener("click", async () => {
                 "critical"
             );
         
-            statusElement.innerHTML =
-                "<span></span> CRITICAL";
+            setInventoryStatusLabel(statusElement, "CRITICAL");
         
         }
         
@@ -2047,8 +1967,7 @@ confirmAddProduct.addEventListener("click", async () => {
                 "low-stock"
             );
         
-            statusElement.innerHTML =
-                "<span></span> LOW STOCK";
+            setInventoryStatusLabel(statusElement, "LOW STOCK");
         
         }
         
@@ -2060,8 +1979,7 @@ confirmAddProduct.addEventListener("click", async () => {
                 "in-stock"
             );
         
-            statusElement.innerHTML =
-                "<span></span> IN STOCK";
+            setInventoryStatusLabel(statusElement, "IN STOCK");
         
         }
 

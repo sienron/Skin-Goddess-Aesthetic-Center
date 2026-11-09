@@ -97,6 +97,34 @@ document.addEventListener('DOMContentLoaded', () => {
   const loginMfaForm = document.getElementById('loginMfaForm');
   const loginMfaDigits = loginMfaOverlay.querySelectorAll('.otp-digit');
   const loginMfaEmail = document.getElementById('loginMfaEmail');
+  const loginMfaTitle = document.getElementById('loginMfaTitle');
+  const loginTotpInstruction = document.getElementById('loginTotpInstruction');
+  const loginMfaSubtitle = document.getElementById('loginMfaSubtitle');
+  const loginMfaTimer = document.getElementById('loginMfaTimer');
+  const loginMfaResendWrap = document.getElementById('loginMfaResendWrap');
+  const loginMfaSecurityNote = document.getElementById('loginMfaSecurityNote');
+  const rememberLoginDeviceWrap = document.getElementById('rememberLoginDeviceWrap');
+  const loginEnrollmentCodePanel = document.getElementById('loginEnrollmentCodePanel');
+  const loginEnrollmentCodeForm = document.getElementById('loginEnrollmentCodeForm');
+  const loginEnrollmentCode = document.getElementById('loginEnrollmentCode');
+  const loginEnrollmentError = document.getElementById('loginEnrollmentError');
+  const loginEnrollmentStartBtn = document.getElementById('loginEnrollmentStartBtn');
+  const loginTotpSetupPanel = document.getElementById('loginTotpSetupPanel');
+  const loginTotpQr = document.getElementById('loginTotpQr');
+  const loginTotpSecret = document.getElementById('loginTotpSecret');
+  const loginTotpRecoveryToggle = document.getElementById('loginTotpRecoveryToggle');
+  const loginRecoveryInput = document.getElementById('loginRecoveryInput');
+  const loginRecoveryCode = document.getElementById('loginRecoveryCode');
+  const loginUseRecoveryCode = document.getElementById('loginUseRecoveryCode');
+  const loginUseTotpCode = document.getElementById('loginUseTotpCode');
+  const loginReenrollWrap = document.getElementById('loginReenrollWrap');
+  const loginRecoveryPanel = document.getElementById('loginRecoveryPanel');
+  const loginRecoveryCodes = document.getElementById('loginRecoveryCodes');
+  const loginCopyRecoveryCodes = document.getElementById('loginCopyRecoveryCodes');
+  const loginDownloadRecoveryCodes = document.getElementById('loginDownloadRecoveryCodes');
+  const loginRecoveryAcknowledged = document.getElementById('loginRecoveryAcknowledged');
+  const loginRecoveryStatus = document.getElementById('loginRecoveryStatus');
+  const loginContinueAfterMfa = document.getElementById('loginContinueAfterMfa');
   const rememberLoginDevice = document.getElementById('rememberLoginDevice');
   const loginMfaError = document.getElementById('loginMfaError');
   const loginMfaMessage = document.getElementById('loginMfaMessage');
@@ -107,7 +135,19 @@ document.addEventListener('DOMContentLoaded', () => {
   let loginMfaCountdownInterval = null;
   let loginMfaResendSecondsLeft = 0;
   let loginMfaResendCountdownInterval = null;
+  let loginMfaMode = 'email_otp';
+  let loginMfaRedirectUrl = '';
+  let loginUsingRecoveryCode = false;
+  let activeRecoveryCodes = [];
   const loginMfaResendLinkText = loginMfaResendLink.textContent;
+
+  function clearRecoveryCodes() {
+    activeRecoveryCodes = [];
+    loginRecoveryCodes.replaceChildren();
+    loginRecoveryAcknowledged.checked = false;
+    loginContinueAfterMfa.disabled = true;
+    loginRecoveryStatus.textContent = '';
+  }
 
   function startLoginMfaResendCooldown() {
     loginMfaResendSecondsLeft = 60;
@@ -155,26 +195,202 @@ document.addEventListener('DOMContentLoaded', () => {
     clearInterval(loginMfaCountdownInterval);
   }
 
-  function openLoginMfa(email) {
+  function openLoginMfa(email, method = 'email_otp') {
+    clearRecoveryCodes();
+    loginMfaMode = method;
     loginMfaEmail.textContent = email;
     loginMfaDigits.forEach((digit) => { digit.value = ''; });
+    loginRecoveryCode.value = '';
+    loginEnrollmentCode.value = '';
     rememberLoginDevice.checked = false;
     loginMfaError.textContent = '';
     loginMfaMessage.textContent = '';
+    loginEnrollmentError.textContent = '';
+    loginEnrollmentCodePanel.hidden = method !== 'enrollment';
+    loginTotpSetupPanel.hidden = true;
+    loginRecoveryPanel.hidden = true;
+    loginMfaForm.hidden = method === 'enrollment';
+    loginMfaSubtitle.hidden = method !== 'email_otp';
+    loginMfaTimer.hidden = method !== 'email_otp';
+    loginMfaResendWrap.hidden = method !== 'email_otp';
+    rememberLoginDeviceWrap.hidden = method !== 'email_otp';
+    loginMfaSecurityNote.hidden = method !== 'email_otp';
+    loginTotpRecoveryToggle.hidden = method !== 'totp';
+    loginReenrollWrap.hidden = method !== 'totp';
+    loginMfaTitle.textContent = method === 'email_otp'
+      ? 'Verify your sign-in'
+      : method === 'enrollment' ? 'Set up privileged MFA' : 'Two-step verification';
+    loginTotpInstruction.hidden = method !== 'totp';
+    loginTotpInstruction.textContent = 'Enter the current six-digit code from your authenticator app.';
+    loginUsingRecoveryCode = false;
+    document.querySelector('#loginMfaForm .otp-inputs').hidden = false;
+    loginRecoveryInput.hidden = true;
+    loginUseRecoveryCode.hidden = false;
+    loginUseTotpCode.hidden = true;
     loginMfaOverlay.hidden = false;
     document.body.classList.add('modal-open');
-    startLoginMfaCountdown();
-    startLoginMfaResendCooldown();
-    loginMfaDigits[0].focus();
+    if (method === 'email_otp') {
+      startLoginMfaCountdown();
+      startLoginMfaResendCooldown();
+      loginMfaDigits[0].focus();
+    } else if (method === 'totp') {
+      loginMfaDigits[0].focus();
+    } else {
+      loginEnrollmentCode.focus();
+    }
   }
 
   function closeLoginMfa() {
+    if (!loginRecoveryPanel.hidden && !loginRecoveryAcknowledged.checked) {
+      loginRecoveryStatus.textContent = 'Save and acknowledge your recovery codes before closing.';
+      loginRecoveryAcknowledged.focus();
+      return;
+    }
+    clearRecoveryCodes();
+    loginRecoveryPanel.hidden = true;
     loginMfaOverlay.hidden = true;
     document.body.classList.remove('modal-open');
     loginMfaError.textContent = '';
     loginMfaMessage.textContent = '';
     stopLoginMfaCountdown();
+    clearInterval(loginMfaResendCountdownInterval);
+    loginTotpQr.removeAttribute('src');
+    loginTotpSecret.textContent = '';
   }
+
+  function showRecoveryCodes(codes, redirectUrl) {
+    activeRecoveryCodes = codes.map((code) => String(code));
+    loginMfaRedirectUrl = redirectUrl;
+    loginMfaForm.hidden = true;
+    loginMfaSubtitle.hidden = true;
+    loginMfaResendWrap.hidden = true;
+    loginMfaSecurityNote.hidden = true;
+    loginMfaTimer.hidden = true;
+    loginEnrollmentCodePanel.hidden = true;
+    loginTotpSetupPanel.hidden = true;
+    loginRecoveryPanel.hidden = false;
+    loginMfaTitle.textContent = 'Save your recovery codes';
+    loginTotpInstruction.hidden = true;
+    loginRecoveryCodes.replaceChildren(...activeRecoveryCodes.map((code) => {
+      const item = document.createElement('li');
+      const value = document.createElement('code');
+      value.textContent = code;
+      item.appendChild(value);
+      return item;
+    }));
+  }
+
+  loginRecoveryAcknowledged.addEventListener('change', () => {
+    loginContinueAfterMfa.disabled = !loginRecoveryAcknowledged.checked;
+    if (loginRecoveryAcknowledged.checked) loginRecoveryStatus.textContent = '';
+  });
+
+  loginCopyRecoveryCodes.addEventListener('click', async () => {
+    if (!activeRecoveryCodes.length) return;
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('Clipboard access is unavailable.');
+      await navigator.clipboard.writeText(activeRecoveryCodes.join('\n'));
+      loginRecoveryStatus.textContent = 'Recovery codes copied.';
+    } catch {
+      loginRecoveryStatus.textContent = 'Could not copy the codes. Use the download option or save them manually.';
+    }
+  });
+
+  loginDownloadRecoveryCodes.addEventListener('click', () => {
+    if (!activeRecoveryCodes.length) return;
+    const file = new Blob([`${activeRecoveryCodes.join('\n')}\n`], { type: 'text/plain;charset=utf-8' });
+    const downloadUrl = URL.createObjectURL(file);
+    const downloadLink = document.createElement('a');
+    downloadLink.href = downloadUrl;
+    downloadLink.download = 'recovery-codes.txt';
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    downloadLink.remove();
+    setTimeout(() => URL.revokeObjectURL(downloadUrl), 0);
+    loginRecoveryStatus.textContent = 'Recovery codes downloaded.';
+  });
+
+  loginContinueAfterMfa.addEventListener('click', () => {
+    if (!loginRecoveryAcknowledged.checked) {
+      loginRecoveryStatus.textContent = 'Acknowledge that you saved your recovery codes to continue.';
+      loginRecoveryAcknowledged.focus();
+      return;
+    }
+    const redirectUrl = loginMfaRedirectUrl;
+    clearRecoveryCodes();
+    loginRecoveryPanel.hidden = true;
+    if (redirectUrl) window.location.href = redirectUrl;
+  });
+
+  loginUseRecoveryCode.addEventListener('click', () => {
+    loginUsingRecoveryCode = true;
+    document.querySelector('#loginMfaForm .otp-inputs').hidden = true;
+    loginRecoveryInput.hidden = false;
+    loginUseRecoveryCode.hidden = true;
+    loginUseTotpCode.hidden = false;
+    loginRecoveryCode.focus();
+  });
+
+  loginUseTotpCode.addEventListener('click', () => {
+    loginUsingRecoveryCode = false;
+    document.querySelector('#loginMfaForm .otp-inputs').hidden = false;
+    loginRecoveryInput.hidden = true;
+    loginUseRecoveryCode.hidden = false;
+    loginUseTotpCode.hidden = true;
+    loginMfaDigits[0].focus();
+  });
+
+  document.getElementById('loginReenrollButton').addEventListener('click', () => {
+    loginMfaMode = 'enrollment';
+    loginTotpInstruction.hidden = true;
+    loginUsingRecoveryCode = false;
+    document.querySelector('#loginMfaForm .otp-inputs').hidden = false;
+    loginRecoveryInput.hidden = true;
+    loginMfaForm.hidden = true;
+    loginEnrollmentCodePanel.hidden = false;
+    loginTotpRecoveryToggle.hidden = true;
+    loginMfaTitle.textContent = 'Set up a new authenticator';
+    loginEnrollmentCode.focus();
+  });
+
+  loginEnrollmentCodeForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    loginEnrollmentError.textContent = '';
+    loginEnrollmentStartBtn.disabled = true;
+    try {
+      const response = await fetch('/api/auth/mfa/enrollment/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: loginEnrollmentCode.value.trim() }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        loginEnrollmentError.textContent = data.message || 'Enrollment could not be started.';
+        return;
+      }
+      loginTotpQr.src = data.qrCodeDataUrl;
+      loginTotpSecret.textContent = data.secret;
+      loginEnrollmentCodePanel.hidden = true;
+      loginTotpSetupPanel.hidden = false;
+      loginMfaForm.hidden = false;
+      loginMfaMode = 'enrollment_confirm';
+      loginMfaTitle.textContent = 'Confirm your authenticator';
+      loginTotpInstruction.textContent = 'Enter the current six-digit code from your authenticator app to activate MFA.';
+      loginTotpInstruction.hidden = false;
+      loginMfaSubtitle.hidden = true;
+      loginTotpRecoveryToggle.hidden = true;
+      loginMfaTimer.hidden = true;
+      loginMfaResendWrap.hidden = true;
+      loginMfaSecurityNote.hidden = true;
+      loginMfaDigits.forEach((digit) => { digit.value = ''; });
+      loginMfaDigits[0].focus();
+    } catch (error) {
+      loginEnrollmentError.textContent = 'Something went wrong. Please try again.';
+      console.error('MFA enrollment request failed:', error);
+    } finally {
+      loginEnrollmentStartBtn.disabled = false;
+    }
+  });
 
   document.getElementById('closeLoginMfa').addEventListener('click', closeLoginMfa);
   document.getElementById('backToLoginMfa').addEventListener('click', (event) => {
@@ -202,19 +418,29 @@ document.addEventListener('DOMContentLoaded', () => {
     event.preventDefault();
     loginMfaError.textContent = '';
     loginMfaMessage.textContent = '';
-    const code = Array.from(loginMfaDigits).map((digit) => digit.value).join('');
-    if (!/^\d{6}$/.test(code)) {
-      loginMfaError.textContent = 'Enter all six digits.';
+    const code = loginUsingRecoveryCode
+      ? loginRecoveryCode.value.trim()
+      : Array.from(loginMfaDigits).map((digit) => digit.value).join('');
+    if (loginUsingRecoveryCode ? !code : !/^\d{6}$/.test(code)) {
+      loginMfaError.textContent = loginUsingRecoveryCode ? 'Enter your recovery code.' : 'Enter all six digits.';
       return;
     }
 
     loginMfaVerifyBtn.disabled = true;
     loginMfaVerifyBtn.textContent = 'VERIFYING...';
     try {
-      const response = await fetch('/api/auth/login/verify-otp', {
+      const endpoint = loginMfaMode === 'email_otp'
+        ? '/api/auth/login/verify-otp'
+        : loginMfaMode === 'enrollment_confirm'
+          ? '/api/auth/mfa/enrollment/verify'
+          : '/api/auth/login/verify-totp';
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, rememberDevice: rememberLoginDevice.checked }),
+        body: JSON.stringify({
+          code,
+          rememberDevice: loginMfaMode === 'email_otp' && rememberLoginDevice.checked,
+        }),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -223,6 +449,10 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       if (typeof data.redirectUrl !== 'string' || !data.redirectUrl) {
         loginMfaError.textContent = 'Could not determine the correct page for your account.';
+        return;
+      }
+      if (Array.isArray(data.recoveryCodes) && data.recoveryCodes.length) {
+        showRecoveryCodes(data.recoveryCodes, data.redirectUrl);
         return;
       }
       window.location.href = data.redirectUrl;
@@ -305,7 +535,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       if (data.requiresMfa) {
-        openLoginMfa(email);
+        openLoginMfa(email, data.mfaMethod || 'email_otp');
         return;
       }
 

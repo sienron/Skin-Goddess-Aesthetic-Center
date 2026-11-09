@@ -5,6 +5,7 @@
 require('dotenv').config(); 
 
 const { Pool } = require('pg');
+const { getPostgresSslConfig } = require('./utils/postgresConfig');
 
 const pool = new Pool({
   user: process.env.DB_USER,
@@ -12,9 +13,7 @@ const pool = new Pool({
   host: process.env.DB_HOST,
   port: process.env.DB_PORT,
   database: process.env.DB_NAME,
-  ssl: process.env.DB_SSL === 'true' || process.env.NODE_ENV === 'production'
-    ? { rejectUnauthorized: false }
-    : false
+  ssl: getPostgresSslConfig()
 });
 // Ito yung "settings" ng koneksyon natin — kinukuha lahat mula sa .env file,
 // para hindi natin kailangang i-type nang diretso yung password sa code

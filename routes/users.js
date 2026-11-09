@@ -10,6 +10,7 @@ const router = express.Router();
 const db = require('../db');
 const { requireRole } = require('../middleware/auth');
 const isValidPassword = require('../utils/password');
+const { isValidName, isValidEmail } = require('../utils/userValidation');
 
 // Every route below is admin-only.
 router.use(requireRole('admin'));
@@ -178,12 +179,18 @@ router.post('/', async (req, res) => {
   if (!trimmedName || !normalizedEmail || !role) {
     return res.status(400).json({ message: 'Full name, email, and role are required.' });
   }
+  if (!isValidName(trimmedName, 201) || !isValidEmail(normalizedEmail)) {
+    return res.status(400).json({ message: 'Enter a valid full name and email address.' });
+  }
   if (!Object.hasOwn(ROLE_BADGE, role)) {
     return res.status(400).json({ message: 'Invalid user role.' });
   }
 
-  const [firstName, ...rest] = trimmedName.split(' ');
+  const [firstName, ...rest] = trimmedName.split(/\s+/);
   const lastName = rest.join(' ') || '';
+  if (!isValidName(firstName) || (lastName && !isValidName(lastName))) {
+    return res.status(400).json({ message: 'Enter a valid full name and email address.' });
+  }
 
   try {
     const existing = await db.query('SELECT user_id FROM users WHERE LOWER(email) = $1', [normalizedEmail]);
@@ -233,46 +240,82 @@ router.put('/:id', async (req, res) => {
   }
 
   const trimmedName = typeof fullName === 'string' ? fullName.trim() : '';
-  const [firstName, ...rest] = trimmedName.split(' ');
-  const lastName = rest.join(' ') || '';
+  let firstName = null;
+  let lastName = null;
+  if (fullName !== undefined) {
+    if (!isValidName(trimmedName, 201)) {
+      return res.status(400).json({ message: 'Enter a valid full name.' });
+    }
+    const [parsedFirstName, ...rest] = trimmedName.split(/\s+/);
+    const parsedLastName = rest.join(' ') || '';
+    if (!isValidName(parsedFirstName) || (parsedLastName && !isValidName(parsedLastName))) {
+      return res.status(400).json({ message: 'Enter a valid full name.' });
+    }
+    firstName = parsedFirstName;
+    lastName = parsedLastName;
+  }
+
+  const normalizedEmail = email === undefined
+    ? null
+    : typeof email === 'string' ? email.trim().toLowerCase() : '';
+  if (normalizedEmail !== null && !isValidEmail(normalizedEmail)) {
+    return res.status(400).json({ message: 'Enter a valid email address.' });
+  }
 
   try {
     const passwordHash = password === undefined ? null : await bcrypt.hash(password, 10);
-    const result = await db.query(
-      `UPDATE users SET
-         first_name = COALESCE($1, first_name),
-         last_name = COALESCE($2, last_name),
-         email = COALESCE($3, email),
-         date_of_birth = COALESCE($4, date_of_birth),
-         gender = COALESCE($5, gender),
-         civil_status = COALESCE($6, civil_status),
-         contact_number = COALESCE($7, contact_number),
-         home_address = COALESCE($8, home_address),
-         allergies = COALESCE($9, allergies),
-         medical_conditions = COALESCE($10, medical_conditions),
-         password_hash = COALESCE($11, password_hash),
-         role = COALESCE($12, role),
-         updated_at = NOW()
-       WHERE user_id = $13
-       RETURNING user_id, first_name, last_name, email, role, status, gender,
-                 date_of_birth, civil_status, contact_number, home_address,
-                 allergies, medical_conditions, email_verified, created_at, updated_at`,
-      [
-        firstName || null,
-        lastName || null,
-        email ? email.trim().toLowerCase() : null,
-        dob || null,
-        sex || null,
-        civilStatus || null,
-        contact || null,
-        address || null,
-        Array.isArray(allergies) ? allergies.join(', ') : (allergies || null),
-        conditions || null,
-        passwordHash,
-        role || null,
-        req.params.id,
-      ]
-    );
+    const result = await db.transaction(async (client) => {
+      const current = await client.query(
+        'SELECT role FROM users WHERE user_id = $1 FOR UPDATE',
+        [req.params.id]
+      );
+      if (current.rows.length === 0) return { rows: [] };
+
+      const updated = await client.query(
+        `UPDATE users SET
+           first_name = COALESCE($1, first_name),
+           last_name = COALESCE($2, last_name),
+           email = COALESCE($3, email),
+           date_of_birth = COALESCE($4, date_of_birth),
+           gender = COALESCE($5, gender),
+           civil_status = COALESCE($6, civil_status),
+           contact_number = COALESCE($7, contact_number),
+           home_address = COALESCE($8, home_address),
+           allergies = COALESCE($9, allergies),
+           medical_conditions = COALESCE($10, medical_conditions),
+           password_hash = COALESCE($11, password_hash),
+           role = COALESCE($12, role),
+           updated_at = NOW()
+         WHERE user_id = $13
+         RETURNING user_id, first_name, last_name, email, role, status, gender,
+                   date_of_birth, civil_status, contact_number, home_address,
+                   allergies, medical_conditions, email_verified, created_at, updated_at`,
+        [
+          firstName || null,
+          lastName || null,
+          normalizedEmail,
+          dob || null,
+          sex || null,
+          civilStatus || null,
+          contact || null,
+          address || null,
+          Array.isArray(allergies) ? allergies.join(', ') : (allergies || null),
+          conditions || null,
+          passwordHash,
+          role || null,
+          req.params.id,
+        ]
+      );
+      if (current.rows[0].role !== updated.rows[0].role) {
+        await client.query(`
+          DELETE FROM user_sessions
+          WHERE sess->>'userId' = $1
+             OR sess->>'pendingLoginUserId' = $1
+             OR sess->>'pendingPrivilegedMfaUserId' = $1
+        `, [String(req.params.id)]);
+      }
+      return updated;
+    });
 
     if (result.rows.length === 0) {
       return res.status(404).json({ message: 'User not found.' });
@@ -296,16 +339,31 @@ router.patch('/:id/status', async (req, res) => {
   }
 
   try {
-    const target = await db.query('SELECT user_id FROM users WHERE user_id = $1', [req.params.id]);
-    if (target.rows.length === 0) return res.status(404).json({ message: 'User not found.' });
+    const result = await db.transaction(async (client) => {
+      const target = await client.query(
+        'SELECT user_id FROM users WHERE user_id = $1 FOR UPDATE',
+        [req.params.id]
+      );
+      if (target.rows.length === 0) return { rows: [] };
 
-    const result = await db.query(
-      `UPDATE users SET status = $1, updated_at = NOW() WHERE user_id = $2
-       RETURNING user_id, first_name, last_name, email, role, status, gender,
-                 date_of_birth, civil_status, contact_number, home_address,
-                 allergies, medical_conditions, email_verified, created_at, updated_at`,
-      [status, req.params.id]
-    );
+      const updated = await client.query(
+        `UPDATE users SET status = $1, updated_at = NOW() WHERE user_id = $2
+         RETURNING user_id, first_name, last_name, email, role, status, gender,
+                   date_of_birth, civil_status, contact_number, home_address,
+                   allergies, medical_conditions, email_verified, created_at, updated_at`,
+        [status, req.params.id]
+      );
+
+      if (status === 'suspended') {
+        await client.query(`
+          DELETE FROM user_sessions
+          WHERE sess->>'userId' = $1
+             OR sess->>'pendingLoginUserId' = $1
+             OR sess->>'pendingPrivilegedMfaUserId' = $1
+        `, [String(req.params.id)]);
+      }
+      return updated;
+    });
 
     if (result.rows.length === 0) {
       return res.status(404).json({ message: 'User not found.' });

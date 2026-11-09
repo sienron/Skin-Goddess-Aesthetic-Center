@@ -5,6 +5,7 @@ const { requireRole } = require('../middleware/auth');
 const { DEPOSIT_DEDUCTED_FROM_PRICE, NO_SHOW_DEPOSIT_IS_INCOME } = require('../utils/financeRules');
 const { notifyRoles } = require('../utils/notifications');
 const { LOW_STOCK_THRESHOLD } = require('../utils/inventoryThresholds');
+const { escapeCsvCell } = require('../utils/csv');
 
 const router = express.Router();
 const PAYMENT_TYPES = ['reservation', 'balance', 'product_sale'];
@@ -1320,14 +1321,8 @@ router.get('/report', endpoint(async (req, res) => {
   res.json(await reportData(from, to));
 }));
 
-function csvCell(value) {
-  let text = value == null ? '' : String(value);
-  if (/^[=+\-@]/.test(text)) text = `'${text}`;
-  return `"${text.replace(/"/g, '""')}"`;
-}
-
 function sendCsv(res, headers, rows, filename) {
-  const body = [headers, ...rows].map((row) => row.map(csvCell).join(',')).join('\r\n');
+  const body = [headers, ...rows].map((row) => row.map(escapeCsvCell).join(',')).join('\r\n');
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
   res.send(`\uFEFF${body}`);

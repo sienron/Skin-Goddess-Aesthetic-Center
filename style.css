@@ -6312,6 +6312,74 @@ main.page {
   max-width: 400px;
 }
 
+.login-recovery-warning {
+  margin: 14px 0;
+  padding: 12px 14px;
+  color: var(--gold-dark-2);
+  background: #FBF7EE;
+  border: 1px solid var(--gold-2);
+  border-radius: var(--radius);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.login-recovery-codes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 16px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.login-recovery-codes li {
+  min-width: 0;
+  padding: 10px 8px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  text-align: center;
+}
+
+.login-recovery-codes code {
+  color: var(--text-dark);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  overflow-wrap: anywhere;
+}
+
+.login-recovery-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.login-recovery-actions .auth-btn {
+  flex: 1;
+  min-height: 42px;
+  padding: 9px;
+  border-radius: var(--radius);
+  font-size: 11px;
+}
+
+.login-recovery-status {
+  min-height: 18px;
+  margin: 8px 0;
+  color: var(--gold-dark-2);
+  font-size: 11px;
+}
+
+.login-recovery-acknowledge {
+  justify-content: flex-start;
+  margin: 12px 0 16px;
+  text-align: left;
+  font-size: 12px;
+}
+
+.login-recovery-acknowledge input {
+  flex: 0 0 auto;
+}
+
 .otp-email {
   color: var(--gold-dark-2);
   font-weight: 600;
@@ -6356,6 +6424,12 @@ main.page {
 .otp-timer-value {
   color: var(--gold-2);
   font-weight: 600;
+}
+
+@media (max-width: 420px) {
+  .login-recovery-actions {
+    flex-direction: column;
+  }
 }
 
 .otp-resend {
