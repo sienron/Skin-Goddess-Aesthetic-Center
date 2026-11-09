@@ -352,32 +352,39 @@
         </div>
         <button class="apt-modal__close" id="appointmentDetailsClose" type="button" aria-label="Close appointment details">&times;</button>
       </header>
-      <dl class="appointment-details-grid">
-        <div><dt>Reference</dt><dd id="appointmentDetailsReference"></dd></div>
-        <div><dt>Client / Walk-in</dt><dd id="appointmentDetailsClient"></dd></div>
-        <div><dt>Service</dt><dd id="appointmentDetailsService"></dd></div>
-        <div><dt>Appointment date</dt><dd id="appointmentDetailsDate"></dd></div>
-        <div><dt>Treatment duration</dt><dd id="appointmentDetailsDuration"></dd></div>
-        <div><dt>Reserved end (incl. buffer)</dt><dd id="appointmentDetailsScheduledEnd"></dd></div>
-        <div><dt>Expected end</dt><dd id="appointmentDetailsExpectedEnd"></dd></div>
-        <div><dt>Reserved buffer</dt><dd id="appointmentDetailsBuffer"></dd></div>
-        <div><dt>Assigned staff</dt><dd id="appointmentDetailsStaff"></dd></div>
-        <div><dt>Status</dt><dd id="appointmentDetailsStatus"></dd></div>
-        <div><dt>Product-use review</dt><dd id="appointmentDetailsProductReview"></dd></div>
-      </dl>
-      <section id="appointmentEndAdjustmentSection" class="appointment-end-adjustment" hidden>
-        <h3>Adjust Expected End Time</h3>
-        <p>Only changes the estimate for this ongoing treatment. It does not change the original schedule, service duration, or price.</p>
-        <form id="appointmentExpectedEndForm">
-          <label for="appointmentExpectedEndTime">EXPECTED END TIME</label>
-          <input id="appointmentExpectedEndTime" name="expectedEndTime" type="time" required>
-          <button class="um-btn um-btn--primary" id="appointmentExpectedEndSave" type="submit">Update Estimate</button>
-        </form>
-        <p class="appointment-inventory-message" id="appointmentEndAdjustmentMessage" role="status" aria-live="polite"></p>
-        <h4>Adjustment history</h4>
-        <ul id="appointmentEndAdjustmentHistory"></ul>
-      </section>
-      <p class="appointment-inventory-message" id="appointmentDetailsMessage" role="status" aria-live="polite"></p>
+      <div class="appointment-details-content">
+        <section class="appointment-details-section" aria-labelledby="appointmentInformationTitle">
+          <h3 id="appointmentInformationTitle">Appointment Information</h3>
+          <dl class="appointment-details-grid">
+            <div><dt>Reference</dt><dd id="appointmentDetailsReference"></dd></div>
+            <div><dt>Client / Walk-in</dt><dd id="appointmentDetailsClient"></dd></div>
+            <div><dt>Service</dt><dd id="appointmentDetailsService"></dd></div>
+            <div><dt>Appointment date</dt><dd id="appointmentDetailsDate"></dd></div>
+            <div><dt>Treatment duration</dt><dd id="appointmentDetailsDuration"></dd></div>
+            <div><dt>Reserved end (incl. buffer)</dt><dd id="appointmentDetailsScheduledEnd"></dd></div>
+            <div><dt>Expected end</dt><dd id="appointmentDetailsExpectedEnd"></dd></div>
+            <div><dt>Reserved buffer</dt><dd id="appointmentDetailsBuffer"></dd></div>
+            <div><dt>Assigned staff</dt><dd id="appointmentDetailsStaff"></dd></div>
+            <div><dt>Status</dt><dd id="appointmentDetailsStatus"></dd></div>
+            <div><dt>Product-use review</dt><dd id="appointmentDetailsProductReview"></dd></div>
+          </dl>
+        </section>
+        <section id="appointmentEndAdjustmentSection" class="appointment-end-adjustment" aria-labelledby="appointmentEndAdjustmentTitle" hidden>
+          <h3 id="appointmentEndAdjustmentTitle">Adjust Expected End Time</h3>
+          <p>Only changes the estimate for this ongoing treatment. It does not change the original schedule, service duration, or price.</p>
+          <form id="appointmentExpectedEndForm">
+            <label for="appointmentExpectedEndTime">EXPECTED END TIME</label>
+            <input id="appointmentExpectedEndTime" name="expectedEndTime" type="time" required>
+            <button class="um-btn um-btn--primary" id="appointmentExpectedEndSave" type="submit">Update Estimate</button>
+          </form>
+          <p class="appointment-inventory-message" id="appointmentEndAdjustmentMessage" role="status" aria-live="polite"></p>
+          <section class="appointment-adjustment-history" aria-labelledby="appointmentAdjustmentHistoryTitle">
+            <h4 id="appointmentAdjustmentHistoryTitle">Adjustment history</h4>
+            <ul id="appointmentEndAdjustmentHistory"></ul>
+          </section>
+        </section>
+        <p class="appointment-inventory-message appointment-details-notice" id="appointmentDetailsMessage" role="status" aria-live="polite"></p>
+      </div>
       <footer class="appointment-inventory-actions">
         <button class="um-btn um-btn--ghost" id="appointmentDetailsDone" type="button">Close</button>
         <button class="um-btn um-btn--primary" id="appointmentProductsReviewBtn" type="button" hidden>Review Products Used</button>

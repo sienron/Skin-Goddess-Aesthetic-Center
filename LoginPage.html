@@ -284,10 +284,10 @@
       </p>
 
       <section id="loginEnrollmentCodePanel" hidden>
-        <p>Privileged accounts require an authenticator app. Enter the single-use enrollment code provided by the verified system operator.</p>
-        <form id="loginEnrollmentCodeForm">
+        <p class="login-enrollment-description">Privileged accounts require an authenticator app. Enter the single-use enrollment code provided by the verified system operator.</p>
+        <form id="loginEnrollmentCodeForm" class="login-enrollment-form">
           <label for="loginEnrollmentCode">ENROLLMENT CODE</label>
-          <input type="text" id="loginEnrollmentCode" autocomplete="one-time-code" maxlength="64" required>
+          <input type="text" id="loginEnrollmentCode" autocomplete="one-time-code" maxlength="64" placeholder="Enter enrollment code" required>
           <span class="field-error" id="loginEnrollmentError" aria-live="assertive"></span>
           <button type="submit" class="auth-btn btn-gold btn-block" id="loginEnrollmentStartBtn">SET UP AUTHENTICATOR</button>
         </form>
