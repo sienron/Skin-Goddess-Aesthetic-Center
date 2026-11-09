@@ -17,6 +17,7 @@ const {
   codeForStep,
   matchTotpStep,
   encryptTotpSecret,
+  decryptTotpSecret,
   hashEnrollmentCode,
 } = require('../utils/totp');
 
@@ -511,7 +512,11 @@ test('operator-issued enrollment code is required before setup and enrollment ac
       if (sql.includes('SELECT role, status, email_verified')) return { rows: [{ role: 'admin', status: 'active', email_verified: true }] };
       if (sql.includes('SELECT enrollment_code_id, code_hash')) return { rows: [codeRow] };
       if (sql.includes('INSERT INTO privileged_mfa_pending_enrollments')) {
-        pendingSecret = { ciphertext: values[1], iv: values[2], tag: values[3] };
+        pendingSecret = {
+          secret_ciphertext: values[1],
+          secret_iv: values[2],
+          secret_tag: values[3],
+        };
         return { rows: [] };
       }
       if (sql.includes('INSERT INTO privileged_mfa_audit')) auditEvents.push(values[1]);
@@ -540,7 +545,12 @@ test('operator-issued enrollment code is required before setup and enrollment ac
   assert.equal(setupResponse.statusCode, 200);
   assert.match(setupResponse.body.qrCodeDataUrl, /^data:image\/png;base64,/);
   assert.equal(typeof setupResponse.body.secret, 'string');
-  assert.notEqual(pendingSecret.ciphertext, setupResponse.body.secret);
+  assert.notEqual(pendingSecret.secret_ciphertext, setupResponse.body.secret);
+  assert.equal(decryptTotpSecret({
+    ciphertext: pendingSecret.secret_ciphertext,
+    iv: pendingSecret.secret_iv,
+    tag: pendingSecret.secret_tag,
+  }), setupResponse.body.secret);
   assert.equal(startRequest.session.pendingPrivilegedMfaStage, 'enrollment_confirm');
 
   const createdCodes = [];

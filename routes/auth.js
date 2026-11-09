@@ -801,7 +801,11 @@ router.post('/mfa/enrollment/verify', privilegedMfaVerifyLimiter, async (req, re
       }
       if (pending.attempts >= 5) return { status: 'locked' };
 
-      const secret = decryptTotpSecret(pending);
+      const secret = decryptTotpSecret({
+        ciphertext: pending.secret_ciphertext,
+        iv: pending.secret_iv,
+        tag: pending.secret_tag,
+      });
       const matchedStep = matchTotpStep(secret, code);
       if (matchedStep === null) {
         await client.query(`
