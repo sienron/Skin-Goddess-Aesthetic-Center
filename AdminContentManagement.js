@@ -101,7 +101,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const select = document.getElementById('cmServiceCategorySelect');
     const list = document.getElementById('cmServiceList');
     const searchInput = document.getElementById('cmServiceSearchInput');
+    const serviceCount = document.getElementById('cmServiceCount');
     if (!select || !list) return;
+
+    if (serviceCount) {
+      serviceCount.textContent = `${SERVICES.length} ${SERVICES.length === 1 ? 'service' : 'services'}`;
+    }
 
     if (searchInput) {
       searchInput.value = serviceSearchTerm;

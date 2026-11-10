@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="admin-workspace-refresh.css">
 </head>
 <body class="sg-admin-typography">
 
@@ -87,6 +88,15 @@
           <div class="um-header__actions-row">
             <button class="um-btn um-btn--primary" id="cmAddBtn" type="button">+ Add New</button>
           </div>
+          <div class="admin-notification-wrap">
+            <button class="admin-notification-btn" id="adminNotificationBtn" type="button" aria-label="View notifications" aria-haspopup="true" aria-expanded="false" aria-controls="adminNotificationDropdown">
+              <img src="icons/notification-bell.svg" alt="">
+            </button>
+            <div class="admin-notification-dropdown" id="adminNotificationDropdown">
+              <strong>Notifications</strong>
+              <div class="admin-notification-list">No notifications yet</div>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -101,6 +111,14 @@
         <!-- ===== Services & Treatments ===== -->
         <div class="cm-panel cm-panel--active" id="cmPanelServices">
           <div class="cm-services-shell">
+            <div class="cm-catalog-heading">
+              <div>
+                <p class="cm-catalog-heading__eyebrow">YOUR WEBSITE CATALOG</p>
+                <h2>Services &amp; treatments</h2>
+                <p>Keep your offerings, pricing, and appointment details up to date.</p>
+              </div>
+              <span class="cm-catalog-count" id="cmServiceCount" aria-live="polite">Service catalog</span>
+            </div>
             <div class="cm-services-toolbar">
               <div class="cm-toolbar-group">
                 <label class="cm-select-field" for="cmServiceCategorySelect">

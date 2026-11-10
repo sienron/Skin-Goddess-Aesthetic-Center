@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="admin-workspace-refresh.css">
 </head>
 <body class="sg-admin-typography">
   <div class="um-shell">
@@ -64,13 +65,38 @@
     <main class="um-main inquiries-main">
       <header class="um-header">
         <div>
+          <p class="um-header__eyebrow">INBOX</p>
           <h1 class="um-header__title">Customer Inquiries</h1>
           <p class="um-header__subtitle">Messages submitted through the Contact Us page</p>
         </div>
         <div class="um-header__actions">
+          <div class="admin-notification-wrap">
+            <button class="admin-notification-btn" id="adminNotificationBtn" type="button" aria-label="View notifications" aria-haspopup="true" aria-expanded="false" aria-controls="adminNotificationDropdown">
+              <img src="icons/notification-bell.svg" alt="">
+            </button>
+            <div class="admin-notification-dropdown" id="adminNotificationDropdown">
+              <strong>Notifications</strong>
+              <div class="admin-notification-list">No notifications yet</div>
+            </div>
+          </div>
           <button class="um-btn um-btn--ghost" type="button" id="refreshInquiries" aria-label="Refresh inquiries">Refresh</button>
         </div>  
       </header>
+
+      <section class="inquiry-overview" aria-label="Inquiry overview">
+        <article class="inquiry-overview-card inquiry-overview-card--total">
+          <span class="inquiry-overview-card__icon" aria-hidden="true">01</span>
+          <div><p>Total messages</p><strong id="inquiryTotalMetric">—</strong></div>
+        </article>
+        <article class="inquiry-overview-card inquiry-overview-card--pending">
+          <span class="inquiry-overview-card__icon" aria-hidden="true">02</span>
+          <div><p>Awaiting reply</p><strong id="inquiryPendingMetric">—</strong></div>
+        </article>
+        <article class="inquiry-overview-card inquiry-overview-card--replied">
+          <span class="inquiry-overview-card__icon" aria-hidden="true">03</span>
+          <div><p>Replied</p><strong id="inquiryRepliedMetric">—</strong></div>
+        </article>
+      </section>
 
       <section class="inquiries-workspace" aria-label="Customer inquiries">
         <div class="inquiries-list-panel">

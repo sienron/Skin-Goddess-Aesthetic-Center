@@ -13,6 +13,8 @@
         const notificationWrap = headerActions.querySelector(".admin-notification-wrap");
         const account = sidebar.querySelector(".um-sidebar__account, .inv-sidebar__account");
         const storageKey = "skin-goddess-staff-theme";
+        const sharedThemeStorageKey = "skin-goddess-theme";
+        const customerThemeStorageKey = "skin-goddess-customer-theme";
         const icons = `
             <svg class="staff-theme-toggle__icon staff-theme-toggle__icon--moon" viewBox="0 0 20 20" aria-hidden="true">
                 <path d="M16.8 12.1A7.2 7.2 0 0 1 7.9 3.2 7.3 7.3 0 1 0 16.8 12.1Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
@@ -55,7 +57,9 @@
             });
             if (!persist) return;
             try {
+                window.localStorage.setItem(sharedThemeStorageKey, theme);
                 window.localStorage.setItem(storageKey, theme);
+                window.localStorage.setItem(customerThemeStorageKey, theme);
             } catch (error) {
                 console.warn("Unable to save the staff theme preference.", error);
             }
@@ -63,14 +67,19 @@
 
         let savedTheme = "light";
         try {
-            savedTheme = window.localStorage.getItem(storageKey) === "dark" ? "dark" : "light";
+            savedTheme = [
+                sharedThemeStorageKey,
+                storageKey,
+                customerThemeStorageKey,
+            ].map((key) => window.localStorage.getItem(key))
+                .find((theme) => theme === "dark" || theme === "light") || "light";
         } catch (error) {
             console.warn("Unable to read the saved staff theme preference.", error);
         }
         setTheme(savedTheme, false);
 
         window.addEventListener("storage", (event) => {
-            if (event.key === storageKey) {
+            if ([sharedThemeStorageKey, storageKey, customerThemeStorageKey].includes(event.key)) {
                 setTheme(event.newValue === "dark" ? "dark" : "light", false);
             }
         });

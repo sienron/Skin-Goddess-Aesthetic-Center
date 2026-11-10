@@ -513,6 +513,8 @@
     if (staffHeader && staffSidebar && actions) {
         const notificationWrap = actions.querySelector(".notification-wrap");
         const themeStorageKey = "skin-goddess-staff-theme";
+        const sharedThemeStorageKey = "skin-goddess-theme";
+        const customerThemeStorageKey = "skin-goddess-customer-theme";
         const iconMarkup = `
             <svg class="staff-theme-toggle__icon staff-theme-toggle__icon--moon" viewBox="0 0 20 20" aria-hidden="true">
                 <path d="M16.8 12.1A7.2 7.2 0 0 1 7.9 3.2 7.3 7.3 0 1 0 16.8 12.1Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
@@ -557,7 +559,9 @@
 
             if (!persist) return;
             try {
+                window.localStorage.setItem(sharedThemeStorageKey, theme);
                 window.localStorage.setItem(themeStorageKey, theme);
+                window.localStorage.setItem(customerThemeStorageKey, theme);
             } catch (error) {
                 console.warn("Unable to save the staff theme preference.", error);
             }
@@ -565,14 +569,19 @@
 
         let savedTheme = "light";
         try {
-            savedTheme = window.localStorage.getItem(themeStorageKey) === "dark" ? "dark" : "light";
+            savedTheme = [
+                sharedThemeStorageKey,
+                themeStorageKey,
+                customerThemeStorageKey,
+            ].map((key) => window.localStorage.getItem(key))
+                .find((theme) => theme === "dark" || theme === "light") || "light";
         } catch (error) {
             console.warn("Unable to read the saved staff theme preference.", error);
         }
         setTheme(savedTheme, false);
 
         window.addEventListener("storage", (event) => {
-            if (event.key === themeStorageKey) {
+            if ([sharedThemeStorageKey, themeStorageKey, customerThemeStorageKey].includes(event.key)) {
                 setTheme(event.newValue === "dark" ? "dark" : "light", false);
             }
         });
@@ -581,6 +590,8 @@
     const customerThemeToggle = document.getElementById("themeToggle");
     if (customerThemeToggle && (document.body.classList.contains("client-header") || document.body.classList.contains("homepage"))) {
         const themeStorageKey = "skin-goddess-customer-theme";
+        const sharedThemeStorageKey = "skin-goddess-theme";
+        const staffThemeStorageKey = "skin-goddess-staff-theme";
         const themeIcon = customerThemeToggle.querySelector(".theme-toggle-icon");
 
         function setCustomerTheme(theme, persist) {
@@ -593,6 +604,8 @@
 
             if (!persist) return;
             try {
+                window.localStorage.setItem(sharedThemeStorageKey, theme);
+                window.localStorage.setItem(staffThemeStorageKey, theme);
                 window.localStorage.setItem(themeStorageKey, theme);
             } catch (error) {
                 console.warn("Unable to save the customer theme preference.", error);
@@ -605,14 +618,19 @@
 
         let savedTheme = "light";
         try {
-            savedTheme = window.localStorage.getItem(themeStorageKey) === "dark" ? "dark" : "light";
+            savedTheme = [
+                sharedThemeStorageKey,
+                staffThemeStorageKey,
+                themeStorageKey,
+            ].map((key) => window.localStorage.getItem(key))
+                .find((theme) => theme === "dark" || theme === "light") || "light";
         } catch (error) {
             console.warn("Unable to read the saved customer theme preference.", error);
         }
         setCustomerTheme(savedTheme, false);
 
         window.addEventListener("storage", (event) => {
-            if (event.key === themeStorageKey) {
+            if ([sharedThemeStorageKey, staffThemeStorageKey, themeStorageKey].includes(event.key)) {
                 setCustomerTheme(event.newValue === "dark" ? "dark" : "light", false);
             }
         });

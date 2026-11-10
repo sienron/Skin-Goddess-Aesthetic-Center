@@ -3,6 +3,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const detailElement = document.getElementById('inquiryDetail');
   const countElement = document.getElementById('inquiryCount');
   const searchInput = document.getElementById('inquirySearch');
+  const totalMetric = document.getElementById('inquiryTotalMetric');
+  const pendingMetric = document.getElementById('inquiryPendingMetric');
+  const repliedMetric = document.getElementById('inquiryRepliedMetric');
   let inquiries = [];
   let selectedId = null;
   let activeFilter = 'all';
@@ -35,6 +38,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function renderList() {
     const visible = visibleInquiries();
+    const repliedCount = inquiries.filter((inquiry) => Boolean(inquiry.replied_at)).length;
+    totalMetric.textContent = String(inquiries.length).padStart(2, '0');
+    pendingMetric.textContent = String(inquiries.length - repliedCount).padStart(2, '0');
+    repliedMetric.textContent = String(repliedCount).padStart(2, '0');
     listElement.replaceChildren();
     countElement.textContent = `${visible.length} ${visible.length === 1 ? 'inquiry' : 'inquiries'}`;
 
