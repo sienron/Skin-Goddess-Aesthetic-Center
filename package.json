@@ -25,11 +25,8 @@
         "migrate:announcement-reads": "node migrations/046-announcement-reads.js",
         "migrate:appointment-scheduling": "node migrations/047-flexible-appointment-scheduling.js && node migrations/048-appointment-delay-retries.js && node migrations/049-consolidate-aesthetician-roles.js",
         "migrate:aesthetician-roles": "node migrations/049-consolidate-aesthetician-roles.js",
-<<<<<<< HEAD
-=======
         "migrate:privileged-mfa": "node migrations/050-privileged-totp-mfa.js",
         "migrate:hashed-email-otps": "node migrations/051-hashed-email-otps.js",
->>>>>>> 1ee1c961f2bcc933f855d36c0fb09fea517b64c3
         "test:finance:integration": "node --test tests/finance.integration.test.js",
         "test:finance:ux": "node --test tests/finance-ux.test.js",
         "test:security": "node --test tests/login-security.test.js tests/appointment-booking-access.test.js",
