@@ -46,7 +46,7 @@ const confirmRoute = appointmentsRouter.stack
   .find((layer) => layer.route?.path === '/paymongo/confirm' && layer.route.methods.post)
   .route.stack.at(-1).handle;
 
-async function invokeConfirm({ initialStatus = 'pending', checkoutData, fetchFailure = false }) {
+async function invokeConfirm({ initialStatus = 'pending', checkoutData, fetchFailure = false, closedDate = null }) {
   const originalRecord = { ...paymentRecord, status: initialStatus };
   let checkoutStatus = initialStatus;
   let checkoutPaymentId = null;
@@ -59,6 +59,9 @@ async function invokeConfirm({ initialStatus = 'pending', checkoutData, fetchFai
   const queries = [];
 
   db.query = async (sql, values = []) => {
+      if (/FROM clinic_operating_hours/.test(sql)) return { rows: require('../utils/clinicSchedule').DEFAULT_HOURS };
+      if (/SELECT closure_id, closure_date::text, reason FROM clinic_closures/.test(sql)) return { rows: closedDate ? [{ closure_date:closedDate }] : [] };
+      if (/SELECT pg_advisory_xact_lock_shared/.test(sql)) return { rows: [] };
     queries.push({ sql, values });
     if (/SELECT reference_number, user_id/.test(sql)) {
       return { rows: [{ ...originalRecord, status: checkoutStatus, appointment_id: appointmentId }] };
@@ -79,6 +82,9 @@ async function invokeConfirm({ initialStatus = 'pending', checkoutData, fetchFai
     transactionStarted = true;
     return callback({
       async query(sql, values = []) {
+      if (/FROM clinic_operating_hours/.test(sql)) return { rows: require('../utils/clinicSchedule').DEFAULT_HOURS };
+      if (/SELECT closure_id, closure_date::text, reason FROM clinic_closures/.test(sql)) return { rows: closedDate ? [{ closure_date:closedDate }] : [] };
+      if (/SELECT pg_advisory_xact_lock_shared/.test(sql)) return { rows: [] };
         queries.push({ sql, values });
         if (/SELECT status\s+FROM paymongo_checkout_sessions/.test(sql)) {
           return { rows: [{ status: checkoutStatus }] };
@@ -207,6 +213,14 @@ test('PayMongo non-paid status leaves the checkout pending and does not create a
   assert.equal(result.responseBody.pending, true);
   assert.equal(result.appointmentInsertCount, 0);
   assert.equal(result.queries.some(({ sql }) => /INSERT INTO appointments/.test(sql)), false);
+});
+
+test('a paid checkout cannot create an appointment after staff close its date', async () => {
+  const result = await invokeConfirm({ checkoutData:paidCheckout(), closedDate:paymentRecord.appointment_date });
+  assert.equal(result.statusCode,409);
+  assert.equal(result.appointmentInsertCount,0);
+  assert.match(result.responseBody.message,/refund/i);
+  assert.equal(result.queries.some(({sql})=>/INSERT INTO payments/.test(sql)),false);
 });
 
 test('PayMongo API failure leaves the checkout pending for retry', async () => {

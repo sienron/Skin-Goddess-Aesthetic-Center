@@ -27,6 +27,9 @@ async function invokeRebook({ staffAvailable = true, originalStatus = 'cancelled
   let responseBody;
   db.transaction = async (callback) => callback({
     async query(sql, values = []) {
+      if (/FROM clinic_operating_hours/.test(sql)) return { rows: require('../utils/clinicSchedule').DEFAULT_HOURS };
+      if (/SELECT closure_id, closure_date::text, reason FROM clinic_closures/.test(sql)) return { rows: [] };
+      if (/SELECT pg_advisory_xact_lock_shared/.test(sql)) return { rows: [] };
       queryCalls.push({ sql, values });
       if (/SELECT appointment_id, user_id, walk_in_name/.test(sql)) {
         return { rows: [{

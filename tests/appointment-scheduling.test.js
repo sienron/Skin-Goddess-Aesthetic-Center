@@ -62,6 +62,9 @@ async function loadAvailability({
 }) {
   const queries = [];
   db.query = async (sql, values = []) => {
+      if (/FROM clinic_operating_hours/.test(sql)) return { rows: require('../utils/clinicSchedule').DEFAULT_HOURS };
+      if (/SELECT closure_id, closure_date::text, reason FROM clinic_closures/.test(sql)) return { rows: [] };
+      if (/SELECT pg_advisory_xact_lock_shared/.test(sql)) return { rows: [] };
     queries.push({ sql, values });
     if (/SELECT duration_minutes, buffer_minutes FROM services/.test(sql)) {
       return { rows: [service] };
@@ -223,6 +226,9 @@ async function runAdjustment({
   };
 
   db.query = async (sql, values = []) => {
+      if (/FROM clinic_operating_hours/.test(sql)) return { rows: require('../utils/clinicSchedule').DEFAULT_HOURS };
+      if (/SELECT closure_id, closure_date::text, reason FROM clinic_closures/.test(sql)) return { rows: [] };
+      if (/SELECT pg_advisory_xact_lock_shared/.test(sql)) return { rows: [] };
     if (/SELECT email FROM users/.test(sql)) return { rows: [{ email: 'client@example.test' }] };
     if (/WHERE affected_appointment_id = \$1\s+AND claimed_at = \$2::timestamptz/.test(sql)) {
       const entry = ledger.get(Number(values[0]));
@@ -254,6 +260,9 @@ async function runAdjustment({
 
   db.transaction = async (callback) => callback({
     async query(sql, values = []) {
+      if (/FROM clinic_operating_hours/.test(sql)) return { rows: require('../utils/clinicSchedule').DEFAULT_HOURS };
+      if (/SELECT closure_id, closure_date::text, reason FROM clinic_closures/.test(sql)) return { rows: [] };
+      if (/SELECT pg_advisory_xact_lock_shared/.test(sql)) return { rows: [] };
       if (/SELECT appointment_id, appointment_date::text/.test(sql)) {
         if (/FOR UPDATE/.test(sql)) events.adjustmentLockOrder.push('appointment-row');
         return { rows: [appointment] };
@@ -566,6 +575,9 @@ test('concurrent administrator adjustments serialize and audit the latest previo
     try {
       return await callback({
         async query(sql, values = []) {
+      if (/FROM clinic_operating_hours/.test(sql)) return { rows: require('../utils/clinicSchedule').DEFAULT_HOURS };
+      if (/SELECT closure_id, closure_date::text, reason FROM clinic_closures/.test(sql)) return { rows: [] };
+      if (/SELECT pg_advisory_xact_lock_shared/.test(sql)) return { rows: [] };
           if (/SELECT appointment_id, appointment_date::text/.test(sql)) {
             return { rows: [{
               ...appointment,

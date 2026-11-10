@@ -155,7 +155,7 @@ function createMonthChip(appt) {
 
     const client = document.createElement("span");
     client.className = "appt-client";
-    client.textContent = appt.client;
+    client.textContent = appt.clinicPendingResolution ? `${appt.client} - Pending Resolution` : appt.client;
 
     const time = document.createElement("span");
     time.className = "appt-time";
@@ -271,7 +271,7 @@ function createWeekChip(appt, startHour) {
 
     const client = document.createElement("span");
     client.className = "appt-client";
-    client.textContent = appt.client;
+    client.textContent = appt.clinicPendingResolution ? `${appt.client} - Pending Resolution` : appt.client;
 
     const timeRange = document.createElement("span");
     timeRange.className = "appt-time-range";
@@ -364,7 +364,7 @@ function renderSuggestions(matches) {
 
         const client = document.createElement("span");
         client.className = "suggestion-client";
-        client.textContent = appt.client;
+        client.textContent = appt.clinicPendingResolution ? `${appt.client} - Pending Resolution` : appt.client;
 
         const meta = document.createElement("span");
         meta.className = "suggestion-meta";

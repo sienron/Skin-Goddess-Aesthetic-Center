@@ -74,6 +74,7 @@ function normalizeAppt(appt) {
     appointment.remarks = appointment.remarks ?? appointment.notes ?? "No notes yet.";
     appointment.cancellationRequestStatus = appointment.cancellationRequestStatus ?? appointment.cancellation_request_status;
     appointment.rescheduleRequestStatus = appointment.rescheduleRequestStatus ?? appointment.reschedule_request_status;
+    appointment.clinicPendingResolution = appointment.clinicPendingResolution ?? appointment.clinic_pending_resolution ?? false;
     appointment.apptNumber = appointment.apptNumber ?? appointment.appt_number ?? appointment.id;
     return appointment;
 }
@@ -140,7 +141,7 @@ function openApptModal(appt) {
     document.getElementById("apptModalContact").textContent = normalizedAppt.contact || "—";
 
     const canManageAppointment = normalizedAppt.status === "confirmed" && normalizedAppt.is_demo !== true;
-    const canMarkNoShow = ["confirmed", "in_progress"].includes(normalizedAppt.status) && normalizedAppt.is_demo !== true;
+    const canMarkNoShow = !normalizedAppt.clinicPendingResolution && ["confirmed", "in_progress"].includes(normalizedAppt.status) && normalizedAppt.is_demo !== true;
     const manilaToday = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 
     if (apptModalCancelBtn) {
@@ -153,7 +154,7 @@ function openApptModal(appt) {
     }
     if (apptModalFinishBtn) {
         apptModalFinishBtn.dataset.apptId = normalizedAppt.id;
-        apptModalFinishBtn.disabled = !canManageAppointment || normalizedAppt.date !== manilaToday;
+        apptModalFinishBtn.disabled = normalizedAppt.clinicPendingResolution || !canManageAppointment || normalizedAppt.date !== manilaToday;
         apptModalFinishBtn.textContent = "Start Service";
     }
     if (apptModalNoShowBtn) {
@@ -178,7 +179,9 @@ function openApptModal(appt) {
         apptCancellationForm.reset();
     }
     if (apptActionMessage) {
-        if (normalizedAppt.cancellationRequestStatus === "pending") {
+        if (normalizedAppt.clinicPendingResolution) {
+            apptActionMessage.textContent = "Pending Resolution: clinic schedule changed. Staff will coordinate rescheduling or cancellation.";
+        } else if (normalizedAppt.cancellationRequestStatus === "pending") {
             apptActionMessage.textContent = "A cancellation request is pending admin review.";
         } else if (normalizedAppt.rescheduleRequestStatus === "pending") {
             apptActionMessage.textContent = "A reschedule request is pending admin review.";

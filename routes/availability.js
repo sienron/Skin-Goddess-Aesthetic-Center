@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const { VALID_SLOTS, CLOSING_TIME, CLOSED_WEEKDAYS, MAX_ADVANCE_DAYS, DEFAULT_BUFFER_MINUTES, to24h, addMinutes, overlapsLunchBreak, manilaNow, isSlotInPast, isSlotTooSoon } = require('../utils/slots');
+const { loadSchedule, slotsForDate, fitsSchedule } = require('../utils/clinicSchedule');
+const { CLOSED_WEEKDAYS, MAX_ADVANCE_DAYS, DEFAULT_BUFFER_MINUTES, to24h, addMinutes, manilaNow, isSlotInPast, isSlotTooSoon } = require('../utils/slots');
 
 function isLeapYear(year) { return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0); }
 function daysInMonth(year, month) { return [31, isLeapYear(year) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1]; }
@@ -59,6 +60,7 @@ router.get('/', async (req, res) => {
         AND appointment_date BETWEEN $1::date AND $2::date
     `, [firstDate, lastDate]);
     const now = manilaNow();
+    const clinicSchedule = await loadSchedule(db);
     const latestDate = addCalendarDays(now.dateStr, MAX_ADVANCE_DAYS);
     const availability = {};
 
@@ -66,10 +68,10 @@ router.get('/', async (req, res) => {
       const dateStr = formatDate(year, month, day);
       if (dateStr < now.dateStr || dateStr > latestDate || CLOSED_WEEKDAYS.includes(weekday(dateStr))) continue;
 
-      const slots = VALID_SLOTS.filter((slot) => {
+      const slots = slotsForDate(clinicSchedule, dateStr).filter((slot) => {
         const start = to24h(slot);
         const end = addMinutes(start, duration);
-        if (!end || end > CLOSING_TIME || overlapsLunchBreak(start, end)
+        if (!end || !fitsSchedule(clinicSchedule, dateStr, start, end)
           || isSlotInPast(dateStr, start) || isSlotTooSoon(dateStr, start)) return false;
         return aestheticians.rows.some(({ user_id }) => !appointments.rows.some((appointment) => (
           appointment.aesthetician_id === user_id

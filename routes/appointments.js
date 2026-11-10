@@ -4,6 +4,7 @@ const { rateLimit } = require('express-rate-limit');
 const db = require('../db');
 const { requireActiveAccount, blockDemoCustomerPayments, requireRole } = require('../middleware/auth');
 const { notifyUser, notifyUsers, notifyRoles } = require('../utils/notifications');
+const { assertClinicAvailable } = require('../utils/clinicSchedule');
 const { reconcileAppointmentDelayNotifications } = require('../utils/appointmentDelayNotifications');
 const { notifyStockTransition } = require('../utils/inventoryNotifications');
 const { recordInventoryTransaction } = require('../utils/inventoryTransactions');
@@ -281,6 +282,7 @@ router.get('/admin', requireRole('admin'), async (req, res) => {
     const result = await db.query(`
       SELECT a.appointment_id,
              a.is_demo,
+             EXISTS(SELECT 1 FROM clinic_appointment_impacts ci WHERE ci.appointment_id=a.appointment_id AND ci.resolution='pending') AS clinic_pending_resolution,
              a.service_id,
              a.aesthetician_id AS assigned_staff_id,
              a.appointment_date::text AS date,
@@ -347,6 +349,7 @@ router.post('/admin/advance-started', requireRole('admin'), async (_req, res) =>
       UPDATE appointments
       SET appointment_status = 'in_progress', updated_at = NOW()
       WHERE appointment_status = 'confirmed'
+        AND NOT EXISTS(SELECT 1 FROM clinic_appointment_impacts ci WHERE ci.appointment_id=appointments.appointment_id AND ci.resolution='pending')
         AND is_demo = FALSE
         AND appointment_date = $1::date
         AND appointment_time <= $2::time
@@ -368,6 +371,7 @@ router.post('/admin/advance-started', requireRole('admin'), async (_req, res) =>
 
     return res.json({ updatedCount: result.rows.length });
   } catch (error) {
+    if (error.code === 'P0001' || error.statusCode) return res.status(error.statusCode || 409).json({ message: error.message });
     console.error('Error advancing started appointments:', error);
     return res.status(500).json({ message: 'Could not update started appointments.' });
   }
@@ -486,7 +490,7 @@ router.put('/admin/:id/expected-end', requireRole('admin'), async (req, res) => 
       notifications: notificationResults
     });
   } catch (error) {
-    if (error.statusCode) return res.status(error.statusCode).json({ message: error.message });
+    if (error.code === 'P0001' || error.statusCode) return res.status(error.statusCode || 409).json({ message: error.message });
     console.error('Error adjusting appointment expected end time:', error);
     return res.status(500).json({ message: 'Could not adjust the expected end time.' });
   }
@@ -522,7 +526,7 @@ router.put('/admin/:id/edit', requireRole('admin'), async (req, res) => {
   const serviceId = validServiceId(body.serviceId);
   const staffId = validServiceId(body.staffId);
   const requestedDate = normalizeDate(body.date);
-  const requestedTime = typeof body.time === 'string' && VALID_SLOTS.includes(body.time) ? to24h(body.time) : null;
+  const requestedTime = typeof body.time === 'string' && to24h(body.time) ? to24h(body.time) : null;
   const nextStatus = typeof body.status === 'string' ? body.status.replace(/-/g, '_') : '';
   if (!serviceId) return res.status(400).json({ message: 'Choose a valid service.' });
   if (!staffId) return res.status(400).json({ message: 'Choose an available staff member.' });
@@ -533,6 +537,7 @@ router.put('/admin/:id/edit', requireRole('admin'), async (req, res) => {
 
   try {
     const updatedAppointment = await db.transaction(async (client) => {
+      await client.query('SELECT pg_advisory_xact_lock_shared(5032026,1)');
       const result = await client.query(`
         SELECT appointment_status, service_id, aesthetician_id, appointment_date::text AS appointment_date,
                appointment_time::text AS appointment_time, appointment_end_time::text AS appointment_end_time,
@@ -697,6 +702,7 @@ router.put('/admin/:id/edit', requireRole('admin'), async (req, res) => {
           [updatedAppointment.user_id, updatedAppointment.previousStaffId, updatedAppointment.staffId].filter(Boolean),
           'appointment_rescheduled',
           `Appointment ${appointmentId} was updated by the admin. New schedule: ${updatedAppointment.appointmentDate} at ${from24h(updatedAppointment.appointmentTime)}. Status: ${updatedAppointment.appointment_status.replace(/_/g, ' ')}.`,
+          { appointmentId },
         );
       } catch (error) {
         console.error(`Appointment update notification failed for appointment ${appointmentId}:`, error);
@@ -717,7 +723,7 @@ router.put('/admin/:id/edit', requireRole('admin'), async (req, res) => {
       status: updatedAppointment.appointment_status
     });
   } catch (error) {
-    if (error.statusCode) return res.status(error.statusCode).json({ message: error.message });
+    if (error.code === 'P0001' || error.statusCode) return res.status(error.statusCode || 409).json({ message: error.message });
     if (error.code === '23P01' || error.code === '23505') {
       return res.status(409).json({ message: 'That time is no longer available. Choose another slot or staff member.' });
     }
@@ -1246,6 +1252,7 @@ router.post('/admin/:id/complete-with-inventory', requireRole('admin'), async (r
       products: deduction.updatedProducts
     });
   } catch (error) {
+    if (error.code === 'P0001' || error.statusCode) return res.status(error.statusCode || 409).json({ message: error.message });
     if (error.code === '23505') {
       return res.status(409).json({ message: 'Inventory has already been deducted for this appointment.' });
     }
@@ -1270,6 +1277,7 @@ router.post('/admin/:id/rebook', requireRole('admin'), async (req, res) => {
 
   try {
     const created = await db.transaction(async (client) => {
+      await client.query('SELECT pg_advisory_xact_lock_shared(5032026,1)');
       const originalResult = await client.query(`
         SELECT appointment_id, user_id, walk_in_name, service_id,
                booked_service_price, booked_reservation_fee, appointment_status, is_demo
@@ -1342,7 +1350,7 @@ router.post('/admin/:id/rebook', requireRole('admin'), async (req, res) => {
       referenceNumber: `APT-${String(created.appointment_id).padStart(4, '0')}`
     });
   } catch (error) {
-    if (error.statusCode) return res.status(error.statusCode).json({ message: error.message });
+    if (error.code === 'P0001' || error.statusCode) return res.status(error.statusCode || 409).json({ message: error.message });
     if (error.code === '23P01' || error.code === '23505') {
       return res.status(409).json({ message: 'That time is no longer available. Choose another slot or staff member.' });
     }
@@ -1398,6 +1406,7 @@ router.post('/admin/walk-in', requireRole('admin'), async (req, res) => {
 
   try {
     const created = await db.transaction(async (client) => {
+      await client.query('SELECT pg_advisory_xact_lock_shared(5032026,1)');
       const booking = await getValidatedSchedule(client, body, res);
       if (!booking) return null;
 
@@ -1441,7 +1450,7 @@ router.post('/admin/walk-in', requireRole('admin'), async (req, res) => {
       referenceNumber: `APT-${String(created.appointment_id).padStart(4, '0')}`
     });
   } catch (error) {
-    if (error.statusCode) return res.status(error.statusCode).json({ message: error.message });
+    if (error.code === 'P0001' || error.statusCode) return res.status(error.statusCode || 409).json({ message: error.message });
     if (error.code === '23P01' || error.code === '23505') {
       return res.status(409).json({ message: 'That time is no longer available. Choose another slot or staff member.' });
     }
@@ -1607,6 +1616,7 @@ router.post('/:id/notes', requireActiveAccount, async (req, res) => {
     `, [appointmentId, req.session.userId, text, color]);
     return res.status(201).json(noteResponse(result.rows[0]));
   } catch (error) {
+    if (error.code === 'P0001' || error.statusCode) return res.status(error.statusCode || 409).json({ message: error.message });
     console.error('Error creating treatment note:', error);
     return res.status(500).json({ message: 'Could not create treatment note.' });
   }
@@ -1642,6 +1652,7 @@ router.patch('/:id/notes/:noteId', requireActiveAccount, async (req, res) => {
     if (result.rows.length === 0) return res.status(404).json({ message: 'Treatment note not found.' });
     return res.json(noteResponse(result.rows[0]));
   } catch (error) {
+    if (error.code === 'P0001' || error.statusCode) return res.status(error.statusCode || 409).json({ message: error.message });
     console.error('Error updating treatment note:', error);
     return res.status(500).json({ message: 'Could not update treatment note.' });
   }
@@ -1724,7 +1735,7 @@ async function getValidatedSchedule(queryClient, body, res, allowShortLead = fal
     return null;
   }
 
-  if (typeof body.time !== 'string' || !VALID_SLOTS.includes(body.time)) {
+  if (typeof body.time !== 'string' || !to24h(body.time)) {
     res.status(400).json({ message: 'Choose an available appointment time.' });
     return null;
   }
@@ -1741,12 +1752,13 @@ async function getValidatedSchedule(queryClient, body, res, allowShortLead = fal
   const durationMinutes = Number(durationSnapshot?.durationMinutes ?? service.duration_minutes);
   const bufferMinutes = Number(durationSnapshot?.bufferMinutes ?? service.buffer_minutes ?? DEFAULT_BUFFER_MINUTES);
   const appointmentEndTime = addMinutes(appointmentTime, durationMinutes + bufferMinutes);
-  if (!appointmentEndTime || appointmentEndTime > CLOSING_TIME
-    || overlapsLunchBreak(appointmentTime, appointmentEndTime)) {
+  if (!appointmentEndTime) {
     res.status(400).json({ message: 'This service does not fit within the center’s operating hours at the selected time.' });
     return null;
   }
 
+  try { await assertClinicAvailable(queryClient, appointmentDate, appointmentTime, appointmentEndTime); }
+  catch (error) { if (error.statusCode) { res.status(400).json({ message:error.message });return null; } throw error; }
   return { service, appointmentDate, appointmentTime, appointmentEndTime, durationMinutes, bufferMinutes };
 }
 
@@ -1775,6 +1787,7 @@ async function findAvailableAestheticians(
   lockStaffSchedules = false,
   additionalStaffIds = [],
 ) {
+  await assertClinicAvailable(queryClient, booking.appointmentDate, booking.appointmentTime, booking.appointmentEndTime);
   if (lockStaffSchedules) {
     const staffResult = await queryClient.query(`
       SELECT user_id FROM users
@@ -1809,6 +1822,13 @@ async function findAvailableAestheticians(
 async function createAppointmentFromPaidCheckout(client, payment, referenceNumber, paymentId = null, paymentMethod = null) {
   const requestedMethod = paymentMethod || payment.payment_method;
   const recordedMethod = ['paymongo', 'gcash', 'maya', 'card'].includes(requestedMethod) ? requestedMethod : 'paymongo';
+  await client.query('SELECT pg_advisory_xact_lock_shared(5032026,1)');
+  try {
+    await assertClinicAvailable(client, payment.appointment_date, payment.appointment_time, payment.appointment_end_time);
+  } catch (error) {
+    if (error.statusCode === 409) return null;
+    throw error;
+  }
   const candidates = await findAvailableAestheticians(client, {
     appointmentDate: payment.appointment_date,
     appointmentTime: payment.appointment_time,
@@ -1993,6 +2013,7 @@ router.get('/mine', requireActiveAccount, async (req, res) => {
                s.service_name AS service,
                a.booked_service_price AS fee,
                a.booked_reservation_fee AS deposit_amount,
+               EXISTS(SELECT 1 FROM clinic_appointment_impacts ci WHERE ci.appointment_id=a.appointment_id AND ci.resolution='pending') AS clinic_pending_resolution,
                a.cancellation_request_status,
                a.cancellation_reason,
                a.cancellation_description,
@@ -2052,6 +2073,7 @@ router.get('/mine', requireActiveAccount, async (req, res) => {
       service_name: row.service,
       booked_service_price: row.fee,
       booked_reservation_fee: row.deposit_amount,
+      clinicPendingResolution: row.clinic_pending_resolution,
       cancellationRequestStatus: row.cancellation_request_status,
       cancellationReason: row.cancellation_reason,
       cancellationDescription: row.cancellation_description,
@@ -2078,6 +2100,7 @@ router.post('/:id/cancel', requireRole('admin'), async (req, res) => {
             SELECT a.appointment_id, a.user_id, a.aesthetician_id, a.is_demo,
               a.appointment_date::text AS appointment_date,
               a.appointment_time::text AS appointment_time, a.appointment_status, a.payment_status,
+              EXISTS(SELECT 1 FROM clinic_appointment_impacts ci WHERE ci.appointment_id=a.appointment_id AND ci.resolution='pending') AS clinic_pending,
               s.service_name
             FROM appointments a
             JOIN services s ON s.service_id = a.service_id
@@ -2090,11 +2113,11 @@ router.post('/:id/cancel', requireRole('admin'), async (req, res) => {
       return res.status(409).json({ message: 'Synthetic survey appointments cannot be changed.' });
     }
     const isInProgress = appointment.appointment_status === 'in_progress';
-    if (!['confirmed', 'in_progress'].includes(appointment.appointment_status)) {
-      return res.status(400).json({ message: 'Only confirmed or In Progress appointments can be cancelled.' });
+    if (!['confirmed', 'in_progress'].includes(appointment.appointment_status) && !(appointment.appointment_status === 'pending' && appointment.clinic_pending)) {
+      return res.status(400).json({ message: 'Only confirmed, In Progress, or clinic-affected pending appointments can be cancelled.' });
     }
     const minutesToAppointment = minutesUntil(appointment.appointment_date, appointment.appointment_time, manilaNow());
-    if (minutesToAppointment <= 0 && !isInProgress) {
+    if (minutesToAppointment <= 0 && !isInProgress && !appointment.clinic_pending) {
       return res.status(400).json({ message: 'Confirmed appointments that have already started cannot be cancelled.' });
     }
 
@@ -2113,10 +2136,11 @@ router.post('/:id/cancel', requireRole('admin'), async (req, res) => {
     }
 
     const message = `Your ${appointment.service_name} appointment on ${appointment.appointment_date} at ${String(appointment.appointment_time).slice(0, 5)} was cancelled.${refundMessage}`;
-    await notifyUsers([appointment.user_id, appointment.aesthetician_id].filter(Boolean), 'appointment_cancelled', message);
-    await notifyRoles(['admin'], 'appointment_cancelled', message, { excludeUserIds: [req.session.userId] });
+    await notifyUsers([appointment.user_id, appointment.aesthetician_id].filter(Boolean), 'appointment_cancelled', message, { appointmentId });
+    await notifyRoles(['admin'], 'appointment_cancelled', message, { excludeUserIds: [req.session.userId], appointmentId });
     return res.json({ message: `Appointment cancelled successfully.${refundMessage}` });
   } catch (error) {
+    if (error.code === 'P0001' || error.statusCode) return res.status(error.statusCode || 409).json({ message: error.message });
     console.error('Error cancelling appointment:', error);
     return res.status(500).json({ message: 'Could not cancel appointment.' });
   }
@@ -2174,6 +2198,7 @@ router.post('/:id/cancellation-request', requireActiveAccount, async (req, res) 
     }
     return res.json({ message: 'Cancellation request sent to the admin.' });
   } catch (error) {
+    if (error.code === 'P0001' || error.statusCode) return res.status(error.statusCode || 409).json({ message: error.message });
     console.error('Error creating cancellation request:', error);
     return res.status(500).json({ message: 'Could not send cancellation request.' });
   }
@@ -2213,6 +2238,7 @@ router.post('/:id/cancellation-request/review', requireRole('admin'), async (req
 
     if (requestType === 'reschedule' && decision === 'allow') {
       await db.transaction(async (client) => {
+        await client.query('SELECT pg_advisory_xact_lock_shared(5032026,1)');
         const current = await client.query(`
           SELECT appointment_id, appointment_status, aesthetician_id,
                  booked_duration_minutes, booked_buffer_minutes,
@@ -2238,7 +2264,7 @@ router.post('/:id/cancellation-request/review', requireRole('admin'), async (req
         const now = manilaNow();
         const requestedDuration = Number(currentAppointment.booked_duration_minutes);
         const requestedBuffer = Number(currentAppointment.booked_buffer_minutes);
-        if (!requestedDate || !VALID_SLOTS.includes(from24h(requestedTime))
+        if (!requestedDate || !from24h(requestedTime)
           || requestedDate < now.dateStr
           || requestedDate > addCalendarDays(now.dateStr, MAX_ADVANCE_DAYS)
           || CLOSED_WEEKDAYS.includes(weekday(requestedDate))
@@ -2255,13 +2281,12 @@ router.post('/:id/cancellation-request/review', requireRole('admin'), async (req
           throw error;
         }
         const requestedEndTime = addMinutes(requestedTime, requestedDuration + requestedBuffer);
-        if (!requestedEndTime || requestedEndTime > CLOSING_TIME
-          || overlapsLunchBreak(requestedTime, requestedEndTime)
-          || requestedEndTime !== storedRequestedEndTime) {
+        if (!requestedEndTime || requestedEndTime !== storedRequestedEndTime) {
           const error = new Error("The requested time no longer matches the appointment's booked duration and buffer. Submit a new reschedule request.");
           error.statusCode = 409;
           throw error;
         }
+        await assertClinicAvailable(client, requestedDate, requestedTime, requestedEndTime);
         await client.query('SELECT pg_advisory_xact_lock($1, $2)', [1042026, currentAppointment.aesthetician_id]);
         const conflictResult = await client.query(`
           SELECT 1
@@ -2343,6 +2368,7 @@ router.post('/:id/cancellation-request/review', requireRole('admin'), async (req
         [appointment.user_id, appointment.aesthetician_id].filter(Boolean),
         'appointment_cancelled',
         `Appointment ${appointmentId} was cancelled after admin review.${refundMessage}`,
+        { appointmentId },
       );
       cancellationMessage = refundMessage;
     } else if (decision === 'allow' && requestType === 'reschedule') {
@@ -2350,6 +2376,7 @@ router.post('/:id/cancellation-request/review', requireRole('admin'), async (req
         [appointment.user_id, appointment.aesthetician_id].filter(Boolean),
         'appointment_rescheduled',
         `Appointment ${appointmentId} was rescheduled to ${appointment.reschedule_requested_date} at ${String(appointment.reschedule_requested_time).slice(0, 5)}.`,
+        { appointmentId },
       );
     }
     const label = requestType === 'reschedule' ? 'Reschedule' : 'Cancellation';
@@ -2359,7 +2386,7 @@ router.post('/:id/cancellation-request/review', requireRole('admin'), async (req
         : `${label} request rejected.`
     });
   } catch (error) {
-    if (error.statusCode) return res.status(error.statusCode).json({ message: error.message });
+    if (error.code === 'P0001' || error.statusCode) return res.status(error.statusCode || 409).json({ message: error.message });
     if (error.code === '23P01' || error.code === '23505') {
       return res.status(409).json({ message: 'The requested slot is no longer available. Choose another slot.' });
     }
@@ -2405,6 +2432,7 @@ router.post('/:id/start', requireActiveAccount, async (req, res) => {
     }
     return res.json({ message: 'Appointment marked as In Progress.' });
   } catch (error) {
+    if (error.code === 'P0001' || error.statusCode) return res.status(error.statusCode || 409).json({ message: error.message });
     console.error('Error starting appointment:', error);
     return res.status(500).json({ message: 'Could not start appointment.' });
   }
@@ -2471,6 +2499,7 @@ router.post('/:id/rating', ratingLimiter, requireActiveAccount, async (req, res)
     );
     return res.status(201).json({ message: 'Thanks for your feedback!', rating: inserted.rows[0] });
   } catch (error) {
+    if (error.code === 'P0001' || error.statusCode) return res.status(error.statusCode || 409).json({ message: error.message });
     if (error.code === '23505') return res.status(409).json({ message: 'You already rated this appointment.' });
     console.error('Error submitting rating:', error);
     return res.status(500).json({ message: 'Could not submit your rating.' });
@@ -2501,6 +2530,7 @@ router.post('/:id/no-show', requireActiveAccount, async (req, res) => {
     );
     return res.json({ message: 'Appointment marked as no show.' });
   } catch (error) {
+    if (error.code === 'P0001' || error.statusCode) return res.status(error.statusCode || 409).json({ message: error.message });
     console.error('Error marking appointment no show:', error);
     return res.status(500).json({ message: 'Could not mark appointment as no show.' });
   }
@@ -2514,7 +2544,7 @@ router.post('/:id/reschedule', requireActiveAccount, async (req, res) => {
   const appointmentDate = normalizeDate(body.date);
   const appointmentTime = typeof body.time === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(body.time) ? body.time : null;
   const slotLabel = appointmentTime ? from24h(appointmentTime) : null;
-  if (!appointmentDate || !appointmentTime || !VALID_SLOTS.includes(slotLabel)) {
+  if (!appointmentDate || !appointmentTime || !slotLabel) {
     return res.status(400).json({ message: 'Choose a valid date and available appointment time.' });
   }
 
@@ -2568,11 +2598,12 @@ router.post('/:id/reschedule', requireActiveAccount, async (req, res) => {
       appointmentTime,
       Number(appointment.booked_duration_minutes) + Number(appointment.booked_buffer_minutes),
     );
-    if (!appointmentEndTime || appointmentEndTime > CLOSING_TIME
-      || overlapsLunchBreak(appointmentTime, appointmentEndTime)) {
+    if (!appointmentEndTime) {
       return res.status(400).json({ message: 'This service does not fit within operating hours at the selected time.' });
     }
 
+    try { await assertClinicAvailable(db, appointmentDate, appointmentTime, appointmentEndTime); }
+    catch (error) { if (error.statusCode) return res.status(400).json({ message:error.message });throw error; }
     if (!isAdmin && (isAssignedAesthetician || isClient)) {
       await db.query(`
         UPDATE appointments
@@ -2600,6 +2631,7 @@ router.post('/:id/reschedule', requireActiveAccount, async (req, res) => {
     }
 
     const rescheduled = await db.transaction(async (client) => {
+      await client.query('SELECT pg_advisory_xact_lock_shared(5032026,1)');
       const current = await client.query(`
         SELECT appointment_status, aesthetician_id
         FROM appointments
@@ -2641,9 +2673,11 @@ router.post('/:id/reschedule', requireActiveAccount, async (req, res) => {
       [appointment.user_id, appointment.aesthetician_id].filter((userId) => userId && userId !== req.session.userId),
       'appointment_rescheduled',
       `${appointment.service_name} was rescheduled to ${appointmentDate} at ${slotLabel}.`,
+      { appointmentId },
     );
     return res.json({ message: 'Appointment rescheduled successfully.' });
   } catch (error) {
+    if (error.code === 'P0001' || error.statusCode) return res.status(error.statusCode || 409).json({ message: error.message });
     if (error.code === '23P01' || error.code === '23505') {
       return res.status(409).json({ message: 'That time is no longer available. Choose another slot.' });
     }
@@ -2756,6 +2790,7 @@ router.post('/paymongo/checkout-session', requireActiveAccount, blockDemoCustome
       currency: 'PHP'
     });
   } catch (error) {
+    if (error.code === 'P0001' || error.statusCode) return res.status(error.statusCode || 409).json({ message: error.message });
     if (referenceNumber) {
       await db.query(`UPDATE paymongo_checkout_sessions SET status = 'failed', updated_at = NOW() WHERE reference_number = $1 AND status = 'pending'`, [referenceNumber]).catch(() => {});
     }
@@ -2910,6 +2945,7 @@ router.post('/paymongo/confirm', requireActiveAccount, blockDemoCustomerPayments
       }
     });
   } catch (error) {
+    if (error.code === 'P0001' || error.statusCode) return res.status(error.statusCode || 409).json({ message: error.message });
     if (error.code === 'PAYMENT_NOT_PAID') return res.status(409).json({ pending: true, message: error.message });
     if (error.code === 'SLOT_UNAVAILABLE' || error.code === '23P01' || error.code === '23505') {
       const refundOutcome = payment
@@ -3047,6 +3083,7 @@ router.post('/paymongo/webhook', async (req, res) => {
     }
     return res.sendStatus(200);
   } catch (error) {
+    if (error.code === 'P0001' || error.statusCode) return res.status(error.statusCode || 409).json({ message: error.message });
     console.error('Error processing PayMongo webhook:', error.message);
     return res.status(500).json({ message: 'Could not process payment notification.' });
   }

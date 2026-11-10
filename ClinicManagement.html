@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clinic Management — Skin Goddess Aesthetic Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="sg-admin-typography">
+
+  <div class="um-shell">
+
+    <!-- Mobile-only hamburger + overlay (handled by admin-dashboard.js) -->
+    <button class="um-sidebar-toggle um-sidebar-toggle--admin" id="umSidebarToggle" type="button" aria-label="Toggle menu" aria-expanded="false">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+    <div class="um-sidebar-overlay" id="umSidebarOverlay"></div>
+
+    <!-- ============ SIDEBAR ============ -->
+    <aside class="um-sidebar" id="umSidebar">
+      <a href="index.html" class="um-sidebar__logo">
+        <div class="logo-container">
+          <img id="logo" src="images/logo_horizontal-removebg.webp" alt="Skin Goddess Aesthetic Center logo">
+        </div>
+      </a>
+
+      <p class="um-sidebar__label">My Links</p>
+      <nav class="um-sidebar__nav" aria-label="Main navigation">
+        <a href="AdminDashboard.html" class="um-nav-link"><img src="icons/finance-dashboard.svg" alt=""><span>Dashboard</span></a>
+        <section class="admin-nav-group">
+          <button class="admin-nav-group-toggle" type="button" aria-expanded="false" aria-controls="adminAppointmentsMenu"><img src="icons/staff-appointments.svg" alt=""><span>Appointments</span><svg class="admin-nav-chevron" aria-hidden="true" viewBox="0 0 20 20"><path d="m5 7.5 5 5 5-5"/></svg></button>
+          <ul class="admin-nav-submenu" id="adminAppointmentsMenu" hidden>
+            <li><a href="AdminClients.html" class="um-nav-link admin-nav-child"><span>Clients</span></a></li>
+            <li><a href="AdminAppointment.html" class="um-nav-link admin-nav-child"><span>Appointments</span></a></li>
+            <li><a href="AdminTreatmentHistory.html" class="um-nav-link admin-nav-child"><span>Treatment History</span></a></li>
+          </ul>
+        </section>
+        <section class="admin-nav-group">
+          <button class="admin-nav-group-toggle" type="button" aria-expanded="false" aria-controls="adminInventoryMenu"><img src="icons/staff-inventory.svg" alt=""><span>Inventory</span><svg class="admin-nav-chevron" aria-hidden="true" viewBox="0 0 20 20"><path d="m5 7.5 5 5 5-5"/></svg></button>
+          <ul class="admin-nav-submenu" id="adminInventoryMenu" hidden>
+            <li><a href="AdminInventoryManagement.html" class="um-nav-link admin-nav-child"><span>Inventory</span></a></li>
+            <li><a href="AdminInventoryTransactions.html" class="um-nav-link admin-nav-child"><span>Stock Transaction Log</span></a></li>
+          </ul>
+        </section>
+        <section class="admin-nav-group">
+          <button class="admin-nav-group-toggle" type="button" aria-expanded="false" aria-controls="adminFinanceMenu"><img src="icons/finance-transactions.svg" alt=""><span>Finance</span><svg class="admin-nav-chevron" aria-hidden="true" viewBox="0 0 20 20"><path d="m5 7.5 5 5 5-5"/></svg></button>
+          <ul class="admin-nav-submenu" id="adminFinanceMenu" hidden>
+            <li><a href="FinancesTransactions.html" class="um-nav-link admin-nav-child"><span>Sales &amp; Transactions</span></a></li>
+            <li><a href="FinanceExpenses.html" class="um-nav-link admin-nav-child"><span>Expenses</span></a></li>
+            <li><a href="FinanceReports.html" class="um-nav-link admin-nav-child"><span>Reports</span></a></li>
+          </ul>
+        </section>
+        <a href="AdminInquiries.html" class="um-nav-link"><img src="icons/staff-inquiries.svg" alt=""><span>Inquiries</span></a>
+        <a href="Usermanagement.html" class="um-nav-link"><img src="icons/staff-users.svg" alt=""><span>User Management</span></a>
+        <a href="ClinicManagement.html" class="um-nav-link um-nav-link--active" aria-current="page"><img src="icons/calendar.svg" alt=""><span>Clinic Management</span></a>
+        <a href="AdminContentManagement.html" class="um-nav-link"><img src="icons/staff-content.svg" alt=""><span>Content Management</span></a>
+      </nav>
+
+      <div class="um-sidebar__account">
+        <button class="um-sidebar__profile" id="adminProfileBtn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="adminProfileMenu">
+          <span class="um-avatar">A</span>
+          <span class="um-sidebar__account-details">
+            <span class="um-sidebar__account-name">Admin User</span>
+            <span class="um-sidebar__account-role">Owner</span>
+          </span>
+        </button>
+        <div class="um-sidebar__account-menu" id="adminProfileMenu" role="menu">
+          <button class="um-sidebar__logout" id="adminLogoutBtn" type="button" role="menuitem">Log out</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ===== MAIN CONTENT ===== -->
+    <div class="um-main" id="clinicManagementMain">
+
+      <header class="um-header">
+        <div>
+          <h1 class="um-header__title">Clinic Management</h1>
+          <p class="um-header__subtitle">Operating hours, clinic closures, and appointment coordination</p>
+        </div>
+
+        <div class="um-header__actions">
+          <div class="admin-notification-wrap">
+            <button class="admin-notification-btn" id="adminNotificationBtn" type="button" aria-label="View notifications" aria-haspopup="true" aria-expanded="false" aria-controls="adminNotificationDropdown">
+              <img src="icons/notification-bell.svg" alt="">
+            </button>
+            <div class="admin-notification-dropdown" id="adminNotificationDropdown">
+              <strong>Notifications</strong>
+              <div class="admin-notification-list">No notifications yet</div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <p class="clinic-feedback" id="clinicFeedback" role="status" aria-live="polite">Loading clinic schedule…</p>
+      <div class="clinic-sections">
+        <section class="clinic-card" aria-labelledby="clinicHoursTitle">
+          <div class="clinic-heading"><div><h2 id="clinicHoursTitle">Operating Days &amp; Hours</h2><p>Weekly schedule · Asia/Manila</p></div><span class="clinic-badge">Regular hours</span></div>
+          <p class="clinic-hint">Appointments include treatment time and buffer. The existing 12:00–1:00 PM lunch break and 30-minute booking intervals apply.</p>
+          <form id="clinicHoursForm">
+            <div class="um-table-wrap"><table class="um-table clinic-hours"><thead><tr><th>DAY</th><th>OPERATING</th><th>OPENING</th><th>CLOSING</th></tr></thead><tbody id="clinicHoursBody"></tbody></table></div>
+            <div class="clinic-actions"><button class="um-btn um-btn--primary" id="clinicSaveHours" type="submit" disabled>Review &amp; Save Hours</button></div>
+          </form>
+        </section>
+
+        <section class="clinic-card" aria-labelledby="clinicClosuresTitle">
+          <div class="clinic-heading"><div><h2 id="clinicClosuresTitle">Clinic Closures</h2><p>Plan closures and coordinate affected appointments</p></div><button class="um-btn um-btn--primary" id="clinicAddClosure" type="button" disabled>+ Schedule Closure</button></div>
+          <p class="clinic-hint">Select several dates in the calendar, review affected appointments, then confirm. Staff can use the existing appointment workflows to reschedule or cancel.</p>
+          <h3>Pending Resolution</h3>
+          <div id="clinicPending" aria-live="polite"></div>
+        </section>
+
+        <section class="clinic-card" aria-labelledby="clinicHistoryTitle">
+          <div class="clinic-heading"><div><h2 id="clinicHistoryTitle">Closure History</h2><p>Scheduled and previous closures, resolutions, and notifications</p></div><button class="um-btn um-btn--ghost" id="clinicViewDeliveries" type="button">Notification Delivery</button></div>
+          <div class="clinic-filters"><label for="clinicHistoryFilter">Show closures</label><select id="clinicHistoryFilter"><option value="all">All closures</option><option value="scheduled">Scheduled</option><option value="closed_today">Closed today</option><option value="past">Past</option><option value="reopened">Reopened</option><option value="pending">Pending resolution</option></select><button class="um-btn um-btn--ghost" id="clinicRefresh" type="button">Refresh</button></div>
+          <div class="um-table-wrap"><table class="um-table"><thead><tr><th>DATE</th><th>REASON</th><th>STATUS</th><th>APPOINTMENTS</th><th>ACTIONS</th></tr></thead><tbody id="clinicHistoryBody"></tbody></table></div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <dialog class="clinic-dialog" id="clinicClosureDialog" aria-labelledby="clinicClosureDialogTitle">
+    <form id="clinicClosureForm">
+      <div class="clinic-heading"><div><h2 id="clinicClosureDialogTitle">Schedule Clinic Closure</h2><p>Select multiple dates · Asia/Manila</p></div><button class="um-btn um-btn--ghost" type="button" data-close aria-label="Close calendar">×</button></div>
+      <div class="clinic-calendar-nav"><button class="um-btn um-btn--ghost" id="clinicPrevMonth" type="button" aria-label="Previous month">‹</button><strong id="clinicCalendarMonth" aria-live="polite"></strong><button class="um-btn um-btn--ghost" id="clinicNextMonth" type="button" aria-label="Next month">›</button></div>
+      <div class="clinic-calendar-labels" aria-hidden="true"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>
+      <div class="clinic-calendar" id="clinicCalendar" aria-label="Select closure dates"></div>
+      <p class="clinic-hint" id="clinicSelectedDates" aria-live="polite">No dates selected</p>
+      <label class="clinic-field">Closure reason<textarea id="clinicClosureReason" maxlength="1000" rows="3" required placeholder="For example: clinic maintenance"></textarea></label>
+      <p class="clinic-error" id="clinicClosureError" role="alert" hidden></p>
+      <div class="clinic-actions"><button class="um-btn um-btn--ghost" type="button" data-close>Cancel</button><button class="um-btn um-btn--primary" type="submit">Review Affected Appointments</button></div>
+    </form>
+  </dialog>
+
+  <dialog class="clinic-dialog clinic-dialog--wide" id="clinicReviewDialog" aria-labelledby="clinicReviewTitle">
+    <div class="clinic-heading"><div><h2 id="clinicReviewTitle">Review Schedule Changes</h2><p id="clinicReviewSummary"></p></div><button class="um-btn um-btn--ghost" type="button" data-close aria-label="Close review">×</button></div>
+    <p class="clinic-hint" id="clinicReviewNotice"></p><div id="clinicReviewAppointments"></div>
+    <p class="clinic-error" id="clinicReviewError" role="alert" hidden></p>
+    <div class="clinic-actions"><button class="um-btn um-btn--ghost" type="button" data-close>Back</button><button class="um-btn um-btn--primary" id="clinicConfirm" type="button">Confirm Changes</button></div>
+  </dialog>
+
+  <dialog class="clinic-dialog clinic-dialog--wide" id="clinicDetailsDialog" aria-labelledby="clinicDetailsTitle">
+    <div class="clinic-heading"><h2 id="clinicDetailsTitle">Closure Details</h2><button class="um-btn um-btn--ghost" type="button" data-close aria-label="Close details">×</button></div>
+    <div id="clinicDetailsContent"></div><div class="clinic-actions"><button class="um-btn um-btn--ghost" type="button" data-close>Close</button></div>
+  </dialog>
+  <script src="admin-dashboard.js"></script>
+  <script src="admin-notifications.js"></script>
+  <script src="clinic-management.js"></script>
+</body>
+</html>
+

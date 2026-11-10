@@ -1,7 +1,18 @@
 const db = require('../db');
 const { sendNotificationEmail } = require('./mailer');
 
-async function notifyUserWithDelivery(userId, type, message, { email = true } = {}) {
+async function notifyUserWithDelivery(userId, type, message, { email = true, appointmentId = null } = {}) {
+  if (appointmentId && ['appointment_rescheduled', 'appointment_cancelled'].includes(type)) {
+    const existing = await db.query(`SELECT d.notification_id FROM clinic_notification_deliveries d
+      JOIN appointments a ON a.appointment_id=d.appointment_id
+      WHERE a.appointment_id=$1 AND d.user_id=$2
+        AND d.event_key='resolution:'||a.appointment_id||':'||a.updated_at LIMIT 1`, [appointmentId,userId]);
+    if (existing.rows.length) {
+      // Keep the existing cancellation/refund wording in the durable final notice.
+      await db.query('UPDATE notifications SET message=$2 WHERE notification_id=$1', [existing.rows[0].notification_id,message]);
+      return { notification: existing.rows[0], emailStatus: 'queued' };
+    }
+  }
   let notification;
   try {
     const result = await db.query(`

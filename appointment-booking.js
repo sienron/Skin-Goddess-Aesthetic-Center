@@ -497,8 +497,8 @@
             slotsContainer.appendChild(grid);
         }
 
-        buildGroup("MORNING", MORNING_SLOTS);
-        buildGroup("AFTERNOON", AFTERNOON_SLOTS);
+        buildGroup("MORNING", available.filter((slot) => slot.endsWith('AM')));
+        buildGroup("AFTERNOON / EVENING", available.filter((slot) => slot.endsWith('PM')));
     }
 
      /* ===== Submission =====
@@ -589,6 +589,13 @@
     }
 
     fetchServices();
+    // Refresh an open booking calendar when staff change clinic availability.
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && selectedService) fetchAvailability();
+    });
+    window.setInterval(() => {
+        if (!document.hidden && selectedService) fetchAvailability();
+    }, 30000);
     renderCalendar();
     renderSlots();
 })();

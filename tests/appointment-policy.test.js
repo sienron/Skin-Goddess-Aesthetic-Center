@@ -78,6 +78,9 @@ async function invokeCheckout(body, isoDate = '2026-01-04T22:00:00.000Z', servic
   const queryCalls = [];
   let checkoutValues;
   db.query = async (sql, values = []) => {
+      if (/FROM clinic_operating_hours/.test(sql)) return { rows: require('../utils/clinicSchedule').DEFAULT_HOURS };
+      if (/SELECT closure_id, closure_date::text, reason FROM clinic_closures/.test(sql)) return { rows: [] };
+      if (/SELECT pg_advisory_xact_lock_shared/.test(sql)) return { rows: [] };
     queryCalls.push({ sql, values });
     if (/SELECT user_id, first_name, last_name, email, contact_number/.test(sql)) {
       return { rows: [{
@@ -275,11 +278,17 @@ test('verified checkout creates the appointment with the submitted customer deta
   const assignmentQueries = [];
   const staffLocks = [];
   db.query = async (sql) => {
+      if (/FROM clinic_operating_hours/.test(sql)) return { rows: require('../utils/clinicSchedule').DEFAULT_HOURS };
+      if (/SELECT closure_id, closure_date::text, reason FROM clinic_closures/.test(sql)) return { rows: [] };
+      if (/SELECT pg_advisory_xact_lock_shared/.test(sql)) return { rows: [] };
     if (/FROM paymongo_checkout_sessions/.test(sql)) return { rows: [payment] };
     return { rows: [] };
   };
   db.transaction = async (callback) => callback({
     async query(sql, values = []) {
+      if (/FROM clinic_operating_hours/.test(sql)) return { rows: require('../utils/clinicSchedule').DEFAULT_HOURS };
+      if (/SELECT closure_id, closure_date::text, reason FROM clinic_closures/.test(sql)) return { rows: [] };
+      if (/SELECT pg_advisory_xact_lock_shared/.test(sql)) return { rows: [] };
       if (/FROM paymongo_checkout_sessions/.test(sql)) return { rows: [payment] };
       if (/SELECT category FROM services/.test(sql)) return { rows: [{ category: 'facial' }] };
       if (/SELECT user_id FROM users\s+WHERE role/.test(sql)) return { rows: [{ user_id: 31 }] };
@@ -326,6 +335,9 @@ test('ratings remain eligible on day seven and are rejected after the deadline',
   async function submitAt(isoDate) {
     const queries = [];
     db.query = async (sql) => {
+      if (/FROM clinic_operating_hours/.test(sql)) return { rows: require('../utils/clinicSchedule').DEFAULT_HOURS };
+      if (/SELECT closure_id, closure_date::text, reason FROM clinic_closures/.test(sql)) return { rows: [] };
+      if (/SELECT pg_advisory_xact_lock_shared/.test(sql)) return { rows: [] };
       queries.push(sql);
       if (/SELECT appointment_id, user_id, aesthetician_id/.test(sql)) {
         return { rows: [{ appointment_id: 22, user_id: 7, aesthetician_id: 31, service_id: 3, appointment_status: 'completed' }] };
@@ -362,6 +374,9 @@ test('all cancellation requests require strictly more than 24 hours, including a
   async function submitAt(appointmentTime, userId = 7) {
     const queries = [];
     db.query = async (sql) => {
+      if (/FROM clinic_operating_hours/.test(sql)) return { rows: require('../utils/clinicSchedule').DEFAULT_HOURS };
+      if (/SELECT closure_id, closure_date::text, reason FROM clinic_closures/.test(sql)) return { rows: [] };
+      if (/SELECT pg_advisory_xact_lock_shared/.test(sql)) return { rows: [] };
       queries.push(sql);
       if (/SELECT appointment_id, aesthetician_id, user_id, appointment_status/.test(sql)) {
         return { rows: [{
@@ -425,6 +440,9 @@ test('approved cancellation refunds only requests submitted more than 24 hours a
       };
     };
     db.query = async (sql, values = []) => {
+      if (/FROM clinic_operating_hours/.test(sql)) return { rows: require('../utils/clinicSchedule').DEFAULT_HOURS };
+      if (/SELECT closure_id, closure_date::text, reason FROM clinic_closures/.test(sql)) return { rows: [] };
+      if (/SELECT pg_advisory_xact_lock_shared/.test(sql)) return { rows: [] };
       queries.push({ sql, values });
       if (/SELECT a\.appointment_status, a\.service_id/.test(sql)) {
         return { rows: [{
@@ -444,7 +462,11 @@ test('approved cancellation refunds only requests submitted more than 24 hours a
     };
     db.transaction = async (callback) => callback({
       async query(sql, values = []) {
+      if (/FROM clinic_operating_hours/.test(sql)) return { rows: require('../utils/clinicSchedule').DEFAULT_HOURS };
+      if (/SELECT closure_id, closure_date::text, reason FROM clinic_closures/.test(sql)) return { rows: [] };
+      if (/SELECT pg_advisory_xact_lock_shared/.test(sql)) return { rows: [] };
         transactionQueries.push({ sql, values });
+        if (/SELECT is_demo\s+FROM appointments/.test(sql)) return { rows: [{ is_demo:false }] };
         if (/SELECT reference_number, payment_id, amount_cents/.test(sql)) {
           return { rows: [{ reference_number: 'SGREFUNDTEST', payment_id: 'pay_test_local', amount_cents: 50000 }] };
         }
@@ -487,6 +509,9 @@ test('direct admin cancellation forfeits a paid deposit at exactly 24 hours', as
   const handler = routeHandler('/:id/cancel', 'post');
   const queries = [];
   db.query = async (sql, values = []) => {
+      if (/FROM clinic_operating_hours/.test(sql)) return { rows: require('../utils/clinicSchedule').DEFAULT_HOURS };
+      if (/SELECT closure_id, closure_date::text, reason FROM clinic_closures/.test(sql)) return { rows: [] };
+      if (/SELECT pg_advisory_xact_lock_shared/.test(sql)) return { rows: [] };
     queries.push({ sql, values });
     if (/SELECT a\.appointment_id, a\.user_id/.test(sql)) {
       return { rows: [{
@@ -544,6 +569,9 @@ test('rescheduling uses the original treatment and buffer snapshots without chan
     let updateValues;
     const queries = [];
     db.query = async (sql, values = []) => {
+      if (/FROM clinic_operating_hours/.test(sql)) return { rows: require('../utils/clinicSchedule').DEFAULT_HOURS };
+      if (/SELECT closure_id, closure_date::text, reason FROM clinic_closures/.test(sql)) return { rows: [] };
+      if (/SELECT pg_advisory_xact_lock_shared/.test(sql)) return { rows: [] };
       queries.push(sql);
       if (/SELECT a\.appointment_id, a\.user_id, a\.aesthetician_id/.test(sql)) {
         return { rows: [{
@@ -600,6 +628,9 @@ test('reschedule approval uses booked duration and buffer snapshots and rechecks
   const transactionQueries = [];
   let update;
   db.query = async (sql) => {
+      if (/FROM clinic_operating_hours/.test(sql)) return { rows: require('../utils/clinicSchedule').DEFAULT_HOURS };
+      if (/SELECT closure_id, closure_date::text, reason FROM clinic_closures/.test(sql)) return { rows: [] };
+      if (/SELECT pg_advisory_xact_lock_shared/.test(sql)) return { rows: [] };
     if (/SELECT a\.appointment_status, a\.service_id/.test(sql)) {
       return { rows: [{
         appointment_status: 'confirmed',
@@ -617,6 +648,9 @@ test('reschedule approval uses booked duration and buffer snapshots and rechecks
   };
   db.transaction = async (callback) => callback({
     async query(sql, values = []) {
+      if (/FROM clinic_operating_hours/.test(sql)) return { rows: require('../utils/clinicSchedule').DEFAULT_HOURS };
+      if (/SELECT closure_id, closure_date::text, reason FROM clinic_closures/.test(sql)) return { rows: [] };
+      if (/SELECT pg_advisory_xact_lock_shared/.test(sql)) return { rows: [] };
       transactionQueries.push({ sql, values });
       if (/SELECT appointment_id, appointment_status, aesthetician_id/.test(sql)) {
         return { rows: [{
@@ -663,6 +697,9 @@ test('reschedule approval rejects a stored end time that no longer matches the b
   const handler = routeHandler('/:id/cancellation-request/review', 'post');
   const transactionQueries = [];
   db.query = async (sql) => {
+      if (/FROM clinic_operating_hours/.test(sql)) return { rows: require('../utils/clinicSchedule').DEFAULT_HOURS };
+      if (/SELECT closure_id, closure_date::text, reason FROM clinic_closures/.test(sql)) return { rows: [] };
+      if (/SELECT pg_advisory_xact_lock_shared/.test(sql)) return { rows: [] };
     if (/SELECT a\.appointment_status, a\.service_id/.test(sql)) {
       return { rows: [{
         appointment_status: 'confirmed',
@@ -680,6 +717,9 @@ test('reschedule approval rejects a stored end time that no longer matches the b
   };
   db.transaction = async (callback) => callback({
     async query(sql, values = []) {
+      if (/FROM clinic_operating_hours/.test(sql)) return { rows: require('../utils/clinicSchedule').DEFAULT_HOURS };
+      if (/SELECT closure_id, closure_date::text, reason FROM clinic_closures/.test(sql)) return { rows: [] };
+      if (/SELECT pg_advisory_xact_lock_shared/.test(sql)) return { rows: [] };
       transactionQueries.push({ sql, values });
       if (/SELECT appointment_id, appointment_status, aesthetician_id/.test(sql)) {
         return { rows: [{
@@ -719,6 +759,9 @@ test('reschedule approval rejects a slot taken before review while holding the s
   const transactionQueries = [];
   let updated = false;
   db.query = async (sql) => {
+      if (/FROM clinic_operating_hours/.test(sql)) return { rows: require('../utils/clinicSchedule').DEFAULT_HOURS };
+      if (/SELECT closure_id, closure_date::text, reason FROM clinic_closures/.test(sql)) return { rows: [] };
+      if (/SELECT pg_advisory_xact_lock_shared/.test(sql)) return { rows: [] };
     if (/SELECT a\.appointment_status, a\.service_id/.test(sql)) {
       return { rows: [{
         appointment_status: 'confirmed',
@@ -734,6 +777,9 @@ test('reschedule approval rejects a slot taken before review while holding the s
   };
   db.transaction = async (callback) => callback({
     async query(sql, values = []) {
+      if (/FROM clinic_operating_hours/.test(sql)) return { rows: require('../utils/clinicSchedule').DEFAULT_HOURS };
+      if (/SELECT closure_id, closure_date::text, reason FROM clinic_closures/.test(sql)) return { rows: [] };
+      if (/SELECT pg_advisory_xact_lock_shared/.test(sql)) return { rows: [] };
       transactionQueries.push({ sql, values });
       if (/SELECT appointment_id, appointment_status, aesthetician_id/.test(sql)) {
         return { rows: [{
@@ -779,6 +825,9 @@ test('admin rescheduling rejects a slot blocked by an adjusted expected end', as
   const transactionQueries = [];
   const staffLocks = [];
   db.query = async (sql) => {
+      if (/FROM clinic_operating_hours/.test(sql)) return { rows: require('../utils/clinicSchedule').DEFAULT_HOURS };
+      if (/SELECT closure_id, closure_date::text, reason FROM clinic_closures/.test(sql)) return { rows: [] };
+      if (/SELECT pg_advisory_xact_lock_shared/.test(sql)) return { rows: [] };
     if (/SELECT a\.appointment_id, a\.user_id, a\.aesthetician_id/.test(sql)) {
       return { rows: [{
         appointment_id: 42,
@@ -798,6 +847,9 @@ test('admin rescheduling rejects a slot blocked by an adjusted expected end', as
   };
   db.transaction = async (callback) => callback({
     async query(sql, values = []) {
+      if (/FROM clinic_operating_hours/.test(sql)) return { rows: require('../utils/clinicSchedule').DEFAULT_HOURS };
+      if (/SELECT closure_id, closure_date::text, reason FROM clinic_closures/.test(sql)) return { rows: [] };
+      if (/SELECT pg_advisory_xact_lock_shared/.test(sql)) return { rows: [] };
       transactionQueries.push({ sql, values });
       if (/SELECT appointment_status, aesthetician_id/.test(sql)) {
         return { rows: [{ appointment_status: 'confirmed', aesthetician_id: 31 }] };
@@ -858,6 +910,9 @@ test('customer detail migration is additive and idempotent', async () => {
   const { migrate } = require('../migrations/043-appointment-customer-details');
   const statements = [];
   db.query = async (sql) => {
+      if (/FROM clinic_operating_hours/.test(sql)) return { rows: require('../utils/clinicSchedule').DEFAULT_HOURS };
+      if (/SELECT closure_id, closure_date::text, reason FROM clinic_closures/.test(sql)) return { rows: [] };
+      if (/SELECT pg_advisory_xact_lock_shared/.test(sql)) return { rows: [] };
     statements.push(sql);
     return { rows: [] };
   };
@@ -877,6 +932,9 @@ test('flexible scheduling migration backfills historical ends, adds audit tables
   const statements = [];
   db.transaction = async (callback) => callback({
     async query(sql) {
+      if (/FROM clinic_operating_hours/.test(sql)) return { rows: require('../utils/clinicSchedule').DEFAULT_HOURS };
+      if (/SELECT closure_id, closure_date::text, reason FROM clinic_closures/.test(sql)) return { rows: [] };
+      if (/SELECT pg_advisory_xact_lock_shared/.test(sql)) return { rows: [] };
       statements.push(sql);
       return { rows: [] };
     }

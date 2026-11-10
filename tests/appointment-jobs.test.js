@@ -101,7 +101,8 @@ test('notification jobs do not automatically mark overdue appointments as no-sho
     '* * * * *',
     '*/5 * * * *',
     '* * * * *',
-    '0 9 * * *'
+    '0 9 * * *',
+    '* * * * *'
   ]);
   assert.equal(schedules[3][2].timezone, 'Asia/Manila');
   assert.equal(schedules[3][1], jobs.runAppointmentRatingFallback);
