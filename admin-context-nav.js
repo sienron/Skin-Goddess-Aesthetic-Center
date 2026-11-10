@@ -60,6 +60,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     ["FinanceReports.html", "Reports", "icons/finance-reports.svg"],
     ["AdminInquiries.html", "Inquiries", "icons/staff-inquiries.svg"],
     ["Usermanagement.html", "User Management", "icons/staff-users.svg"],
+    ["ClinicManagement.html", "Clinic Management", "icons/calendar.svg"],
     ["AdminContentManagement.html", "Content Management", "icons/staff-content.svg"],
   ];
   const groups = [

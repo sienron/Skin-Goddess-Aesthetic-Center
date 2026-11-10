@@ -1,4 +1,5 @@
-// Shared appointment-slot rules. Update this one file if operating hours change.
+// Shared appointment policies and legacy default slots. Weekly hours and closures
+// are loaded from PostgreSQL by clinicSchedule.js and edited in Clinic Management.
 const CLOSING_TIME = '18:00';
 const LUNCH_BREAK_START = '12:00';
 const LUNCH_BREAK_END = '13:00';

@@ -198,6 +198,7 @@ const protectedPages = [
   { path: '/AdminClients.html', roles: ['admin'] },
   { path: '/AdminTreatmentHistory.html', roles: ['admin'] },
   { path: '/AdminContentManagement.html', roles: ['admin'] },
+  { path: '/ClinicManagement.html', roles: ['admin'] },
   { path: '/AdminInquiries.html', roles: ['admin'] },
   { path: '/AdminInventoryManagement.html', roles: ['admin'] },
   { path: '/Usermanagement.html', roles: ['admin'] },
@@ -248,6 +249,7 @@ app.use('/api/newsletter', require('./routes/newsletter'));
 app.use('/api/ratings', require('./routes/ratings'));
 app.use('/api/content', require('./routes/content'));
 app.use('/api/availability', require('./routes/availability'));
+app.use('/api/clinic', require('./routes/clinic'));
 app.use('/api/inventory', require('./routes/inventory'));
 app.use('/api/announcements', require('./routes/announcements'));
 app.use('/api/notifications', require('./routes/notifications'));

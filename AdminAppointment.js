@@ -86,6 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     return {
       id,
+      clinicPendingResolution: record.clinic_pending_resolution === true,
       ref: 'APT-' + id.padStart(4, '0'),
       client: String(record.client || `${record.first_name || ''} ${record.last_name || ''}`.trim() || 'Client'),
       profile,
@@ -115,6 +116,12 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   }
 
+  document.querySelectorAll('#newAppointmentTime').forEach(select => {
+    for (let minute=0;minute<1440;minute+=30) {
+      const text=displayTime(String(Math.floor(minute/60)).padStart(2,'0')+':'+String(minute%60).padStart(2,'0'));
+      if (![...select.options].some(option=>option.value===text)) select.add(new Option(text,text));
+    }
+  });
   const state = { status: 'all', todayOnly: false, month: manilaDateKey().slice(0, 7), query: '', page: 1 };
 
   // ---------- helpers ----------
@@ -389,6 +396,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const serviceField = serviceSelect.closest('.form-group');
     const message = document.getElementById('appointmentEditMessage');
     const saveButton = document.getElementById('appointmentEditSave');
+    // Include saved operating hours beyond the former 9 AM?6 PM window.
+    const priorValue = timeSelect.value;
+    if (!timeSelect.dataset.clinicTimes) {
+      for (let minute = 0; minute < 1440; minute += 30) {
+        const time = String(Math.floor(minute / 60)).padStart(2,'0') + ':' + String(minute % 60).padStart(2,'0');
+        const text = displayTime(time);
+        if (![...timeSelect.options].some(option => option.value === text)) { const option = new Option(text,text);timeSelect.add(option); }
+      }
+      timeSelect.dataset.clinicTimes = 'true';timeSelect.value = priorValue;
+    }
     document.getElementById('appointmentEditTitle').textContent = rebook ? 'Rebook Appointment' : 'Edit Appointment';
     saveButton.textContent = rebook ? 'Create Rebooked Appointment' : 'Save Changes';
     document.getElementById('appointmentEditSubtitle').textContent = appointment.ref;
@@ -1100,6 +1117,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusTd = el('td');
     const statusClass = a.status;
     statusTd.appendChild(el('span', 'apt-status apt-status--' + statusClass, STATUS_LABELS[a.status] || a.status.toUpperCase()));
+    if (a.clinicPendingResolution) statusTd.appendChild(el('div', 'clinic-badge', 'Pending Resolution'));
     if (a.status === 'in-progress') {
       statusTd.appendChild(el(
         'small',
@@ -1869,7 +1887,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  loadAppointments();
+  loadAppointments().then(() => {
+    const appointmentId = new URLSearchParams(window.location.search).get('appointment');
+    const appointment = APPOINTMENTS.find(item => item.id === appointmentId);
+    if (appointment) {
+      if (['completed','cancelled','no-show'].includes(appointment.status)) openAppointmentDetails(appointment);
+      else openAppointmentEdit(appointment);
+    }
+  });
   window.setInterval(() => {
     if (!document.hidden) loadAppointments();
   }, 30000);

@@ -227,17 +227,19 @@ async function sendInquiryNotification(inquiry) {
   }
 }
 
-async function sendNotificationEmail(toEmail, type, message) {
+async function sendNotificationEmail(toEmail, type, message, { idempotencyKey } = {}) {
   assertDemoCustomerExternalOperationAllowed('Brevo email delivery', toEmail);
   const safeType = escapeHtml(type.replace(/_/g, ' '));
   const safeMessage = escapeHtml(message);
   const response = await fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',
+    ...(idempotencyKey ? { signal: AbortSignal.timeout(15000) } : {}),
     headers: {
       'Content-Type': 'application/json',
       'api-key': process.env.BREVO_API_KEY,
     },
     body: JSON.stringify({
+      ...(idempotencyKey ? { headers: { idempotencyKey } } : {}),
       sender: {
         name: 'Skin Goddess Aesthetic Center',
         email: process.env.EMAIL_USER,
@@ -249,7 +251,9 @@ async function sendNotificationEmail(toEmail, type, message) {
   });
 
   if (!response.ok) {
-    throw new Error(`Brevo notification email failed: ${await response.text()}`);
+    const detail = await response.text();
+    if (idempotencyKey && detail.includes('duplicate_parameter')) return;
+    throw new Error(`Brevo notification email failed: ${detail}`);
   }
 }
 

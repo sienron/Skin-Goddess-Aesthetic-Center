@@ -1,6 +1,7 @@
 const CUSTOMER_APPOINTMENTS_QUERY = `
   SELECT a.appointment_id,
          a.is_demo,
+         EXISTS(SELECT 1 FROM clinic_appointment_impacts ci WHERE ci.appointment_id=a.appointment_id AND ci.resolution='pending') AS clinic_pending_resolution,
          a.appointment_date::text AS date,
          a.appointment_time::text AS start,
          a.appointment_end_time::text AS end,

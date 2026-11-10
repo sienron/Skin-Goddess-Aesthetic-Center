@@ -4,6 +4,7 @@ const { notifyUser, notifyRoles } = require('./notifications');
 const { sendAppointmentReminderEmail } = require('./mailer');
 const { RATING_WINDOW_DAYS } = require('./appointmentRatings');
 const { processPendingAppointmentDelayNotifications } = require('./appointmentDelayNotifications');
+const { processClinicNotifications } = require('./clinicNotifications');
 
 let remindersRunning = false;
 let emailRemindersRunning = false;
@@ -24,6 +25,7 @@ async function sendReminders(flag, hours, type) {
     WHERE a.service_id = s.service_id
       AND a.user_id IS NOT NULL
       AND a.appointment_status IN ('pending', 'confirmed')
+      AND NOT EXISTS (SELECT 1 FROM clinic_appointment_impacts ci WHERE ci.appointment_id=a.appointment_id AND ci.resolution='pending')
       AND a.${flag} = FALSE
       AND a.appointment_date + a.appointment_time > (NOW() AT TIME ZONE 'Asia/Manila')
       AND a.appointment_date + a.appointment_time <= (NOW() AT TIME ZONE 'Asia/Manila') + ($1 * INTERVAL '1 hour')
@@ -63,6 +65,7 @@ async function sendAppointmentEmailReminders(flag, hours) {
     JOIN users u ON u.user_id = a.user_id
     JOIN services s ON s.service_id = a.service_id
     WHERE a.appointment_status = 'confirmed'
+      AND NOT EXISTS (SELECT 1 FROM clinic_appointment_impacts ci WHERE ci.appointment_id=a.appointment_id AND ci.resolution='pending')
       AND a.is_demo = FALSE
       AND a.${flag} = FALSE
       AND a.appointment_date + a.appointment_time > ${now}
@@ -77,6 +80,7 @@ async function sendAppointmentEmailReminders(flag, hours) {
       SET ${flag} = TRUE
       WHERE appointment_id = $1 AND ${flag} = FALSE
         AND appointment_status = 'confirmed'
+        AND NOT EXISTS (SELECT 1 FROM clinic_appointment_impacts ci WHERE ci.appointment_id=appointments.appointment_id AND ci.resolution='pending')
         AND is_demo = FALSE
         AND appointment_date = $2::date AND appointment_time = $3::time
         AND appointment_date + appointment_time > ${now}
@@ -157,6 +161,7 @@ async function runAppointmentStatusAdvancement() {
       UPDATE appointments
       SET appointment_status = 'in_progress', updated_at = NOW()
       WHERE appointment_status = 'confirmed'
+        AND NOT EXISTS (SELECT 1 FROM clinic_appointment_impacts ci WHERE ci.appointment_id=appointments.appointment_id AND ci.resolution='pending')
         AND appointment_date = (NOW() AT TIME ZONE 'Asia/Manila')::date
         AND appointment_time <= (NOW() AT TIME ZONE 'Asia/Manila')::time
       RETURNING appointment_id, user_id
@@ -288,6 +293,7 @@ function startNotificationJobs() {
   cron.schedule('*/5 * * * *', runAppointmentRatingFallback, { timezone: 'Asia/Manila' });
   cron.schedule('* * * * *', runAppointmentDelayNotificationRetries, { timezone: 'Asia/Manila' });
   cron.schedule('0 9 * * *', runExpiryAlerts, { timezone: 'Asia/Manila' });
+  cron.schedule('* * * * *', processClinicNotifications, { timezone: 'Asia/Manila' });
 }
 
 module.exports = {

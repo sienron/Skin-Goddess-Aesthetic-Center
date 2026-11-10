@@ -238,6 +238,7 @@
   }
 
   function statusLabel(appointment) {
+    if (appointment.clinicPendingResolution) return 'Pending Resolution: clinic schedule changed';
     if (appointment.cancellationRequestStatus === 'pending') return 'Cancellation requested';
     if (appointment.rescheduleRequestStatus === 'pending') return 'Reschedule requested';
     const labels = { confirmed: 'Confirmed', pending: 'Pending', cancelled: 'Cancelled', completed: 'Completed', no_show: 'No show' };
