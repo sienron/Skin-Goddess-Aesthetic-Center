@@ -1,4 +1,8 @@
 require('dotenv').config();
+require('./utils/runtimeSecurityConfig').assertValidRuntimeSecurityConfig();
+if (process.env.NODE_ENV === 'production') {
+  require('./utils/totp').validateEncryptionKey();
+}
 require('./utils/demoMode').assertValidDemoCustomerConfiguration();
 
 const express = require('express');
@@ -7,6 +11,14 @@ const path = require('path');
 const crypto = require('crypto');
 const { DASHBOARD_PER_ROLE } = require('./utils/roleRoutes');
 const { hasRoleAccess } = require('./utils/roleAccess');
+const {
+  hasCurrentMfaAssurance,
+  isPrivilegedRole,
+  PRIVILEGED_SESSION_MAX_AGE_MS,
+} = require('./utils/privilegedMfa');
+const { requirePrivilegedMfa } = require('./middleware/privilegedMfa');
+const { createSecurityHeaders } = require('./middleware/securityHeaders');
+const { destroySession } = require('./utils/sessionSecurity');
 const PgSession = require('connect-pg-simple')(session);
 
 const db = require('./db');
@@ -18,14 +30,8 @@ const publicDir = path.join(__dirname, 'public');
 const sessionSecret = process.env.SESSION_SECRET;
 const STAY_SIGNED_IN_MAX_AGE = 1000 * 60 * 60 * 24 * 400;
 
-if (!sessionSecret && process.env.NODE_ENV === 'production') {
-  throw new Error('SESSION_SECRET must be configured in production.');
-}
-if (!sessionSecret) {
-  console.warn('SESSION_SECRET is not configured. Sessions will be invalidated when the server restarts; add a stable value to .env.');
-}
-
 app.set('trust proxy', 1);
+app.use(createSecurityHeaders());
 
 app.use('/api/appointments/paymongo/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json({ limit: '8mb' }));
@@ -44,11 +50,32 @@ app.use(session({
 }));
 
 app.use((req, res, next) => {
-  if (req.session?.staySignedIn) {
+  if (req.session?.staySignedIn && !req.session.privilegedMfaAuthenticatedAt) {
     req.session.cookie.maxAge = STAY_SIGNED_IN_MAX_AGE;
+  }
+
+  if (req.session?.privilegedMfaAuthenticatedAt) {
+    const authenticatedAt = Number(req.session.privilegedMfaAuthenticatedAt);
+    const remaining = PRIVILEGED_SESSION_MAX_AGE_MS
+      - (Date.now() - authenticatedAt);
+    if (!Number.isFinite(authenticatedAt) || remaining <= 0) {
+      if (req.path === '/api/auth/login') return next();
+      return destroySession(req, res).then(() => {
+        if (req.accepts('html') && !req.originalUrl.startsWith('/api/')) {
+          return res.redirect('/LoginPage.html?mfa=required');
+        }
+        return res.status(401).json({ message: 'Your privileged session expired. Sign in again.' });
+      });
+    }
+    req.session.cookie.maxAge = Math.min(
+      Number(req.session.cookie.maxAge) || PRIVILEGED_SESSION_MAX_AGE_MS,
+      remaining,
+    );
   }
   next();
 });
+
+app.use('/api', requirePrivilegedMfa);
 
 app.use((req, res, next) => {
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)
@@ -95,7 +122,7 @@ function requireRole(...allowedRoles) {
 
     try {
       const result = await db.query(
-        'SELECT role, status, dev_access_all FROM users WHERE user_id = $1',
+        'SELECT role, status, dev_access_all, totp_enabled, totp_enrolled_at FROM users WHERE user_id = $1',
         [req.session.userId]
       );
 
@@ -103,13 +130,16 @@ function requireRole(...allowedRoles) {
         return res.status(401).send('Your session is no longer valid.');
       }
 
-      if (result.rows[0].status === 'suspended') {
-        return res.status(403).send('Your account is suspended.');
+      if (result.rows[0].status !== 'active') {
+        return res.status(403).send('Your account is not active.');
       }
 
       const currentRole = result.rows[0].role;
       req.session.role = currentRole;
-      const localDevAccess = process.env.NODE_ENV !== 'production'
+      if (isPrivilegedRole(currentRole) && !hasCurrentMfaAssurance(req.session, result.rows[0])) {
+        return res.status(403).send('Complete privileged MFA before accessing this page.');
+      }
+      const localDevAccess = process.env.NODE_ENV === 'development'
         && result.rows[0].dev_access_all === true;
 
       if (!hasRoleAccess(currentRole, allowedRoles, localDevAccess)) {
@@ -142,7 +172,7 @@ app.use(async (req, res, next) => {
 
   try {
     const result = await db.query(
-      'SELECT role, status, dev_access_all FROM users WHERE user_id = $1',
+      'SELECT role, status, dev_access_all, totp_enabled, totp_enrolled_at FROM users WHERE user_id = $1',
       [req.session.userId]
     );
     const user = result.rows[0];
@@ -151,8 +181,17 @@ app.use(async (req, res, next) => {
       return res.status(401).send('Your session is no longer valid.');
     }
 
-    if (user.status === 'suspended') {
-      return res.status(403).send('Your account is suspended.');
+    if (user.status !== 'active') {
+      return destroySession(req, res).then(() => (
+        res.status(403).send('Your account is not active.')
+      ));
+    }
+
+    if (requestedPage !== '/LoginPage.html'
+      && isPrivilegedRole(user.role)
+      && !hasCurrentMfaAssurance(req.session, user)) {
+      return destroySession(req, res)
+        .then(() => res.redirect('/LoginPage.html?mfa=required'));
     }
 
     req.session.role = user.role;
@@ -166,7 +205,7 @@ app.use(async (req, res, next) => {
       }
     }
 
-    const localDevAccess = process.env.NODE_ENV !== 'production' && user.dev_access_all === true;
+    const localDevAccess = process.env.NODE_ENV === 'development' && user.dev_access_all === true;
     if (user.role === 'inventory_officer' && !localDevAccess) {
       if (requestedPage === '/' || !INVENTORY_OFFICER_PAGES.has(requestedPage)) {
         return res.redirect('/InventoryManagement.html');

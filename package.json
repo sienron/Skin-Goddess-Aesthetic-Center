@@ -25,9 +25,20 @@
         "migrate:announcement-reads": "node migrations/046-announcement-reads.js",
         "migrate:appointment-scheduling": "node migrations/047-flexible-appointment-scheduling.js && node migrations/048-appointment-delay-retries.js && node migrations/049-consolidate-aesthetician-roles.js",
         "migrate:aesthetician-roles": "node migrations/049-consolidate-aesthetician-roles.js",
+<<<<<<< HEAD
+=======
+        "migrate:privileged-mfa": "node migrations/050-privileged-totp-mfa.js",
+        "migrate:hashed-email-otps": "node migrations/051-hashed-email-otps.js",
+>>>>>>> 1ee1c961f2bcc933f855d36c0fb09fea517b64c3
         "test:finance:integration": "node --test tests/finance.integration.test.js",
         "test:finance:ux": "node --test tests/finance-ux.test.js",
         "test:security": "node --test tests/login-security.test.js tests/appointment-booking-access.test.js",
+        "test:security:mfa": "node --test tests/privileged-mfa.test.js tests/recovery-codes-ui.test.js tests/session-security.test.js tests/user-management-xss.test.js",
+        "test:security:cms-inventory": "node --test tests/content-public-access.test.js tests/inventory-xss.test.js",
+        "test:security:headers-inquiries": "node --test tests/security-headers.test.js tests/inquiries-rate-limit.test.js",
+        "test:security:invoice-csv": "node --test tests/invoice-upload-security.test.js tests/csv-formula-injection.test.js",
+        "test:security:otp": "node --test tests/otp-security.test.js tests/login-security.test.js",
+        "test:security:batch5": "node --test tests/paymongo-webhook-security.test.js tests/postgres-config.test.js",
         "test:appointment:scheduling": "node --test tests/appointment-policy.test.js tests/appointment-scheduling.test.js tests/appointment-delay-notifications.test.js tests/rebook-appointment.test.js tests/appointment-booking-access.test.js tests/paymongo-recovery.test.js",
         "seed:role-test-accounts": "node scripts/seed-role-test-accounts.js",
         "migrate:demo-customer": "node migrations/043-demo-customer-appointments.js",
@@ -45,10 +56,12 @@
         "express": "^5.2.1",
         "express-rate-limit": "^8.7.0",
         "express-session": "^1.19.0",
+        "helmet": "^8.3.0",
         "multer": "^2.4.0",
         "node-cron": "^4.6.0",
         "nodemailer": "^10.1.0",
         "pg": "^8.22.0",
+        "qrcode": "^1.5.4",
         "sharp": "^0.35.5",
         "tesseract.js": "^7.0.0"
     },

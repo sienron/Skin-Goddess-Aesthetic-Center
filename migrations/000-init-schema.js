@@ -30,7 +30,7 @@ async function migrate() {
       CREATE TABLE IF NOT EXISTS otp_codes (
         otp_id SERIAL PRIMARY KEY,
         user_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
-        code VARCHAR(10) NOT NULL,
+        code_hash VARCHAR(64) NOT NULL,
         purpose VARCHAR(50) NOT NULL,
         is_used BOOLEAN DEFAULT FALSE,
         expires_at TIMESTAMP NOT NULL,

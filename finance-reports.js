@@ -16,9 +16,7 @@
   }
 
   function csvCell(value) {
-    let text = value == null ? '' : String(value);
-    if (/^[=+\-@]/.test(text)) text = `'${text}`;
-    return `"${text.replace(/"/g, '""')}"`;
+    return CsvExport.escapeCell(value);
   }
 
   function downloadCsv(name, headers, rows, section) {

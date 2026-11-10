@@ -277,13 +277,15 @@ document.addEventListener('DOMContentLoaded', () => {
         historyList.appendChild(el('li', '', 'No end-time adjustments recorded.'));
         return;
       }
-      history.forEach((entry) => {
-        historyList.appendChild(el(
-          'li',
-          '',
-          `${displayTime(entry.previous_end_time)} → ${displayTime(entry.new_end_time)} by ${entry.administrator || 'Admin'} · ${formatManilaDateTime(entry.created_at)}`
-        ));
-      });
+      [...history]
+        .sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at))
+        .forEach((entry) => {
+          historyList.appendChild(el(
+            'li',
+            '',
+            `${displayTime(entry.previous_end_time)} → ${displayTime(entry.new_end_time)} by ${entry.administrator || 'Admin'} · ${formatManilaDateTime(entry.created_at)}`
+          ));
+        });
     } catch (error) {
       message.textContent = error.message || 'Could not load adjustment history.';
       message.classList.add('appointment-inventory-message--error');

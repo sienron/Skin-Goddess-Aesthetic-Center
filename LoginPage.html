@@ -277,12 +277,38 @@
       </div>
 
       <h2 class="modal-title" id="loginMfaTitle">Verify your sign-in</h2>
-      <p class="modal-subtitle">
+      <p id="loginTotpInstruction" hidden></p>
+      <p class="modal-subtitle" id="loginMfaSubtitle">
         We sent a 6-digit code to<br>
         <span class="otp-email" id="loginMfaEmail"></span>
       </p>
 
+      <section id="loginEnrollmentCodePanel" hidden>
+        <p class="login-enrollment-description">Privileged accounts require an authenticator app. Enter the single-use enrollment code provided by the verified system operator.</p>
+        <form id="loginEnrollmentCodeForm" class="login-enrollment-form">
+          <label for="loginEnrollmentCode">ENROLLMENT CODE</label>
+          <input type="text" id="loginEnrollmentCode" autocomplete="one-time-code" maxlength="64" placeholder="Enter enrollment code" required>
+          <span class="field-error" id="loginEnrollmentError" aria-live="assertive"></span>
+          <button type="submit" class="auth-btn btn-gold btn-block" id="loginEnrollmentStartBtn">SET UP AUTHENTICATOR</button>
+        </form>
+      </section>
+
+      <section id="loginTotpSetupPanel" hidden>
+        <p>Scan this QR code with your authenticator app. Enter the six-digit code from the app to activate MFA.</p>
+        <img id="loginTotpQr" alt="Authenticator setup QR code" width="220" height="220">
+        <p>Manual setup key: <code id="loginTotpSecret"></code></p>
+      </section>
+
       <form id="loginMfaForm" novalidate>
+        <div id="loginTotpRecoveryToggle" hidden>
+          <button type="button" class="link-gold" id="loginUseRecoveryCode">Use a recovery code</button>
+          <button type="button" class="link-gold" id="loginUseTotpCode" hidden>Use authenticator code</button>
+          <div id="loginRecoveryInput" hidden>
+            <label for="loginRecoveryCode">RECOVERY CODE</label>
+            <input type="text" id="loginRecoveryCode" autocomplete="one-time-code" maxlength="32">
+          </div>
+          <p id="loginReenrollWrap" hidden>Lost your authenticator and recovery codes? <button type="button" class="link-gold" id="loginReenrollButton">Enter an operator-issued enrollment code</button></p>
+        </div>
         <div class="otp-inputs">
           <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" aria-label="Digit 1">
           <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" aria-label="Digit 2">
@@ -291,8 +317,8 @@
           <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" aria-label="Digit 5">
           <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" aria-label="Digit 6">
         </div>
-        <p class="otp-timer">Code expires in <span class="otp-timer-value" id="loginMfaTimerValue">05:00</span></p>
-        <label class="checkbox-label login-mfa-remember">
+        <p class="otp-timer" id="loginMfaTimer">Code expires in <span class="otp-timer-value" id="loginMfaTimerValue">05:00</span></p>
+        <label class="checkbox-label login-mfa-remember" id="rememberLoginDeviceWrap">
           <input type="checkbox" id="rememberLoginDevice">
           <span>Remember this device for 30 days</span>
         </label>
@@ -301,11 +327,25 @@
         <button type="submit" class="auth-btn btn-gold btn-block" id="loginMfaVerifyBtn">VERIFY CODE</button>
       </form>
 
-      <p class="otp-resend">Didn't receive it? <a href="#" class="link-gold" id="loginMfaResendLink">Resend code</a></p>
+      <p class="otp-resend" id="loginMfaResendWrap">Didn't receive it? <a href="#" class="link-gold" id="loginMfaResendLink">Resend code</a></p>
+      <section id="loginRecoveryPanel" hidden>
+        <h3>Save your recovery codes</h3>
+        <p class="login-recovery-warning">Each recovery code can only be used once. Store these codes somewhere secure.</p>
+        <ul class="login-recovery-codes" id="loginRecoveryCodes"></ul>
+        <div class="login-recovery-actions">
+          <button type="button" class="auth-btn auth-btn-outline" id="loginCopyRecoveryCodes">Copy all codes</button>
+          <button type="button" class="auth-btn auth-btn-outline" id="loginDownloadRecoveryCodes">Download recovery codes</button>
+        </div>
+        <p class="login-recovery-status" id="loginRecoveryStatus" role="status" aria-live="polite"></p>
+        <label class="checkbox-label login-recovery-acknowledge">
+          <input type="checkbox" id="loginRecoveryAcknowledged">
+          <span>I have saved my recovery codes somewhere secure.</span>
+        </label>
+        <button type="button" class="auth-btn btn-gold btn-block" id="loginContinueAfterMfa" disabled>CONTINUE</button>
+      </section>
       <div class="otp-divider-line"></div>
       <a href="#" class="back-to-signin" id="backToLoginMfa">&larr; Back to Sign In</a>
-      <div class="otp-security-note">
-        <p>This code is valid for 5 minutes.</p>
+      <div class="otp-security-note" id="loginMfaSecurityNote">
         <p>Never share this code with anyone.</p>
       </div>
     </div>

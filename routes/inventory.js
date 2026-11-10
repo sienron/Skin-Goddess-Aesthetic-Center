@@ -10,33 +10,50 @@ const { recordInventoryTransaction } = require('../utils/inventoryTransactions')
 const { recognizeImage } = require('../utils/invoiceOcr');
 const { parseInvoiceText, INVOICE_PARSER_CONFIG } = require('../utils/invoiceParser');
 const { isInventoryCategory } = require('../utils/inventoryCategories');
+const {
+    MAX_INVOICE_UPLOAD_BYTES,
+    InvoiceImageError,
+    validateAndNormalizeInvoiceImage,
+} = require('../utils/invoiceUpload');
 
 router.use(requireRole('inventory_officer', 'admin'));
 
 const uploadInvoice = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 10 * 1024 * 1024 },
-    fileFilter(req, file, callback) {
-        if (!['image/jpeg', 'image/png'].includes(file.mimetype)) {
-            return callback(new Error('Only JPEG and PNG invoice images are allowed.'));
-        }
-        callback(null, true);
-    }
+    limits: { fileSize: MAX_INVOICE_UPLOAD_BYTES },
 });
 
 function handleInvoiceUpload(req, res, next) {
     uploadInvoice.single('image')(req, res, error => {
-        if (!error) return next();
+        if (!error) {
+            if (!req.file) return next();
+            const sourceHash = crypto.createHash('sha256').update(req.file.buffer).digest('hex');
+            return validateAndNormalizeInvoiceImage(req.file.buffer)
+                .then(normalizedImage => {
+                    req.file.buffer = normalizedImage;
+                    req.file.mimetype = 'image/png';
+                    req.file.sourceHash = sourceHash;
+                    return next();
+                })
+                .catch(validationError => {
+                    req.file.buffer = null;
+                    const status = validationError instanceof InvoiceImageError
+                        ? validationError.status
+                        : 400;
+                    return res.status(status).json({
+                        message: status === 413
+                            ? 'The invoice image must be 10 MB or smaller.'
+                            : 'The invoice image is invalid or unsupported. Upload a JPEG or PNG image.'
+                    });
+                });
+        }
 
         const isTooLarge = error instanceof multer.MulterError
             && error.code === 'LIMIT_FILE_SIZE';
-        const isInvalidType = error.message === 'Only JPEG and PNG invoice images are allowed.';
         return res.status(isTooLarge ? 413 : 400).json({
             message: isTooLarge
                 ? 'The invoice image must be 10 MB or smaller.'
-                : isInvalidType
-                    ? error.message
-                    : 'The invoice image could not be uploaded.'
+                : 'The invoice image could not be uploaded.'
         });
     });
 }
@@ -46,6 +63,19 @@ function validExpiryDate(value) {
     if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
     const date = new Date(`${value}T00:00:00Z`);
     return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+function validateProductDetails(productName, expiryDate) {
+    if (typeof productName !== 'string' || !productName.trim()) {
+        return 'Product name is required.';
+    }
+    if (productName.trim().length > 255) {
+        return 'Product name must be 255 characters or fewer.';
+    }
+    if (!validExpiryDate(expiryDate)) {
+        return 'Enter a valid expiration date.';
+    }
+    return null;
 }
 
 function validateBatchRows(rows) {
@@ -127,7 +157,7 @@ router.post('/batch-upload/scan', handleInvoiceUpload, async (req, res) => {
 
         const response = {
             rows: reviewedRows,
-            source_hash: crypto.createHash('sha256').update(req.file.buffer).digest('hex')
+            source_hash: req.file.sourceHash
         };
         if (process.env.OCR_RETURN_RAW_TEXT !== 'false') response.rawText = rawText;
         return res.json(response);
@@ -136,6 +166,8 @@ router.post('/batch-upload/scan', handleInvoiceUpload, async (req, res) => {
         return res.status(500).json({
             message: 'The invoice image could not be processed. Please try again with a clearer photo.'
         });
+    } finally {
+        req.file.buffer = null;
     }
 });
 
@@ -673,17 +705,11 @@ router.post('/', async (req, res) => {
         } = req.body;
 
         if (!isInventoryCategory(category)) {
-            return res.status(400).json({
-                message: 'Choose a valid inventory category.'
-            });
+            return res.status(400).json({ message: 'Choose a valid inventory category.' });
         }
 
-        // Check product name
-        if (!product_name || product_name.trim() === "") {
-            return res.status(400).json({
-                message: "Product name is required."
-            });
-        }
+        const detailsError = validateProductDetails(product_name, expiry_date);
+        if (detailsError) return res.status(400).json({ message: detailsError });
 
         // Check stock
         if (!Number.isInteger(stock) || stock < 0) {
@@ -898,20 +924,11 @@ router.put("/:id", async (req, res) => {
         } = body;
 
         if (!isInventoryCategory(category)) {
-            return res.status(400).json({
-                message: "Choose a valid inventory category."
-            });
+            return res.status(400).json({ message: 'Choose a valid inventory category.' });
         }
 
-        // Check product name
-        if (!product_name || product_name.trim() === "") {
-
-            return res.status(400).json({
-                message: "Product name is required."
-            });
-
-        }
-
+        const detailsError = validateProductDetails(product_name, expiry_date);
+        if (detailsError) return res.status(400).json({ message: detailsError });
 
         // Check stock
         if (hasTargetStock

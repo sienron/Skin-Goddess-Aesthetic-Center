@@ -171,7 +171,7 @@ function getStockStatusLabel(product){
         default: return "Unavailable";
     }
 }
-
+//days remain before a product expires, or how many days it has already been expired.
 function getExpirationDays(expiryValue, referenceDate = new Date()){
     if(!expiryValue){
         return null;
@@ -188,7 +188,7 @@ function getExpirationDays(expiryValue, referenceDate = new Date()){
     ){
         return Number.NaN;
     }
-
+    //Setting the time to midnight
     expiryDate.setHours(0, 0, 0, 0);
     const today = new Date(referenceDate);
     today.setHours(0, 0, 0, 0);
@@ -288,7 +288,7 @@ async function loadInventory(){
     }
 
 }
-
+//dashboard card for expired products
 function updateExpiredItemsCount(){
     const expiredProducts = inventoryProducts.filter(product => {
         return getExpirationDays(product.expiry_date) < 0;
@@ -499,6 +499,7 @@ async function loadExpiringSoonCount() {
 
         const products = await response.json();
 
+//dashboard card for expiring soon products (within 30 days)
         const today = new Date();
 
         const expiringProducts = products.filter(product => {
@@ -522,98 +523,15 @@ async function loadExpiringSoonCount() {
 //translate JSON to JS table row
 function renderInventory(){
 
-    inventoryBody.innerHTML = "";
+    inventoryBody.replaceChildren();
 
     inventoryProducts.forEach(product => {
-
-        const row = document.createElement("tr");
-        row.dataset.id = product.product_id;
-
-        row.dataset.category = product.category;
-        row.dataset.stock = product.stock_quantity;
-        row.dataset.expiry =
-            product.expiry_date || "none";
-
-            const status = getStockStatus(product);
-            const statusClass = status === "low" ? "low-stock" : status;
-            row.dataset.status = status;
-
-
-        row.innerHTML = `
-            <td>
-                <div class="product-name">
-                    ${product.product_name}
-                </div>
-            </td>
-
-            <td>
-                ${product.category}
-            </td>
-
-            <td>
-                <div class="stock-control">
-
-                    <span class="stock-number">
-                        ${product.stock_quantity}
-                    </span>
-
-                    <button
-                        class="action-btn decrease"
-                        type="button"
-                        title="Remove stock"
-                    >
-                        −
-                    </button>
-
-                    <button
-                        class="action-btn increase"
-                        type="button"
-                        title="Add stock"
-                    >
-                        +
-                    </button>
-
-                </div>
-            </td>
-
-            <td>
-                ${
-                    product.expiry_date
-                        ? product.expiry_date
-                        : "No Expiration"
-                }
-            </td>
-
-            <td>
-                <div class="status ${statusClass}">
-                    <span></span>
-                    ${getStockStatusLabel(product).toUpperCase()}
-                </div>
-            </td>
-
-            <td>
-            <div class="action-buttons">
-
-                <button
-                    class="action-btn edit"
-                    type="button"
-                    title="Edit product"
-                >
-                    Edit
-                </button>
-
-                <button
-                    class="action-btn delete"
-                    type="button"
-                    title="Delete product"
-                >
-                    ×
-                </button>
-
-            </div>
-        </td>
-        `;
-
+        const status = getStockStatus(product);
+        const row = InventoryRowRenderer.createInventoryProductRow(
+            product,
+            status,
+            getStockStatusLabel(product),
+        );
         inventoryBody.appendChild(row);
 
     });
@@ -623,16 +541,25 @@ function renderInventory(){
 
 }
 
-function renderInventorySidebar(){
+function setInventoryStatusLabel(element, label) {
+    const indicator = document.createElement("span");
+    element.replaceChildren(indicator, document.createTextNode(` ${label}`));
+}
+
+function renderInventorySidebar() {
     categoryStock.replaceChildren();
 
+    //loops through configured inventory categories
     inventoryCategories.forEach(category => {
+        //For each category, finds the products belonging to that category
         const products = inventoryProducts.filter(
             product => product.category === category.name
         );
+        //counts products that have stock greater than zero:
         const availableProducts = products.filter(
             product => Number(product.stock_quantity) > 0
         ).length;
+        
         const percentage = products.length
             ? Math.round((availableProducts / products.length) * 100)
             : 0;
@@ -642,9 +569,11 @@ function renderInventorySidebar(){
 
         const label = document.createElement("span");
         label.textContent = category.label;
-
+        
+        //progress bar 
         const progress = document.createElement("div");
         progress.className = "progress";
+
         progress.setAttribute("role", "progressbar");
         progress.setAttribute(
             "aria-label",
@@ -654,6 +583,7 @@ function renderInventorySidebar(){
         progress.setAttribute("aria-valuemax", "100");
         progress.setAttribute("aria-valuenow", String(percentage));
 
+        //filled progress bar
         const fill = document.createElement("div");
         fill.style.width = `${percentage}%`;
         progress.appendChild(fill);
@@ -665,8 +595,7 @@ function renderInventorySidebar(){
         categoryStock.appendChild(row);
     });
 
-    const alerts = inventoryProducts
-        .map(product => {
+    const alerts = inventoryProducts.map(product => {
             const stock = Number(product.stock_quantity);
             if (stock <= 0 || stock > inventoryThresholds.lowStock) return null;
 
@@ -674,11 +603,11 @@ function renderInventorySidebar(){
                 product,
                 stock,
                 critical: stock <= inventoryThresholds.criticalStock,
-                since: Date.parse(product.stock_status_since || "") || 0
+                since: Date.parse(product.stock_status_since || "") || 0  //Get the date the stock entered its current status TO SORT THE ALERTS
             };
         })
         .filter(Boolean)
-        .sort((first, second) => second.since - first.since);
+        .sort((first, second) => second.since - first.since); //sort the alertss
 
     lowStockAlerts.replaceChildren();
 
@@ -807,7 +736,7 @@ function filterInventory(){
         row.style.display = matchingProductIds.has(row.dataset.id) ? "" : "none";
     });
 }
-
+//dashboard cards update
 function updateStockSummaryFromInventory() {
     const totalStock = inventoryProducts.reduce(
         (total, product) => total + Number(product.stock_quantity),
@@ -2031,8 +1960,7 @@ confirmAddProduct.addEventListener("click", async () => {
                 "out-of-stock"
             );
         
-            statusElement.innerHTML =
-                "<span></span> OUT OF STOCK";
+            setInventoryStatusLabel(statusElement, "OUT OF STOCK");
         
         }
         
@@ -2044,8 +1972,7 @@ confirmAddProduct.addEventListener("click", async () => {
                 "critical"
             );
         
-            statusElement.innerHTML =
-                "<span></span> CRITICAL";
+            setInventoryStatusLabel(statusElement, "CRITICAL");
         
         }
         
@@ -2057,8 +1984,7 @@ confirmAddProduct.addEventListener("click", async () => {
                 "low-stock"
             );
         
-            statusElement.innerHTML =
-                "<span></span> LOW STOCK";
+            setInventoryStatusLabel(statusElement, "LOW STOCK");
         
         }
         
@@ -2070,8 +1996,7 @@ confirmAddProduct.addEventListener("click", async () => {
                 "in-stock"
             );
         
-            statusElement.innerHTML =
-                "<span></span> IN STOCK";
+            setInventoryStatusLabel(statusElement, "IN STOCK");
         
         }
 

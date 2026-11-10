@@ -1,12 +1,20 @@
 const express = require('express');
+const { rateLimit } = require('express-rate-limit');
 const db = require('../db');
 const { requireRole } = require('../middleware/auth');
 const { sendInquiryReply, sendInquiryNotification } = require('../utils/mailer');
 
 const router = express.Router();
 const INQUIRY_TYPES = new Set(['booking', 'services', 'feedback', 'other']);
+const inquirySubmissionLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many inquiry submissions. Please try again later.' },
+});
 
-router.post('/', async (req, res) => {
+router.post('/', inquirySubmissionLimiter, async (req, res) => {
   const {
     firstName,
     lastName,

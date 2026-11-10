@@ -102,13 +102,10 @@ router.get('/public/pages/:pageKey', async (req, res) => {
   try {
     const result = await db.query(`
       SELECT content_key, label,
-        CASE WHEN is_published THEN title ELSE '' END AS title,
-        CASE WHEN is_published THEN body ELSE '' END AS body,
-        payload, page_key,
-        CASE WHEN is_published THEN image_url ELSE '' END AS image_url,
+        title, body, payload, page_key, image_url,
         is_published
       FROM homepage_content
-      WHERE page_key = $1
+      WHERE page_key = $1 AND is_published = TRUE
       ORDER BY display_order, content_key
     `, [pageKey]);
     return res.json(result.rows.map(mapHomepageContent));
@@ -199,11 +196,28 @@ router.get('/images/:imageId', async (req, res) => {
 
   try {
     const result = await db.query(
-      'SELECT mime_type, image_data FROM website_content_images WHERE image_id = $1',
+      `SELECT image.mime_type, image.image_data
+       FROM website_content_images image
+       WHERE image.image_id = $1
+         AND (
+           EXISTS (
+             SELECT 1 FROM homepage_content content
+             WHERE content.is_published = TRUE
+               AND (
+                 content.image_url = '/api/content/images/' || image.image_id::text
+                 OR content.payload::text LIKE '%' || image.image_id::text || '%'
+               )
+           )
+           OR EXISTS (
+             SELECT 1 FROM website_team_members member
+             WHERE member.is_published = TRUE
+               AND member.photo_url = '/api/content/images/' || image.image_id::text
+           )
+         )`,
       [imageId],
     );
     if (!result.rows.length) return res.sendStatus(404);
-    res.set('Cache-Control', 'public, max-age=31536000, immutable');
+    res.set('Cache-Control', 'no-store');
     res.type(result.rows[0].mime_type).send(result.rows[0].image_data);
   } catch (error) {
     console.error('Could not load page image:', error.message);

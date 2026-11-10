@@ -19,7 +19,7 @@ async function migrate() {
         change_id SERIAL PRIMARY KEY,
         user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
         new_email VARCHAR(255) NOT NULL,
-        code VARCHAR(10) NOT NULL,
+        code_hash VARCHAR(64) NOT NULL,
         is_used BOOLEAN NOT NULL DEFAULT FALSE,
         attempts INTEGER NOT NULL DEFAULT 0,
         expires_at TIMESTAMP NOT NULL,

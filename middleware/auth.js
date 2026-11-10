@@ -6,6 +6,7 @@
 const db = require('../db');
 const { hasRoleAccess } = require('../utils/roleAccess');
 const { createBlockDemoCustomerPayments } = require('../utils/demoCustomerAccess');
+const { hasCurrentMfaAssurance, isPrivilegedRole } = require('../utils/privilegedMfa');
 
 function requireLogin(req, res, next) {
   if (!req.session.userId) {
@@ -30,8 +31,8 @@ async function requireActiveAccount(req, res, next) {
     if (result.rows.length === 0) {
       return res.status(401).json({ message: 'Your session is no longer valid.' });
     }
-    if (result.rows[0].status === 'suspended') {
-      return res.status(403).json({ message: 'Your account is suspended.' });
+    if (result.rows[0].status !== 'active') {
+      return res.status(403).json({ message: 'Your account is not active.' });
     }
 
     return next();
@@ -48,18 +49,24 @@ function requireRole(...allowedRoles) {
     if (!req.session.userId) return requireLogin(req, res, next);
 
     try {
-      const result = await db.query('SELECT role, status, dev_access_all FROM users WHERE user_id = $1', [req.session.userId]);
+      const result = await db.query(
+        'SELECT role, status, dev_access_all, totp_enabled, totp_enrolled_at FROM users WHERE user_id = $1',
+        [req.session.userId]
+      );
       if (result.rows.length === 0) {
         return res.status(401).json({ message: 'Your session is no longer valid.' });
       }
 
-      if (result.rows[0].status === 'suspended') {
-        return res.status(403).json({ message: 'Your account is suspended.' });
+      if (result.rows[0].status !== 'active') {
+        return res.status(403).json({ message: 'Your account is not active.' });
       }
 
       const currentRole = result.rows[0].role;
       req.session.role = currentRole;
-      const localDevAccess = process.env.NODE_ENV !== 'production' && result.rows[0].dev_access_all === true;
+      if (isPrivilegedRole(currentRole) && !hasCurrentMfaAssurance(req.session, result.rows[0])) {
+        return res.status(403).json({ message: 'Complete privileged MFA before accessing this resource.' });
+      }
+      const localDevAccess = process.env.NODE_ENV === 'development' && result.rows[0].dev_access_all === true;
 
       if (!hasRoleAccess(currentRole, allowedRoles, localDevAccess)) {
         if (req.accepts('html') && !req.originalUrl.startsWith('/api/')) {

@@ -702,13 +702,24 @@ test('only Admins can access Admin inventory-review routes', async () => {
         ['admin', null, true],
         ['inventory_officer', 403, false]
       ]) {
+        const enrolledAt = new Date('2025-01-01T00:00:00Z');
         db.query = async () => ({
-          rows: [{ role, status: 'active', dev_access_all: false }]
+          rows: [{
+            role,
+            status: 'active',
+            dev_access_all: false,
+            totp_enabled: role === 'admin',
+            totp_enrolled_at: role === 'admin' ? enrolledAt : null
+          }]
         });
         let statusCode = null;
         let nextCalled = false;
         await authorize({
-          session: { userId: 29 },
+          session: {
+            userId: 29,
+            mfaVerifiedAt: enrolledAt.getTime(),
+            privilegedMfaAuthenticatedAt: Date.now()
+          },
           path: `/api/appointments${path}`,
           originalUrl: `/api/appointments${path}`,
           accepts: () => false
