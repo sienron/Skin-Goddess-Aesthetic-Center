@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // ===== OTP / Email Verification modal (shown after CREATE ACCOUNT) ===
   const otpModal = document.getElementById('otpModal');
   const registerForm = document.getElementById('registerForm');
+  const passwordSetupForm = document.getElementById('registration-password-setup-form');
 
   if (!otpModal || !registerForm) return; // self-guard: safe if this page's markup isn't present
 
@@ -118,35 +119,47 @@ document.addEventListener('DOMContentLoaded', () => {
     startResendCooldown();
   }
 
+  function showPasswordSetup() {
+    otpModal.hidden = false;
+    document.body.classList.add('modal-open');
+    otpModal.querySelector('.modal-title').textContent = 'Create your password';
+    otpModal.querySelector('.modal-subtitle').hidden = true;
+    otpModal.querySelector('.otp-inputs').hidden = true;
+    otpModal.querySelector('.otp-timer').hidden = true;
+    otpModal.querySelector('[data-error-for="otp"]').hidden = true;
+    verifyBtn.hidden = true;
+    otpModal.querySelector('.otp-resend').hidden = true;
+    otpModal.querySelector('.otp-divider-line').hidden = true;
+    otpModal.querySelector('.back-to-signin').hidden = true;
+    otpModal.querySelector('.otp-security-note').hidden = true;
+    passwordSetupForm.hidden = false;
+    document.getElementById('setup-password').focus();
+  }
+
   function closeOtpModal() {
     otpModal.hidden = true;
     document.body.classList.remove('modal-open');
     stopCountdown();
   }
 
+  fetch('/api/auth/registration-status')
+    .then(async (response) => {
+      if (!response.ok) throw new Error('Could not check registration status.');
+      return response.json();
+    })
+    .then((data) => {
+      if (data.requiresPasswordSetup) showPasswordSetup();
+    })
+    .catch((error) => console.error('Registration status check failed:', error));
+
   registerForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     clearErrors(registerForm);
     setFieldError('form', '');
 
-    const password = document.getElementById('password').value;
-    const confirmPassword = document.getElementById('confirmPassword').value;
     const agree = document.getElementById('agree').checked;
 
     let hasError = false;
-
-    if (password.length < 8 || password.length > 72) {
-      setFieldError('password', 'Password must be between 8 and 72 characters.');
-      hasError = true;
-    } else if (!/[^A-Za-z0-9\s]/.test(password)) {
-      setFieldError('password', 'Password must include at least one special character (such as !, @, or #).');
-      hasError = true;
-    }
-
-    if (password !== confirmPassword) {
-      setFieldError('confirmPassword', 'Passwords do not match.');
-      hasError = true;
-    }
 
     if (!agree) {
       setFieldError('agree', 'Please agree to the Terms of Service and Privacy Policy.');
@@ -165,7 +178,6 @@ document.addEventListener('DOMContentLoaded', () => {
       allergies: document.getElementById('allergies').value.trim(),
       conditions: document.getElementById('conditions').value.trim(),
       email: document.getElementById('email').value.trim(),
-      password: password,
     };
 
     try {
@@ -234,24 +246,61 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // Inline success instead of alert — swap modal content, then redirect
-      const modalBox = otpModal.querySelector('.otp-modal');
-      modalBox.innerHTML = `
+      showPasswordSetup();
+    } catch (err) {
+      console.error('OTP verification request failed:', err);
+      if (errorEl) errorEl.textContent = 'Something went wrong. Please try again.';
+    }
+  });
+
+  passwordSetupForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearErrors(passwordSetupForm);
+
+    const password = document.getElementById('setup-password').value;
+    const confirmPassword = document.getElementById('setup-confirm-password').value;
+    if (password.length < 8 || password.length > 72 || !/[^A-Za-z0-9\s]/.test(password)) {
+      setFieldError('setup-password', 'Password must be 8 to 72 characters and include at least one special character.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setFieldError('setup-confirm-password', 'Passwords do not match.');
+      return;
+    }
+
+    const submitButton = document.getElementById('completeRegistrationBtn');
+    submitButton.disabled = true;
+    submitButton.textContent = 'SAVING...';
+    try {
+      const response = await fetch('/api/auth/complete-registration', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setFieldError('setup-form', data.message || 'Could not finish account setup. Please try again.');
+        return;
+      }
+
+      passwordSetupForm.innerHTML = `
         <div class="modal-icon" style="background:#2e7d32;">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2">
             <path d="M20 6L9 17l-5-5"/>
           </svg>
         </div>
-        <h2 class="modal-title">Email verified!</h2>
-        <p class="modal-subtitle">You can now sign in to your account.</p>
+        <h2 class="modal-title">Account created!</h2>
+        <p class="modal-subtitle">You can now sign in with your new password.</p>
       `;
-
       setTimeout(() => {
         window.location.href = '/LoginPage.html';
       }, 1500);
     } catch (err) {
-      console.error('OTP verification request failed:', err);
-      if (errorEl) errorEl.textContent = 'Something went wrong. Please try again.';
+      console.error('Registration password setup failed:', err);
+      setFieldError('setup-form', 'Something went wrong. Please try again.');
+    } finally {
+      submitButton.disabled = false;
+      submitButton.textContent = 'CREATE PASSWORD';
     }
   });
 

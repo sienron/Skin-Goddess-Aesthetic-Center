@@ -28,7 +28,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const publicDir = path.join(__dirname, 'public');
 const sessionSecret = process.env.SESSION_SECRET;
-const STAY_SIGNED_IN_MAX_AGE = 1000 * 60 * 60 * 24 * 400;
+const STAY_SIGNED_IN_MAX_AGE = 1000 * 60 * 60 * 24 * 30;
 
 app.set('trust proxy', 1);
 app.use(createSecurityHeaders());

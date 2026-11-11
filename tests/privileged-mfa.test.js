@@ -368,7 +368,7 @@ test('client email OTP flow remains available without a privileged MFA marker', 
   assert.equal(req.session.userId, 17);
   assert.equal(req.session.mfaVerifiedAt, undefined);
   assert.equal(req.session.staySignedIn, true);
-  assert.equal(req.session.cookie.maxAge, 1000 * 60 * 60 * 24 * 400);
+  assert.equal(req.session.cookie.maxAge, 1000 * 60 * 60 * 24 * 30);
 });
 
 test('valid recovery code rotates the stored recovery set and authenticates once', async () => {
