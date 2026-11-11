@@ -31,8 +31,10 @@ if (!contactForm) {
     }
 
     const submitButton = contactForm.querySelector('[type="submit"]');
+    const submitLabel = submitButton.textContent;
     submitButton.disabled = true;
-    showStatus('Sending your message...', '');
+    submitButton.textContent = 'Sending...';
+    showStatus('Sending your message...', 'pending');
 
     try {
       const response = await fetch('/api/inquiries', {
@@ -49,6 +51,7 @@ if (!contactForm) {
       showStatus(error.message || 'We could not send your inquiry. Please try again.', 'error');
     } finally {
       submitButton.disabled = false;
+      submitButton.textContent = submitLabel;
     }
   });
 

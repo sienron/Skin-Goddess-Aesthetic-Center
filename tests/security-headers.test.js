@@ -45,6 +45,7 @@ test('security headers include a compatible CSP and defensive browser policies',
     assert.match(csp, /script-src[^;]*'unsafe-inline'[^;]*cdn\.jsdelivr\.net/);
     assert.match(csp, /style-src[^;]*fonts\.googleapis\.com/);
     assert.match(csp, /frame-src[^;]*checkout\.paymongo\.com/);
+    assert.match(csp, /frame-src[^;]*www\.google\.com/);
     assert.match(csp, /frame-ancestors 'none'/);
     assert.equal(headers['x-frame-options'], 'DENY');
     assert.equal(headers['x-content-type-options'], 'nosniff');

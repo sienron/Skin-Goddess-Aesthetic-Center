@@ -349,7 +349,6 @@
       const hero = blocks.get('contact_hero');
       const message = blocks.get('contact_message');
       if (hero) {
-        setAccentHeading('.contact-title', hero.title);
         setText('.contact-breadcrumb', hero.body);
       } else document.querySelector('.contact-hero')?.setAttribute('hidden', '');
 
@@ -358,14 +357,15 @@
         setText('.form-subtitle', message.body);
       } else document.querySelector('.contact-form-col')?.setAttribute('hidden', '');
 
-      const info = document.querySelectorAll('.contact-info-card .info-row');
+      const info = [...document.querySelectorAll('.contact-info-card .info-row')];
       [
-        ['contact_address', 0],
-        ['contact_phone', 1],
-        ['contact_email', 2],
-      ].forEach(([key, index]) => {
+        ['contact_address', 'address'],
+        ['contact_phone', 'phone'],
+      ].forEach(([key, label]) => {
         const block = blocks.get(key);
-        const row = info[index];
+        const row = info.find((item) =>
+          item.querySelector('.info-label')?.textContent.trim().toLowerCase() === label
+        );
         if (!block) {
           row?.setAttribute('hidden', '');
           return;

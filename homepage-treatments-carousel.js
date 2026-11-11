@@ -15,21 +15,84 @@
   let animation = null;
   let hovering = false;
   let boosting = false;
+  let resizeTimer = null;
+
+  function getCanonicalCards() {
+    return Array.from(track.children).filter((card) =>
+      card.matches('.treatment-card') && !card.classList.contains('treatment-card--clone'),
+    );
+  }
+
+  function removeDesktopClones() {
+    track.querySelectorAll('.treatment-card--clone').forEach((clone) => clone.remove());
+  }
+
+  function appendDesktopClones(cards) {
+    const clones = cards.map((card) => {
+      const clone = card.cloneNode(true);
+      clone.classList.add('treatment-card--clone');
+      clone.setAttribute('aria-hidden', 'true');
+      clone.tabIndex = -1;
+      clone.querySelectorAll('*').forEach((element) => {
+        if (element.tabIndex >= 0) element.tabIndex = -1;
+      });
+      track.append(clone);
+      return clone;
+    });
+
+    return clones;
+  }
+
+  function createDesktopClones(cards) {
+    removeDesktopClones();
+    return appendDesktopClones(cards);
+  }
 
   function startDesktopLoop() {
     if (!desktopMotion.matches || animation) return;
+    const cards = getCanonicalCards();
+    if (!cards.length) return;
+
+    let clones = createDesktopClones(cards);
+    const firstVisibleIndex = cards.findIndex((card) => !card.hidden);
+    if (firstVisibleIndex < 0) {
+      removeDesktopClones();
+      return;
+    }
+    const loopDistance = clones[firstVisibleIndex].getBoundingClientRect().left
+      - cards[firstVisibleIndex].getBoundingClientRect().left;
+
+    if (!Number.isFinite(loopDistance) || loopDistance <= 0) {
+      console.error('Unable to measure the homepage treatments carousel loop.');
+      removeDesktopClones();
+      return;
+    }
+
+    while (track.getBoundingClientRect().right
+      - (track.getBoundingClientRect().left + loopDistance) < carousel.clientWidth) {
+      clones = clones.concat(appendDesktopClones(cards));
+    }
+
     animation = track.animate(
-      [{ transform: 'translateX(0)' }, { transform: 'translateX(-50%)' }],
+      [{ transform: 'translateX(0)' }, { transform: `translateX(-${loopDistance}px)` }],
       { duration: BASE_DURATION, iterations: Infinity, easing: 'linear' },
     );
     restingState();
   }
 
   function stopDesktopLoop() {
-    if (!animation) return;
-    animation.cancel();
-    animation = null;
+    if (animation) {
+      animation.cancel();
+      animation = null;
+    }
     boosting = false;
+    removeDesktopClones();
+  }
+
+  function refreshDesktopLoop() {
+    if (!desktopMotion.matches) return;
+    stopDesktopLoop();
+    startDesktopLoop();
   }
 
   function restingState() {
@@ -112,5 +175,21 @@
     if (!desktopMotion.matches) stopDesktopLoop();
     else startDesktopLoop();
   });
+
+  const contentObserver = new MutationObserver((mutations) => {
+    if (mutations.some((mutation) =>
+      mutation.target.matches('.treatment-card') &&
+      !mutation.target.classList.contains('treatment-card--clone'))) {
+      refreshDesktopLoop();
+    }
+  });
+  contentObserver.observe(track, { attributes: true, attributeFilter: ['hidden'], subtree: true });
+
+  window.addEventListener('resize', () => {
+    if (!desktopMotion.matches) return;
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(refreshDesktopLoop, 150);
+  });
+
   startDesktopLoop();
 })();

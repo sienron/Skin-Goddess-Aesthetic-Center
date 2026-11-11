@@ -44,7 +44,7 @@
                 </div>
             </div>
 
-            <button class="book-now-btn" type="button" onclick="window.location.href='UserAppointment.html'">BOOK NOW</button>
+            <a class="book-now-btn" href="/UserAppointment.html">BOOK NOW</a>
 
             <div class="header-profile-wrap" id="profileWrap">
               <button type="button" class="profile-row" id="profileBtn" aria-haspopup="true" aria-expanded="false">
@@ -86,7 +86,7 @@
       <li><a href="ContactUsPage.html" class="active">Contact</a></li>
     </ul>
 
-    <button class="book-now-btn mobile-nav-book-btn" type="button" onclick="window.location.href='UserAppointment.html'">BOOK NOW</button>
+    <a class="book-now-btn mobile-nav-book-btn" href="/UserAppointment.html">BOOK NOW</a>
 
     <div class="mobile-nav-profile">
       <div class="profile-avatar">AR</div>
@@ -98,100 +98,90 @@
 
   <main class="contact-main">
 
-    <div class="contact-hero">
-      <p class="contact-breadcrumb">HOME &middot; CONTACT US</p>
-      <h1 class="contact-title">Get in <span class="text-gold">Touch</span></h1>
-    </div>
+    <section class="contact-hero" aria-labelledby="contactTitle">
+      <div class="contact-hero-copy">
+        <p class="contact-breadcrumb">HOME <span aria-hidden="true">/</span> CONTACT</p>
+        <h1 class="contact-title" id="contactTitle">Get in Touch</h1>
+      </div>
+    </section>
 
     <div class="contact-grid">
 
-      <!-- Left column: map + contact info -->
-      <section class="contact-info-col">
+      <section class="contact-info-col" aria-label="Clinic contact information">
         <div class="contact-map">
           <iframe
-            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3864.6185871284347!2d120.9652764749822!3d14.391465986070484!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2110358e5909487f%3A0x6f33d234862041eb!2sSkin-Goddess%20Aesthetic%20Center!5e0!3m2!1sen!2sph!4v1785746223191!5m2!1sen!2sph"
-            width="100%"
-            height="384"
-            style="border:0;"
-            allowfullscreen=""
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d1932.3095582132378!2d120.96771731859029!3d14.391435404193205!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2110358e5909487f%3A0x6f33d234862041eb!2sSkin-Goddess%20Aesthetic%20Center!5e0!3m2!1sen!2sph!4v1794400038070!5m2!1sen!2sph"
+            title="Skin Goddess Aesthetic Center location"
             loading="lazy"
-            referrerpolicy="strict-origin-when-cross-origin"
-            title="Skin Goddess Aesthetic Center location">
+            allowfullscreen
+            referrerpolicy="strict-origin-when-cross-origin">
           </iframe>
         </div>
 
         <div class="contact-info-card">
-          <p class="section-label">FIND US</p>
-
-          <div class="info-row">
-            <span class="info-icon" aria-hidden="true">📍</span>
-            <div> 
-
-                
-              <p class="info-title">Skin Goddess Aesthetic Center</p>
-              <p class="info-sub">2nd Floor KW Plaza Building, Pasong Buaya 2 </p>
-              <p class="info-sub">Imus Cavite., Imus, Philippines, 4103</p>
+          <dl class="contact-details">
+            <div class="info-row">
+              <dt class="info-label">ADDRESS</dt>
+              <dd class="info-content">
+                <span class="info-title">Skin Goddess Aesthetic Center</span>
+                <span class="info-sub">2nd Floor KW Plaza Building, Pasong Buaya 2</span>
+                <span class="info-sub">Imus Cavite., Imus, Philippines, 4103</span>
+              </dd>
             </div>
-          </div>
-
-          <div class="info-row">
-            <span class="info-icon" aria-hidden="true">📞</span>
-            <div>
-              <p class="info-title">+63 945 611 9436</p>
-              <p class="info-sub">Mon &ndash; Sun &middot; 9:00 AM &ndash; 6:00 PM</p>
+            <div class="info-row">
+              <dt class="info-label">PHONE</dt>
+              <dd class="info-content">
+                <a class="info-title info-link" href="tel:+639456119436">+63 945 611 9436</a>
+              </dd>
             </div>
-          </div>
-
-          <div class="info-row">
-            <span class="info-icon" aria-hidden="true">✉️</span>
-            <div>
-              <p class="info-title">info@skingoddess.ph</p>
+            <div class="info-row">
+              <dt class="info-label">HOURS</dt>
+              <dd class="info-content">
+                <span class="info-title">Mon &ndash; Sun</span>
+                <span class="info-sub">9:00 AM &ndash; 6:00 PM</span>
+              </dd>
             </div>
-          </div>
+            <div class="info-row">
+              <dt class="info-label">EMAIL</dt>
+              <dd class="info-content">
+                <a class="info-title info-link" href="mailto:skingoddess456@gmail.com">skingoddess456@gmail.com</a>
+              </dd>
+            </div>
+          </dl>
 
-          <p class="section-label">FOLLOW US</p>
-          <div class="social-row">
-            <a href="https://www.facebook.com/profile.php?id=100063979185153" class="social-icon" aria-label="Facebook" target="_blank">f</a>
-            <a href="#" class="social-icon" aria-label="Instagram">◎</a>
-          </div>
         </div>
       </section>
 
-      <!-- Right column: contact form -->
-      <section class="contact-form-col">
-        <p class="section-label">SEND A MESSAGE</p>
-        <h2 class="form-title">We'd love to <span class="text-gold-italic">hear from you.</span></h2>
+      <section class="contact-form-col" aria-labelledby="contactFormTitle">
+        <h2 class="form-title" id="contactFormTitle">Start a conversation.</h2>
         <p class="form-subtitle">Fill out the form below and our team will get back to you within 24 hours.</p>
 
         <form id="contactForm" class="contact-form" novalidate>
           <div class="contact-form-row two-col">
             <div class="form-field">
-              <label for="firstName">FIRST NAME</label>
-              <input type="text" id="firstName" name="firstName" placeholder="Maria" required />
+              <label for="firstName">First name <span aria-hidden="true">*</span></label>
+              <input type="text" id="firstName" name="firstName" placeholder="Maria" autocomplete="given-name" required>
             </div>
             <div class="form-field">
-              <label for="lastName">LAST NAME</label>
-              <input type="text" id="lastName" name="lastName" placeholder="Santos" required />
+              <label for="lastName">Last name <span aria-hidden="true">*</span></label>
+              <input type="text" id="lastName" name="lastName" placeholder="Santos" autocomplete="family-name" required>
+            </div>
+          </div>
+
+          <div class="contact-form-row two-col">
+            <div class="form-field">
+              <label for="email">Email address <span aria-hidden="true">*</span></label>
+              <input type="email" id="email" name="email" placeholder="maria@email.com" autocomplete="email" required>
+            </div>
+            <div class="form-field">
+              <label for="phone">Phone number</label>
+              <input type="tel" id="phone" name="phone" placeholder="+63 9XX XXX XXXX" autocomplete="tel">
             </div>
           </div>
 
           <div class="contact-form-row">
             <div class="form-field">
-              <label for="email">EMAIL ADDRESS</label>
-              <input type="email" id="email" name="email" placeholder="maria@email.com" required />
-            </div>
-          </div>
-
-          <div class="contact-form-row">
-            <div class="form-field">
-              <label for="phone">PHONE NUMBER</label>
-              <input type="tel" id="phone" name="phone" placeholder="+63 9XX XXX XXXX" />
-            </div>
-          </div>
-
-          <div class="contact-form-row">
-            <div class="form-field">
-              <label for="subject">SUBJECT</label>
+              <label for="subject">Subject <span aria-hidden="true">*</span></label>
               <select id="subject" name="subject" required>
                 <option value="" disabled selected>Select inquiry type</option>
                 <option value="booking">Booking Inquiry</option>
@@ -204,12 +194,17 @@
 
           <div class="contact-form-row">
             <div class="form-field">
-              <label for="message">MESSAGE</label>
-              <textarea id="message" name="message" rows="4" placeholder="Write your message here..." required></textarea>
+              <label for="message">Message <span aria-hidden="true">*</span></label>
+              <textarea id="message" name="message" rows="5" placeholder="Write your message here..." required></textarea>
             </div>
           </div>
 
-          <button type="submit" class="btn-send">SEND MESSAGE</button>
+          <button type="submit" class="btn-send">Send message <span aria-hidden="true">&rarr;</span></button>
+          <div class="contact-social">
+            <a href="https://www.facebook.com/profile.php?id=100063979185153" target="_blank" rel="noopener noreferrer" aria-label="Visit Skin Goddess Aesthetic Center on Facebook">
+              <img src="images/2023_Facebook_icon.svg.webp" alt="" width="32" height="32">
+            </a>
+          </div>
           <p id="formStatus" class="form-status" role="status" aria-live="polite"></p>
         </form>
       </section>
@@ -243,8 +238,8 @@
                                   Pasong Buaya 2 Imus, Cavite, 
                                   Philippines 4103
         </p>
-        <p class="footer-col-body">+63 945 611 9436</p>
-        <p class="footer-col-body">info@skingoddess.ph</p>
+        <p class="footer-col-body"><a href="tel:+639456119436">+63 945 611 9436</a></p>
+        <p class="footer-col-body"><a href="mailto:skingoddess456@gmail.com">skingoddess456@gmail.com</a></p>
         <p class="footer-col-body">Mon - Sun</p>
         <p class="footer-col-body-time">9am - 6pm  </p>
         

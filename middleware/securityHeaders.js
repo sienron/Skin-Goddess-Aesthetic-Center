@@ -7,7 +7,7 @@ const CONTENT_SECURITY_POLICY = {
   fontSrc: ["'self'", 'data:', 'https://fonts.gstatic.com'],
   formAction: ["'self'"],
   frameAncestors: ["'none'"],
-  frameSrc: ["'self'", 'https://checkout.paymongo.com'],
+  frameSrc: ["'self'", 'https://checkout.paymongo.com', 'https://www.google.com'],
   imgSrc: ["'self'", 'data:', 'blob:'],
   objectSrc: ["'none'"],
   scriptSrc: [
