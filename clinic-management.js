@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   function appointmentTable(appointments,withResolution=false) {
     if(!appointments.length)return el('p','No affected appointments.','clinic-empty');
-    const wrap=el('div',null,'um-table-wrap'),table=el('table',null,'um-table'),head=el('thead'),row=el('tr');
+    const wrap=el('div',null,'um-table-wrap'),table=el('table',null,'um-table clinic-data-table'),head=el('thead'),row=el('tr');
     ['APPOINTMENT','CUSTOMER / SERVICE','DATE & TIME',...(withResolution?['RESOLUTION']:[]),'ACTION'].forEach(text=>row.append(el('th',text)));head.append(row);table.append(head);
     const body=el('tbody');appointments.forEach(a=>{
       const tr=el('tr');tr.append(el('td',`APT-${String(a.appointment_id).padStart(4,'0')}`));
@@ -25,7 +25,11 @@ document.addEventListener('DOMContentLoaded', () => {
       tr.append(el('td',`${dateLabel(a.appointment_date)} · ${timeLabel(a.appointment_time)}`));
       if(withResolution){const cell=el('td');cell.append(el('span',a.resolution==='pending'?'Pending Resolution':label(a.resolution),'clinic-badge'));tr.append(cell);}
       const cell=el('td'),link=el('a','Manage Appointment','um-btn um-btn--ghost');link.href=`AdminAppointment.html?appointment=${a.appointment_id}`;cell.append(link);tr.append(cell);body.append(tr);
-    });table.append(body);wrap.append(table);return wrap;
+    });
+    body.querySelectorAll('tr').forEach(tr=>{
+      [...tr.cells].forEach((cell,index)=>{cell.dataset.label=row.cells[index].textContent;});
+    });
+    table.append(body);wrap.append(table);return wrap;
   }
   function hours() {
     const body=$('clinicHoursBody');body.replaceChildren();
@@ -34,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
       tr.append(el('th',names[weekday]));tr.firstChild.scope='row';
       const cell=el('td'),field=el('label',null,'clinic-switch'),check=el('input');check.type='checkbox';check.checked=day.is_open;check.setAttribute('aria-label',`${names[weekday]} operating`);
       const text=el('span',day.is_open?'Open':'Closed');field.append(check,text);cell.append(field);tr.append(cell);
-      ['opening_time','closing_time'].forEach(key=>{const td=el('td'),input=el('input');input.type='time';input.value=day[key].slice(0,5);input.required=true;input.disabled=!day.is_open;input.dataset.field=key;input.setAttribute('aria-label',`${names[weekday]} ${key==='opening_time'?'opening':'closing'} time`);td.append(input);tr.append(td);});
+      ['opening_time','closing_time'].forEach(key=>{const td=el('td'),input=el('input');td.dataset.label=key==='opening_time'?'Opening':'Closing';input.type='time';input.value=day[key].slice(0,5);input.required=true;input.disabled=!day.is_open;input.dataset.field=key;input.setAttribute('aria-label',`${names[weekday]} ${key==='opening_time'?'opening':'closing'} time`);td.append(input);tr.append(td);});
       check.addEventListener('change',()=>{text.textContent=check.checked?'Open':'Closed';tr.querySelectorAll('input[type="time"]').forEach(input=>input.disabled=!check.checked);});body.append(tr);
     });
   }
@@ -46,7 +50,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const row=el('tr');row.append(el('td',dateLabel(c.closure_date)),el('td',c.reason));const status=el('td');status.append(el('span',label(c.status),'clinic-badge'));row.append(status);
       row.append(el('td',`${c.pending_count} pending · ${c.rescheduled_count} rescheduled · ${c.cancelled_count} cancelled (${c.affected_count} affected)`));
       const actions=el('td'),group=el('div',null,'clinic-row-actions');group.append(action('Details',()=>details(c.closure_id)));
-      if(!c.reopened_at && c.closure_date>=today){group.append(action('Edit',()=>openCalendar(c)),action('Reopen',()=>reviewReopen(c)));}actions.append(group);row.append(actions);body.append(row);
+      if(!c.reopened_at && c.closure_date>=today){group.append(action('Edit',()=>openCalendar(c)),action('Reopen',()=>reviewReopen(c)));}actions.append(group);row.append(actions);
+      [...row.cells].forEach((cell,index)=>{cell.dataset.label=['Date','Reason','Status','Appointments','Actions'][index];});
+      body.append(row);
     });
   }
   async function load(resetHours=true) {

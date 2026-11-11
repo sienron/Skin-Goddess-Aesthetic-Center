@@ -1,60 +1,4 @@
-/* Clinic Management uses the existing admin shell and staff theme. */
-.clinic-sections {
-  display: grid;
-  gap: 24px;
-}
-
-.clinic-card,
-.clinic-dialog {
-  --clinic-surface: #fff;
-  --clinic-line: var(--um-border, #ece7dd);
-  --clinic-muted: #756c62;
-  background: var(--clinic-surface);
-  color: var(--um-text-body, #4a4540);
-  border: 1px solid var(--clinic-line);
-  border-radius: 14px;
-  padding: 24px;
-  font-family: 'Poppins', sans-serif;
-}
-
-.clinic-card h2,
-.clinic-dialog h2 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.clinic-card h3,
-.clinic-dialog h3 {
-  margin: 20px 0 12px;
-  font-size: 15px;
-}
-
-.clinic-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.clinic-heading p {
-  margin: 5px 0 0;
-  font-size: 12px;
-  color: var(--clinic-muted);
-}
-
-.clinic-hint,
-.clinic-feedback {
-  font-size: 12px;
-  line-height: 1.7;
-  color: var(--clinic-muted, #756c62);
-}
-
-.clinic-feedback {
-  margin: 0 0 18px;
-}
-
+/* Clinic resolution badges also appear in the appointment list. */
 .clinic-badge {
   display: inline-block;
   border-radius: 6px;
@@ -66,256 +10,9 @@
   white-space: nowrap;
 }
 
-.clinic-actions,
-.clinic-row-actions,
-.clinic-filters {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.clinic-actions {
-  justify-content: flex-end;
-  margin-top: 20px;
-}
-
-.clinic-filters {
-  margin-bottom: 18px;
-  font-size: 12px;
-}
-
-.clinic-card .um-table {
-  width: 100%;
-}
-
-.clinic-card .um-table td,
-.clinic-dialog .um-table td {
-  vertical-align: top;
-  white-space: normal;
-  font-size: 12px;
-}
-
-.clinic-hours th[scope='row'] {
-  text-align: left;
-  font-weight: 500;
-}
-
-.clinic-switch {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-}
-
-.clinic-switch input {
-  accent-color: var(--gold-dark, #b5892a);
-  width: 18px;
-  height: 18px;
-}
-
-.clinic-card input[type='time'],
-.clinic-card select,
-.clinic-dialog textarea {
-  font: inherit;
-  font-size: 13px;
-  padding: 10px 12px;
-  border-radius: 7px;
-  border: 1px solid var(--clinic-line);
-  background: var(--clinic-surface);
-  color: inherit;
-}
-
-.clinic-card input:disabled {
-  opacity: .45;
-}
-
-.clinic-card label,
-.clinic-dialog label {
-  color: var(--clinic-text, #4a4540);
-}
-
-.clinic-card .um-btn:disabled,
-.clinic-dialog .um-btn:disabled {
-  opacity: .5;
-  cursor: wait;
-}
-
-.clinic-empty {
-  padding: 18px;
-  color: var(--clinic-muted);
-  font-size: 13px;
-  text-align: center;
-}
-
-.clinic-dialog {
-  width: min(540px, calc(100vw - 32px));
-  max-height: calc(100dvh - 40px);
-  margin: auto;
-  overflow-y: auto;
-  box-shadow: 0 20px 70px #0003;
-}
-
-.clinic-dialog--wide {
-  width: min(940px, calc(100vw - 32px));
-}
-
-.clinic-dialog::backdrop {
-  background: #18140e99;
-}
-
-.clinic-dialog .um-table-wrap {
-  overflow-x: auto;
-}
-
-.clinic-dialog .um-table {
-  min-width: 570px;
-}
-
-.clinic-calendar-nav {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin: 18px 0;
-}
-
-.clinic-calendar-labels,
-.clinic-calendar {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 5px;
-}
-
-.clinic-calendar-labels {
-  text-align: center;
-  font-size: 11px;
-  color: var(--clinic-muted);
-  margin-bottom: 8px;
-}
-
-.clinic-calendar-day {
-  min-height: 42px;
-  font: inherit;
-  border: 1px solid var(--clinic-line);
-  border-radius: 8px;
-  background: var(--clinic-surface);
-  color: inherit;
-  cursor: pointer;
-}
-
-.clinic-calendar-day:hover:not(:disabled),
-.clinic-calendar-day.is-selected {
-  background: var(--espresso, #5a3a1e);
-  color: #fff;
-  border-color: var(--espresso, #5a3a1e);
-}
-
-.clinic-calendar-day:disabled {
-  opacity: .3;
-  cursor: default;
-}
-
-.clinic-calendar-day:focus-visible,
-.clinic-dialog button:focus-visible,
-.clinic-card button:focus-visible {
-  outline: 3px solid var(--gold, #d4a937);
-  outline-offset: 2px;
-}
-
-.clinic-field {
-  display: grid;
-  gap: 8px;
-  font-size: 13px;
-}
-
-.clinic-field textarea {
-  width: 100%;
-  resize: vertical;
-}
-
-.clinic-error {
-  color: #9b2626;
-  font-size: 12px;
-  line-height: 1.7;
-}
-
-.clinic-error[hidden] {
-  display: none;
-}
-
-.clinic-deliveries {
-  display: grid;
-  gap: 12px;
-}
-
-.clinic-delivery {
-  border: 1px solid var(--clinic-line);
-  border-radius: 9px;
-  padding: 16px;
-  font-size: 12px;
-}
-
-.clinic-delivery .clinic-heading {
-  margin-bottom: 8px;
-}
-
-.clinic-delivery small {
-  color: var(--clinic-muted);
-}
-
-body.staff-theme-dark .clinic-card,
-body.staff-theme-dark .clinic-dialog {
-  --clinic-surface: #222523;
-  --clinic-line: #41413b;
-  --clinic-muted: #aaa398;
-  --clinic-text: #e9e4da;
-  color: #e9e4da;
-  color-scheme: dark;
-}
-
-body.staff-theme-dark .clinic-card input[type='time'],
-body.staff-theme-dark .clinic-card select,
-body.staff-theme-dark .clinic-dialog textarea {
-  color: #e9e4da;
-}
-
 body.staff-theme-dark .clinic-badge {
   background: #373126;
   color: #ead9a9;
-}
-
-body.staff-theme-dark .clinic-error {
-  color: #f0a6a6;
-}
-
-body.staff-theme-dark .clinic-feedback {
-  color: #aaa398;
-}
-
-@media (max-width: 700px) {
-
-  .clinic-card,
-  .clinic-dialog {
-    padding: 16px;
-  }
-
-  .clinic-heading {
-    align-items: flex-start;
-    flex-wrap: wrap;
-  }
-
-  .clinic-hours {
-    min-width: 480px;
-  }
-
-  #clinicManagementMain .um-header {
-    gap: 12px;
-  }
-
-  .clinic-actions .um-btn {
-    flex: 1;
-    text-align: center;
-  }
 }
 
 /* ===== FONTS & GLOBAL RESET ===== */
@@ -29995,4 +29692,152 @@ body.customer-theme-dark.contact-page .form-field select,
 body.customer-theme-dark.contact-page .form-field textarea {
   border-color: #555148;
   background: #292a27;
+}
+
+/* Clinic Management: responsive layout and staff theme. */
+.clinic-sections { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
+.clinic-card, .clinic-dialog {
+  --clinic-surface: #fff;
+  --clinic-line: var(--um-border, #ece7dd);
+  --clinic-muted: #756c62;
+  min-width: 0;
+  background: var(--clinic-surface);
+  color: var(--um-text-body, #4a4540);
+  border: 1px solid var(--clinic-line);
+  border-radius: 14px;
+  padding: 24px;
+  font-family: 'Poppins', sans-serif;
+  overflow-wrap: anywhere;
+}
+.clinic-card h2, .clinic-dialog h2 { margin: 0; font-size: 18px; font-weight: 600; }
+.clinic-card h3, .clinic-dialog h3 { margin: 20px 0 12px; font-size: 15px; }
+.clinic-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.clinic-heading > :first-child { min-width: 0; }
+.clinic-heading p { margin: 5px 0 0; font-size: 12px; color: var(--clinic-muted); }
+.clinic-hint, .clinic-feedback { font-size: 12px; line-height: 1.7; color: var(--clinic-muted, #756c62); }
+.clinic-feedback { margin: 0 0 18px; }
+.clinic-actions, .clinic-row-actions, .clinic-filters { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.clinic-actions { justify-content: flex-end; margin-top: 20px; }
+.clinic-filters { margin-bottom: 18px; font-size: 12px; }
+.clinic-card .um-table-wrap, .clinic-dialog .um-table-wrap { min-width: 0; overflow-x: auto; }
+.clinic-card .um-table, .clinic-dialog .um-table { width: 100%; min-width: 0; }
+.clinic-card .clinic-data-table, .clinic-dialog .clinic-data-table { min-width: 640px; }
+.clinic-card .um-table td, .clinic-dialog .um-table td { vertical-align: top; white-space: normal; font-size: 12px; }
+.clinic-hours th[scope='row'] { text-align: left; font-weight: 500; }
+.clinic-switch { display: flex; align-items: center; gap: 8px; min-height: 44px; cursor: pointer; }
+.clinic-switch input { flex-shrink: 0; accent-color: var(--gold-dark, #b5892a); width: 20px; height: 20px; }
+.clinic-card input[type='time'], .clinic-card select, .clinic-dialog textarea {
+  min-width: 0; max-width: 100%; font: inherit; font-size: 13px; padding: 10px 12px; border-radius: 7px; border: 1px solid var(--clinic-line); background: var(--clinic-surface); color: inherit;
+}
+.clinic-hours input[type='time'] { box-sizing: border-box; width: 100%; min-height: 44px; }
+.clinic-card input:disabled { opacity: .45; }
+.clinic-card label, .clinic-dialog label { color: var(--clinic-text, #4a4540); }
+.clinic-card .um-btn:disabled, .clinic-dialog .um-btn:disabled { opacity: .5; cursor: wait; }
+.clinic-empty { padding: 18px; color: var(--clinic-muted); font-size: 13px; text-align: center; }
+.clinic-dialog { box-sizing: border-box; width: min(540px, calc(100vw - 32px)); max-width: calc(100vw - 32px); max-height: calc(100dvh - 40px); margin: auto; overflow-y: auto; box-shadow: 0 20px 70px #0003; }
+.clinic-dialog--wide { width: min(940px, calc(100vw - 32px)); }
+.clinic-dialog::backdrop { background: #18140e99; }
+.clinic-calendar-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 18px 0; }
+.clinic-calendar-labels, .clinic-calendar { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); gap: 5px; }
+.clinic-calendar-labels { text-align: center; font-size: 11px; color: var(--clinic-muted); margin-bottom: 8px; }
+.clinic-calendar-day { min-width: 0; min-height: 42px; padding: 0; font: inherit; border: 1px solid var(--clinic-line); border-radius: 8px; background: var(--clinic-surface); color: inherit; cursor: pointer; }
+.clinic-calendar-day:hover:not(:disabled), .clinic-calendar-day.is-selected { background: var(--espresso, #5a3a1e); color: #fff; border-color: var(--espresso, #5a3a1e); }
+.clinic-calendar-day:disabled { opacity: .3; cursor: default; }
+.clinic-calendar-day:focus-visible, .clinic-dialog button:focus-visible, .clinic-card button:focus-visible { outline: 3px solid var(--gold, #d4a937); outline-offset: 2px; }
+.clinic-field { display: grid; gap: 8px; font-size: 13px; }
+.clinic-field textarea { box-sizing: border-box; width: 100%; resize: vertical; }
+.clinic-error { color: #9b2626; font-size: 12px; line-height: 1.7; }
+.clinic-error[hidden] { display: none; }
+.clinic-deliveries { display: grid; gap: 12px; }
+.clinic-delivery { min-width: 0; border: 1px solid var(--clinic-line); border-radius: 9px; padding: 16px; font-size: 12px; }
+.clinic-delivery .clinic-heading { margin-bottom: 8px; }
+.clinic-delivery small { color: var(--clinic-muted); }
+body.staff-theme-dark .clinic-card, body.staff-theme-dark .clinic-dialog { --clinic-surface: #222523; --clinic-line: #41413b; --clinic-muted: #aaa398; --clinic-text: #e9e4da; color: #e9e4da; color-scheme: dark; }
+body.staff-theme-dark .clinic-card input[type='time'], body.staff-theme-dark .clinic-card select, body.staff-theme-dark .clinic-dialog textarea { color: #e9e4da; }
+body.staff-theme-dark .clinic-error { color: #f0a6a6; }
+body.staff-theme-dark .clinic-feedback { color: #aaa398; }
+
+@media (max-width: 700px) {
+  .clinic-sections { gap: 16px; }
+  .clinic-card, .clinic-dialog { padding: 16px; }
+  .clinic-heading { align-items: flex-start; flex-wrap: wrap; gap: 12px; }
+  .clinic-card > .clinic-heading > .um-btn { width: 100%; }
+  .clinic-card .um-btn, .clinic-dialog .um-btn { min-height: 44px; white-space: normal; }
+  .clinic-dialog > .clinic-heading, #clinicClosureForm > .clinic-heading { flex-wrap: nowrap; }
+  .clinic-dialog .clinic-heading [data-close] { flex-shrink: 0; }
+  .clinic-dialog input, .clinic-dialog textarea, .clinic-card select { font-size: 16px; }
+  .clinic-actions { align-items: stretch; }
+  .clinic-actions .um-btn { flex: 1 1 100%; text-align: center; }
+  .clinic-filters { align-items: stretch; }
+  .clinic-filters label { width: 100%; }
+  .clinic-filters select { flex: 1; width: 0; }
+
+  /* Keep both time fields visible without horizontal scrolling. */
+  .clinic-card .clinic-hours, .clinic-card .clinic-data-table, .clinic-dialog .clinic-data-table { display: block; min-width: 0; }
+  .clinic-card .um-table-wrap, .clinic-dialog .um-table-wrap { border: 0; background: transparent; }
+  .clinic-hours thead, .clinic-data-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .clinic-card .um-table thead th, .clinic-dialog .um-table thead th { display: table-cell; }
+  .clinic-hours tbody, .clinic-data-table tbody { display: grid; gap: 12px; }
+  .clinic-hours tbody tr, .clinic-data-table tbody tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 12px;
+    padding: 12px;
+    border: 1px solid var(--clinic-line);
+    border-radius: 10px;
+    background: var(--clinic-surface);
+  }
+  .clinic-card .um-table tbody th, .clinic-card .um-table tbody td, .clinic-dialog .um-table tbody td {
+    display: block;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    color: inherit;
+  }
+  .clinic-card .clinic-hours th[scope='row'] { align-self: center; font-weight: 600; }
+  /* Override the shared staff typography to keep mobile fields readable. */
+  body.sg-admin-typography .clinic-hours th[scope='row'] { font-size: 14px !important; }
+  #clinicManagementMain .clinic-hours input[type='time'],
+  #clinicManagementMain .clinic-card select,
+  .clinic-dialog #clinicClosureReason { font-size: 16px !important; }
+  .clinic-hours .clinic-switch { justify-content: flex-end; }
+  .clinic-hours td[data-label]::before, .clinic-data-table td[data-label]::before {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--clinic-muted);
+    font-size: 11px;
+    font-weight: 500;
+    content: attr(data-label);
+  }
+  .clinic-card .clinic-hours input[type='time'] { padding: 10px 8px; font-size: 16px; }
+  .clinic-data-table tbody tr { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .clinic-data-table td .um-btn { display: inline-flex; align-items: center; justify-content: center; }
+  .clinic-row-actions .um-btn { flex: 1; }
+}
+
+@media (max-width: 640px) {
+  #clinicManagementMain { padding: calc(82px + env(safe-area-inset-top, 0px)) 14px 28px; }
+  #clinicManagementMain > .um-header { gap: 0; margin-bottom: 14px; }
+  #clinicManagementMain > .um-header > div:first-child { min-width: 0; }
+  #clinicManagementMain .um-header__actions { width: auto; margin: 0; }
+  #clinicManagementMain .um-header__subtitle { margin: 0; font-size: 12px; line-height: 1.6; }
+  body.sg-admin-typography #clinicManagementMain .um-header__title {
+    top: calc(21px + env(safe-area-inset-top, 0px));
+    right: 68px;
+    font-size: clamp(15px, 4.2vw, 17px) !important;
+    line-height: 1.4 !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .clinic-hours tbody tr { gap: 8px; padding: 10px; }
+  .clinic-hours td[data-label] { grid-column: 1 / -1; }
 }
