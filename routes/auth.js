@@ -55,10 +55,6 @@ const DUMMY_PASSWORD_HASH = '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJ
 const REMEMBERED_DEVICE_COOKIE_PREFIX = 'sg_remembered_device_';
 const LEGACY_REMEMBERED_DEVICE_COOKIE = 'sg_remembered_device';
 const REMEMBERED_DEVICE_MAX_AGE = 1000 * 60 * 60 * 24 * 30;
-<<<<<<< HEAD
-=======
-const STAY_SIGNED_IN_MAX_AGE = 1000 * 60 * 60 * 24 * 30;
->>>>>>> bcf72bbc4dd3caf1433b42273d1a5dd7a70911dd
 const PRIVILEGED_MFA_PENDING_MS = 10 * 60 * 1000;
 const preserveDemoCustomerAccess = createPreserveDemoCustomerAccess(db);
 
