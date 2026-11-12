@@ -139,6 +139,8 @@ let productToDelete = null;
 
 let inventoryProducts = [];
 let inventoryThresholds = null;
+let inventoryMutationVersion = 0;
+let isRefreshingLowStockAlerts = false;
 
 function getStockStatus(product){
     const stock = Number(product.stock_quantity);
@@ -639,6 +641,34 @@ function renderInventorySidebar() {
         item.append(details, badge);
         lowStockAlerts.appendChild(item);
     });
+}
+
+async function refreshLowStockAlerts() {
+    if (document.hidden || isRefreshingLowStockAlerts) {
+        return;
+    }
+
+    isRefreshingLowStockAlerts = true;
+    const mutationVersion = inventoryMutationVersion;
+
+    try {
+        const response = await fetch("/api/inventory", { cache: "no-store" });
+        if (!response.ok) {
+            throw new Error("Failed to refresh inventory alerts.");
+        }
+
+        const products = await response.json();
+        if (mutationVersion !== inventoryMutationVersion) {
+            return;
+        }
+
+        inventoryProducts = products;
+        renderInventorySidebar();
+    } catch (error) {
+        console.error("Error refreshing low-stock alerts:", error);
+    } finally {
+        isRefreshingLowStockAlerts = false;
+    }
 }
 
 /* =========================================================
@@ -1508,6 +1538,8 @@ confirmDelete.addEventListener("click", async () => {
         const result =
             await response.json();
 
+        inventoryMutationVersion += 1;
+
         console.log(
             "Product deleted:",
             result
@@ -1706,6 +1738,8 @@ confirmAddProduct.addEventListener("click", async () => {
 
         const newProduct = await response.json();
 
+        inventoryMutationVersion += 1;
+
         console.log(
             "Product added:",
             newProduct
@@ -1841,6 +1875,8 @@ confirmAddProduct.addEventListener("click", async () => {
         const updatedProduct =
             await response.json();
 
+        inventoryMutationVersion += 1;
+
         console.log(
             "Product updated:",
             updatedProduct
@@ -1891,8 +1927,7 @@ confirmAddProduct.addEventListener("click", async () => {
 
    async function updateStock(row, stockAdjustment, deductOne = false){
 
-    const productId =
-        row.dataset.id;
+    const productId = row.dataset.id;
     const stockButtons = row.querySelectorAll(".action-btn.increase, .action-btn.decrease");
     stockButtons.forEach(button => {
         button.disabled = true;
@@ -1918,6 +1953,7 @@ confirmAddProduct.addEventListener("click", async () => {
         }
 
         const updatedProduct = responseBody;
+        inventoryMutationVersion += 1;
         const product = inventoryProducts.find(
             item => String(item.product_id) === String(productId)
         );
@@ -2077,6 +2113,13 @@ loadCriticalStockToday();
 loadOutOfStockCount();
 loadOutOfStockToday();
 loadExpiringSoonCount();
+
+window.setInterval(refreshLowStockAlerts, 5000);
+document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+        void refreshLowStockAlerts();
+    }
+});
 
 if (new URLSearchParams(window.location.search).get('new') === '1') {
     addProductButton.click();
