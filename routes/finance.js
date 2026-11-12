@@ -1568,6 +1568,28 @@ function spreadsheetDate(value) {
   return new Date(`${value}T00:00:00.000Z`);
 }
 
+function statementPeriod(from, to) {
+  const dateLabel = statementDateLabel;
+  const start = new Date(`${from}T00:00:00.000Z`);
+  const end = new Date(`${to}T00:00:00.000Z`);
+  const nextMonth = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth() + 1, 1));
+  const lastDay = new Date(nextMonth.getTime() - 86400000).getUTCDate();
+  if (start.getUTCDate() === 1 && end.getUTCDate() === lastDay
+    && start.getUTCMonth() === end.getUTCMonth() && start.getUTCFullYear() === end.getUTCFullYear()) {
+    return `For the month ended ${dateLabel(to)}`;
+  }
+  return `For the period ${dateLabel(from)} to ${dateLabel(to)}`;
+}
+
+function statementDateLabel(value) {
+  return spreadsheetDate(value).toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
 // Use a restrained navy and teal palette for readable management reports.
 const EXCEL_STYLE = {
   navy: 'FF17324D',
@@ -1586,25 +1608,25 @@ const EXCEL_STYLE = {
 };
 
 const FINANCIAL_STATEMENT_STYLE = {
-  navy: 'FF332F29',
-  blue: 'FFC3A45D',
-  slate: 'FF716B61',
-  band: 'FFFAF8F3',
-  total: 'FFF2EBDD',
-  border: 'FFE2DDD2',
-  section: 'FFF7F2E8',
-  green: 'FF6C572A',
-  greenFill: 'FFF7F1E3',
-  amber: 'FF806A38',
-  amberFill: 'FFFAF4E6',
-  red: 'FF8C4B45',
-  redFill: 'FFF8EEEB',
-  cashIn: 'FFF7F1E3',
-  cashOut: 'FFF1EFEB',
-  finalTotal: 'FFE9DDBD',
+  navy: 'FF333333',
+  blue: 'FFB99A55',
+  slate: 'FF777777',
+  band: 'FFF7F7F7',
+  total: 'FFFFFFFF',
+  border: 'FFD9D9D9',
+  section: 'FFFFFFFF',
+  green: 'FFB99A55',
+  greenFill: 'FFFFFFFF',
+  amber: 'FF777777',
+  amberFill: 'FFFFFFFF',
+  red: 'FF333333',
+  redFill: 'FFFFFFFF',
+  cashIn: 'FFFFFFFF',
+  cashOut: 'FFFFFFFF',
+  finalTotal: 'FFFFFFFF',
 };
 
-const PESO_NUMBER_FORMAT = '₱#,##0.00;[Red]-₱#,##0.00';
+const PESO_NUMBER_FORMAT = '₱#,##0.00;(₱#,##0.00)';
 
 function reportStatusStyle(value, style = EXCEL_STYLE) {
   const status = String(value ?? '').trim().toLowerCase();
@@ -1824,9 +1846,12 @@ function addProfessionalReportSheet(workbook, options) {
     name, title, periodLabel, generatedAt, description, headers, widths, records,
     dateColumns = [], amountColumns = [], quantityColumns = [], filter = true, totals = [],
     style = EXCEL_STYLE, currencyFormat = '"PHP" #,##0.00;[Red]-"PHP" #,##0.00',
-    orientation = 'landscape', sectionColumns = [1], inflowColumns = [], outflowColumns = [],
+    orientation = 'landscape', sectionColumns = [1], sectionLabels = [],
+    inflowColumns = [], outflowColumns = [],
     inflowLabels = [], outflowLabels = [], highlightColumns = [], emphasisLabels = [],
-    finalTotalLabels = [], autoRowHeight = false, filterEmpty = false,
+    finalTotalLabels = [], singleUnderlineLabels = [], doubleUnderlineLabels = [],
+    indentColumns = [], freezeHeader = true, bandedRows = true,
+    autoRowHeight = false, filterEmpty = false,
   } = options;
   const isBranded = style === FINANCIAL_STATEMENT_STYLE;
   const worksheet = workbook.addWorksheet(name);
@@ -1847,6 +1872,10 @@ function addProfessionalReportSheet(workbook, options) {
   });
   worksheet.getCell(1, 1).font = { name: 'Aptos', bold: true, size: 15, color: { argb: 'FFFFFFFF' } };
   worksheet.getCell(1, 1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: style.navy } };
+  if (isBranded) {
+    worksheet.getCell(1, 1).font = { name: 'Aptos', bold: true, size: 15, color: { argb: style.navy } };
+    worksheet.getCell(1, 1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } };
+  }
   worksheet.getCell(2, 1).font = { name: 'Aptos', bold: true, size: isBranded ? 16 : 13, color: { argb: style.navy } };
   if (isBranded) worksheet.getCell(2, 1).border = { bottom: { style: 'thin', color: { argb: style.blue } } };
   worksheet.getCell(3, 1).font = { name: 'Aptos', bold: true, size: 10, color: { argb: style.slate } };
@@ -1872,10 +1901,19 @@ function addProfessionalReportSheet(workbook, options) {
   const header = worksheet.getRow(headerRow);
   header.height = 38;
   header.eachCell({ includeEmpty: true }, (cell) => {
-    cell.font = { name: 'Aptos', bold: true, size: 10, color: { argb: 'FFFFFFFF' } };
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: style.navy } };
+    cell.font = {
+      name: 'Aptos',
+      bold: true,
+      size: 10,
+      color: { argb: isBranded ? style.navy : 'FFFFFFFF' },
+    };
+    cell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: isBranded ? 'FFFFFFFF' : style.navy },
+    };
     cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
-    cell.border = { bottom: { style: 'medium', color: { argb: style.blue } } };
+    cell.border = { bottom: { style: isBranded ? 'thin' : 'medium', color: { argb: style.blue } } };
   });
   for (let rowNumber = headerRow + 1; rowNumber <= dataEndRow; rowNumber += 1) {
     const row = worksheet.getRow(rowNumber);
@@ -1885,8 +1923,8 @@ function addProfessionalReportSheet(workbook, options) {
         index === column - 1 || value === '' || value == null
       ))
     ));
-    const isSection = Boolean(sectionColumn);
     const label = String(record?.find((value) => typeof value === 'string' && value.trim()) || '').trim();
+    const isSection = Boolean(sectionColumn) || sectionLabels.includes(label);
     const isFinalTotal = finalTotalLabels.includes(label);
     const isSubtotal = isFinalTotal || emphasisLabels.includes(label)
       || /^Total\b|^Net income\b|^Balance check\b/i.test(label)
@@ -1904,12 +1942,23 @@ function addProfessionalReportSheet(workbook, options) {
         wrapText: true,
       };
       cell.border = { bottom: { style: 'hair', color: { argb: style.border } } };
+      if (indentColumns.includes(columnNumber) && !isSection && !isSubtotal && cell.value) {
+        cell.alignment = { ...cell.alignment, indent: 1 };
+      }
       if (isSubtotal) {
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: isFinalTotal ? style.finalTotal || style.total : style.total } };
-        cell.border = { top: { style: 'medium', color: { argb: style.blue } } };
+        cell.border = {
+          top: { style: isBranded ? 'thin' : 'medium', color: { argb: style.border } },
+          bottom: doubleUnderlineLabels.includes(label)
+            ? { style: 'double', color: { argb: style.navy } }
+            : singleUnderlineLabels.includes(label)
+              ? { style: 'thin', color: { argb: style.navy } }
+              : { style: 'hair', color: { argb: style.border } },
+        };
       } else if (isSection) {
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: style.section } };
-      } else if ((rowNumber - headerRow) % 2 === 0) {
+        cell.border = { bottom: { style: 'thin', color: { argb: style.border } } };
+      } else if (bandedRows && (rowNumber - headerRow) % 2 === 0) {
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: style.band } };
       }
       const unavailableValue = /^(not recorded|not tracked|not available|not determinable|incomplete)\b/i
@@ -1936,6 +1985,7 @@ function addProfessionalReportSheet(workbook, options) {
       }
       if (typeof cell.value === 'number' && highlightColumns.includes(columnNumber)) {
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: style.cashIn || style.total } };
+        cell.font = { ...cell.font, color: { argb: style.navy }, bold: true };
       }
       if (autoRowHeight) {
         const value = cell.value instanceof Date ? cell.value.toISOString().slice(0, 10) : String(cell.value ?? '');
@@ -1962,6 +2012,13 @@ function addProfessionalReportSheet(workbook, options) {
       row.eachCell({ includeEmpty: true }, (cell) => {
         cell.font = { ...cell.font, name: 'Aptos', bold: true, size: 11, color: { argb: style.navy } };
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: style.finalTotal || style.total } };
+        if (doubleUnderlineLabels.includes(label)) {
+          cell.border = {
+            ...cell.border,
+            top: { style: 'thin', color: { argb: style.navy } },
+            bottom: { style: 'double', color: { argb: style.navy } },
+          };
+        }
       });
     }
   }
@@ -1973,14 +2030,22 @@ function addProfessionalReportSheet(workbook, options) {
     row.eachCell({ includeEmpty: true }, (cell) => {
       cell.font = { name: 'Aptos', bold: true, size: 10, color: { argb: style.navy } };
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: style.total } };
-      cell.border = { top: { style: 'medium', color: { argb: style.blue } } };
+      cell.border = { top: { style: isBranded ? 'thin' : 'medium', color: { argb: isBranded ? style.border : style.blue } } };
     });
     row.getCell(total.column).alignment = { horizontal: 'right', vertical: 'middle' };
+    if (isBranded) {
+      row.getCell(total.column).border = {
+        ...row.getCell(total.column).border,
+        bottom: { style: 'double', color: { argb: style.navy } },
+      };
+    }
     if (autoRowHeight) row.height = 30;
   });
 
   const lastRow = worksheet.lastRow.number;
-  worksheet.views = [{ state: 'frozen', ySplit: headerRow }];
+  worksheet.views = isBranded
+    ? [{ showGridLines: false, ...(freezeHeader ? { state: 'frozen', ySplit: headerRow } : {}) }]
+    : [{ state: 'frozen', ySplit: headerRow }];
   worksheet.pageSetup = {
     paperSize: 9,
     orientation,
@@ -2101,8 +2166,8 @@ async function sendCompleteFinanceWorkbook(res, from, to) {
     paymentReversalExportRows(from, to),
   ]);
   const generatedAt = report.generated_at;
-  const period = `Reporting period: ${from} to ${to}`;
-  const snapshotDate = `Snapshot date: ${manilaDate()}`;
+  const period = statementPeriod(from, to);
+  const snapshotDate = `As of ${statementDateLabel(manilaDate())}`;
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'Skin Goddess Aesthetic Center';
   workbook.subject = `Financial reports ${from} to ${to}`;
@@ -2116,17 +2181,18 @@ async function sendCompleteFinanceWorkbook(res, from, to) {
     revenueBySource.set(row.source, (revenueBySource.get(row.source) || 0) + Number(row.amount));
   });
   const revenueRows = [
-    ['Revenue', '', '', ''],
-    ['Service revenue', revenueBySource.get('Completed appointment') || 0,
+    ['Revenue', '', ''],
+    ['Treatment Service Revenue', revenueBySource.get('Completed appointment') || 0,
       'Booked service prices for completed appointments, recognized on appointment date.'],
+    ['Other Revenue', '', ''],
     ['Product / sales revenue', revenueBySource.get('Posted product sale') || 0,
       'Posted product-sale payments, recognized on Manila receipt date.'],
     ['Retained deposit revenue', (revenueBySource.get('Retained no-show deposit') || 0)
       + (revenueBySource.get('Forfeited cancellation deposit') || 0),
     'Only retained deposits recognized under the existing finance rules.'],
-    ['Total revenue', Number(report.income_statement.sales),
+    ['Total Revenue', Number(report.income_statement.sales),
       'Uses the existing sales-earned calculation; excludes ordinary reservation deposits.'],
-    ['Expenses', '', 'Active recorded expenses by expense date; voided records are excluded.'],
+    ['Recorded Expenses', '', 'Active recorded expenses by expense date; voided records are excluded.'],
   ];
   const expensesByCategory = new Map();
   details.expenses.filter((row) => row.status === 'active').forEach((row) => {
@@ -2137,25 +2203,31 @@ async function sendCompleteFinanceWorkbook(res, from, to) {
       revenueRows.push([category, amount, 'Recorded operating expense; expense payment method is not tracked.']);
     });
   revenueRows.push(
-    ['Total expenses', Number(report.income_statement.expenses), 'Non-voided recorded expenses for the selected period.'],
-    ['Net income', Number(report.income_statement.sales) - Number(report.income_statement.expenses),
-      'Total recognized revenue less recorded expenses. This is not cash collected less expenses.']
+    ['Total Expenses', Number(report.income_statement.expenses), 'Non-voided recorded expenses for the selected period.'],
+    ['NET INCOME (LOSS) BEFORE TAX', Number(report.income_statement.sales) - Number(report.income_statement.expenses),
+      'Total recognized revenue less recorded expenses. Cost of services and income tax are not separately recorded; this is not cash collected less expenses.']
   );
   addProfessionalReportSheet(workbook, {
     name: 'Income Statement',
     title: 'Income Statement',
-    period,
+    periodLabel: period,
     generatedAt,
-    description: 'Revenue follows the existing sales-earned rules. Cash collections and refundable deposits are not treated as earned revenue.',
+    description: 'Revenue follows the existing sales-earned rules. Cash collections and refundable deposits are not treated as earned revenue. Cost-of-services detail and income tax are not separately recorded.',
     headers: ['Line item', 'Amount (PHP)', 'Basis / notes'],
-    widths: [34, 22, 92],
+    widths: [32, 20, 58],
     records: revenueRows,
     amountColumns: [2],
     filter: false,
     style: FINANCIAL_STATEMENT_STYLE,
     currencyFormat: PESO_NUMBER_FORMAT,
     orientation: 'portrait',
-    finalTotalLabels: ['Net income'],
+    singleUnderlineLabels: ['Total Revenue', 'Total Expenses'],
+    doubleUnderlineLabels: ['NET INCOME (LOSS) BEFORE TAX'],
+    finalTotalLabels: ['NET INCOME (LOSS) BEFORE TAX'],
+    sectionLabels: ['Recorded Expenses'],
+    indentColumns: [1],
+    freezeHeader: false,
+    bandedRows: false,
     autoRowHeight: true,
   });
 
@@ -2166,11 +2238,16 @@ async function sendCompleteFinanceWorkbook(res, from, to) {
   const datedReversalOutflows = reversalRows.reduce((sum, row) => sum + Number(row.amount), 0);
   const refundedPaymentCount = paymentRows.filter((row) => row.status === 'refunded').length;
   const cashFlowRows = [
-    ['', 'Opening cash balance', '', '', '', '', '', 'Not Available', 'No reliable opening cash or bank balance is recorded.'],
+    ['', 'Cash Flows from Operating Activities', '', '', '', '', '', '', ''],
     ['', 'Recorded payment inflows', '', 'Original payment receipts in selected period', '', '', '', trackedInflows, 'All payment records; current payment status appears in detail below.'],
     ['', 'Dated payment reversals', '', 'Reversals recorded in selected period', '', '', '', datedReversalOutflows, 'Based on the recorded reversal timestamp.'],
-    ['', 'Net dated movement known', '', 'Recorded inflows less dated reversals', '', '', '', trackedInflows - datedReversalOutflows, 'Incomplete: refund dates and expense settlement dates are not recorded.'],
-    ['', 'Ending cash balance', '', '', '', '', '', 'Not Available', 'Cannot be calculated without a reliable opening balance and complete dated cash movements.'],
+    ['', 'Cash Flows from Investing Activities', '', '', '', '', '', '', ''],
+    ['', 'Investing activity records', '', '', '', '', '', 'Not tracked', 'Investing activity records are not maintained in the finance data.'],
+    ['', 'Cash Flows from Financing Activities', '', '', '', '', '', '', ''],
+    ['', 'Financing activity records', '', '', '', '', '', 'Not tracked', 'Financing activity records are not maintained in the finance data.'],
+    ['', 'Net Increase (Decrease) in Cash — known dated movements', '', 'Recorded inflows less dated reversals', '', '', '', trackedInflows - datedReversalOutflows, 'Incomplete: refund dates and expense settlement dates are not recorded.'],
+    ['', 'Cash and Cash Equivalents at Beginning of Period', '', '', '', '', '', 'Not Available', 'No reliable opening cash or bank balance is recorded.'],
+    ['', 'Cash and Cash Equivalents at End of Period', '', '', '', '', '', 'Not Available', 'Cannot be calculated without a reliable opening balance and complete dated cash movements.'],
     ['', 'Detailed movements', '', '', '', '', '', '', ''],
     ...paymentRows.map((row) => [
       spreadsheetDate(row.date), 'Payment receipt', row.receipt_number,
@@ -2194,12 +2271,12 @@ async function sendCompleteFinanceWorkbook(res, from, to) {
   ];
   addProfessionalReportSheet(workbook, {
     name: 'Cash Flow',
-    title: 'Cash Flow Statement',
-    period,
+    title: 'Statement of Cash Flows',
+    periodLabel: period,
     generatedAt,
     description: 'Only dated payment receipts and recorded reversals are treated as cash movements. Expenses have no settlement record; refund event dates are unavailable. Opening Balance Not Available; ending cash balance is not authoritative or calculable.',
     headers: ['Date', 'Event', 'Reference', 'Description', 'Payment method', 'Cash In (PHP)', 'Cash Out (PHP)', 'Summary amount / balance (PHP)', 'Status / basis'],
-    widths: [15, 25, 24, 44, 21, 20, 20, 25, 72],
+    widths: [13, 28, 20, 32, 15, 16, 16, 22, 38],
     records: cashFlowRows,
     dateColumns: [1],
     amountColumns: [6, 7, 8],
@@ -2211,7 +2288,9 @@ async function sendCompleteFinanceWorkbook(res, from, to) {
     outflowColumns: [7],
     inflowLabels: ['Recorded payment inflows'],
     outflowLabels: ['Dated payment reversals'],
-    emphasisLabels: ['Net dated movement known'],
+    emphasisLabels: ['Net Increase (Decrease) in Cash — known dated movements'],
+    freezeHeader: true,
+    bandedRows: false,
     autoRowHeight: true,
   });
 
@@ -2224,20 +2303,26 @@ async function sendCompleteFinanceWorkbook(res, from, to) {
   const knownDepositLiabilities = liabilitiesResult.rows.reduce((sum, row) => sum + Number(row.amount), 0);
   const knownAssetsSubtotal = receivablesTotal + knownInventoryValue;
   const balanceRows = [
-    ['Assets', '', ''],
+    ['ASSETS', '', ''],
+    ['Current Assets', '', ''],
     ['Cash on hand / digital balances', 'Not recorded', 'No complete opening balance or current cash/bank balance is maintained.'],
     ['Accounts receivable', receivablesTotal, 'Completed appointments only, following the existing finance outstanding-balance calculation.'],
     ['Inventory (known recorded-cost valuation)', knownInventoryValue,
       `Quantity × latest recorded procurement unit cost. ${missingInventoryCosts} product(s) have no unit cost and are excluded from this subtotal.`],
+    ['Non-Current Assets', '', ''],
     ['Equipment / other assets', 'Not tracked', 'No reliable asset register or equipment valuation is maintained.'],
     ['Known assets subtotal', knownAssetsSubtotal, 'Includes accounts receivable and inventory with recorded unit cost only; excludes unavailable assets.'],
     ['Total assets', 'Not determinable', 'Cash, equipment, and any inventory missing recorded unit cost are unavailable.'],
-    ['Liabilities', '', ''],
+    ['LIABILITIES', '', ''],
+    ['Current Liabilities', '', ''],
     ['Recorded refundable customer deposits', knownDepositLiabilities, 'Posted reservation payments on pending, confirmed, and in-progress appointments.'],
-    ['Supplier bills / loans / other payables', 'Not tracked', 'No supported accounts-payable, loan, or payable register was found.'],
+    ['Accounts payable / other current liabilities', 'Not tracked', 'No supported accounts-payable or other current-liability register was found.'],
+    ['Non-Current Liabilities', '', ''],
+    ['Long-term loans and other liabilities', 'Not tracked', 'No supported long-term liability register was found.'],
     ['Total liabilities', 'Incomplete', 'Only recorded refundable customer deposits are available.'],
-    ['Equity', '', ''],
-    ["Owner's equity", 'Not recorded', 'Owner capital, withdrawals, investments, and retained earnings balances are not maintained.'],
+    ['EQUITY', '', ''],
+    ["Owner's capital / retained earnings", 'Not recorded', 'Owner capital, withdrawals, investments, and retained earnings balances are not maintained.'],
+    ['Total liabilities and equity', 'Not determinable', 'Liabilities are incomplete and equity balances are not recorded.'],
     ['Balance check: Assets − Liabilities − Equity', 'Not determinable',
       'The accounting equation cannot be evaluated honestly until the unavailable opening balances, liabilities, and equity records are supplied through an approved accounting workflow.'],
   ];
@@ -2248,43 +2333,47 @@ async function sendCompleteFinanceWorkbook(res, from, to) {
     generatedAt,
     description: 'Point-in-time view of values supported by application records. Missing assets, liabilities, and equity are labeled unavailable; no balancing figures are fabricated.',
     headers: ['Account / measure', 'Amount (PHP) / status', 'Basis / notes'],
-    widths: [40, 34, 92],
+    widths: [38, 28, 58],
     records: balanceRows,
     amountColumns: [2],
     filter: false,
     style: FINANCIAL_STATEMENT_STYLE,
     currencyFormat: PESO_NUMBER_FORMAT,
     orientation: 'portrait',
-    emphasisLabels: ["Owner's equity"],
+    emphasisLabels: ["Owner's capital / retained earnings"],
+    indentColumns: [1],
+    freezeHeader: false,
+    bandedRows: false,
     autoRowHeight: true,
   });
 
   addProfessionalReportSheet(workbook, {
     name: 'Accounts Receivable',
-    title: 'Accounts Receivable Report',
+    title: 'Accounts Receivable Subsidiary Ledger',
     periodLabel: snapshotDate,
     generatedAt,
-    description: 'Point-in-time outstanding balances for completed appointments, using the same deposit treatment as the existing Finance outstanding-balance calculation. Due dates are not recorded.',
-    headers: ['Client', 'Invoice / appointment reference', 'Service', 'Transaction date', 'Due date', 'Original amount (PHP)', 'Amount paid (PHP)', 'Outstanding (PHP)', 'Status'],
-    widths: [26, 26, 30, 17, 17, 22, 22, 22, 18],
+    description: 'Point-in-time outstanding balances for completed appointments, using the same deposit treatment as the existing Finance outstanding-balance calculation. Due dates are not recorded, so aging / overdue classification is unavailable.',
+    headers: ['Customer / client name', 'Appointment reference', 'Transaction date', 'Due date', 'Service', 'Original amount (PHP)', 'Payments received (PHP)', 'Outstanding balance (PHP)', 'Payment status'],
+    widths: [25, 23, 16, 16, 26, 20, 20, 21, 17],
     records: receivables.map((row) => [
       row.client,
       `APT-${String(row.appointment_id).padStart(4, '0')}`,
-      row.service_name,
       spreadsheetDate(row.transaction_date),
       'Not recorded',
+      row.service_name,
       Number(row.original_amount),
       Number(row.amount_paid),
       Number(row.outstanding),
       row.status,
     ]),
-    dateColumns: [4],
+    dateColumns: [3],
     amountColumns: [6, 7, 8],
     totals: [{ label: 'Total outstanding receivables', column: 8, value: receivablesTotal }],
     style: FINANCIAL_STATEMENT_STYLE,
     currencyFormat: PESO_NUMBER_FORMAT,
     orientation: 'landscape',
     highlightColumns: [8],
+    freezeHeader: true,
     autoRowHeight: true,
     filterEmpty: true,
   });
