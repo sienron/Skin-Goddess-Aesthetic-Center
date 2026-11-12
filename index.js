@@ -14,11 +14,11 @@ const { hasRoleAccess } = require('./utils/roleAccess');
 const {
   hasCurrentMfaAssurance,
   isPrivilegedRole,
-  PRIVILEGED_SESSION_MAX_AGE_MS,
 } = require('./utils/privilegedMfa');
 const { requirePrivilegedMfa } = require('./middleware/privilegedMfa');
 const { createSecurityHeaders } = require('./middleware/securityHeaders');
-const { destroySession } = require('./utils/sessionSecurity');
+const { destroySession, DEFAULT_SESSION_MAX_AGE_MS } = require('./utils/sessionSecurity');
+const { enforceSessionLifetime } = require('./middleware/sessionLifetime');
 const PgSession = require('connect-pg-simple')(session);
 
 const db = require('./db');
@@ -28,7 +28,6 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const publicDir = path.join(__dirname, 'public');
 const sessionSecret = process.env.SESSION_SECRET;
-const STAY_SIGNED_IN_MAX_AGE = 1000 * 60 * 60 * 24 * 400;
 
 app.set('trust proxy', 1);
 app.use(createSecurityHeaders());
@@ -42,38 +41,14 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    maxAge: 1000 * 60 * 60 * 24,
+    maxAge: DEFAULT_SESSION_MAX_AGE_MS,
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
     sameSite: 'lax'
   }
 }));
 
-app.use((req, res, next) => {
-  if (req.session?.staySignedIn && !req.session.privilegedMfaAuthenticatedAt) {
-    req.session.cookie.maxAge = STAY_SIGNED_IN_MAX_AGE;
-  }
-
-  if (req.session?.privilegedMfaAuthenticatedAt) {
-    const authenticatedAt = Number(req.session.privilegedMfaAuthenticatedAt);
-    const remaining = PRIVILEGED_SESSION_MAX_AGE_MS
-      - (Date.now() - authenticatedAt);
-    if (!Number.isFinite(authenticatedAt) || remaining <= 0) {
-      if (req.path === '/api/auth/login') return next();
-      return destroySession(req, res).then(() => {
-        if (req.accepts('html') && !req.originalUrl.startsWith('/api/')) {
-          return res.redirect('/LoginPage.html?mfa=required');
-        }
-        return res.status(401).json({ message: 'Your privileged session expired. Sign in again.' });
-      });
-    }
-    req.session.cookie.maxAge = Math.min(
-      Number(req.session.cookie.maxAge) || PRIVILEGED_SESSION_MAX_AGE_MS,
-      remaining,
-    );
-  }
-  next();
-});
+app.use(enforceSessionLifetime);
 
 app.use('/api', requirePrivilegedMfa);
 

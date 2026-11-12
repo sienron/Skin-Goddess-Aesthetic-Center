@@ -24,10 +24,8 @@ const { isDemoCustomer, isDemoCustomerAccount } = require('../utils/demoMode');
 const { createPreserveDemoCustomerAccess } = require('../utils/demoCustomerAccess');
 const { isValidName, isValidEmail } = require('../utils/userValidation');
 const { hashOtpCode, verifyOtpCode } = require('../utils/otpSecurity');
-const {
-  isPrivilegedRole,
-  PRIVILEGED_SESSION_MAX_AGE_MS,
-} = require('../utils/privilegedMfa');
+const { isPrivilegedRole } = require('../utils/privilegedMfa');
+const { getSessionMaxAge } = require('../utils/sessionSecurity');
 const {
   createTotpSecret,
   matchTotpStep,
@@ -57,7 +55,6 @@ const DUMMY_PASSWORD_HASH = '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJ
 const REMEMBERED_DEVICE_COOKIE_PREFIX = 'sg_remembered_device_';
 const LEGACY_REMEMBERED_DEVICE_COOKIE = 'sg_remembered_device';
 const REMEMBERED_DEVICE_MAX_AGE = 1000 * 60 * 60 * 24 * 30;
-const STAY_SIGNED_IN_MAX_AGE = 1000 * 60 * 60 * 24 * 400;
 const PRIVILEGED_MFA_PENDING_MS = 10 * 60 * 1000;
 const preserveDemoCustomerAccess = createPreserveDemoCustomerAccess(db);
 
@@ -104,6 +101,7 @@ function clearPendingPrivilegedMfa(req) {
   delete req.session.pendingPrivilegedMfaUserId;
   delete req.session.pendingPrivilegedMfaStage;
   delete req.session.pendingPrivilegedMfaExpiresAt;
+  delete req.session.pendingPrivilegedMfaStaySignedIn;
 }
 
 function hasPendingPrivilegedMfa(req) {
@@ -111,20 +109,21 @@ function hasPendingPrivilegedMfa(req) {
     && Number(req.session.pendingPrivilegedMfaExpiresAt) > Date.now();
 }
 
-async function beginPrivilegedMfa(req, user, stage) {
+async function beginPrivilegedMfa(req, user, stage, staySignedIn) {
   await regenerateSession(req);
   req.session.pendingPrivilegedMfaUserId = user.user_id;
   req.session.pendingPrivilegedMfaStage = stage;
   req.session.pendingPrivilegedMfaExpiresAt = Date.now() + PRIVILEGED_MFA_PENDING_MS;
+  req.session.pendingPrivilegedMfaStaySignedIn = staySignedIn;
   req.session.cookie.maxAge = PRIVILEGED_MFA_PENDING_MS;
 }
 
 async function establishPrivilegedAuthenticatedSession(req, user) {
   const enrolledAt = new Date(user.totp_enrolled_at).getTime();
-  await establishAuthenticatedSession(req, user, false);
+  const staySignedIn = req.session.pendingPrivilegedMfaStaySignedIn === true;
+  await establishAuthenticatedSession(req, user, staySignedIn);
   req.session.mfaVerifiedAt = enrolledAt;
   req.session.privilegedMfaAuthenticatedAt = Date.now();
-  req.session.cookie.maxAge = PRIVILEGED_SESSION_MAX_AGE_MS;
 }
 
 async function writeMfaAudit(client, userId, eventType) {
@@ -200,8 +199,10 @@ async function establishAuthenticatedSession(req, user, staySignedIn) {
   req.session.role = user.role;
   if (staySignedIn) {
     req.session.staySignedIn = true;
-    req.session.cookie.maxAge = STAY_SIGNED_IN_MAX_AGE;
   }
+  const maxAge = getSessionMaxAge(req.session);
+  req.session.sessionExpiresAt = Date.now() + maxAge;
+  req.session.cookie.maxAge = maxAge;
 }
 
 async function recentVerificationCodeCount(userId) {
@@ -549,7 +550,7 @@ router.post('/login', loginLimiter, async (req, res) => {
 
     if (isPrivilegedRole(user.role)) {
       const stage = user.totp_enabled === true ? 'totp' : 'enrollment';
-      await beginPrivilegedMfa(req, user, stage);
+      await beginPrivilegedMfa(req, user, stage, staysignedin === true);
       return res.status(200).json({
         message: stage === 'totp' ? 'Enter your authenticator code.' : 'Privileged account enrollment is required.',
         requiresMfa: true,

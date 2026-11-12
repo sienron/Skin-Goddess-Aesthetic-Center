@@ -1,3 +1,12 @@
+const DEFAULT_SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+const STAY_SIGNED_IN_MAX_AGE_MS = 30 * DEFAULT_SESSION_MAX_AGE_MS;
+
+function getSessionMaxAge(session) {
+  return session.staySignedIn === true
+    ? STAY_SIGNED_IN_MAX_AGE_MS
+    : DEFAULT_SESSION_MAX_AGE_MS;
+}
+
 function destroySession(req, res) {
   return new Promise((resolve) => {
     if (!req.session) {
@@ -24,4 +33,9 @@ function destroySession(req, res) {
   });
 }
 
-module.exports = { destroySession };
+module.exports = {
+  DEFAULT_SESSION_MAX_AGE_MS,
+  STAY_SIGNED_IN_MAX_AGE_MS,
+  getSessionMaxAge,
+  destroySession,
+};

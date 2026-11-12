@@ -1,5 +1,6 @@
+const { getSessionMaxAge } = require('./sessionSecurity');
+
 const PRIVILEGED_ROLES = new Set(['admin', 'finance_officer']);
-const PRIVILEGED_SESSION_MAX_AGE_MS = 12 * 60 * 60 * 1000;
 
 function isPrivilegedRole(role) {
   return PRIVILEGED_ROLES.has(role);
@@ -14,12 +15,12 @@ function hasCurrentMfaAssurance(session, user) {
   return Number(session.mfaVerifiedAt) === new Date(user.totp_enrolled_at).getTime()
     && Number.isFinite(authenticatedAt)
     && sessionAge >= 0
-    && sessionAge < PRIVILEGED_SESSION_MAX_AGE_MS;
+    && sessionAge < getSessionMaxAge(session)
+    && (session.sessionExpiresAt === undefined || Number(session.sessionExpiresAt) > Date.now());
 }
 
 module.exports = {
   PRIVILEGED_ROLES,
-  PRIVILEGED_SESSION_MAX_AGE_MS,
   isPrivilegedRole,
   hasCurrentMfaAssurance,
 };

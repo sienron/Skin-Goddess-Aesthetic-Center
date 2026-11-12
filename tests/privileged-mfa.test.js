@@ -5,10 +5,8 @@ const db = require('../db');
 const authRouter = require('../routes/auth');
 const { requireRole } = require('../middleware/auth');
 const { requirePrivilegedMfa } = require('../middleware/privilegedMfa');
-const {
-  isPrivilegedRole,
-  PRIVILEGED_SESSION_MAX_AGE_MS,
-} = require('../utils/privilegedMfa');
+const { isPrivilegedRole } = require('../utils/privilegedMfa');
+const { DEFAULT_SESSION_MAX_AGE_MS, STAY_SIGNED_IN_MAX_AGE_MS } = require('../utils/sessionSecurity');
 const { migrate } = require('../migrations/050-privileged-totp-mfa');
 const { issueEnrollmentCode } = require('../scripts/issue-privileged-mfa-enrollment');
 const { hashOtpCode } = require('../utils/otpSecurity');
@@ -239,21 +237,26 @@ test('TOTP login succeeds, consumes the step once, and regenerates an MFA-assure
   assert.equal(req.session.userId, 17);
   assert.equal(req.session.mfaVerifiedAt, enrolledAt.getTime());
   assert.ok(Number.isFinite(req.session.privilegedMfaAuthenticatedAt));
-  assert.equal(req.session.cookie.maxAge, PRIVILEGED_SESSION_MAX_AGE_MS);
-  assert.equal(req.session.staySignedIn, undefined);
+  assert.equal(req.session.cookie.maxAge, 30 * 24 * 60 * 60 * 1000);
+  assert.equal(req.session.staySignedIn, true);
   assert.equal(req.session.pendingPrivilegedMfaUserId, undefined);
   assert.equal(req.session.regenerationCount, 1);
   assert.deepEqual(audited, ['login_succeeded']);
 });
 
-test('admin and finance TOTP logins never receive persistent sessions', async () => {
-  for (const role of ['admin', 'finance_officer']) {
+test('admin and finance password-to-TOTP logins honor the stay-signed-in selection', async () => {
+  const passwordHash = await bcrypt.hash('CorrectHorse!1', 4);
+  for (const [role, staySignedIn] of [
+    ['admin', true], ['admin', false],
+    ['finance_officer', true], ['finance_officer', false],
+  ]) {
     const secret = createTotpSecret();
     const encrypted = encryptTotpSecret(secret);
     const enrolledAt = new Date();
     const step = Math.floor(Date.now() / 1000 / 30);
     const user = authUser({
       role,
+      password_hash: passwordHash,
       totp_secret_ciphertext: encrypted.ciphertext,
       totp_secret_iv: encrypted.iv,
       totp_secret_tag: encrypted.tag,
@@ -270,22 +273,30 @@ test('admin and finance TOTP logins never receive persistent sessions', async ()
       },
     });
     const req = {
-      body: { code: codeForStep(secret, step) },
-      session: sessionWith({
-        pendingPrivilegedMfaUserId: 17,
-        pendingPrivilegedMfaStage: 'totp',
-        pendingPrivilegedMfaExpiresAt: Date.now() + 60_000,
-        pendingPrivilegedMfaStaySignedIn: true,
-      }),
+      body: { email: user.email, password: 'CorrectHorse!1', staysignedin: staySignedIn },
+      headers: {},
+      session: sessionWith(),
     };
-    const response = responseCapture();
+    const loginResponse = responseCapture();
+    await routeHandler('/login', 'post')(req, loginResponse);
+    assert.equal(loginResponse.statusCode, 200);
+    assert.equal(loginResponse.body.mfaMethod, 'totp');
+    assert.equal(req.session.userId, undefined);
+    assert.equal(req.session.pendingPrivilegedMfaStaySignedIn, staySignedIn);
 
+    req.body = { code: codeForStep(secret, step) };
+    const response = responseCapture();
+    const beforeLogin = Date.now();
     await routeHandler('/login/verify-totp', 'post')(req, response);
 
     assert.equal(response.statusCode, 200, role);
     assert.equal(req.session.role, role);
-    assert.equal(req.session.staySignedIn, undefined);
-    assert.equal(req.session.cookie.maxAge, PRIVILEGED_SESSION_MAX_AGE_MS);
+    assert.equal(req.session.staySignedIn, staySignedIn ? true : undefined);
+    const maxAge = staySignedIn ? STAY_SIGNED_IN_MAX_AGE_MS : DEFAULT_SESSION_MAX_AGE_MS;
+    assert.equal(req.session.cookie.maxAge, maxAge);
+    assert.ok(req.session.sessionExpiresAt >= beforeLogin + maxAge);
+    assert.ok(req.session.sessionExpiresAt <= Date.now() + maxAge);
+    assert.equal(req.session.pendingPrivilegedMfaStaySignedIn, undefined);
   }
 });
 
@@ -368,7 +379,7 @@ test('client email OTP flow remains available without a privileged MFA marker', 
   assert.equal(req.session.userId, 17);
   assert.equal(req.session.mfaVerifiedAt, undefined);
   assert.equal(req.session.staySignedIn, true);
-  assert.equal(req.session.cookie.maxAge, 1000 * 60 * 60 * 24 * 400);
+  assert.equal(req.session.cookie.maxAge, 1000 * 60 * 60 * 24 * 30);
 });
 
 test('valid recovery code rotates the stored recovery set and authenticates once', async () => {
@@ -395,6 +406,7 @@ test('valid recovery code rotates the stored recovery set and authenticates once
       pendingPrivilegedMfaUserId: 17,
       pendingPrivilegedMfaStage: 'totp',
       pendingPrivilegedMfaExpiresAt: Date.now() + 60_000,
+      pendingPrivilegedMfaStaySignedIn: true,
     }),
   };
   const response = responseCapture();
@@ -406,6 +418,8 @@ test('valid recovery code rotates the stored recovery set and authenticates once
   assert.equal(response.body.recoveryCodes.length, 10);
   assert.equal(consumedCodes[0], hashRecoveryCode('A1'.repeat(12)));
   assert.equal(insertedHashes, 10);
+  assert.equal(req.session.staySignedIn, true);
+  assert.equal(req.session.cookie.maxAge, STAY_SIGNED_IN_MAX_AGE_MS);
 });
 
 test('privileged MFA verification applies an account-bound failed-attempt limit', async () => {
@@ -476,13 +490,32 @@ test('protected API and role middleware deny privileged sessions without current
   assert.equal(apiAllowed, true);
 });
 
-test('privileged MFA assurance expires at the absolute session lifetime', () => {
+test('privileged MFA stays valid beyond 12 hours and expires at 30 days when selected', (t) => {
   const { hasCurrentMfaAssurance } = require('../utils/privilegedMfa');
-  const user = authUser();
-  assert.equal(hasCurrentMfaAssurance({
-    mfaVerifiedAt: user.totp_enrolled_at.getTime(),
-    privilegedMfaAuthenticatedAt: Date.now() - PRIVILEGED_SESSION_MAX_AGE_MS,
-  }, user), false);
+  const signedInAt = Date.now();
+  let now = signedInAt;
+  t.mock.method(Date, 'now', () => now);
+  for (const role of ['admin', 'finance_officer']) {
+    const user = authUser({ role });
+    const session = {
+      mfaVerifiedAt: user.totp_enrolled_at.getTime(),
+      privilegedMfaAuthenticatedAt: signedInAt,
+      staySignedIn: true,
+      sessionExpiresAt: signedInAt + 30 * 24 * 60 * 60 * 1000,
+    };
+    for (const elapsed of [12 * 60 * 60 * 1000, STAY_SIGNED_IN_MAX_AGE_MS - 1]) {
+      now = signedInAt + elapsed;
+      assert.equal(hasCurrentMfaAssurance(session, user), true, role);
+    }
+    now = signedInAt + STAY_SIGNED_IN_MAX_AGE_MS;
+    assert.equal(hasCurrentMfaAssurance(session, user), false, role);
+
+    session.staySignedIn = false;
+    now = signedInAt + DEFAULT_SESSION_MAX_AGE_MS - 1;
+    assert.equal(hasCurrentMfaAssurance(session, user), true, role);
+    now += 1;
+    assert.equal(hasCurrentMfaAssurance(session, user), false, role);
+  }
 });
 
 test('only administrator and finance roles require privileged TOTP', () => {
@@ -529,6 +562,7 @@ test('operator-issued enrollment code is required before setup and enrollment ac
       pendingPrivilegedMfaUserId: 17,
       pendingPrivilegedMfaStage: 'enrollment',
       pendingPrivilegedMfaExpiresAt: Date.now() + 60_000,
+      pendingPrivilegedMfaStaySignedIn: true,
     }),
   };
   const startResponse = responseCapture();
@@ -591,6 +625,8 @@ test('operator-issued enrollment code is required before setup and enrollment ac
   assert.equal(createdCodes.length, 10);
   assert.equal(startRequest.session.userId, 17);
   assert.equal(startRequest.session.mfaVerifiedAt, enrolledAt.getTime());
+  assert.equal(startRequest.session.staySignedIn, true);
+  assert.equal(startRequest.session.cookie.maxAge, STAY_SIGNED_IN_MAX_AGE_MS);
   assert.equal(startRequest.session.pendingPrivilegedMfaUserId, undefined);
   assert.ok(auditEvents.includes('enrollment_succeeded'));
 });
