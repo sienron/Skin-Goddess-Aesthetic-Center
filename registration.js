@@ -11,6 +11,17 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  document.querySelectorAll('#registration-password-setup-form .toggle-password').forEach((button) => {
+    const input = document.getElementById(button.getAttribute('data-target'));
+    if (!input) return;
+
+    button.addEventListener('click', () => {
+      const isPassword = input.type === 'password';
+      input.type = isPassword ? 'text' : 'password';
+      button.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
+    });
+  });
+
   // ===== OTP / Email Verification modal (shown after CREATE ACCOUNT) ===
   const otpModal = document.getElementById('otpModal');
   const registerForm = document.getElementById('registerForm');
@@ -259,8 +270,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const password = document.getElementById('setup-password').value;
     const confirmPassword = document.getElementById('setup-confirm-password').value;
-    if (password.length < 8 || password.length > 72 || !/[^A-Za-z0-9\s]/.test(password)) {
-      setFieldError('setup-password', 'Password must be 8 to 72 characters and include at least one special character.');
+    if (password.length < 9 || password.length > 72 || !/[A-Za-z]/.test(password) || !/\d/.test(password) || !/[^A-Za-z0-9\s]/.test(password)) {
+      setFieldError('setup-password', 'Password must be 9 to 72 characters and include at least one letter, one number, and one special character.');
       return;
     }
     if (password !== confirmPassword) {

@@ -1776,6 +1776,89 @@ hr {
   min-width: 1320px;
 }
 
+body.admin-treatment-history-page .um-shell {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+body.admin-treatment-history-page .um-main {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+body.admin-treatment-history-page .um-main > .staff-page-content {
+  min-height: 0;
+  overflow: hidden;
+}
+
+body.admin-treatment-history-page .staff-table-card {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+body.admin-treatment-history-page .staff-appointments-table-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  overflow: auto;
+}
+
+body.admin-treatment-history-page .staff-appointments-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+body.aesthetician-treatment-history-page .staff-page-content {
+  min-height: 0;
+  overflow: hidden;
+}
+
+body.aesthetician-treatment-history-page .staff-table-card {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+body.aesthetician-treatment-history-page .staff-appointments-table-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  overflow: auto;
+}
+
+body.aesthetician-treatment-history-page .staff-appointments-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+body.staff-theme-dark.aesthetician-treatment-history-page .notification-bell {
+  filter: brightness(0) invert(0.9);
+}
+
+body.staff-theme-dark.aesthetician-treatment-history-page section.staff-sidebar .profile-card {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+body.staff-theme-dark.aesthetician-treatment-history-page section.staff-sidebar .profile-card:hover {
+  background: var(--staff-sidebar-hover);
+}
+
+body.staff-theme-dark.aesthetician-treatment-history-page section.staff-sidebar .profile-avatar {
+  background: var(--um-role-staff-bg, #f8f2e0);
+  color: var(--gold-dark-2, #b3923d);
+}
+
 .treatment-notes-view-btn {
   white-space: nowrap;
 }

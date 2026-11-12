@@ -282,8 +282,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!newPassword) {
       setFieldError(passwordForm, 'newPassword', 'New password is required.');
       hasError = true;
-    } else if (newPassword.length < 8 || newPassword.length > 72) {
-      setFieldError(passwordForm, 'newPassword', 'Password must be between 8 and 72 characters.');
+    } else if (newPassword.length < 9 || newPassword.length > 72) {
+      setFieldError(passwordForm, 'newPassword', 'Password must be between 9 and 72 characters.');
+      hasError = true;
+    } else if (!/[A-Za-z]/.test(newPassword)) {
+      setFieldError(passwordForm, 'newPassword', 'Password must include at least one letter.');
+      hasError = true;
+    } else if (!/\d/.test(newPassword)) {
+      setFieldError(passwordForm, 'newPassword', 'Password must include at least one number.');
       hasError = true;
     } else if (!/[^A-Za-z0-9\s]/.test(newPassword)) {
       setFieldError(passwordForm, 'newPassword', 'Password must include at least one special character (such as !, @, or #).');

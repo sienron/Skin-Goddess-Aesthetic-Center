@@ -371,6 +371,72 @@ function displayAppointmentStatus(value) {
   })[status] || status;
 }
 
+async function createAppointmentWorkbook(records) {
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'Skin Goddess Aesthetic Center';
+  const worksheet = workbook.addWorksheet('Appointments', {
+    views: [{ state: 'frozen', ySplit: 1 }]
+  });
+  worksheet.columns = [
+    { header: 'Reference', key: 'reference', width: 14 },
+    { header: 'Client', key: 'client', width: 28 },
+    { header: 'Service', key: 'service', width: 32 },
+    { header: 'Appointment Date', key: 'date', width: 18 },
+    { header: 'Start Time', key: 'start', width: 14 },
+    { header: 'Reserved End', key: 'scheduledEnd', width: 14 },
+    { header: 'Expected End', key: 'expectedEnd', width: 14 },
+    { header: 'Assigned Staff', key: 'assignedTo', width: 24 },
+    { header: 'Status', key: 'status', width: 16 },
+    { header: 'Treatment Duration (min)', key: 'duration', width: 24 },
+    { header: 'Buffer (min)', key: 'buffer', width: 14 },
+    { header: 'Service Fee (PHP)', key: 'fee', width: 18 },
+    { header: 'Reservation Fee (PHP)', key: 'deposit', width: 22 },
+    { header: 'Payment Status', key: 'paymentStatus', width: 18 },
+    { header: 'Contact', key: 'contact', width: 20 }
+  ];
+  const header = worksheet.getRow(1);
+  header.height = 30;
+  header.eachCell((cell) => {
+    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF6B5422' } };
+    cell.alignment = { vertical: 'middle', wrapText: true };
+  });
+
+  records.forEach((record) => {
+    const date = String(record.date || '').slice(0, 10);
+    const row = worksheet.addRow([
+      `APT-${String(record.appointment_id).padStart(4, '0')}`,
+      record.client || 'Client',
+      record.service || 'Service unavailable',
+      /^\d{4}-\d{2}-\d{2}$/.test(date) ? new Date(`${date}T00:00:00.000Z`) : null,
+      excelTime(record.start),
+      excelTime(record.scheduled_end || record.end),
+      excelTime(record.expected_end || record.end),
+      record.assigned_to || 'Unassigned',
+      displayAppointmentStatus(record.status),
+      record.duration_is_estimated ? 'Not recorded' : Number(record.duration_minutes) || 0,
+      record.duration_is_estimated ? 'Not recorded' : Number(record.buffer_minutes) || 0,
+      Number(record.fee) || 0,
+      Number(record.deposit_amount) || 0,
+      String(record.payment_status || 'unpaid').replace(/_/g, ' '),
+      record.contact || '—'
+    ]);
+    row.getCell(4).numFmt = 'dd mmm yyyy';
+    [5, 6, 7].forEach((column) => {
+      row.getCell(column).numFmt = 'h:mm AM/PM';
+    });
+    [12, 13].forEach((column) => {
+      row.getCell(column).numFmt = '₱#,##0.00';
+    });
+    row.eachCell((cell, column) => {
+      cell.alignment = { vertical: 'middle', wrapText: column === 2 || column === 3 || column === 15 };
+    });
+  });
+  worksheet.autoFilter = { from: 'A1', to: 'O1' };
+
+  return workbook.xlsx.writeBuffer();
+}
+
 router.get('/admin', requireRole('admin'), async (_req, res) => {
   try {
     return res.json(await loadAdminAppointmentRows());
@@ -411,69 +477,7 @@ router.get('/admin/export.xlsx', requireRole('admin'), async (req, res) => {
       || Number(right.appointment_id) - Number(left.appointment_id)
     ));
 
-    const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'Skin Goddess Aesthetic Center';
-    const worksheet = workbook.addWorksheet('Appointments', {
-      views: [{ state: 'frozen', ySplit: 1 }]
-    });
-    worksheet.columns = [
-      { header: 'Reference', key: 'reference', width: 14 },
-      { header: 'Client', key: 'client', width: 28 },
-      { header: 'Service', key: 'service', width: 32 },
-      { header: 'Appointment Date', key: 'date', width: 18 },
-      { header: 'Start Time', key: 'start', width: 14 },
-      { header: 'Reserved End', key: 'scheduledEnd', width: 14 },
-      { header: 'Expected End', key: 'expectedEnd', width: 14 },
-      { header: 'Assigned Staff', key: 'assignedTo', width: 24 },
-      { header: 'Status', key: 'status', width: 16 },
-      { header: 'Treatment Duration (min)', key: 'duration', width: 24 },
-      { header: 'Buffer (min)', key: 'buffer', width: 14 },
-      { header: 'Service Fee (PHP)', key: 'fee', width: 18 },
-      { header: 'Reservation Fee (PHP)', key: 'deposit', width: 22 },
-      { header: 'Payment Status', key: 'paymentStatus', width: 18 },
-      { header: 'Contact', key: 'contact', width: 20 }
-    ];
-    const header = worksheet.getRow(1);
-    header.height = 30;
-    header.eachCell((cell) => {
-      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF6B5422' } };
-      cell.alignment = { vertical: 'middle', wrapText: true };
-    });
-
-    records.forEach((record) => {
-      const date = String(record.date || '').slice(0, 10);
-      const row = worksheet.addRow([
-        `APT-${String(record.appointment_id).padStart(4, '0')}`,
-        record.client || 'Client',
-        record.service || 'Service unavailable',
-        /^\d{4}-\d{2}-\d{2}$/.test(date) ? new Date(`${date}T00:00:00.000Z`) : null,
-        excelTime(record.start),
-        excelTime(record.scheduled_end || record.end),
-        excelTime(record.expected_end || record.end),
-        record.assigned_to || 'Unassigned',
-        displayAppointmentStatus(record.status),
-        record.duration_is_estimated ? 'Not recorded' : Number(record.duration_minutes) || 0,
-        record.duration_is_estimated ? 'Not recorded' : Number(record.buffer_minutes) || 0,
-        Number(record.fee) || 0,
-        Number(record.deposit_amount) || 0,
-        String(record.payment_status || 'unpaid').replace(/_/g, ' '),
-        record.contact || '—'
-      ]);
-      row.getCell(4).numFmt = 'dd mmm yyyy';
-      [5, 6, 7].forEach((column) => {
-        row.getCell(column).numFmt = 'h:mm AM/PM';
-      });
-      [12, 13].forEach((column) => {
-        row.getCell(column).numFmt = '₱#,##0.00';
-      });
-      row.eachCell((cell, column) => {
-        cell.alignment = { vertical: 'middle', wrapText: column === 2 || column === 3 || column === 15 };
-      });
-    });
-    worksheet.autoFilter = { from: 'A1', to: 'O1' };
-
-    const buffer = await workbook.xlsx.writeBuffer();
+    const buffer = await createAppointmentWorkbook(records);
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename="appointments-${month}.xlsx"`);
     return res.send(buffer);

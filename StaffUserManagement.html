@@ -5,10 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="style.css">
-    <title>User Management</title>
+    <title>Clients - Skin Goddess Aesthetic Center</title>
 </head>
 
-<body class="aesthetician-page aesthetician-clients-page">
+<body class="sg-admin-typography aesthetician-page aesthetician-clients-page">
     <header class="staff-header">
         <button type="button" class="staff-hamburger-btn" id="hamburgerBtn" aria-label="Open menu" aria-expanded="false" aria-controls="mobileNavDrawer">
             <img src="icons/hamburger.svg" alt="" class="staff-hamburger-icon">
@@ -19,8 +19,8 @@
         </div>
 
         <div class="page-title">
-            <h2>User Management</h2>
-            <p>Monthly overview - <span id="current-month">Month 0000</span></p>
+            <h2>Clients</h2>
+            <p>Review your assigned client appointments</p>
         </div>
 
         <div class="actions">
@@ -143,11 +143,11 @@
                 </div>
             </div>
         </section>
-        <section class="main-content">
+        <section class="main-content admin-clients-main">
             <section class="clients-dashboard" aria-labelledby="clientsDashboardTitle">
                 <div class="clients-dashboard-heading">
                     <div>
-                        <p class="clients-eyebrow">MY CLIENTS</p>
+                        <p class="clients-eyebrow">CLIENT DIRECTORY</p>
                         <h1 id="clientsDashboardTitle">Client appointments</h1>
                     </div>
                     <p class="clients-dashboard-date" id="clientsDashboardDate"></p>
@@ -156,11 +156,11 @@
                 <div class="client-summary-grid" aria-label="Appointment summary">
                     <article class="client-summary-card">
                         <span class="admin-metric-icon" aria-hidden="true"><img src="icons/calendar.svg" alt=""></span>
-                        <p class="client-summary-label">TODAY'S APPOINTMENT</p>
+                        <p class="client-summary-label">TODAY'S APPOINTMENTS</p>
                         <p class="client-summary-value" id="todayAppointmentCount">—</p>
                         <p class="client-summary-hint">Scheduled for today</p>
                     </article>
-                    <article class="client-summary-card">
+                    <article class="client-summary-card client-summary-card--rescheduled">
                         <span class="admin-metric-icon" aria-hidden="true"><img src="icons/staff-appointments.svg" alt=""></span>
                         <p class="client-summary-label">RESCHEDULED</p>
                         <p class="client-summary-value" id="rescheduledCount">—</p>
