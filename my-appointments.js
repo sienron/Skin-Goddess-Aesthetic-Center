@@ -50,6 +50,7 @@
   const WEEK_START_HOUR = 9;
   const WEEK_END_HOUR = 18; // salon closes at 6PM
   const HOUR_HEIGHT = 100; // px, matches .hour-label height / .week-day-col-bg grid lines
+  const CALENDAR_STATUSES = new Set(['confirmed', 'pending', 'in-progress', 'completed', 'cancelled', 'no-show']);
 
   let view = 'month';
   let appointmentsByDate = {};
@@ -246,6 +247,13 @@
     return labels[status] || (status ? status.replace(/_/g, ' ') : 'Status unavailable');
   }
 
+  function getCalendarStatusClass(appointment) {
+    const status = String(appointment.status || appointment.appointment_status || '')
+      .toLowerCase()
+      .replace(/_/g, '-');
+    return CALENDAR_STATUSES.has(status) ? `status-${status}` : '';
+  }
+
   function renderAppointmentList(container, appointments, emptyMessage) {
     container.replaceChildren();
     if (!appointments.length) {
@@ -326,26 +334,35 @@
     const chip = document.createElement('button');
     chip.type = 'button';
     chip.className = 'cal-chip';
-    if (appointment.appointment_status === 'cancelled') chip.classList.add('is-cancelled');
-    else if (dateKey < todayKey) chip.classList.add('is-past');
+    const statusClass = getCalendarStatusClass(appointment);
+    if (statusClass) chip.classList.add(statusClass);
+    if (String(appointment.status || appointment.appointment_status || '').toLowerCase() === 'cancelled') {
+      chip.classList.add('is-cancelled');
+    } else if (dateKey < todayKey) {
+      chip.classList.add('is-past');
+    }
 
     const name = document.createElement('span');
     name.className = 'cal-chip-name';
-    name.textContent = appointment.service_name;
+    name.textContent = appointment.service_name || appointment.service || 'Appointment';
 
     const time = document.createElement('span');
     time.className = 'cal-chip-time';
-    time.textContent = formatTime(appointment.appointment_time);
+    time.textContent = formatTime(appointment.appointment_time || appointment.start);
 
     chip.append(name, time);
+    chip.setAttribute(
+      'aria-label',
+      `${name.textContent}, ${time.textContent}. ${statusLabel(appointment)}. View appointment details.`
+    );
     chip.addEventListener('click', () => openModal(appointment));
     return chip;
   }
 
   function buildWeekChip(appointment, todayKey) {
     const dateKey = String(appointment.appointment_date).slice(0, 10);
-    const [startH, startM] = String(appointment.appointment_time).split(':').map(Number);
-    const [endH, endM] = String(appointment.appointment_end_time).split(':').map(Number);
+    const [startH, startM] = String(appointment.appointment_time || appointment.start).split(':').map(Number);
+    const [endH, endM] = String(appointment.appointment_end_time || appointment.end).split(':').map(Number);
     const startMinutes = Math.max((startH - WEEK_START_HOUR) * 60 + startM, 0);
     const endMinutes = Math.min((endH - WEEK_START_HOUR) * 60 + endM, (WEEK_END_HOUR - WEEK_START_HOUR) * 60);
     const duration = Math.max(endMinutes - startMinutes, 30);
@@ -353,20 +370,29 @@
     const chip = document.createElement('button');
     chip.type = 'button';
     chip.className = 'appt-chip-week';
-    if (appointment.appointment_status === 'cancelled') chip.classList.add('is-cancelled');
-    else if (dateKey < todayKey) chip.classList.add('is-past');
+    const statusClass = getCalendarStatusClass(appointment);
+    if (statusClass) chip.classList.add(statusClass);
+    if (String(appointment.status || appointment.appointment_status || '').toLowerCase() === 'cancelled') {
+      chip.classList.add('is-cancelled');
+    } else if (dateKey < todayKey) {
+      chip.classList.add('is-past');
+    }
     chip.style.top = `${(startMinutes / 60) * HOUR_HEIGHT}px`;
     chip.style.height = `${(duration / 60) * HOUR_HEIGHT}px`;
 
     const name = document.createElement('span');
     name.className = 'cal-chip-name';
-    name.textContent = appointment.service_name;
+    name.textContent = appointment.service_name || appointment.service || 'Appointment';
 
     const time = document.createElement('span');
     time.className = 'cal-chip-time';
-    time.textContent = `${formatTime(appointment.appointment_time)} – ${formatTime(appointment.appointment_end_time)}`;
+    time.textContent = `${formatTime(appointment.appointment_time || appointment.start)} – ${formatTime(appointment.appointment_end_time || appointment.end)}`;
 
     chip.append(name, document.createElement('br'), time);
+    chip.setAttribute(
+      'aria-label',
+      `${name.textContent}, ${time.textContent}. ${statusLabel(appointment)}. View appointment details.`
+    );
     chip.addEventListener('click', () => openModal(appointment));
     return chip;
   }
@@ -395,6 +421,7 @@
       const cell = document.createElement('div');
       cell.className = 'cal-cell';
       if (day.getMonth() !== month) cell.classList.add('other-month');
+      if (dayKey === todayKey) cell.classList.add('is-today');
 
       const num = document.createElement('span');
       num.className = 'cal-daynum';

@@ -32,10 +32,12 @@ function from24h(time) {
   return `${hour12}:${match[2]} ${hour24 < 12 ? 'AM' : 'PM'}`;
 }
 
+//creates the slot time for appointments
 function buildValidSlots() {
-  const slots = [];
+  const slots = []; //starts empty
   for (const [start, end] of [[9 * 60, 12 * 60], [13 * 60, 18 * 60]]) {
-    for (let minute = start; minute < end; minute += BOOKING_INTERVAL_MINUTES) {
+    //creates the range for slots for 9 to 12 and 1 to 6.
+    for (let minute = start; minute < end; minute += BOOKING_INTERVAL_MINUTES){
       slots.push(from24h(`${String(Math.floor(minute / 60)).padStart(2, '0')}:${String(minute % 60).padStart(2, '0')}`));
     }
   }

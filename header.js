@@ -642,6 +642,12 @@
     const mobileNavOverlay = document.getElementById("mobileNavOverlay");
     const mobileNavClose = document.getElementById("mobileNavClose");
 
+    document.querySelectorAll(".mobile-nav-book-btn:not([onclick]):not([href])").forEach((button) => {
+        button.addEventListener("click", () => {
+            window.location.href = "/UserAppointment.html";
+        });
+    });
+
     if (!hamburgerBtn || !mobileNavDrawer || !mobileNavOverlay) return;
 
     function openDrawer() {

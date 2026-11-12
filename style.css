@@ -11168,13 +11168,13 @@ body:not(.profile-ready) .mobile-nav-profile {
   flex: 1;
   display: block;
   min-height: calc(100vh - 80px);
-  padding: 42px 24px 70px;
+  padding: 34px 24px 52px;
   background: #fbf9f5;
 }
 
 .account-container {
   width: 100%;
-  max-width: 720px;
+  max-width: 980px;
   margin: 0 auto;
 }
 
@@ -11188,7 +11188,7 @@ body:not(.profile-ready) .mobile-nav-profile {
 }
 
 .account-sub {
-  margin: 8px 0 28px;
+  margin: 8px 0 22px;
   color: #8c8177;
   font-family: "Raleway", sans-serif;
   font-size: 0.95rem;
@@ -11196,12 +11196,12 @@ body:not(.profile-ready) .mobile-nav-profile {
 
 .account-section {
   width: 100%;
-  margin-bottom: 24px;
-  padding: 30px;
+  margin-bottom: 18px;
+  padding: 24px;
   background: #ffffff;
   border: 1px solid #e5ddd2;
-  border-radius: 10px;
-  box-shadow: 0 4px 14px rgba(80, 58, 35, 0.05);
+  border-radius: 8px;
+  box-shadow: 0 3px 12px rgba(80, 58, 35, 0.045);
 }
 
 .account-section-header {
@@ -11209,7 +11209,7 @@ body:not(.profile-ready) .mobile-nav-profile {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 25px;
+  margin-bottom: 18px;
 }
 
 .account-section-title {
@@ -11222,7 +11222,8 @@ body:not(.profile-ready) .mobile-nav-profile {
 
 .account-edit-btn {
   min-width: 58px;
-  padding: 9px 17px;
+  min-height: 38px;
+  padding: 8px 15px;
   color: #b5892a;
   background: #ffffff;
   border: 1px solid #d4a937;
@@ -11238,13 +11239,26 @@ body:not(.profile-ready) .mobile-nav-profile {
   background: #d4a937;
 }
 
+.account-edit-btn:focus-visible,
+.account-form-actions .btn:focus-visible {
+  outline: 2px solid #b5892a;
+  outline-offset: 2px;
+}
+
+.account-fields-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 22px;
+}
+
 .account-section .auth-form-group {
-  margin-bottom: 23px;
+  min-width: 0;
+  margin-bottom: 0;
 }
 
 .account-section label {
   display: block;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   color: #82766b;
   font-family: "Raleway", sans-serif;
   font-size: 0.72rem;
@@ -11255,12 +11269,13 @@ body:not(.profile-ready) .mobile-nav-profile {
 
 .account-section input {
   width: 100%;
-  height: 47px;
+  height: 44px;
   padding: 0 14px;
   color: #302923;
   background: #ffffff;
   border: 1px solid #ded5ca;
   border-radius: 7px;
+  box-sizing: border-box;
   font-family: "Raleway", sans-serif;
   font-size: 0.95rem;
   outline: none;
@@ -11268,7 +11283,7 @@ body:not(.profile-ready) .mobile-nav-profile {
 
 .account-section input:disabled {
   color: #3d352e;
-  background: #ffffff;
+  background: #faf8f4;
   opacity: 1;
   cursor: default;
 }
@@ -11282,7 +11297,7 @@ body:not(.profile-ready) .mobile-nav-profile {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-top: 28px;
+  margin-top: 18px;
 }
 
 .account-form-actions[hidden] {
@@ -11341,11 +11356,14 @@ body:not(.profile-ready) .mobile-nav-profile {
 
 .account-section .field-error {
   display: block;
-  min-height: 16px;
   margin-top: 5px;
   color: #b93c3c;
   font-family: "Raleway", sans-serif;
   font-size: 0.75rem;
+}
+
+.account-section .field-error:empty {
+  display: none;
 }
 
 .account-section .has-error input {
@@ -11353,7 +11371,7 @@ body:not(.profile-ready) .mobile-nav-profile {
 }
 
 #password-form {
-  margin-top: 24px;
+  margin-top: 0;
 }
 
 #password-form[hidden] {
@@ -11391,29 +11409,45 @@ body:not(.profile-ready) .mobile-nav-profile {
 
 @media (max-width: 600px) {
   .account-page {
-    padding: 32px 16px 50px;
+    padding: 26px 16px 40px;
   }
 
   .account-heading {
-    font-size: 2rem;
+    font-size: 1.9rem;
   }
 
   .account-sub {
-    margin-bottom: 24px;
+    margin-bottom: 18px;
     font-size: 0.88rem;
   }
 
   .account-section {
-    padding: 25px 28px;
+    padding: 18px 16px;
+  }
+
+  .account-section-header {
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .account-fields-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
   }
 
   .account-section-title {
     font-size: 1.05rem;
   }
 
+  .account-edit-btn {
+    padding: 7px 12px;
+    font-size: 0.75rem;
+  }
+
   .account-form-actions {
     align-items: stretch;
     flex-direction: column;
+    gap: 9px;
   }
 
   .account-form-actions .btn {
@@ -12748,21 +12782,39 @@ body:not(.profile-ready) .mobile-nav-profile {
 main.my-appointments-main {
   display: block;
   width: 100%;
-  max-width: 1400px;
+  max-width: 1320px;
   margin: 0 auto;
-  padding: 40px 24px 60px;
+  padding: 32px 28px 56px;
   box-sizing: border-box;
 }
 
 main.my-appointments-main .booking-intro {
-  margin-bottom: 24px;
+  margin-bottom: 12px;
+}
+
+main.my-appointments-main .booking-eyebrow {
+  margin-bottom: 8px;
+  color: var(--gold-dark);
+  letter-spacing: 0.12em;
+}
+
+main.my-appointments-main .booking-intro h1 {
+  margin-bottom: 8px;
+  font-size: clamp(2rem, 3.2vw, 2.65rem);
+  line-height: 1.12;
+}
+
+main.my-appointments-main .booking-intro p {
+  max-width: 560px;
+  font-size: 0.95rem;
+  line-height: 1.55;
 }
 
 .client-appointment-lists {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 24px;
-  margin: 0 0 32px;
+  gap: 28px;
+  margin: 0 0 24px;
 }
 
 .client-appointment-lists[hidden],
@@ -12774,29 +12826,43 @@ main.my-appointments-main .booking-intro {
 
 .appointment-history-link-wrap,
 .appointment-calendar-link-wrap {
-  margin: 0 0 24px;
+  margin: 0 0 16px;
 }
 
 .client-appointment-history-link {
   display: inline-flex;
   align-items: center;
-  min-height: 40px;
-  padding: 0 16px;
-  border: 1px solid #c9a84c;
-  border-radius: 4px;
-  background: #fff;
-  color: #4f421f;
+  justify-content: center;
+  gap: 10px;
+  min-height: 42px;
+  padding: 0 15px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--white);
+  color: var(--espresso);
   font: 600 13px "Raleway", sans-serif;
   text-decoration: none;
+  transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
 }
 
 .client-appointment-history-link:hover {
-  background: #f8f4e9;
+  border-color: var(--gold);
+  background: #fbf7ed;
+  color: var(--espresso-dark);
+}
+
+.client-appointment-history-link:focus-visible,
+.cal-nav-btn:focus-visible,
+.cal-toggle-btn:focus-visible,
+.cal-chip:focus-visible,
+#calWeekView .appt-chip-week:focus-visible {
+  outline: 3px solid rgba(180, 137, 42, 0.4);
+  outline-offset: 2px;
 }
 
 .client-appointment-section {
   min-width: 0;
-  border-top: 2px solid #c9a84c;
+  border-top: 2px solid var(--gold);
   padding-top: 14px;
 }
 
@@ -12837,10 +12903,16 @@ main.my-appointments-main .booking-intro {
   grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 16px;
-  padding: 14px 16px;
-  border: 1px solid #e3ded3;
-  border-radius: 6px;
-  background: #fff;
+  padding: 15px 16px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--white);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.client-appointment-card:hover {
+  border-color: #d7cba9;
+  box-shadow: 0 5px 16px rgba(48, 38, 24, 0.05);
 }
 
 .client-appointment-details h3,
@@ -12860,8 +12932,8 @@ main.my-appointments-main .booking-intro {
 }
 
 .client-appointment-status {
-  padding: 5px 8px;
-  border-radius: 4px;
+  padding: 6px 9px;
+  border-radius: 999px;
   background: #edf4ec;
   color: #32603a;
   font-size: 11px;
@@ -12890,17 +12962,20 @@ main.my-appointments-main .booking-intro {
 }
 
 .client-appointment-view {
-  padding: 8px 10px;
-  border: 1px solid #c9a84c;
-  border-radius: 4px;
-  background: #fff;
-  color: #4f421f;
+  min-height: 36px;
+  padding: 7px 12px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--white);
+  color: var(--espresso);
   font: 600 12px "Raleway", sans-serif;
   cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
 .client-appointment-view:hover {
-  background: #f8f4e9;
+  border-color: var(--gold);
+  background: #fbf7ed;
 }
 
 .client-appointment-empty {
@@ -12918,9 +12993,19 @@ main.my-appointments-main .booking-intro {
   font-size: 14px;
 }
 
+main.my-appointments-main .appointments-message:empty {
+  display: none;
+}
+
 /* ---------- Toolbar ---------- */
 .client-calendar {
   width: 100%;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--white);
+  box-shadow: 0 10px 28px rgba(48, 38, 24, 0.045);
+  box-sizing: border-box;
 }
 
 @media (max-width: 760px) {
@@ -12948,65 +13033,95 @@ main.my-appointments-main .booking-intro {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 20px;
   flex-wrap: wrap;
   margin-bottom: 16px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid var(--line);
 }
 
 .cal-toolbar-left {
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: space-between;
+  gap: 20px;
+  flex: 1;
+  min-width: 0;
 }
 
-.cal-icon {
-  color: #1a1a1a;
+.cal-period-heading {
+  min-width: 0;
+}
+
+.cal-toolbar-label {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--ink-soft);
+  font: 700 10px "Raleway", sans-serif;
+  letter-spacing: 0.12em;
 }
 
 .cal-title {
-  margin: 0 8px 0 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: #1a1a1a;
+  margin: 0;
+  color: var(--ink);
+  font: 600 clamp(1.1rem, 2.1vw, 1.4rem)/1.2 "Playfair Display", serif;
+  white-space: nowrap;
+}
+
+.cal-nav-group {
+  display: flex;
+  gap: 7px;
 }
 
 .cal-nav-btn,
 .cal-toggle-btn {
   font: inherit;
   cursor: pointer;
-  border: 1px solid #ddd;
-  background: #fff;
-  color: #1a1a1a;
-  border-radius: 6px;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  border: 1px solid var(--line);
+  background: var(--white);
+  color: var(--espresso);
+  border-radius: 7px;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
 .cal-nav-btn {
-  width: 32px;
-  height: 32px;
-  font-size: 15px;
+  width: 38px;
+  height: 38px;
+  font-size: 17px;
   line-height: 1;
 }
 
 .cal-nav-btn:hover,
 .cal-toggle-btn:hover {
-  background: #f5f5f5;
+  border-color: #d7cba9;
+  background: #fbf7ed;
 }
 
 .cal-toggle {
   display: flex;
-  gap: 8px;
+  flex: 0 0 auto;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: #f8f6f1;
 }
 
 .cal-toggle-btn {
-  padding: 8px 16px;
-  font-size: 14px;
+  min-width: 76px;
+  min-height: 34px;
+  padding: 6px 13px;
+  border-color: transparent;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .cal-toggle-btn.active {
-  background: #000;
-  border-color: #000;
-  color: #fff;
+  border-color: #ded0a7;
+  background: #eee4c9;
+  color: #57451e;
+  box-shadow: 0 1px 2px rgba(48, 38, 24, 0.08);
 }
 
 /* ---------- Grid ---------- */
@@ -13015,7 +13130,7 @@ main.my-appointments-main .booking-intro {
 }
 
 .cal-inner {
-  min-width: 760px;
+  min-width: 0;
 }
 
 #calWeekView.week-view {
@@ -13042,26 +13157,37 @@ main.my-appointments-main .booking-intro {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   text-align: center;
-  font-size: 12px;
-  letter-spacing: 0.04em;
-  color: #8a8a8a;
-  padding-bottom: 8px;
+  padding: 0 0 9px;
+  color: var(--ink-soft);
+  font: 700 10px "Raleway", sans-serif;
+  letter-spacing: 0.1em;
 }
 
 .cal-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  border-top: 1px solid #e6e6e6;
-  border-left: 1px solid #e6e6e6;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--line);
 }
 
 .cal-cell {
-  min-height: 110px;
-  padding: 8px 6px 6px;
-  border-right: 1px solid #e6e6e6;
-  border-bottom: 1px solid #e6e6e6;
+  min-height: 124px;
+  padding: 8px;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: var(--white);
   box-sizing: border-box;
   min-width: 0;
+}
+
+.cal-cell:hover:not(.other-month) {
+  background: #fdfaf4;
+}
+
+.cal-cell.is-today {
+  background: #fffdf7;
 }
 
 .cal-grid.is-week .cal-cell {
@@ -13069,32 +13195,30 @@ main.my-appointments-main .booking-intro {
 }
 
 .cal-cell.other-month {
-  background: #fcfcfc;
+  background: #faf8f3;
 }
 
 .cal-cell.other-month .cal-daynum {
-  color: #bdbdbd;
-}
-
-.cal-cell.other-month .cal-chip {
-  opacity: 0.55;
+  color: #b0a99b;
 }
 
 .cal-daynum {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 22px;
-  height: 22px;
-  margin-bottom: 6px;
-  font-size: 12px;
-  color: #1f3a5f;
+  min-width: 25px;
+  height: 25px;
+  margin: 0 0 7px 1px;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  color: var(--ink);
+  font: 600 12px "Raleway", sans-serif;
 }
 
 .cal-daynum.is-today {
-  border: 1.5px solid #c9a84a;
-  border-radius: 50%;
-  color: #1a1a1a;
+  border-color: #c9a84c;
+  background: #f6efd9;
+  color: #604b1d;
 }
 
 /* ---------- Appointment chips ---------- */
@@ -13102,46 +13226,82 @@ main.my-appointments-main .booking-intro {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
   width: 100%;
-  margin-bottom: 4px;
-  padding: 5px 8px;
+  min-width: 0;
+  margin-bottom: 5px;
+  padding: 6px 7px;
   font: inherit;
   font-size: 11px;
   text-align: left;
-  color: #4a2a2a;
-  background: #f7e8e8;
+  color: #55451f;
+  background: #f7f1e2;
   border: none;
-  border-left: 3px solid #c0454a;
-  border-radius: 4px;
+  border-left: 3px solid var(--gold-dark);
+  border-radius: 5px;
   cursor: pointer;
   box-sizing: border-box;
-  transition: filter 0.15s;
+  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .cal-chip:hover {
-  filter: brightness(0.96);
+  background: #f1e7cc;
+  box-shadow: 0 2px 6px rgba(48, 38, 24, 0.08);
 }
 
 .cal-chip-name {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-weight: 600;
 }
 
 .cal-chip-time {
   flex-shrink: 0;
-  color: #7a5a5a;
+  color: #75643d;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.cal-chip.status-confirmed {
+  border-left-color: #668464;
+  background: #edf3ec;
+  color: #334d32;
+}
+
+.cal-chip.status-pending {
+  border-left-color: #b38a3d;
+  background: #faf2dd;
+  color: #614c22;
+}
+
+.cal-chip.status-in-progress {
+  border-left-color: #a56d38;
+  background: #f5ece1;
+  color: #624326;
+}
+
+.cal-chip.status-completed {
+  border-left-color: #7185a0;
+  background: #edf1f6;
+  color: #3b506b;
+}
+
+.cal-chip.status-no-show {
+  border-left-color: #a7645b;
+  background: #f5eae8;
+  color: #75433c;
 }
 
 .cal-chip.is-past {
-  opacity: 0.6;
+  opacity: 0.72;
 }
 
 .cal-chip.is-cancelled {
-  background: #efefef;
-  border-left-color: #a5a5a5;
-  color: #8a8a8a;
+  background: #efefed;
+  border-left-color: #aaa69d;
+  color: #77736a;
 }
 
 .cal-chip.is-cancelled .cal-chip-name {
@@ -13151,35 +13311,199 @@ main.my-appointments-main .booking-intro {
 #calWeekView .appt-chip-week {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  align-items: flex-start;
+  gap: 3px;
+  overflow: hidden;
   text-align: left;
   font: inherit;
-  color: #4a2a2a;
-  background: #f7e8e8;
-  border-left: 3px solid #c0454a;
-  transition: filter 0.15s;
+  color: #55451f;
+  background: #f7f1e2;
+  border-left: 3px solid var(--gold-dark);
+  border-radius: 5px;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
 #calWeekView .appt-chip-week:hover {
-  filter: brightness(0.96);
+  background: #f1e7cc;
 }
 
 #calWeekView .appt-chip-week .cal-chip-time {
   font-size: 10px;
 }
 
+#calWeekView .appt-chip-week.status-confirmed {
+  border-left-color: #668464;
+  background: #edf3ec;
+  color: #334d32;
+}
+
+#calWeekView .appt-chip-week.status-pending {
+  border-left-color: #b38a3d;
+  background: #faf2dd;
+  color: #614c22;
+}
+
+#calWeekView .appt-chip-week.status-in-progress {
+  border-left-color: #a56d38;
+  background: #f5ece1;
+  color: #624326;
+}
+
+#calWeekView .appt-chip-week.status-completed {
+  border-left-color: #7185a0;
+  background: #edf1f6;
+  color: #3b506b;
+}
+
+#calWeekView .appt-chip-week.status-no-show {
+  border-left-color: #a7645b;
+  background: #f5eae8;
+  color: #75433c;
+}
+
+.client-calendar .cal-chip:hover,
+.client-calendar #calWeekView .appt-chip-week:hover {
+  filter: brightness(0.96);
+  box-shadow: 0 2px 6px rgba(48, 38, 24, 0.08);
+}
+
 #calWeekView .appt-chip-week.is-past {
-  opacity: 0.6;
+  opacity: 0.72;
 }
 
 #calWeekView .appt-chip-week.is-cancelled {
-  background: #efefef;
-  border-left-color: #a5a5a5;
-  color: #8a8a8a;
+  background: #efefed;
+  border-left-color: #aaa69d;
+  color: #77736a;
 }
 
 #calWeekView .appt-chip-week.is-cancelled .cal-chip-name {
   text-decoration: line-through;
+}
+
+@media (max-width: 760px) {
+  main.my-appointments-main {
+    padding: 28px 20px 44px;
+  }
+
+  .client-calendar {
+    padding: 14px;
+  }
+
+  .cal-toolbar {
+    align-items: stretch;
+  }
+
+  .cal-toolbar-left {
+    flex-basis: 100%;
+  }
+
+  .cal-toggle {
+    margin-left: auto;
+  }
+
+  .cal-cell {
+    min-height: 108px;
+    padding: 6px;
+  }
+}
+
+@media (max-width: 480px) {
+  main.my-appointments-main {
+    padding: 24px 12px 40px;
+  }
+
+  main.my-appointments-main .booking-intro {
+    margin-bottom: 10px;
+  }
+
+  main.my-appointments-main .booking-intro h1 {
+    font-size: 2rem;
+  }
+
+  .client-calendar {
+    padding: 11px 9px;
+    border-radius: 10px;
+  }
+
+  .cal-toolbar {
+    gap: 12px;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+  }
+
+  .cal-toolbar-left {
+    gap: 8px;
+  }
+
+  .cal-title {
+    font-size: 1.05rem;
+  }
+
+  .cal-toolbar-label {
+    font-size: 9px;
+  }
+
+  .cal-nav-group {
+    gap: 5px;
+  }
+
+  .cal-nav-btn {
+    width: 35px;
+    height: 35px;
+  }
+
+  .cal-toggle {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .cal-toggle-btn {
+    flex: 1;
+    min-height: 38px;
+  }
+
+  .cal-weekdays {
+    padding-bottom: 7px;
+    font-size: 9px;
+    letter-spacing: 0.04em;
+  }
+
+  .cal-cell {
+    min-height: 88px;
+    padding: 4px 3px;
+  }
+
+  .cal-daynum {
+    min-width: 22px;
+    height: 22px;
+    margin: 0 0 4px;
+    font-size: 10px;
+  }
+
+  .cal-chip {
+    display: block;
+    margin-bottom: 3px;
+    padding: 4px 3px;
+    border-left-width: 2px;
+    border-radius: 4px;
+  }
+
+  .cal-chip-name {
+    display: block;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow-wrap: normal;
+    font-size: 9px;
+    line-height: 1.15;
+  }
+
+  .cal-chip-time {
+    display: block;
+    margin-top: 3px;
+    font-size: 8px;
+    line-height: 1.1;
+  }
 }
 
 /* ---------- Details modal ---------- */
@@ -24821,7 +25145,7 @@ body.customer-theme-dark .appointment-process__icon svg {
 
 body.customer-theme-dark .client-appointment-section-heading h2,
 body.customer-theme-dark .cal-title,
-body.customer-theme-dark .cal-icon,
+body.customer-theme-dark .cal-toolbar-label,
 body.customer-theme-dark .cal-daynum,
 body.customer-theme-dark .cal-daynum.is-today,
 body.customer-theme-dark .appt-modal-card h3,
@@ -24846,6 +25170,21 @@ body.customer-theme-dark .cal-nav-btn:hover,
 body.customer-theme-dark .cal-toggle-btn:hover {
   background: #373126;
   color: #ead9a9;
+}
+
+body.customer-theme-dark .client-calendar {
+  border-color: #3d3e39;
+  background: #1f201d;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+}
+
+body.customer-theme-dark .cal-toolbar {
+  border-bottom-color: #3d3e39;
+}
+
+body.customer-theme-dark .cal-toggle {
+  border-color: #41413b;
+  background: #292a27;
 }
 
 body.customer-theme-dark .cal-toggle-btn.active {
@@ -24899,13 +25238,61 @@ body.customer-theme-dark .appt-rating-section {
   border-color: #41413b;
 }
 
+body.customer-theme-dark .cal-cell:not(.other-month) {
+  background: #222421;
+}
+
+body.customer-theme-dark .cal-cell.is-today {
+  background: #292820;
+}
+
+body.customer-theme-dark .cal-cell:hover:not(.other-month) {
+  background: #292a27;
+}
+
 body.customer-theme-dark .cal-daynum.is-today {
   border-color: #d8bb73;
+  background: #373126;
 }
 
 body.customer-theme-dark .cal-chip,
 body.customer-theme-dark #calWeekView .appt-chip-week {
   border-left-color: #a18447;
+}
+
+body.customer-theme-dark .cal-chip.status-confirmed,
+body.customer-theme-dark #calWeekView .appt-chip-week.status-confirmed {
+  border-left-color: #83a17c;
+  background: #29352a;
+  color: #d5e0d1;
+}
+
+body.customer-theme-dark .cal-chip.status-pending,
+body.customer-theme-dark #calWeekView .appt-chip-week.status-pending {
+  border-left-color: #d0ad63;
+  background: #373126;
+  color: #f0dfb0;
+}
+
+body.customer-theme-dark .cal-chip.status-in-progress,
+body.customer-theme-dark #calWeekView .appt-chip-week.status-in-progress {
+  border-left-color: #c18b55;
+  background: #382f25;
+  color: #ead4b5;
+}
+
+body.customer-theme-dark .cal-chip.status-completed,
+body.customer-theme-dark #calWeekView .appt-chip-week.status-completed {
+  border-left-color: #8ca0bc;
+  background: #29313c;
+  color: #d6dfeb;
+}
+
+body.customer-theme-dark .cal-chip.status-no-show,
+body.customer-theme-dark #calWeekView .appt-chip-week.status-no-show {
+  border-left-color: #bd8076;
+  background: #3a2c2a;
+  color: #ebd0cb;
 }
 
 body.customer-theme-dark .team-info {

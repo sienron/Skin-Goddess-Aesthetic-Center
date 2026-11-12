@@ -74,9 +74,11 @@ function validCustomerDetails() {
   };
 }
 
-async function invokeCheckout(body, isoDate = '2026-01-04T22:00:00.000Z', serviceOverrides = {}) {
+async function invokeCheckout(body, isoDate = '2026-01-04T22:00:00.000Z', serviceOverrides = {}, options = {}) {
   const queryCalls = [];
   let checkoutValues;
+  let checkoutAttributes;
+  const previousAppBaseUrl = process.env.APP_BASE_URL;
   db.query = async (sql, values = []) => {
       if (/FROM clinic_operating_hours/.test(sql)) return { rows: require('../utils/clinicSchedule').DEFAULT_HOURS };
       if (/SELECT closure_id, closure_date::text, reason FROM clinic_closures/.test(sql)) return { rows: [] };
@@ -111,30 +113,46 @@ async function invokeCheckout(body, isoDate = '2026-01-04T22:00:00.000Z', servic
     if (/INSERT INTO paymongo_checkout_sessions/.test(sql)) checkoutValues = values;
     return { rows: [] };
   };
-  global.fetch = async () => ({
-    ok: true,
-    status: 201,
-    async json() {
-      return {
-        data: {
-          id: 'cs_test_local',
-          attributes: { checkout_url: 'https://checkout.paymongo.com/cs_test_local', livemode: false }
-        }
-      };
-    }
-  });
+  global.fetch = async (url, requestOptions) => {
+    checkoutAttributes = JSON.parse(requestOptions.body).data.attributes;
+    return {
+      ok: true,
+      status: 201,
+      async json() {
+        return {
+          data: {
+            id: 'cs_test_local',
+            attributes: { checkout_url: 'https://checkout.paymongo.com/cs_test_local', livemode: false }
+          }
+        };
+      }
+    };
+  };
 
   const response = responseCapture();
+  const requestOrigin = options.requestOrigin || 'http://localhost:3000';
+  const originUrl = new URL(requestOrigin);
   try {
+    if (options.appBaseUrl) process.env.APP_BASE_URL = options.appBaseUrl;
     await withFrozenDate(isoDate, () => routeHandler('/paymongo/checkout-session', 'post')({
       body: { serviceId: 3, date: '2026-01-05', time: '9:00 AM', ...body },
-      session: { userId: 7 }
+      session: { userId: 7 },
+      protocol: originUrl.protocol.slice(0, -1),
+      get(name) {
+        if (name === 'origin') return requestOrigin;
+        return options.requestHost || originUrl.host;
+      }
     }, response));
   } finally {
     db.query = originalQuery;
     global.fetch = originalFetch;
+    if (previousAppBaseUrl === undefined) {
+      delete process.env.APP_BASE_URL;
+    } else {
+      process.env.APP_BASE_URL = previousAppBaseUrl;
+    }
   }
-  return { response, queryCalls, checkoutValues };
+  return { response, queryCalls, checkoutValues, checkoutAttributes };
 }
 
 test('the shared booking rule accepts the exact three-hour boundary and exposes half-hour intervals', async () => {
@@ -177,6 +195,29 @@ test('checkout rejects a booking inside three hours and accepts the boundary wit
   assert.equal(afterFour.response.statusCode, 201);
   assert.equal(afterFour.checkoutValues[6], '16:30');
   assert.equal(afterFour.checkoutValues[7], '18:00');
+});
+
+test('PayMongo return URLs use the same origin as the signed-in booking request', async () => {
+  setTestPayMongoEnvironment();
+  const result = await invokeCheckout(validCustomerDetails(), undefined, {}, {
+    requestOrigin: 'https://clinic.example',
+    appBaseUrl: 'https://configured.example'
+  });
+
+  assert.equal(result.response.statusCode, 201);
+  assert.equal(new URL(result.checkoutAttributes.success_url).origin, 'https://clinic.example');
+  assert.equal(new URL(result.checkoutAttributes.cancel_url).origin, 'https://clinic.example');
+});
+
+test('checkout rejects a request origin that does not match the current host', async () => {
+  setTestPayMongoEnvironment();
+  const result = await invokeCheckout(validCustomerDetails(), undefined, {}, {
+    requestOrigin: 'https://clinic.example',
+    requestHost: 'attacker.example'
+  });
+
+  assert.equal(result.response.statusCode, 403);
+  assert.equal(result.checkoutAttributes, undefined);
 });
 
 test('checkout reserves service duration plus buffer and rejects lunch or closing overruns', async () => {

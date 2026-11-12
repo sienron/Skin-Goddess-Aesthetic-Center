@@ -2711,6 +2711,21 @@ router.post('/paymongo/checkout-session', requireActiveAccount, blockDemoCustome
     } catch (error) {
       return res.status(503).json({ message: 'Set a valid APP_BASE_URL before starting checkout.' });
     }
+
+    const requestOrigin = req.get('origin');
+    if (requestOrigin) {
+      try {
+        const originUrl = new URL(requestOrigin);
+        const expectedOrigin = new URL(`${req.protocol}://${req.get('host')}`).origin;
+        if (originUrl.origin !== expectedOrigin) {
+          return res.status(403).json({ message: 'Checkout origin could not be verified.' });
+        }
+        baseUrl = new URL(originUrl.origin);
+      } catch (error) {
+        return res.status(400).json({ message: 'Checkout origin is invalid.' });
+      }
+    }
+
     const localHost = ['localhost', '127.0.0.1', '::1'].includes(baseUrl.hostname);
     if (baseUrl.protocol !== 'https:' && !(config.mode === 'test' && localHost && baseUrl.protocol === 'http:')) {
       return res.status(503).json({ message: 'APP_BASE_URL must use HTTPS for live checkout.' });
