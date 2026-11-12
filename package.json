@@ -30,7 +30,7 @@
         "test:finance:integration": "node --test tests/finance.integration.test.js",
         "test:finance:ux": "node --test tests/finance-ux.test.js",
         "test:security": "node --test tests/login-security.test.js tests/appointment-booking-access.test.js",
-        "test:security:mfa": "node --test tests/privileged-mfa.test.js tests/recovery-codes-ui.test.js tests/session-security.test.js tests/user-management-xss.test.js",
+        "test:security:mfa": "node --test tests/privileged-mfa.test.js tests/recovery-codes-ui.test.js tests/session-security.test.js tests/session-lifetime.test.js tests/user-management-xss.test.js",
         "test:security:cms-inventory": "node --test tests/content-public-access.test.js tests/inventory-xss.test.js",
         "test:security:headers-inquiries": "node --test tests/security-headers.test.js tests/inquiries-rate-limit.test.js",
         "test:security:invoice-csv": "node --test tests/invoice-upload-security.test.js tests/csv-formula-injection.test.js",

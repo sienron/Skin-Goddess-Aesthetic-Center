@@ -6,7 +6,7 @@ const { requireRole } = require('../middleware/auth');
 const { requirePrivilegedMfa } = require('../middleware/privilegedMfa');
 const { assertValidRuntimeSecurityConfig } = require('../utils/runtimeSecurityConfig');
 const { isDemoCustomer } = require('../utils/demoMode');
-const { PRIVILEGED_SESSION_MAX_AGE_MS } = require('../utils/privilegedMfa');
+const { STAY_SIGNED_IN_MAX_AGE_MS } = require('../utils/sessionSecurity');
 
 const originalQuery = db.query;
 const originalTransaction = db.transaction;
@@ -229,7 +229,8 @@ test('an expired privileged session is revoked before a protected API can run', 
   const session = {
     userId: 7,
     mfaVerifiedAt: new Date('2026-11-08T00:00:00.000Z').getTime(),
-    privilegedMfaAuthenticatedAt: Date.now() - PRIVILEGED_SESSION_MAX_AGE_MS,
+    privilegedMfaAuthenticatedAt: Date.now() - STAY_SIGNED_IN_MAX_AGE_MS,
+    staySignedIn: true,
     destroy(callback) {
       this.destroyed = true;
       callback(null);

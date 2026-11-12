@@ -60,6 +60,10 @@ function keywordFaqAnswer(question) {
   return 'I can help with basic clinic information: services and prices, booking, opening hours, location, or contact details. For more help, call +63 945 611 9436 or email info@skingoddess.ph.';
 }
 
+function sendKeywordFaqFallback(res, question) {
+  return res.json({ answer: keywordFaqAnswer(question), fallback: true });
+}
+
 const chatLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 20,
@@ -90,7 +94,8 @@ router.post('/', chatLimiter, async (req, res) => {
 
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
-    return res.status(503).json({ message: 'The AI assistant is not configured yet. Please contact the clinic for help.' });
+    console.warn('Groq API key is not configured; returning a keyword-based clinic FAQ answer.');
+    return sendKeywordFaqFallback(res, validMessages[validMessages.length - 1].content);
   }
 
   try {
@@ -114,30 +119,27 @@ router.post('/', chatLimiter, async (req, res) => {
 
     if (!response.ok) {
       console.error(`Groq chat request failed with status ${response.status}.`);
-      if (response.status === 401 || response.status === 403) {
-        return res.status(502).json({ message: 'Groq rejected the API key. Check that GROQ_API_KEY is valid and active.' });
-      }
       if (response.status === 429) {
         console.warn('Groq chat usage limit reached; returning a keyword-based clinic FAQ answer.');
-        return res.json({ answer: keywordFaqAnswer(validMessages[validMessages.length - 1].content) });
+      } else if (response.status === 401 || response.status === 403) {
+        console.warn('Groq rejected the API key or account; returning a keyword-based clinic FAQ answer.');
+      } else {
+        console.warn('Groq request failed; returning a keyword-based clinic FAQ answer.');
       }
-      if (response.status === 400) {
-        return res.status(502).json({ message: 'Groq rejected the model or request settings. Check GROQ_MODEL and try again.' });
-      }
-      return res.status(502).json({ message: 'The AI assistant is temporarily unavailable. Please try again shortly.' });
+      return sendKeywordFaqFallback(res, validMessages[validMessages.length - 1].content);
     }
 
     const result = await response.json();
     const answer = result.choices?.[0]?.message?.content;
     if (typeof answer !== 'string' || !answer.trim()) {
       console.error('Groq chat response did not contain an assistant message.');
-      return res.status(502).json({ message: 'The AI assistant returned an invalid response. Please try again.' });
+      return sendKeywordFaqFallback(res, validMessages[validMessages.length - 1].content);
     }
 
     return res.json({ answer: answer.trim() });
   } catch (error) {
     console.error('Groq chat request error:', error);
-    return res.status(502).json({ message: 'The AI assistant is temporarily unavailable. Please try again shortly.' });
+    return sendKeywordFaqFallback(res, validMessages[validMessages.length - 1].content);
   }
 });
 

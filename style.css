@@ -20437,10 +20437,10 @@ body.homepage .homepage-service-panel {
   min-height: clamp(340px, 49vh, 510px);
   overflow: hidden;
   border: 0;
-  border-right: 1px solid rgba(255, 255, 255, .4);
+  border-right: 1px solid rgba(115, 85, 27, .22);
   border-radius: 0;
-  background: #34291f;
-  color: #fff;
+  background: #C9A84C;
+  color: #34291f;
   isolation: isolate;
   box-shadow: 0 12px 34px rgba(54, 40, 25, .10);
   transition: flex-grow .65s cubic-bezier(.22, .61, .36, 1), min-height .45s cubic-bezier(.22, .61, .36, 1), border-color .35s ease, box-shadow .35s ease;
@@ -20448,6 +20448,18 @@ body.homepage .homepage-service-panel {
 
 body.homepage .homepage-service-panel:last-child {
   border-right: 0;
+}
+
+body.homepage .homepage-service-panel:nth-child(2) {
+  background: #F3EBDD;
+}
+
+body.homepage .homepage-service-panel:nth-child(3) {
+  background: #E8CF82;
+}
+
+body.homepage .homepage-service-panel:nth-child(4) {
+  background: #F8F2E7;
 }
 
 body.homepage .hero.hero-static>.homepage-service-panels-section,
@@ -20460,8 +20472,20 @@ body.homepage .homepage-service-panel::after {
   z-index: -1;
   inset: 0;
   content: "";
-  background: linear-gradient(180deg, rgba(28, 22, 17, .02) 12%, rgba(28, 22, 17, .12) 36%, rgba(28, 22, 17, .88) 100%);
-  transition: background-color .4s ease;
+  background: rgba(201, 168, 76, .66);
+  pointer-events: none;
+}
+
+body.homepage .homepage-service-panel:nth-child(2)::after {
+  background: rgba(243, 235, 221, .70);
+}
+
+body.homepage .homepage-service-panel:nth-child(3)::after {
+  background: rgba(232, 207, 130, .66);
+}
+
+body.homepage .homepage-service-panel:nth-child(4)::after {
+  background: rgba(248, 242, 231, .70);
 }
 
 body.homepage .homepage-service-panel>img {
@@ -20473,7 +20497,7 @@ body.homepage .homepage-service-panel>img {
   height: 100%;
   object-fit: cover;
   object-position: center;
-  transition: transform .9s cubic-bezier(.22, .61, .36, 1), filter .45s ease;
+  transition: transform .9s cubic-bezier(.22, .61, .36, 1);
 }
 
 body.homepage .homepage-service-panel__content {
@@ -20490,7 +20514,7 @@ body.homepage .homepage-service-panel__number {
   align-items: center;
   gap: 9px;
   margin-bottom: 12px;
-  color: #efd381;
+  color: #73551B;
   font-size: 12px;
   font-weight: 600;
   letter-spacing: .14em;
@@ -20500,11 +20524,11 @@ body.homepage .homepage-service-panel__number::after {
   width: 28px;
   height: 1px;
   content: "";
-  background: rgba(239, 211, 129, .7);
+  background: currentColor;
 }
 
 body.homepage .homepage-service-panel__title {
-  color: #fff;
+  color: #34291f;
   font-family: "Playfair Display", var(--font-display);
   font-size: clamp(1.2rem, 1.75vw, 1.8rem);
   font-weight: 600;
@@ -20516,7 +20540,7 @@ body.homepage .homepage-service-panel__description {
   max-height: 0;
   margin-top: 0;
   overflow: hidden;
-  color: rgba(255, 255, 255, .88);
+  color: #514638;
   font-size: 14px;
   line-height: 1.55;
   opacity: 0;
@@ -20530,7 +20554,7 @@ body.homepage .homepage-service-panel__link {
   max-height: 0;
   margin-top: 0;
   overflow: hidden;
-  color: #efd381;
+  color: #73551B;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: .12em;
@@ -20573,7 +20597,7 @@ body.homepage .homepage-service-panel__link {
   }
 
   body.homepage .homepage-service-panel__link:hover {
-    color: #fff;
+    color: #34291f;
   }
 }
 
@@ -20602,7 +20626,7 @@ body.homepage .homepage-service-panel__link {
   }
 
   body.homepage .homepage-service-panel:nth-child(odd) {
-    border-right: 1px solid rgba(255, 255, 255, .4);
+    border-right: 1px solid rgba(115, 85, 27, .22);
   }
 
   body.homepage .homepage-service-panel:nth-child(even) {
@@ -20610,7 +20634,7 @@ body.homepage .homepage-service-panel__link {
   }
 
   body.homepage .homepage-service-panel:nth-child(-n + 2) {
-    border-bottom: 1px solid rgba(255, 255, 255, .4);
+    border-bottom: 1px solid rgba(115, 85, 27, .22);
   }
 }
 
@@ -20659,7 +20683,7 @@ body.homepage .homepage-service-panel__link {
   body.homepage .homepage-service-panel {
     min-height: 230px;
     border-right: 0;
-    border-bottom: 1px solid rgba(255, 255, 255, .4);
+    border-bottom: 1px solid rgba(115, 85, 27, .22);
   }
 
   body.homepage .homepage-service-panel:last-child {
@@ -20677,6 +20701,7 @@ body.homepage .homepage-service-panel__link {
   body.homepage .homepage-service-panel__title {
     font-size: clamp(1.35rem, 6vw, 1.75rem);
   }
+
 }
 
 @media (max-height: 620px) and (min-width: 701px) {
@@ -20714,8 +20739,8 @@ body.homepage .homepage-service-panel__link {
     top: 16px;
     right: 16px;
     padding: 7px 9px;
-    border: 1px solid rgba(239, 211, 129, .62);
-    color: #fff4d1;
+    border: 1px solid rgba(115, 85, 27, .45);
+    color: #73551B;
     content: "TAP TO DISCOVER";
     font-size: 8px;
     font-weight: 700;
