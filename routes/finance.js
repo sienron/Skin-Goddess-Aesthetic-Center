@@ -1585,16 +1585,37 @@ const EXCEL_STYLE = {
   redFill: 'FFFBEAEA',
 };
 
-function reportStatusStyle(value) {
+const FINANCIAL_STATEMENT_STYLE = {
+  navy: 'FF332F29',
+  blue: 'FFC3A45D',
+  slate: 'FF716B61',
+  band: 'FFFAF8F3',
+  total: 'FFF2EBDD',
+  border: 'FFE2DDD2',
+  section: 'FFF7F2E8',
+  green: 'FF6C572A',
+  greenFill: 'FFF7F1E3',
+  amber: 'FF806A38',
+  amberFill: 'FFFAF4E6',
+  red: 'FF8C4B45',
+  redFill: 'FFF8EEEB',
+  cashIn: 'FFF7F1E3',
+  cashOut: 'FFF1EFEB',
+  finalTotal: 'FFE9DDBD',
+};
+
+const PESO_NUMBER_FORMAT = '₱#,##0.00;[Red]-₱#,##0.00';
+
+function reportStatusStyle(value, style = EXCEL_STYLE) {
   const status = String(value ?? '').trim().toLowerCase();
   if (/^(overdue|unpaid|critical|out of stock|error|negative)\b/.test(status)) {
-    return { color: EXCEL_STYLE.red, fill: EXCEL_STYLE.redFill };
+    return { color: style.red, fill: style.redFill };
   }
   if (/^(partially paid|not recorded|not tracked|not available|not determinable|incomplete|low stock|voided|attention)\b/.test(status)) {
-    return { color: EXCEL_STYLE.amber, fill: EXCEL_STYLE.amberFill };
+    return { color: style.amber, fill: style.amberFill };
   }
   if (/^(paid|completed|healthy|in stock|posted|active|positive)\b/.test(status)) {
-    return { color: EXCEL_STYLE.green, fill: EXCEL_STYLE.greenFill };
+    return { color: style.green, fill: style.greenFill };
   }
   return null;
 }
@@ -1802,7 +1823,12 @@ function addProfessionalReportSheet(workbook, options) {
   const {
     name, title, periodLabel, generatedAt, description, headers, widths, records,
     dateColumns = [], amountColumns = [], quantityColumns = [], filter = true, totals = [],
+    style = EXCEL_STYLE, currencyFormat = '"PHP" #,##0.00;[Red]-"PHP" #,##0.00',
+    orientation = 'landscape', sectionColumns = [1], inflowColumns = [], outflowColumns = [],
+    inflowLabels = [], outflowLabels = [], highlightColumns = [], emphasisLabels = [],
+    finalTotalLabels = [], autoRowHeight = false, filterEmpty = false,
   } = options;
+  const isBranded = style === FINANCIAL_STATEMENT_STYLE;
   const worksheet = workbook.addWorksheet(name);
   worksheet.columns = widths.map((width) => ({ width }));
   const columnCount = headers.length;
@@ -1820,16 +1846,18 @@ function addProfessionalReportSheet(workbook, options) {
     cell.alignment = { vertical: 'middle', wrapText: true };
   });
   worksheet.getCell(1, 1).font = { name: 'Aptos', bold: true, size: 15, color: { argb: 'FFFFFFFF' } };
-  worksheet.getCell(1, 1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: EXCEL_STYLE.navy } };
-  worksheet.getCell(2, 1).font = { name: 'Aptos', bold: true, size: 13, color: { argb: EXCEL_STYLE.navy } };
-  worksheet.getCell(3, 1).font = { name: 'Aptos', bold: true, size: 10, color: { argb: EXCEL_STYLE.slate } };
-  worksheet.getCell(4, 1).font = { name: 'Aptos', size: 9, color: { argb: EXCEL_STYLE.slate } };
-  worksheet.getCell(5, 1).font = { name: 'Aptos', italic: true, size: 9, color: { argb: EXCEL_STYLE.slate } };
-  worksheet.getRow(1).height = 28;
-  worksheet.getRow(2).height = 24;
+  worksheet.getCell(1, 1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: style.navy } };
+  worksheet.getCell(2, 1).font = { name: 'Aptos', bold: true, size: isBranded ? 16 : 13, color: { argb: style.navy } };
+  if (isBranded) worksheet.getCell(2, 1).border = { bottom: { style: 'thin', color: { argb: style.blue } } };
+  worksheet.getCell(3, 1).font = { name: 'Aptos', bold: true, size: 10, color: { argb: style.slate } };
+  worksheet.getCell(4, 1).font = { name: 'Aptos', size: 9, color: { argb: style.slate } };
+  worksheet.getCell(5, 1).font = { name: 'Aptos', italic: true, size: 9, color: { argb: style.slate } };
+  worksheet.getRow(1).height = isBranded ? 30 : 28;
+  worksheet.getRow(2).height = isBranded ? 28 : 24;
   worksheet.getRow(3).height = 20;
   worksheet.getRow(4).height = 18;
   worksheet.getRow(5).height = 42;
+  if (style !== EXCEL_STYLE) worksheet.properties.tabColor = { argb: style.blue };
 
   const headerRow = 7;
   headers.forEach((header, index) => { worksheet.getCell(headerRow, index + 1).value = header; });
@@ -1837,7 +1865,7 @@ function addProfessionalReportSheet(workbook, options) {
   const dataEndRow = records.length ? worksheet.lastRow.number : headerRow;
   dateColumns.forEach((column) => { worksheet.getColumn(column).numFmt = 'dd mmm yyyy'; });
   amountColumns.forEach((column) => {
-    worksheet.getColumn(column).numFmt = '"PHP" #,##0.00;[Red]-"PHP" #,##0.00';
+    worksheet.getColumn(column).numFmt = currencyFormat;
   });
   quantityColumns.forEach((column) => { worksheet.getColumn(column).numFmt = '#,##0'; });
 
@@ -1845,20 +1873,28 @@ function addProfessionalReportSheet(workbook, options) {
   header.height = 38;
   header.eachCell({ includeEmpty: true }, (cell) => {
     cell.font = { name: 'Aptos', bold: true, size: 10, color: { argb: 'FFFFFFFF' } };
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: EXCEL_STYLE.navy } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: style.navy } };
     cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
-    cell.border = { bottom: { style: 'medium', color: { argb: EXCEL_STYLE.blue } } };
+    cell.border = { bottom: { style: 'medium', color: { argb: style.blue } } };
   });
   for (let rowNumber = headerRow + 1; rowNumber <= dataEndRow; rowNumber += 1) {
     const row = worksheet.getRow(rowNumber);
     const record = records[rowNumber - headerRow - 1];
-    const isSection = record && record[0] && record.slice(1).every((value) => value === '' || value == null);
-    const label = String(record?.[0] || '');
-    const isSubtotal = /^Total\b|^Net income\b|^Balance check\b/i.test(label);
-    row.height = 30;
+    const sectionColumn = record && sectionColumns.find((column) => (
+      Boolean(record[column - 1]) && record.every((value, index) => (
+        index === column - 1 || value === '' || value == null
+      ))
+    ));
+    const isSection = Boolean(sectionColumn);
+    const label = String(record?.find((value) => typeof value === 'string' && value.trim()) || '').trim();
+    const isFinalTotal = finalTotalLabels.includes(label);
+    const isSubtotal = isFinalTotal || emphasisLabels.includes(label)
+      || /^Total\b|^Net income\b|^Balance check\b/i.test(label)
+      || (isBranded && /\bsubtotal\b/i.test(label));
+    let lineCount = 1;
     row.eachCell({ includeEmpty: true }, (cell, columnNumber) => {
       const font = { name: 'Aptos', size: 10, bold: Boolean(isSection || isSubtotal) };
-      if (isSection || isSubtotal) font.color = { argb: EXCEL_STYLE.navy };
+      if (isSection || isSubtotal) font.color = { argb: style.navy };
       cell.font = font;
       cell.alignment = {
         vertical: 'middle',
@@ -1867,45 +1903,87 @@ function addProfessionalReportSheet(workbook, options) {
           : dateColumns.includes(columnNumber) ? 'center' : 'left',
         wrapText: true,
       };
-      cell.border = { bottom: { style: 'hair', color: { argb: EXCEL_STYLE.border } } };
+      cell.border = { bottom: { style: 'hair', color: { argb: style.border } } };
       if (isSubtotal) {
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: EXCEL_STYLE.total } };
-        cell.border = { top: { style: 'medium', color: { argb: EXCEL_STYLE.blue } } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: isFinalTotal ? style.finalTotal || style.total : style.total } };
+        cell.border = { top: { style: 'medium', color: { argb: style.blue } } };
       } else if (isSection) {
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: EXCEL_STYLE.section } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: style.section } };
       } else if ((rowNumber - headerRow) % 2 === 0) {
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: EXCEL_STYLE.band } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: style.band } };
       }
-      const status = reportStatusStyle(cell.value);
-      if (status && !isSection && !isSubtotal) {
+      const unavailableValue = /^(not recorded|not tracked|not available|not determinable|incomplete)\b/i
+        .test(String(cell.value ?? '').trim());
+      const status = reportStatusStyle(cell.value, style);
+      if (status && !isSection && (!isSubtotal || (isBranded && unavailableValue))) {
         cell.font = { ...cell.font, color: { argb: status.color }, bold: true };
-        if (/(status|condition)/i.test(headers[columnNumber - 1] || '')) {
+        if (isBranded && unavailableValue) {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: status.fill } };
+        } else if (/(status|condition)/i.test(headers[columnNumber - 1] || '')) {
           cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: status.fill } };
         }
       }
       if (typeof cell.value === 'number' && cell.value < 0) {
-        cell.font = { ...cell.font, color: { argb: EXCEL_STYLE.red }, bold: true };
+        cell.font = { ...cell.font, color: { argb: style.red }, bold: true };
+      }
+      if (typeof cell.value === 'number' && inflowColumns.includes(columnNumber)) {
+        cell.font = { ...cell.font, color: { argb: style.green }, bold: true };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: style.cashIn || style.greenFill } };
+      }
+      if (typeof cell.value === 'number' && outflowColumns.includes(columnNumber)) {
+        cell.font = { ...cell.font, color: { argb: style.slate }, bold: true };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: style.cashOut || style.band } };
+      }
+      if (typeof cell.value === 'number' && highlightColumns.includes(columnNumber)) {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: style.cashIn || style.total } };
+      }
+      if (autoRowHeight) {
+        const value = cell.value instanceof Date ? cell.value.toISOString().slice(0, 10) : String(cell.value ?? '');
+        const width = Math.max(10, worksheet.getColumn(columnNumber).width || 12);
+        lineCount = Math.max(lineCount, value.split(/\r?\n/).reduce(
+          (count, line) => count + Math.max(1, Math.ceil(line.length / width)),
+          0
+        ));
       }
     });
+    row.height = autoRowHeight
+      ? Math.min(120, Math.max(isSection ? 24 : 30, lineCount * 14 + 8))
+      : 30;
+    if (inflowLabels.includes(label) || outflowLabels.includes(label)) {
+      const fill = inflowLabels.includes(label) ? style.cashIn || style.greenFill : style.cashOut || style.band;
+      row.eachCell({ includeEmpty: true }, (cell) => {
+        if (cell.value !== '' && cell.value != null) {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fill } };
+        }
+      });
+    }
+    if (isFinalTotal) {
+      row.height = Math.max(row.height, 32);
+      row.eachCell({ includeEmpty: true }, (cell) => {
+        cell.font = { ...cell.font, name: 'Aptos', bold: true, size: 11, color: { argb: style.navy } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: style.finalTotal || style.total } };
+      });
+    }
   }
   totals.forEach((total) => {
     const row = worksheet.addRow([]);
     row.getCell(1).value = total.label;
     row.getCell(total.column).value = total.value;
-    row.getCell(total.column).numFmt = '"PHP" #,##0.00;[Red]-"PHP" #,##0.00';
+    row.getCell(total.column).numFmt = currencyFormat;
     row.eachCell({ includeEmpty: true }, (cell) => {
-      cell.font = { name: 'Aptos', bold: true, size: 10, color: { argb: EXCEL_STYLE.navy } };
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: EXCEL_STYLE.total } };
-      cell.border = { top: { style: 'medium', color: { argb: EXCEL_STYLE.blue } } };
+      cell.font = { name: 'Aptos', bold: true, size: 10, color: { argb: style.navy } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: style.total } };
+      cell.border = { top: { style: 'medium', color: { argb: style.blue } } };
     });
     row.getCell(total.column).alignment = { horizontal: 'right', vertical: 'middle' };
+    if (autoRowHeight) row.height = 30;
   });
 
   const lastRow = worksheet.lastRow.number;
   worksheet.views = [{ state: 'frozen', ySplit: headerRow }];
   worksheet.pageSetup = {
     paperSize: 9,
-    orientation: 'landscape',
+    orientation,
     fitToPage: true,
     fitToWidth: 1,
     fitToHeight: 0,
@@ -1913,8 +1991,9 @@ function addProfessionalReportSheet(workbook, options) {
     printArea: `A1:${worksheet.getColumn(columnCount).letter}${lastRow}`,
     margins: { left: 0.25, right: 0.25, top: 0.5, bottom: 0.5, header: 0.2, footer: 0.25 },
   };
+  if (isBranded) worksheet.headerFooter.oddHeader = `&C&"Aptos,Bold"Skin Goddess Aesthetic Center | ${title}`;
   worksheet.headerFooter.oddFooter = '&LSkin Goddess Aesthetic Center&CFinance report&RPage &P of &N';
-  if (filter && records.length) {
+  if (filter && (records.length || filterEmpty)) {
     worksheet.autoFilter = {
       from: { row: headerRow, column: 1 },
       to: { row: dataEndRow, column: columnCount },
@@ -2073,6 +2152,11 @@ async function sendCompleteFinanceWorkbook(res, from, to) {
     records: revenueRows,
     amountColumns: [2],
     filter: false,
+    style: FINANCIAL_STATEMENT_STYLE,
+    currencyFormat: PESO_NUMBER_FORMAT,
+    orientation: 'portrait',
+    finalTotalLabels: ['Net income'],
+    autoRowHeight: true,
   });
 
   const reversalRows = reversalsResult.rows;
@@ -2119,7 +2203,16 @@ async function sendCompleteFinanceWorkbook(res, from, to) {
     records: cashFlowRows,
     dateColumns: [1],
     amountColumns: [6, 7, 8],
-    filter: false,
+    style: FINANCIAL_STATEMENT_STYLE,
+    currencyFormat: PESO_NUMBER_FORMAT,
+    orientation: 'landscape',
+    sectionColumns: [2],
+    inflowColumns: [6],
+    outflowColumns: [7],
+    inflowLabels: ['Recorded payment inflows'],
+    outflowLabels: ['Dated payment reversals'],
+    emphasisLabels: ['Net dated movement known'],
+    autoRowHeight: true,
   });
 
   const receivables = receivablesResult.rows;
@@ -2143,6 +2236,7 @@ async function sendCompleteFinanceWorkbook(res, from, to) {
     ['Recorded refundable customer deposits', knownDepositLiabilities, 'Posted reservation payments on pending, confirmed, and in-progress appointments.'],
     ['Supplier bills / loans / other payables', 'Not tracked', 'No supported accounts-payable, loan, or payable register was found.'],
     ['Total liabilities', 'Incomplete', 'Only recorded refundable customer deposits are available.'],
+    ['Equity', '', ''],
     ["Owner's equity", 'Not recorded', 'Owner capital, withdrawals, investments, and retained earnings balances are not maintained.'],
     ['Balance check: Assets − Liabilities − Equity', 'Not determinable',
       'The accounting equation cannot be evaluated honestly until the unavailable opening balances, liabilities, and equity records are supplied through an approved accounting workflow.'],
@@ -2158,6 +2252,11 @@ async function sendCompleteFinanceWorkbook(res, from, to) {
     records: balanceRows,
     amountColumns: [2],
     filter: false,
+    style: FINANCIAL_STATEMENT_STYLE,
+    currencyFormat: PESO_NUMBER_FORMAT,
+    orientation: 'portrait',
+    emphasisLabels: ["Owner's equity"],
+    autoRowHeight: true,
   });
 
   addProfessionalReportSheet(workbook, {
@@ -2182,6 +2281,12 @@ async function sendCompleteFinanceWorkbook(res, from, to) {
     dateColumns: [4],
     amountColumns: [6, 7, 8],
     totals: [{ label: 'Total outstanding receivables', column: 8, value: receivablesTotal }],
+    style: FINANCIAL_STATEMENT_STYLE,
+    currencyFormat: PESO_NUMBER_FORMAT,
+    orientation: 'landscape',
+    highlightColumns: [8],
+    autoRowHeight: true,
+    filterEmpty: true,
   });
 
   const paymentLedgerRows = [

@@ -93,12 +93,8 @@
               <div class="admin-notification-list">No notifications yet</div>
             </div>
           </div>
-          <div class="um-search">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-            <input type="text" id="aptSearchInput" placeholder="Search appointments..." aria-label="Search appointments">
-          </div>
           <div class="um-header__actions-row">
-            <button class="um-btn um-btn--ghost" id="exportBtn" type="button">Export</button>
+            <button class="um-btn um-btn--export" id="exportBtn" type="button">Export</button>
             <button class="um-btn um-btn--ghost" id="cancellationRequestsBtn" type="button">Request for Cancellation</button>
             <button class="um-btn um-btn--primary" id="newAppointmentBtn" type="button">+ New Appointment</button>
           </div>
@@ -146,6 +142,10 @@
 
             <div class="apt-toolbar__tools">
               <button class="apt-chip" id="aptTodayChip" type="button" hidden>Today &times;</button>
+              <div class="um-search apt-toolbar__search">
+                <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" id="aptSearchInput" maxlength="100" placeholder="Search appointments..." aria-label="Search appointments">
+              </div>
               <select class="apt-date-range" id="aptDateRange" aria-label="Filter appointments by month"></select>
             </div>
           </div>
@@ -154,13 +154,13 @@
             <table class="apt-table">
               <thead>
                 <tr>
-                  <th>REF NO.</th>
-                  <th>CLIENT</th>
-                  <th>SERVICE</th>
-                  <th>DATE &amp; TIME</th>
-                  <th>ASSIGNED TO</th>
-                  <th>STATUS</th>
-                  <th>ACTION</th>
+                  <th scope="col" aria-sort="none"><button class="apt-sort-button" type="button" data-sort="reference">REF NO.<span class="apt-sort-indicator" aria-hidden="true"></span></button></th>
+                  <th scope="col" aria-sort="none"><button class="apt-sort-button" type="button" data-sort="client">CLIENT<span class="apt-sort-indicator" aria-hidden="true"></span></button></th>
+                  <th scope="col" aria-sort="none"><button class="apt-sort-button" type="button" data-sort="service">SERVICE<span class="apt-sort-indicator" aria-hidden="true"></span></button></th>
+                  <th scope="col" aria-sort="descending"><button class="apt-sort-button" type="button" data-sort="date">DATE &amp; TIME<span class="apt-sort-indicator" aria-hidden="true">↓</span></button></th>
+                  <th scope="col" aria-sort="none"><button class="apt-sort-button" type="button" data-sort="staff">ASSIGNED TO<span class="apt-sort-indicator" aria-hidden="true"></span></button></th>
+                  <th scope="col" aria-sort="none"><button class="apt-sort-button" type="button" data-sort="status">STATUS<span class="apt-sort-indicator" aria-hidden="true"></span></button></th>
+                  <th scope="col">ACTION</th>
                 </tr>
               </thead>
               <tbody id="aptTableBody"></tbody>

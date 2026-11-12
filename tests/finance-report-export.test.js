@@ -51,16 +51,28 @@ function financeRows(sql) {
     ] };
   }
   if (/SELECT appointment\.appointment_id,\s+appointment\.appointment_date::text AS transaction_date/.test(sql)) {
-    return { rows: [{
-      appointment_id: 1,
-      transaction_date: '2026-10-02',
-      client: 'Client One',
-      service_name: 'Facial',
-      original_amount: 1000,
-      amount_paid: 300,
-      outstanding: 700,
-      status: 'Partially paid'
-    }] };
+    return { rows: [
+      {
+        appointment_id: 1,
+        transaction_date: '2026-10-02',
+        client: 'Client One',
+        service_name: 'Facial',
+        original_amount: 1000,
+        amount_paid: 300,
+        outstanding: 700,
+        status: 'Partially paid'
+      },
+      {
+        appointment_id: 2,
+        transaction_date: '2026-10-11',
+        client: 'Client Two',
+        service_name: 'Laser',
+        original_amount: 500,
+        amount_paid: 500,
+        outstanding: 0,
+        status: 'Paid'
+      }
+    ] };
   }
   if (/payment_date/.test(sql) && /appointment_status IN/.test(sql)) {
     return { rows: [{
@@ -99,7 +111,7 @@ function financeRows(sql) {
   if (/FROM \(\s*SELECT a\.appointment_date AS sale_date/.test(sql)) {
     return { rows: [{ amount: 1200 }] };
   }
-  if (/FROM payments WHERE status = 'posted' AND \(created_at AT TIME ZONE 'Asia\/Manila'\)/.test(sql)) {
+  if (/SELECT COALESCE\(SUM\(p\.amount\), 0\)::float8 AS amount FROM payments p LEFT JOIN appointments a/.test(sql)) {
     return { rows: [{ amount: 500 }] };
   }
   if (/FROM expenses WHERE voided_at IS NULL AND expense_date BETWEEN/.test(sql)) {
@@ -150,20 +162,55 @@ test('finance export creates six reports and labels unsupported accounting value
       'Transaction Ledger',
       'Inventory'
     ]);
-    assert.equal(workbook.getWorksheet('Income Statement').getCell('A16').value, 'Net income');
-    assert.equal(workbook.getWorksheet('Income Statement').getCell('B16').value, 800);
-    assert.equal(workbook.getWorksheet('Cash Flow').getCell('H8').value, 'Not Available');
-    assert.equal(workbook.getWorksheet('Cash Flow').getCell('H12').value, 'Not Available');
-    assert.equal(workbook.getWorksheet('Balance Sheet').getCell('B19').value, 'Not recorded');
-    assert.equal(workbook.getWorksheet('Accounts Receivable').getCell('H8').value, 700);
+    const income = workbook.getWorksheet('Income Statement');
+    const cashFlow = workbook.getWorksheet('Cash Flow');
+    const balanceSheet = workbook.getWorksheet('Balance Sheet');
+    const receivables = workbook.getWorksheet('Accounts Receivable');
+    assert.equal(income.getCell('A16').value, 'Net income');
+    assert.equal(income.getCell('B16').value, 800);
+    assert.equal(income.getCell('B16').numFmt, '₱#,##0.00;[Red]-₱#,##0.00');
+    assert.equal(income.getCell('A8').value, 'Revenue');
+    assert.equal(income.getCell('A12').value, 'Total revenue');
+    assert.equal(income.getCell('A13').value, 'Expenses');
+    assert.equal(income.getCell('A15').value, 'Total expenses');
+    assert.equal(income.getCell('A16').fill.fgColor.argb, 'FFE9DDBD');
+    assert.equal(income.getCell('A16').font.size, 11);
+    assert.equal(cashFlow.getCell('H8').value, 'Not Available');
+    assert.equal(cashFlow.getCell('H12').value, 'Not Available');
+    assert.equal(cashFlow.getCell('H8').fill.fgColor.argb, 'FFFAF4E6');
+    assert.equal(cashFlow.getCell('H12').fill.fgColor.argb, 'FFFAF4E6');
+    assert.equal(cashFlow.getCell('F14').fill.fgColor.argb, 'FFF7F1E3');
+    assert.equal(cashFlow.getCell('G16').fill.fgColor.argb, 'FFF1EFEB');
+    assert.equal(cashFlow.getCell('A7').fill.fgColor.argb, 'FF332F29');
+    assert.equal(balanceSheet.getCell('A19').value, 'Equity');
+    assert.equal(balanceSheet.getCell('B20').value, 'Not recorded');
+    assert.equal(balanceSheet.getCell('B20').fill.fgColor.argb, 'FFFAF4E6');
+    assert.equal(receivables.getCell('H8').value, 700);
+    assert.equal(receivables.getCell('H8').numFmt, '₱#,##0.00;[Red]-₱#,##0.00');
+    assert.equal(receivables.getCell('H8').fill.fgColor.argb, 'FFF7F1E3');
+    assert.equal(receivables.getCell('E8').value, 'Not recorded');
+    assert.equal(receivables.getCell('D8').numFmt, 'dd mmm yyyy');
+    assert.equal(receivables.getCell('A9').fill.fgColor.argb, 'FFFAF8F3');
+    for (const sheet of [income, cashFlow, balanceSheet, receivables]) {
+      assert.equal(sheet.views[0].ySplit, 7);
+      assert.match(sheet.headerFooter.oddHeader, /Skin Goddess Aesthetic Center/);
+      assert.equal(sheet.headerFooter.oddFooter, '&LSkin Goddess Aesthetic Center&CFinance report&RPage &P of &N');
+      assert.equal(sheet.pageSetup.fitToWidth, 1);
+      assert.match(sheet.pageSetup.printArea, new RegExp(`^A1:[A-Z]+${sheet.lastRow.number}$`));
+    }
+    assert.equal(income.pageSetup.orientation, 'portrait');
+    assert.equal(cashFlow.pageSetup.orientation, 'landscape');
+    assert.equal(balanceSheet.pageSetup.orientation, 'portrait');
+    assert.ok(cashFlow.autoFilter);
+    assert.ok(receivables.autoFilter);
     assert.equal(workbook.getWorksheet('Inventory').getCell('F8').value, 50);
     assert.equal(workbook.getWorksheet('Inventory').getCell('F9').value, 'Not recorded');
     assert.equal(workbook.getWorksheet('Transaction Ledger').getCell('K8').value, 'posted');
     assert.ok(workbook.getWorksheet('Inventory').autoFilter);
-    assert.equal(workbook.getWorksheet('Income Statement').getCell('A1').fill.fgColor.argb, 'FF17324D');
-    assert.equal(workbook.getWorksheet('Income Statement').getCell('A7').fill.fgColor.argb, 'FF17324D');
-    assert.equal(workbook.getWorksheet('Income Statement').getCell('A9').fill.fgColor.argb, 'FFF3F6F9');
-    assert.equal(workbook.getWorksheet('Cash Flow').getCell('H8').font.color.argb, 'FF946200');
+    assert.equal(income.getCell('A1').fill.fgColor.argb, 'FF332F29');
+    assert.equal(income.getCell('A7').fill.fgColor.argb, 'FF332F29');
+    assert.equal(income.getCell('A9').fill.fgColor.argb, 'FFFAF8F3');
+    assert.equal(cashFlow.getCell('H8').font.color.argb, 'FF806A38');
     assert.equal(workbook.getWorksheet('Inventory').getCell('H8').font.color.argb, 'FFA33131');
     assert.equal(workbook.getWorksheet('Inventory').getCell('H8').fill.fgColor.argb, 'FFFBEAEA');
   }

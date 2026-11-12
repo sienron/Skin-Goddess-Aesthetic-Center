@@ -10,6 +10,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const footerText = document.getElementById('aptFooterText');
   const pagination = document.getElementById('aptPagination');
   const searchInput = document.getElementById('aptSearchInput');
+  const exportButton = document.getElementById('exportBtn');
+  const sortHeaders = document.querySelectorAll('#aptTableCard .apt-sort-button');
   const todayChip = document.getElementById('aptTodayChip');
   const dateRangeSelect = document.getElementById('aptDateRange');
 
@@ -97,6 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
       buffer: record.duration_is_estimated ? 'Not recorded' : (Number(record.buffer_minutes) || 0) + ' min',
       dateKey,
       date: displayDate(dateKey),
+      startTime: String(record.start || record.appointment_time || '').slice(0, 5),
       time: displayTime(record.start || record.appointment_time),
       scheduledEnd: String(record.scheduled_end || record.end || '').slice(0, 5),
       expectedEnd: String(record.expected_end || record.end || '').slice(0, 5),
@@ -122,7 +125,15 @@ document.addEventListener('DOMContentLoaded', () => {
       if (![...select.options].some(option=>option.value===text)) select.add(new Option(text,text));
     }
   });
-  const state = { status: 'all', todayOnly: false, month: manilaDateKey().slice(0, 7), query: '', page: 1 };
+  const state = {
+    status: 'all',
+    todayOnly: false,
+    month: manilaDateKey().slice(0, 7),
+    query: '',
+    page: 1,
+    sortKey: 'date',
+    sortDirection: 'desc'
+  };
 
   // ---------- helpers ----------
 
@@ -153,6 +164,37 @@ document.addEventListener('DOMContentLoaded', () => {
     return td;
   }
 
+  function compareChronological(left, right) {
+    return right.dateKey.localeCompare(left.dateKey)
+      || right.startTime.localeCompare(left.startTime)
+      || Number(right.id) - Number(left.id);
+  }
+
+  function compareAppointments(left, right) {
+    let comparison = 0;
+    if (state.sortKey === 'reference') {
+      comparison = Number(left.id) - Number(right.id);
+    } else if (state.sortKey === 'date') {
+      comparison = left.dateKey.localeCompare(right.dateKey)
+        || left.startTime.localeCompare(right.startTime);
+    } else if (state.sortKey === 'status') {
+      comparison = (STATUS_LABELS[left.status] || left.status).localeCompare(
+        STATUS_LABELS[right.status] || right.status,
+        undefined,
+        { numeric: true, sensitivity: 'base' }
+      );
+    } else {
+      const property = state.sortKey === 'staff' ? 'assignedTo' : state.sortKey;
+      comparison = left[property].localeCompare(right[property], undefined, {
+        numeric: true,
+        sensitivity: 'base'
+      });
+    }
+
+    return comparison * (state.sortDirection === 'asc' ? 1 : -1)
+      || compareChronological(left, right);
+  }
+
   function getFiltered() {
     const query = state.query.trim().toLowerCase();
     return APPOINTMENTS.filter((a) => {
@@ -161,7 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (state.todayOnly && !a.isToday) return false;
       if (!query) return true;
       return [a.ref, a.client, a.service, a.assignedTo].some((v) => v.toLowerCase().includes(query));
-    });
+    }).sort(compareAppointments);
   }
 
   const detailsModal = document.getElementById('appointmentDetailsModal');
@@ -1180,7 +1222,26 @@ document.addEventListener('DOMContentLoaded', () => {
     pagination.appendChild(makeBtn('›', state.page + 1, state.page === totalPages, false));
   }
 
+  function renderSortHeaders() {
+    sortHeaders.forEach((button) => {
+      const active = button.dataset.sort === state.sortKey;
+      const heading = button.closest('th');
+      const indicator = button.querySelector('.apt-sort-indicator');
+      if (heading) heading.setAttribute('aria-sort', active
+        ? state.sortDirection === 'asc' ? 'ascending' : 'descending'
+        : 'none');
+      if (indicator) indicator.textContent = active
+        ? state.sortDirection === 'asc' ? '↑' : '↓'
+        : '';
+      button.setAttribute('aria-pressed', active ? 'true' : 'false');
+      button.setAttribute('aria-label', `Sort by ${button.dataset.sort}${active
+        ? `, ${state.sortDirection === 'asc' ? 'ascending' : 'descending'}`
+        : ''}`);
+    });
+  }
+
   function render() {
+    renderSortHeaders();
     const filtered = getFiltered();
     const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
     state.page = Math.min(state.page, totalPages);
@@ -1479,6 +1540,54 @@ document.addEventListener('DOMContentLoaded', () => {
       render();
     });
   }
+
+  sortHeaders.forEach((button) => {
+    button.addEventListener('click', () => {
+      if (button.dataset.sort === state.sortKey) {
+        state.sortDirection = state.sortDirection === 'asc' ? 'desc' : 'asc';
+      } else {
+        state.sortKey = button.dataset.sort;
+        state.sortDirection = 'asc';
+      }
+      state.page = 1;
+      render();
+    });
+  });
+
+  exportButton?.addEventListener('click', async () => {
+    const params = new URLSearchParams({
+      status: state.status,
+      month: state.month,
+      todayOnly: String(state.todayOnly),
+      search: state.query.trim()
+    });
+    exportButton.disabled = true;
+    try {
+      const response = await fetch(`/api/appointments/admin/export.xlsx?${params.toString()}`, {
+        headers: { Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' },
+        cache: 'no-store'
+      });
+      if (!response.ok) {
+        const result = await readApiResponse(response);
+        throw new Error(result.message || 'Could not export appointments.');
+      }
+      const file = await response.blob();
+      if (!file.size) throw new Error('The appointment export was empty.');
+      const downloadUrl = URL.createObjectURL(file);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = `appointments-${state.month}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+    } catch (error) {
+      console.error('Could not export appointments:', error);
+      window.alert(error.message || 'Could not export appointments.');
+    } finally {
+      exportButton.disabled = false;
+    }
+  });
 
   render();
 

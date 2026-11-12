@@ -13,6 +13,7 @@ const { getPayMongoConfig } = require('../utils/paymongoConfig');
 const { isDemoCustomerAccount } = require('../utils/demoMode');
 const { loadCustomerAppointmentHistory } = require('../utils/customerAppointmentHistory');
 const { randomBytes } = require('crypto');
+const ExcelJS = require('exceljs');
 const { verifyPayMongoWebhookSignature } = require('../utils/paymongoWebhookSecurity');
 const { RATING_WINDOW_DAYS } = require('../utils/appointmentRatings');
 const ratingLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, message: { message: 'Too many rating attempts. Try again later.' } });
@@ -277,61 +278,102 @@ function getCustomerDetails(body, user, res) {
   return { firstName, lastName, email, phone };
 }
 
-router.get('/admin', requireRole('admin'), async (req, res) => {
+const ADMIN_APPOINTMENT_SELECT = `
+  SELECT a.appointment_id,
+         a.is_demo,
+         EXISTS(SELECT 1 FROM clinic_appointment_impacts ci WHERE ci.appointment_id=a.appointment_id AND ci.resolution='pending') AS clinic_pending_resolution,
+         a.service_id,
+         a.aesthetician_id AS assigned_staff_id,
+         a.appointment_date::text AS date,
+         a.appointment_time::text AS start,
+         a.appointment_end_time::text AS end,
+         a.scheduled_end_time::text AS scheduled_end,
+         GREATEST(a.appointment_end_time, COALESCE(a.adjusted_expected_end_time, a.appointment_end_time))::text AS expected_end,
+         a.appointment_status AS status,
+         a.payment_status,
+         s.service_name AS service,
+         CASE WHEN a.booked_duration_is_estimated THEN NULL ELSE a.booked_duration_minutes END AS duration_minutes,
+         a.booked_duration_is_estimated AS duration_is_estimated,
+         a.booked_buffer_minutes AS buffer_minutes,
+         a.booked_service_price AS fee,
+         a.booked_reservation_fee AS deposit_amount,
+         a.cancellation_request_status,
+         a.cancellation_reason,
+         a.cancellation_description,
+         a.cancellation_requested_at,
+         a.user_id AS client_id,
+         COALESCE(NULLIF(BTRIM(CONCAT_WS(' ', a.customer_first_name, a.customer_last_name)), ''), NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Client') AS client,
+         COALESCE(a.customer_email, c.email) AS client_email,
+         c.gender,
+         c.date_of_birth::text AS date_of_birth,
+         COALESCE(a.customer_phone, c.contact_number) AS contact,
+         COALESCE(NULLIF(BTRIM(CONCAT_WS(' ', NULLIF(BTRIM(aesthetician.first_name), ''), NULLIF(BTRIM(aesthetician.last_name), ''))), ''), 'Unassigned') AS assigned_to,
+         deduction.confirmed_at AS inventory_deduction_confirmed_at,
+         CASE WHEN inventory_review.reviewed_by IS NOT NULL
+           THEN inventory_review.reviewed_at
+         END AS inventory_product_reviewed_at,
+         NULLIF(BTRIM(CONCAT_WS(' ', inventory_reviewer.first_name, inventory_reviewer.last_name)), '') AS inventory_product_reviewed_by,
+         (
+           SELECT COUNT(*)
+           FROM appointments previous
+           WHERE previous.user_id = a.user_id AND previous.is_demo = FALSE
+             AND (previous.appointment_date, previous.appointment_time) < (a.appointment_date, a.appointment_time)
+         ) AS previous_appointment_count
+  FROM appointments a
+  LEFT JOIN users c ON c.user_id = a.user_id
+  JOIN services s ON s.service_id = a.service_id
+  LEFT JOIN users aesthetician ON aesthetician.user_id = a.aesthetician_id
+  LEFT JOIN appointment_inventory_deductions deduction ON deduction.appointment_id = a.appointment_id
+  LEFT JOIN appointment_inventory_review_drafts inventory_review
+    ON inventory_review.appointment_id = a.appointment_id
+  LEFT JOIN users inventory_reviewer ON inventory_reviewer.user_id = inventory_review.reviewed_by
+  WHERE a.is_demo = FALSE
+`;
+
+async function loadAdminAppointmentRows() {
+  const result = await db.query(`${ADMIN_APPOINTMENT_SELECT}
+    ORDER BY a.appointment_date DESC, a.appointment_time DESC, a.appointment_id DESC
+  `);
+  return result.rows;
+}
+
+function filterAdminAppointmentRows(rows, { status, month, todayOnly, search }) {
+  const normalizedSearch = search.trim().toLowerCase();
+  const today = manilaNow().dateStr;
+  return rows.filter((row) => {
+    const appointmentStatus = String(row.status || '').toLowerCase().replace(/_/g, '-');
+    const date = String(row.date || '').slice(0, 10);
+    if (status !== 'all' && appointmentStatus !== status) return false;
+    if (date.slice(0, 7) !== month) return false;
+    if (todayOnly && date !== today) return false;
+    if (!normalizedSearch) return true;
+    const reference = `APT-${String(row.appointment_id).padStart(4, '0')}`;
+    return [reference, row.client, row.service, row.assigned_to]
+      .some((value) => String(value || '').toLowerCase().includes(normalizedSearch));
+  });
+}
+
+function excelTime(value) {
+  const match = String(value || '').match(/^(\d{1,2}):(\d{2})/);
+  if (!match) return null;
+  return (Number(match[1]) * 60 + Number(match[2])) / 1440;
+}
+
+function displayAppointmentStatus(value) {
+  const status = String(value || '').toLowerCase().replace(/_/g, '-');
+  return ({
+    'in-progress': 'In Progress',
+    'no-show': 'No Show',
+    pending: 'Pending',
+    confirmed: 'Confirmed',
+    completed: 'Completed',
+    cancelled: 'Cancelled'
+  })[status] || status;
+}
+
+router.get('/admin', requireRole('admin'), async (_req, res) => {
   try {
-    const result = await db.query(`
-      SELECT a.appointment_id,
-             a.is_demo,
-             EXISTS(SELECT 1 FROM clinic_appointment_impacts ci WHERE ci.appointment_id=a.appointment_id AND ci.resolution='pending') AS clinic_pending_resolution,
-             a.service_id,
-             a.aesthetician_id AS assigned_staff_id,
-             a.appointment_date::text AS date,
-             a.appointment_time::text AS start,
-             a.appointment_end_time::text AS end,
-             a.scheduled_end_time::text AS scheduled_end,
-             GREATEST(a.appointment_end_time, COALESCE(a.adjusted_expected_end_time, a.appointment_end_time))::text AS expected_end,
-             a.appointment_status AS status,
-             a.payment_status,
-             s.service_name AS service,
-             CASE WHEN a.booked_duration_is_estimated THEN NULL ELSE a.booked_duration_minutes END AS duration_minutes,
-             a.booked_duration_is_estimated AS duration_is_estimated,
-             a.booked_buffer_minutes AS buffer_minutes,
-             a.booked_service_price AS fee,
-             a.booked_reservation_fee AS deposit_amount,
-             a.cancellation_request_status,
-             a.cancellation_reason,
-             a.cancellation_description,
-             a.cancellation_requested_at,
-             a.user_id AS client_id,
-             COALESCE(NULLIF(BTRIM(CONCAT_WS(' ', a.customer_first_name, a.customer_last_name)), ''), NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Client') AS client,
-             COALESCE(a.customer_email, c.email) AS client_email,
-             c.gender,
-             c.date_of_birth::text AS date_of_birth,
-             COALESCE(a.customer_phone, c.contact_number) AS contact,
-             COALESCE(NULLIF(BTRIM(CONCAT_WS(' ', NULLIF(BTRIM(aesthetician.first_name), ''), NULLIF(BTRIM(aesthetician.last_name), ''))), ''), 'Unassigned') AS assigned_to,
-             deduction.confirmed_at AS inventory_deduction_confirmed_at,
-             CASE WHEN inventory_review.reviewed_by IS NOT NULL
-               THEN inventory_review.reviewed_at
-             END AS inventory_product_reviewed_at,
-             NULLIF(BTRIM(CONCAT_WS(' ', inventory_reviewer.first_name, inventory_reviewer.last_name)), '') AS inventory_product_reviewed_by,
-             (
-               SELECT COUNT(*)
-               FROM appointments previous
-               WHERE previous.user_id = a.user_id AND previous.is_demo = FALSE
-                 AND (previous.appointment_date, previous.appointment_time) < (a.appointment_date, a.appointment_time)
-             ) AS previous_appointment_count
-      FROM appointments a
-      LEFT JOIN users c ON c.user_id = a.user_id
-      JOIN services s ON s.service_id = a.service_id
-      LEFT JOIN users aesthetician ON aesthetician.user_id = a.aesthetician_id
-      LEFT JOIN appointment_inventory_deductions deduction ON deduction.appointment_id = a.appointment_id
-      LEFT JOIN appointment_inventory_review_drafts inventory_review
-        ON inventory_review.appointment_id = a.appointment_id
-      LEFT JOIN users inventory_reviewer ON inventory_reviewer.user_id = inventory_review.reviewed_by
-      WHERE a.is_demo = FALSE
-      ORDER BY a.appointment_date ASC, a.appointment_time ASC, a.appointment_id ASC
-    `);
-    return res.json(result.rows);
+    return res.json(await loadAdminAppointmentRows());
   } catch (error) {
     console.error('Error fetching admin appointments:', error);
     return res.status(500).json({
@@ -339,6 +381,105 @@ router.get('/admin', requireRole('admin'), async (req, res) => {
         ? 'Could not load appointments.'
         : error.message
     });
+  }
+});
+
+router.get('/admin/export.xlsx', requireRole('admin'), async (req, res) => {
+  const status = typeof req.query.status === 'string' ? req.query.status : 'all';
+  const month = typeof req.query.month === 'string' ? req.query.month : '';
+  const todayOnly = req.query.todayOnly === 'true';
+  const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+  if (!['all', 'pending', 'confirmed', 'in-progress', 'completed', 'cancelled', 'no-show'].includes(status)) {
+    return res.status(400).json({ message: 'Choose a valid appointment status filter.' });
+  }
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
+    return res.status(400).json({ message: 'Choose a valid appointment month filter.' });
+  }
+  if (search.length > 100) {
+    return res.status(400).json({ message: 'Appointment search must be 100 characters or fewer.' });
+  }
+
+  try {
+    const records = filterAdminAppointmentRows(await loadAdminAppointmentRows(), {
+      status,
+      month,
+      todayOnly,
+      search
+    }).sort((left, right) => (
+      String(right.date).localeCompare(String(left.date))
+      || String(right.start).localeCompare(String(left.start))
+      || Number(right.appointment_id) - Number(left.appointment_id)
+    ));
+
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'Skin Goddess Aesthetic Center';
+    const worksheet = workbook.addWorksheet('Appointments', {
+      views: [{ state: 'frozen', ySplit: 1 }]
+    });
+    worksheet.columns = [
+      { header: 'Reference', key: 'reference', width: 14 },
+      { header: 'Client', key: 'client', width: 28 },
+      { header: 'Service', key: 'service', width: 32 },
+      { header: 'Appointment Date', key: 'date', width: 18 },
+      { header: 'Start Time', key: 'start', width: 14 },
+      { header: 'Reserved End', key: 'scheduledEnd', width: 14 },
+      { header: 'Expected End', key: 'expectedEnd', width: 14 },
+      { header: 'Assigned Staff', key: 'assignedTo', width: 24 },
+      { header: 'Status', key: 'status', width: 16 },
+      { header: 'Treatment Duration (min)', key: 'duration', width: 24 },
+      { header: 'Buffer (min)', key: 'buffer', width: 14 },
+      { header: 'Service Fee (PHP)', key: 'fee', width: 18 },
+      { header: 'Reservation Fee (PHP)', key: 'deposit', width: 22 },
+      { header: 'Payment Status', key: 'paymentStatus', width: 18 },
+      { header: 'Contact', key: 'contact', width: 20 }
+    ];
+    const header = worksheet.getRow(1);
+    header.height = 30;
+    header.eachCell((cell) => {
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF6B5422' } };
+      cell.alignment = { vertical: 'middle', wrapText: true };
+    });
+
+    records.forEach((record) => {
+      const date = String(record.date || '').slice(0, 10);
+      const row = worksheet.addRow([
+        `APT-${String(record.appointment_id).padStart(4, '0')}`,
+        record.client || 'Client',
+        record.service || 'Service unavailable',
+        /^\d{4}-\d{2}-\d{2}$/.test(date) ? new Date(`${date}T00:00:00.000Z`) : null,
+        excelTime(record.start),
+        excelTime(record.scheduled_end || record.end),
+        excelTime(record.expected_end || record.end),
+        record.assigned_to || 'Unassigned',
+        displayAppointmentStatus(record.status),
+        record.duration_is_estimated ? 'Not recorded' : Number(record.duration_minutes) || 0,
+        record.duration_is_estimated ? 'Not recorded' : Number(record.buffer_minutes) || 0,
+        Number(record.fee) || 0,
+        Number(record.deposit_amount) || 0,
+        String(record.payment_status || 'unpaid').replace(/_/g, ' '),
+        record.contact || '—'
+      ]);
+      row.getCell(4).numFmt = 'dd mmm yyyy';
+      [5, 6, 7].forEach((column) => {
+        row.getCell(column).numFmt = 'h:mm AM/PM';
+      });
+      [12, 13].forEach((column) => {
+        row.getCell(column).numFmt = '₱#,##0.00';
+      });
+      row.eachCell((cell, column) => {
+        cell.alignment = { vertical: 'middle', wrapText: column === 2 || column === 3 || column === 15 };
+      });
+    });
+    worksheet.autoFilter = { from: 'A1', to: 'O1' };
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="appointments-${month}.xlsx"`);
+    return res.send(buffer);
+  } catch (error) {
+    console.error('Error exporting admin appointments:', error);
+    return res.status(500).json({ message: 'Could not export appointments.' });
   }
 });
 
@@ -1367,11 +1508,33 @@ router.get('/admin/walk-in-options', requireRole('admin'), async (req, res) => {
     if (req.query.appointmentId && !excludeAppointmentId) {
       return res.status(400).json({ message: 'Choose a valid appointment.' });
     }
+    const serviceId = validServiceId(String(req.query.serviceId || ''));
+    if (!serviceId) return res.status(400).json({ message: 'Choose a valid service.' });
+
+    let durationSnapshot = null;
+    if (excludeAppointmentId) {
+      const currentResult = await db.query(`
+        SELECT service_id, booked_duration_minutes, booked_buffer_minutes, booked_duration_is_estimated
+        FROM appointments
+        WHERE appointment_id = $1 AND is_demo = FALSE
+      `, [excludeAppointmentId]);
+      if (!currentResult.rows.length) {
+        return res.status(404).json({ message: 'Appointment not found.' });
+      }
+      const current = currentResult.rows[0];
+      if (Number(current.service_id) === serviceId && !current.booked_duration_is_estimated) {
+        durationSnapshot = {
+          durationMinutes: Number(current.booked_duration_minutes),
+          bufferMinutes: Number(current.booked_buffer_minutes)
+        };
+      }
+    }
+
     const booking = await getValidatedSchedule(db, {
       serviceId: req.query.serviceId,
       date: req.query.date,
       time: req.query.time
-    }, res);
+    }, res, Boolean(excludeAppointmentId), durationSnapshot);
     if (!booking) return;
 
     const availableStaff = await findAvailableAestheticians(db, {
