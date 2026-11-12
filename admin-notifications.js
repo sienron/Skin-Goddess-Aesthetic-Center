@@ -90,6 +90,28 @@
     const wrap = button?.closest(".admin-notification-wrap");
     if (!button || !dropdown || !wrap) return;
     const list = dropdown.querySelector('.admin-notification-list');
+    let unreadCountLabel;
+    let markAllButton;
+    const heading = dropdown.querySelector(':scope > strong');
+    if (heading) {
+        const header = document.createElement('div');
+        header.className = 'admin-notification-header';
+        const title = document.createElement('span');
+        title.className = 'notification-dropdown-title';
+        title.textContent = 'Notifications';
+        unreadCountLabel = document.createElement('span');
+        unreadCountLabel.className = 'notification-dropdown-count';
+        unreadCountLabel.hidden = true;
+        unreadCountLabel.setAttribute('aria-live', 'polite');
+        unreadCountLabel.setAttribute('aria-atomic', 'true');
+        markAllButton = document.createElement('button');
+        markAllButton.type = 'button';
+        markAllButton.className = 'notification-mark-all';
+        markAllButton.textContent = 'Mark all as read';
+        markAllButton.hidden = true;
+        header.append(title, unreadCountLabel, markAllButton);
+        heading.replaceWith(header);
+    }
     let unreadBadge = document.getElementById('inventoryUnreadNotificationCount');
     if (!unreadBadge) {
         unreadBadge = document.createElement('span');
@@ -117,6 +139,11 @@
         unreadBadge.textContent = unreadCount > 99 ? '99+' : String(unreadCount);
         unreadBadge.hidden = unreadCount === 0 || dropdown.classList.contains('show');
         unreadBadge.setAttribute('aria-label', `${unreadCount} unread notifications`);
+        if (unreadCountLabel) {
+            unreadCountLabel.textContent = unreadCount > 99 ? '99+' : String(unreadCount);
+            unreadCountLabel.hidden = unreadCount === 0;
+        }
+        if (markAllButton) markAllButton.hidden = unreadCount === 0;
     }
 
     function showEmptyState(message) {
@@ -151,6 +178,7 @@
                 item.className = `admin-notification-item${notification.is_read ? '' : ' unread'}${ageClass ? ` ${ageClass}` : ''}`;
                 item.dataset.notificationId = notification.notification_id;
                 const message = document.createElement('span');
+                message.className = 'admin-notification-message';
                 message.textContent = notification.message;
                 item.append(message);
                 const timestamp = document.createElement('time');
@@ -170,7 +198,7 @@
                 if (!notification.is_read) {
                     const status = document.createElement('span');
                     status.className = 'admin-notification-unread-label';
-                    status.textContent = 'UNREAD';
+                    status.setAttribute('aria-label', 'Unread notification');
                     item.append(status);
                 }
                 list.append(item);
@@ -214,12 +242,21 @@
             });
             if (!response.ok) throw new Error(`Could not mark notifications as read (HTTP ${response.status}).`);
             notifications = notifications.map((notification) => ({ ...notification, is_read: true }));
+            list?.querySelectorAll('.admin-notification-item.unread').forEach((item) => {
+                item.classList.remove('unread');
+                item.querySelector('.admin-notification-unread-label')?.remove();
+            });
             renderUnreadCount(0);
         } catch (error) {
             console.error('Could not mark notifications as read:', error);
             await loadNotifications();
         }
     }
+
+    markAllButton?.addEventListener('click', (event) => {
+        event.stopPropagation();
+        markNotificationsRead();
+    });
 
     function closeNotifications() {
         const wasOpen = dropdown.classList.contains('show');

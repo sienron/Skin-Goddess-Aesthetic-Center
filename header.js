@@ -150,6 +150,7 @@
     if (!notificationWrap || !notificationBtn || !notificationDropdown) return;
 
     const notificationList = notificationDropdown.querySelector('.notification-list');
+    const notificationHeader = notificationDropdown.querySelector('.notification-dropdown-header');
     const badge = notificationBtn.querySelector('.badge') || document.createElement('span');
     const popupSuppressedKey = 'skinGoddess.suppressAnnouncementPopup';
     let announcements = [];
@@ -157,10 +158,28 @@
     let personalUnreadCount = 0;
     let displayedAnnouncement = null;
     let isClientAccount = false;
+    let notificationCount;
+    let markAllButton;
 
     if (!badge.classList.contains('badge')) {
         badge.className = 'badge';
         notificationBtn.appendChild(badge);
+    }
+    if (notificationHeader) {
+          const title = document.createElement('span');
+          title.className = 'notification-dropdown-title';
+          title.textContent = 'Notifications';
+          notificationCount = document.createElement('span');
+          notificationCount.className = 'notification-dropdown-count';
+          notificationCount.hidden = true;
+          notificationCount.setAttribute('aria-live', 'polite');
+          notificationCount.setAttribute('aria-atomic', 'true');
+          markAllButton = document.createElement('button');
+          markAllButton.type = 'button';
+          markAllButton.className = 'notification-mark-all';
+          markAllButton.textContent = 'Mark all as read';
+          markAllButton.hidden = true;
+          notificationHeader.replaceChildren(title, notificationCount, markAllButton);
     }
     notificationBtn.setAttribute('role', 'button');
     notificationBtn.setAttribute('tabindex', '0');
@@ -203,6 +222,11 @@
         const unreadCount = personalUnreadCount + unreadAnnouncements().length;
         badge.textContent = unreadCount > 99 ? '99+' : String(unreadCount);
         badge.hidden = unreadCount === 0;
+        if (notificationCount) {
+            notificationCount.textContent = unreadCount > 99 ? '99+' : String(unreadCount);
+            notificationCount.hidden = unreadCount === 0;
+        }
+        if (markAllButton) markAllButton.hidden = unreadCount === 0;
     }
 
     function notificationAgeClass(value) {
@@ -238,7 +262,7 @@
     function appendUnreadLabel(item) {
         const status = document.createElement('span');
         status.className = 'notification-item__unread';
-        status.textContent = 'UNREAD';
+        status.setAttribute('aria-label', 'Unread notification');
         item.append(status);
     }
 
@@ -271,6 +295,7 @@
             item.className = `notification-item${notification.is_read ? '' : ' unread'}`;
             item.dataset.notificationId = notification.notification_id;
             const message = document.createElement('span');
+            message.className = 'notification-item__message';
             message.textContent = notification.message;
             item.append(message);
             appendTimestamp(item, notification.created_at);
@@ -429,6 +454,42 @@
         renderNotificationList();
         updateBadge();
     }
+
+    async function markAllNotificationsRead() {
+        const unreadAnnouncementIds = unreadAnnouncements()
+            .map((announcement) => announcement.announcement_id);
+        const hasUnreadPersonalNotifications = personalNotifications.some((notification) => !notification.is_read);
+        if (!unreadAnnouncementIds.length && !hasUnreadPersonalNotifications) return;
+
+        markAllButton.disabled = true;
+        const requests = [];
+        if (hasUnreadPersonalNotifications) {
+            requests.push(fetch('/api/notifications/read', { method: 'PATCH' }).then((response) => {
+                if (!response.ok) throw new Error(`Could not mark notifications as read (${response.status}).`);
+            }));
+        }
+        unreadAnnouncementIds.forEach((announcementId) => {
+            requests.push(fetch(`/api/announcements/${encodeURIComponent(announcementId)}/read`, {
+                method: 'PATCH'
+            }).then((response) => {
+                if (!response.ok) throw new Error(`Could not mark announcement as read (${response.status}).`);
+            }));
+        });
+
+        const results = await Promise.allSettled(requests);
+        results.forEach((result) => {
+            if (result.status === 'rejected') {
+                console.error('Could not mark all notifications as read:', result.reason);
+            }
+        });
+        await loadNotifications();
+        markAllButton.disabled = false;
+    }
+
+    markAllButton?.addEventListener('click', (event) => {
+        event.stopPropagation();
+        markAllNotificationsRead();
+    });
 
     notificationList?.addEventListener('click', async (event) => {
         const announcementItem = event.target.closest('[data-announcement-id]');

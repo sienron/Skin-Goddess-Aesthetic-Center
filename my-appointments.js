@@ -30,7 +30,7 @@
   if (!grid || !weekdaysEl || !titleEl || !prevBtn || !nextBtn || !weekBtn || !monthBtn ||
       !message || !monthView || !weekView ||
       !weekHeader || !weekTimeColumn || !weekDaysGrid || !appointmentLists || !calendar ||
-      !historyLinkWrap || !calendarLinkWrap || !pageTitle || !pageDescription ||
+      !historyLinkWrap || !calendarLinkWrap || !pageTitle ||
       !upcomingList || !historyList) return;
 
   appointmentLists.hidden = !isAllAppointmentsView;
@@ -41,7 +41,9 @@
     const titleAccent = document.createElement('span');
     titleAccent.textContent = 'Appointments';
     pageTitle.replaceChildren(document.createTextNode('All '), titleAccent);
-    pageDescription.textContent = 'Review your upcoming, past, and cancelled appointments.';
+    if (pageDescription) {
+      pageDescription.textContent = 'Review your upcoming, past, and cancelled appointments.';
+    }
   }
 
   const DAY_NAMES = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
