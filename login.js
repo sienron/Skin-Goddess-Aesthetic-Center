@@ -634,8 +634,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // Success — stays disabled with a confirmation label, nothing more to do here
-      resetSubmitBtn.querySelector('.btn-label').textContent = 'LINK SENT ✓';
+      resetSubmitBtn.querySelector('.btn-label').textContent = 'CHECK YOUR EMAIL ✓';
     } catch (err) {
       setFieldError('reset-form', 'Something went wrong. Please try again.');
       console.error('Forgot password request failed:', err);

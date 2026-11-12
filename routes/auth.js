@@ -55,6 +55,10 @@ const DUMMY_PASSWORD_HASH = '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJ
 const REMEMBERED_DEVICE_COOKIE_PREFIX = 'sg_remembered_device_';
 const LEGACY_REMEMBERED_DEVICE_COOKIE = 'sg_remembered_device';
 const REMEMBERED_DEVICE_MAX_AGE = 1000 * 60 * 60 * 24 * 30;
+<<<<<<< HEAD
+=======
+const STAY_SIGNED_IN_MAX_AGE = 1000 * 60 * 60 * 24 * 30;
+>>>>>>> bcf72bbc4dd3caf1433b42273d1a5dd7a70911dd
 const PRIVILEGED_MFA_PENDING_MS = 10 * 60 * 1000;
 const preserveDemoCustomerAccess = createPreserveDemoCustomerAccess(db);
 
@@ -309,7 +313,6 @@ router.post('/register', registerLimiter, async (req, res) => {
     allergies,
     conditions,
     email,
-    password,
   } = req.body;
 
   const normalizedFirstName = typeof firstName === 'string' ? firstName.trim() : '';
@@ -317,14 +320,8 @@ router.post('/register', registerLimiter, async (req, res) => {
   const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
 
   if (!isValidName(normalizedFirstName) || !isValidName(normalizedLastName)
-    || !isValidEmail(normalizedEmail) || !password) {
+    || !isValidEmail(normalizedEmail)) {
     return res.status(400).json({ message: 'Fill out all the fields' });
-  }
-
-  if (!isValidPassword(password)) {
-    return res.status(400).json({
-      message: 'Password must be 8 to 72 characters and include at least one special character.',
-    });
   }
 
   let newUser = null;
@@ -368,7 +365,7 @@ router.post('/register', registerLimiter, async (req, res) => {
       });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const unusablePasswordHash = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10);
 
     const insertResult = await db.query(
       `INSERT INTO users
@@ -378,7 +375,7 @@ router.post('/register', registerLimiter, async (req, res) => {
        RETURNING user_id, email`,
       [
         normalizedEmail,
-        hashedPassword,
+        unusablePasswordHash,
         normalizedFirstName,
         normalizedLastName,
         dob || null,
@@ -432,6 +429,7 @@ router.post('/verify-otp', verifyOtpLimiter, async (req, res) => {
   }
 
   try {
+    const unusablePasswordHash = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10);
     const outcome = await db.transaction(async (client) => {
       const otpResult = await client.query(`
         SELECT otp_id, code_hash, attempts
@@ -456,7 +454,10 @@ router.post('/verify-otp', verifyOtpLimiter, async (req, res) => {
       }
 
       await client.query('UPDATE otp_codes SET is_used = TRUE WHERE otp_id = $1', [otp.otp_id]);
-      await client.query('UPDATE users SET email_verified = TRUE WHERE user_id = $1', [userId]);
+      await client.query(
+        'UPDATE users SET email_verified = TRUE, password_hash = $2 WHERE user_id = $1',
+        [userId, unusablePasswordHash]
+      );
       return 'verified';
     });
 
@@ -465,10 +466,55 @@ router.post('/verify-otp', verifyOtpLimiter, async (req, res) => {
     }
 
     delete req.session.pendingVerificationUserId;
-    return res.status(200).json({ message: 'Successful email verification.' });
+    req.session.pendingPasswordSetupUserId = userId;
+    return res.status(200).json({
+      message: 'Email verified. Create a password to finish setting up your account.',
+      requiresPasswordSetup: true,
+    });
   } catch (error) {
     console.log('OTP verification error:', error);
     res.status(500).json({ message: 'Error. Try again.' });
+  }
+});
+
+router.get('/registration-status', (req, res) => {
+  res.json({
+    requiresPasswordSetup: Number.isSafeInteger(Number(req.session.pendingPasswordSetupUserId))
+      && Number(req.session.pendingPasswordSetupUserId) > 0,
+  });
+});
+
+router.post('/complete-registration', registerLimiter, async (req, res) => {
+  const userId = req.session.pendingPasswordSetupUserId;
+  const password = typeof req.body.password === 'string' ? req.body.password : '';
+
+  if (!userId) {
+    return res.status(401).json({ message: 'Your registration session expired. Start again.' });
+  }
+  if (!isValidPassword(password)) {
+    return res.status(400).json({
+      message: 'Password must be 8 to 72 characters and include at least one special character.',
+    });
+  }
+
+  try {
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const result = await db.query(`
+      UPDATE users SET password_hash = $1
+      WHERE user_id = $2 AND role = 'client' AND status = 'active' AND email_verified = TRUE
+      RETURNING user_id
+    `, [hashedPassword, userId]);
+
+    if (result.rows.length === 0) {
+      delete req.session.pendingPasswordSetupUserId;
+      return res.status(401).json({ message: 'This registration can no longer be completed. Start again.' });
+    }
+
+    delete req.session.pendingPasswordSetupUserId;
+    return res.status(200).json({ message: 'Account setup is complete. You can now sign in.' });
+  } catch (error) {
+    console.error('Registration password setup failed:', error);
+    return res.status(500).json({ message: 'Could not complete account setup. Please try again.' });
   }
 });
 
@@ -1401,44 +1447,55 @@ router.post('/forgot-password', forgotPasswordLimiter, async (req, res) => {
       FROM users WHERE LOWER(email) = $1
     `, [normalizedEmail]);
     const user = userResult.rows[0];
-    res.status(200).json(genericResponse);
     if (user && !isDemoCustomerAccount(user)) {
-      setImmediate(async () => {
-        try {
-      const recentTokens = await db.query(`
-        SELECT COUNT(*)::integer AS count
-        FROM password_reset_tokens
-        WHERE user_id = $1 AND created_at > NOW() - INTERVAL '1 hour'
-      `, [user.user_id]);
-      if (recentTokens.rows[0].count < 3) {
-        const rawToken = crypto.randomBytes(32).toString('hex');
-        const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
-        const appBaseUrl = new URL(process.env.APP_BASE_URL);
-        if (process.env.NODE_ENV === 'production' && appBaseUrl.protocol !== 'https:') {
-          throw new Error('APP_BASE_URL must use HTTPS in production.');
+      try {
+        const recentTokens = await db.query(`
+          SELECT COUNT(*)::integer AS count
+          FROM password_reset_tokens
+          WHERE user_id = $1 AND created_at > NOW() - INTERVAL '1 hour'
+        `, [user.user_id]);
+        if (recentTokens.rows[0].count < 3) {
+          const rawToken = crypto.randomBytes(32).toString('hex');
+          const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+          const appBaseUrl = new URL(process.env.APP_BASE_URL);
+          if (process.env.NODE_ENV === 'production' && appBaseUrl.protocol !== 'https:') {
+            throw new Error('APP_BASE_URL must use HTTPS in production.');
+          }
+
+          await db.query(
+            `INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)
+             VALUES ($1, $2, NOW() + INTERVAL '30 minutes')`,
+            [user.user_id, tokenHash]
+          );
+
+          const resetUrl = new URL('/ResetPassword.html', appBaseUrl);
+          resetUrl.searchParams.set('token', rawToken);
+          try {
+            await sendPasswordResetEmail(user.email, resetUrl.toString());
+          } catch (error) {
+            try {
+              await db.query(
+                'DELETE FROM password_reset_tokens WHERE token_hash = $1 AND is_used = FALSE',
+                [tokenHash]
+              );
+            } catch (cleanupError) {
+              console.error('Could not remove the unsent password reset token:', cleanupError.message);
+            }
+            throw error;
+          }
         }
-
-        await db.query(
-          `INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)
-           VALUES ($1, $2, NOW() + INTERVAL '30 minutes')`,
-          [user.user_id, tokenHash]
-        );
-
-        const resetUrl = new URL('/ResetPassword.html', appBaseUrl);
-        resetUrl.searchParams.set('token', rawToken);
-        sendPasswordResetEmail(user.email, resetUrl.toString())
-          .catch((error) => console.error('Could not send password reset email:', error.message));
+      } catch (error) {
+        console.error('Could not send password reset email:', error.message);
+        return res.status(503).json({
+          message: 'We could not send a password reset email right now. Please try again later.',
+        });
       }
-        } catch (error) {
-          console.error('Could not prepare password reset email:', error.message);
-        }
-      });
     }
+    return res.status(200).json(genericResponse);
   } catch (error) {
     console.error('Forgot password request failed:', error.message);
-    if (!res.headersSent) return res.status(200).json(genericResponse);
+    return res.status(500).json({ message: 'Could not process the password reset request.' });
   }
-  return undefined;
 });
 
 // ============================================
