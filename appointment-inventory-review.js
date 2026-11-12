@@ -145,12 +145,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const productId = Number(product.product_id);
             const current = selection.get(productId);
             const stock = Number(product.stock_quantity);
+            const expired = Boolean(product.is_expired_for_appointment);
             const quantity = Number(current?.quantity);
             const insufficient = current && (!Number.isSafeInteger(quantity) || quantity < 1 || quantity > stock);
-            const row = el(`article`, `appointment-review-product${insufficient ? ' has-stock-warning' : ''}`);
+            const row = el(`article`, `appointment-review-product${insufficient || expired ? ' has-stock-warning' : ''}`);
             const checkbox = el('input');
             checkbox.type = 'checkbox';
             checkbox.checked = Boolean(current);
+            checkbox.disabled = expired;
             checkbox.setAttribute('aria-label', `Select ${product.product_name}`);
             const details = el('div', 'appointment-review-product__details');
             details.append(
@@ -160,19 +162,27 @@ document.addEventListener('DOMContentLoaded', () => {
             if (product.is_suggested) {
                 details.appendChild(el('span', 'appointment-review-product__tag', 'Service suggestion'));
             }
+            if (expired) {
+                details.appendChild(el('span', 'appointment-review-product__expired',
+                    `Expired before service date (expires ${product.expiry_date})`));
+            }
             const quantityLabel = el('label', 'appointment-review-product__quantity', 'Actual quantity used');
             const quantityInput = el('input');
             quantityInput.type = 'number';
             quantityInput.min = '1';
             quantityInput.step = '1';
             quantityInput.value = current?.quantity ?? '';
-            quantityInput.disabled = !current;
+            quantityInput.disabled = !current || expired;
             quantityInput.setAttribute('aria-label', `Actual quantity used for ${product.product_name}`);
             quantityLabel.appendChild(quantityInput);
             row.append(checkbox, details, quantityLabel);
-            if (insufficient) {
+            if (expired || insufficient) {
                 row.appendChild(el('p', 'appointment-review-product__warning',
-                    stock <= 0 ? 'Out of stock. This item cannot be confirmed while selected.' : `Only ${stock} units are available.`));
+                    expired
+                        ? 'This product cannot be selected for an appointment after its expiration date.'
+                        : stock <= 0
+                            ? 'Out of stock. This item cannot be confirmed while selected.'
+                            : `Only ${stock} units are available.`));
             }
             list.appendChild(row);
 
@@ -279,7 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
             appointment = queueItem;
             products = review.products;
             selection = new Map(review.products
-                .filter((product) => product.is_selected)
+                .filter((product) => product.is_selected && !product.is_expired_for_appointment)
                 .map((product) => [Number(product.product_id), {
                     quantity: product.selected_quantity ?? '',
                     isSuggested: Boolean(product.selected_is_suggested),
@@ -295,6 +305,9 @@ document.addEventListener('DOMContentLoaded', () => {
             dialogMessage.textContent = review.reviewStatus === 'confirmed'
                 ? `Confirmed by ${review.reviewedBy || 'Inventory Officer'}${review.reviewedAt ? ` on ${formatManilaDateTime(review.reviewedAt)}` : ''}. Editing the selection will reset confirmation.`
                 : 'Check the suggested products against what was actually used and enter each quantity.';
+            if (review.removedExpiredSelection) {
+                dialogMessage.textContent = 'Previously selected products that were expired before the appointment date were removed. Review the products and quantities again.';
+            }
             dialogMessage.classList.remove('is-error');
             draftDirty = false;
             attestation.checked = false;

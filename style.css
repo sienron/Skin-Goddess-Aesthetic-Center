@@ -14806,6 +14806,11 @@ textarea.cm-editor__input {
   border-radius: 5px;
 }
 
+.appointment-product-row--expired {
+  border-color: #c94c4c;
+  background: #fff4f3;
+}
+
 .appointment-product-row>input[type="checkbox"] {
   width: 16px;
   height: 16px;
@@ -14837,6 +14842,10 @@ textarea.cm-editor__input {
 
 .appointment-product-tag--manual {
   color: var(--um-role-client);
+}
+
+.appointment-product-tag--expired {
+  color: #9b1c1c;
 }
 
 .appointment-product-review-note {

@@ -99,6 +99,8 @@ async function editAppointmentStatus({ currentStatus, requestedStatus, appointme
 async function saveDraft({
   selectedItems,
   stockByProductId,
+  expiryByProductId = new Map(),
+  serviceDate = '2026-10-17',
   confirmed = false,
   existingDraft = null,
   route = draftRoute,
@@ -112,8 +114,8 @@ async function saveDraft({
   db.transaction = async (callback) => callback({
     async query(sql, values = []) {
       queryCalls.push({ sql, values });
-      if (/SELECT appointment_status\s+FROM appointments/.test(sql)) {
-        return { rows: [{ appointment_status: 'in_progress' }] };
+      if (/SELECT appointment_status, appointment_date::text AS service_date/.test(sql)) {
+        return { rows: [{ appointment_status: 'in_progress', service_date: serviceDate }] };
       }
       if (/SELECT selected_items, reviewed_by, reviewed_at\s+FROM appointment_inventory_review_drafts/.test(sql)) {
         return existingDraft ? { rows: [existingDraft] } : { rows: [] };
@@ -126,7 +128,8 @@ async function saveDraft({
             .map((productId) => ({
               product_id: productId,
               product_name: `Product ${productId}`,
-              stock_quantity: stockByProductId.get(productId)
+              stock_quantity: stockByProductId.get(productId),
+              expiry_date: expiryByProductId.get(productId) || null
             }))
         };
       }
@@ -171,6 +174,7 @@ async function loadReview({ products, savedSelection = null }) {
             appointment_id: 42,
             service_id: 3,
             status: 'in_progress',
+            date: '2026-10-17',
             service: 'Test service',
             client: 'Test client'
           }]
@@ -276,6 +280,8 @@ async function saveServiceDefaults({ products }) {
 async function completeAppointment({
   selectedItems,
   stockByProductId = new Map([[12, 20]]),
+  expiryByProductId = new Map(),
+  serviceDate = '2026-10-17',
   alreadyDeducted = false,
   reviewConfirmed = true,
   failOnInventoryLog = false,
@@ -296,7 +302,12 @@ async function completeAppointment({
         async query(sql, values = []) {
           queryCalls.push({ sql, values });
           if (/SELECT appointment_id, appointment_status, user_id/.test(sql)) {
-            return { rows: [{ appointment_id: 42, appointment_status: 'in_progress', user_id: null }] };
+            return { rows: [{
+              appointment_id: 42,
+              appointment_status: 'in_progress',
+              user_id: null,
+              service_date: serviceDate
+            }] };
           }
           if (/SELECT selected_items, reviewed_by, reviewed_at/.test(sql)) {
             return {
@@ -310,14 +321,15 @@ async function completeAppointment({
           if (/FROM appointment_inventory_deductions/.test(sql)) {
             return { rows: alreadyDeducted ? [{ confirmed_at: '2026-10-16T00:00:00Z' }] : [] };
           }
-          if (/SELECT product_id, product_name, stock_quantity\s+FROM inventory_products/.test(sql)) {
+          if (/SELECT product_id, product_name, stock_quantity, expiry_date::text AS expiry_date\s+FROM inventory_products/.test(sql)) {
             return {
               rows: values[0]
                 .filter((productId) => stockByProductId.has(productId))
                 .map((productId) => ({
                   product_id: productId,
                   product_name: `Product ${productId}`,
-                  stock_quantity: stockByProductId.get(productId)
+                  stock_quantity: stockByProductId.get(productId),
+                  expiry_date: expiryByProductId.get(productId) || null
                 }))
             };
           }
@@ -400,7 +412,7 @@ test('inventory review preselects enabled service suggestions and leaves other p
   ]);
   const mappingQuery = result.queryCalls.find(({ sql }) => /FROM inventory_products product/.test(sql));
   assert.match(mappingQuery.sql, /mapping\.is_enabled = TRUE/);
-  assert.deepEqual(mappingQuery.values, [3]);
+  assert.deepEqual(mappingQuery.values, [3, '2026-10-17']);
 });
 
 test('Inventory Officer queue includes in-progress appointments and review status', async () => {
@@ -1003,6 +1015,34 @@ test('inventory review keeps out-of-stock and insufficient-stock draft selection
   assert.equal(result.responseBody.removedMissingSelection, false);
 });
 
+test('inventory review removes a saved selection expired before the appointment date', async () => {
+  const result = await loadReview({
+    products: [{
+      product_id: 12,
+      product_name: 'Expired product',
+      category: 'Treatment',
+      stock_quantity: 5,
+      expiry_date: '2026-10-16',
+      is_expired_for_appointment: true,
+      default_quantity: 1,
+      review_note: null,
+      is_suggested: true
+    }],
+    savedSelection: [
+      { productId: 12, quantity: 1, isSuggested: true, suggestionDefaultQuantity: 1 }
+    ]
+  });
+
+  assert.equal(result.statusCode, 200);
+  assert.equal(result.responseBody.products[0].is_selected, false);
+  assert.equal(result.responseBody.products[0].is_expired_for_appointment, true);
+  assert.equal(result.responseBody.removedExpiredSelection, true);
+  assert.equal(result.responseBody.reviewStatus, 'pending');
+  const resetDraft = result.queryCalls.find(({ sql }) => /UPDATE appointment_inventory_review_drafts/.test(sql));
+  assert.deepEqual(JSON.parse(resetDraft.values[0]), []);
+  assert.match(resetDraft.sql, /reviewed_by = NULL, reviewed_at = NULL/);
+});
+
 test('inventory review leaves products unselected when a service has no configured suggestions', async () => {
   const result = await loadReview({
     products: [
@@ -1108,6 +1148,33 @@ test('inventory review draft preserves a quantity greater than current stock for
   assert.equal(result.statusCode, 200);
 });
 
+test('inventory review draft rejects products expired before the appointment date', async () => {
+  const result = await saveDraft({
+    selectedItems: [{ productId: 12, quantity: 1, isSuggested: false }],
+    stockByProductId: new Map([[12, 5]]),
+    expiryByProductId: new Map([[12, '2026-10-16']]),
+    serviceDate: '2026-10-17',
+    confirmed: true
+  });
+
+  assert.equal(result.statusCode, 409);
+  assert.match(result.responseBody.message, /Product 12 expired on 2026-10-16/);
+  assert.equal(result.queryCalls.some(({ sql }) => /INSERT INTO appointment_inventory_review_drafts/.test(sql)), false);
+});
+
+test('inventory review allows use on the product expiration date', async () => {
+  const result = await saveDraft({
+    selectedItems: [{ productId: 12, quantity: 1, isSuggested: false }],
+    stockByProductId: new Map([[12, 5]]),
+    expiryByProductId: new Map([[12, '2026-10-17']]),
+    serviceDate: '2026-10-17',
+    confirmed: true
+  });
+
+  assert.equal(result.statusCode, 200);
+  assert.equal(result.responseBody.reviewStatus, 'confirmed');
+});
+
 test('inventory review draft preserves an out-of-stock selected product', async () => {
   const result = await saveDraft({
     selectedItems: [{ productId: 12, quantity: 1, isSuggested: false }],
@@ -1201,6 +1268,31 @@ test('completion rechecks stock and rolls back when stock is insufficient', asyn
   assert.equal(result.rolledBack, true);
   assert.equal(result.queryCalls.some(({ sql }) => /UPDATE inventory_products/.test(sql)), false);
   assert.equal(result.queryCalls.some(({ sql }) => /UPDATE appointments\s+SET appointment_status = 'completed'/.test(sql)), false);
+});
+
+test('completion rejects products expired before the appointment date without deducting stock', async () => {
+  const result = await completeAppointment({
+    selectedItems: [{ productId: 12, quantity: 1, isSuggested: false }],
+    expiryByProductId: new Map([[12, '2026-10-16']]),
+    serviceDate: '2026-10-17'
+  });
+
+  assert.equal(result.statusCode, 409);
+  assert.match(result.responseBody.message, /Product 12 expired on 2026-10-16/);
+  assert.equal(result.rolledBack, true);
+  assert.equal(result.queryCalls.some(({ sql }) => /UPDATE inventory_products/.test(sql)), false);
+  assert.equal(result.queryCalls.some(({ sql }) => /UPDATE appointments\s+SET appointment_status = 'completed'/.test(sql)), false);
+});
+
+test('completion allows deduction when the appointment occurred on the expiration date', async () => {
+  const result = await completeAppointment({
+    selectedItems: [{ productId: 12, quantity: 1, isSuggested: false }],
+    expiryByProductId: new Map([[12, '2026-10-17']]),
+    serviceDate: '2026-10-17'
+  });
+
+  assert.equal(result.statusCode, 200);
+  assert.equal(result.responseBody.status, 'completed');
 });
 
 test('completion identifies all selected products with insufficient or zero stock', async () => {
