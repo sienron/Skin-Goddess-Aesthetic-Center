@@ -14,7 +14,7 @@
 
     if (!todayCount || !tableBody) return;
 
-    const pageSize = 6;
+    const pageSize = 8;
     let allAppointments = [];
     let currentPage = 1;
 
@@ -162,7 +162,7 @@
 
         const shownFrom = allAppointments.length === 0 ? 0 : startIndex + 1;
         const shownTo = Math.min(startIndex + pageSize, allAppointments.length);
-        tableSummary.textContent = `Showing ${shownTo === 0 ? 0 : `${shownFrom}-${shownTo}`} of ${allAppointments.length} clients`;
+        tableSummary.textContent = `Showing ${shownTo === 0 ? 0 : `${shownFrom}-${shownTo}`} of ${allAppointments.length} appointments`;
         pagination.replaceChildren();
 
         if (totalPages > 1) {

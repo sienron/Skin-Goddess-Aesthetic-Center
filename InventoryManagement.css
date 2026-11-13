@@ -306,12 +306,14 @@ body.inventory-transactions-page > .inventory-page {
 
 
 .btn-export{
+    border-color: var(--gold);
     background: var(--gold);
     color: var(--white);
 }
 
 .btn-export:hover{
-
+    border-color: var(--gold-dark);
+    background: var(--gold-dark);
     transform:translateY(-2px);
 }
 

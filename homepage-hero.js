@@ -1,20 +1,13 @@
 (() => {
-  const servicePanels = Array.from(document.querySelectorAll("body.homepage .homepage-service-panel"));
-  const touchLayout = window.matchMedia("(hover: none), (pointer: coarse)");
-
-  servicePanels.forEach((panel) => {
-    if (touchLayout.matches) panel.setAttribute("aria-expanded", "false");
-    panel.addEventListener("click", (event) => {
-      if (!touchLayout.matches || event.detail === 0) return;
-
-      if (!panel.classList.contains("is-expanded")) {
-        event.preventDefault();
-        servicePanels.forEach((otherPanel) => {
-          const isExpanded = otherPanel === panel;
-          otherPanel.classList.toggle("is-expanded", isExpanded);
-          otherPanel.setAttribute("aria-expanded", String(isExpanded));
-        });
-      }
+  const benefitCards = Array.from(document.querySelectorAll("body.homepage .homepage-benefit-card"));
+  benefitCards.forEach((card) => {
+    card.addEventListener("click", () => {
+      const shouldExpand = !card.classList.contains("is-expanded");
+      benefitCards.forEach((otherCard) => {
+        const isExpanded = otherCard === card && shouldExpand;
+        otherCard.classList.toggle("is-expanded", isExpanded);
+        otherCard.setAttribute("aria-expanded", String(isExpanded));
+      });
     });
   });
 
@@ -49,7 +42,7 @@
     const copy = hero.querySelector(".hero-copy");
     const care = hero.querySelector("#featuredServices");
     const careHeading = care?.querySelector(".homepage-service-panels__header");
-    const careColumns = care ? Array.from(care.querySelectorAll(".homepage-service-panel")) : [];
+    const careColumns = care ? Array.from(care.querySelectorAll(".homepage-benefit-card")) : [];
     const treatments = hero.querySelector("#treatments");
     const treatmentsHeader = treatments?.querySelector(".treatments-section__header");
     const carouselWrap = treatments?.querySelector(".treatments-carousel-wrap");

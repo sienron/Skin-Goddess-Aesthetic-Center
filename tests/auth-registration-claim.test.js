@@ -166,13 +166,31 @@ test('verified email owner can finish registration with a new password', async (
   const session = sessionWith({ pendingPasswordSetupUserId: 17 });
 
   await routeHandler('/complete-registration', 'post')({
-    body: { password: 'new-client-password!' },
+    body: { password: 'new-client-password1!' },
     session,
   }, response);
 
   assert.equal(response.statusCode, 200);
   assert.equal(session.pendingPasswordSetupUserId, undefined);
-  assert.equal(await bcrypt.compare('new-client-password!', savedPasswordHash), true);
+  assert.equal(await bcrypt.compare('new-client-password1!', savedPasswordHash), true);
+});
+
+test('registration completion rejects passwords without a number', async () => {
+  let queryCount = 0;
+  db.query = async () => {
+    queryCount += 1;
+    return { rows: [] };
+  };
+  const response = responseCapture();
+
+  await routeHandler('/complete-registration', 'post')({
+    body: { password: 'new-client-password!' },
+    session: sessionWith({ pendingPasswordSetupUserId: 17 }),
+  }, response);
+
+  assert.equal(response.statusCode, 400);
+  assert.match(response.body.message, /one number/i);
+  assert.equal(queryCount, 0);
 });
 
 test('registration status supports resuming password setup without exposing account details', async () => {
