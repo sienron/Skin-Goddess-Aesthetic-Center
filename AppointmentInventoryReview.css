@@ -215,6 +215,15 @@
     background: #fffaf0;
 }
 
+.appointment-review-product__expired {
+    color: #9b1c1c !important;
+    font-weight: 600;
+}
+
+.appointment-review-product input:disabled {
+    cursor: not-allowed;
+}
+
 .appointment-review-product__details {
     display: grid;
     gap: 2px;

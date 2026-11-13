@@ -764,7 +764,7 @@ router.post('/', async (req, res) => {
     }
 });
 
-//PUT for updating inventory stock
+//PUT '+' for updating inventory stock 
 router.put('/:id/stock', async (req, res) => {
 
     try {

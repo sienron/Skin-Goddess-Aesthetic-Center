@@ -954,7 +954,9 @@ const loadInventoryReview = async (req, res) => {
 
       const productsResult = await client.query(`
         SELECT product.product_id, product.product_name, product.category,
-               product.stock_quantity, mapping.default_quantity, mapping.review_note,
+               product.stock_quantity, product.expiry_date::text AS expiry_date,
+               (product.expiry_date IS NOT NULL AND product.expiry_date < $2::date) AS is_expired_for_appointment,
+               mapping.default_quantity, mapping.review_note,
                (mapping.product_id IS NOT NULL) AS is_suggested
         FROM inventory_products product
         LEFT JOIN service_inventory_product_defaults mapping
@@ -962,7 +964,7 @@ const loadInventoryReview = async (req, res) => {
          AND mapping.product_id = product.product_id
          AND mapping.is_enabled = TRUE
         ORDER BY product.category, product.product_name, product.product_id
-      `, [appointment.service_id]);
+      `, [appointment.service_id, appointment.date]);
       const productsById = new Map(productsResult.rows.map((product) => [
         Number(product.product_id),
         product
@@ -980,6 +982,7 @@ const loadInventoryReview = async (req, res) => {
       const selectedItems = savedDraft
         ? storedSelection
           .filter((item) => productsById.has(Number(item.productId)))
+          .filter((item) => !productsById.get(Number(item.productId)).is_expired_for_appointment)
           .map((item) => ({
             productId: Number(item.productId),
             quantity: item.quantity === null ? null : Number(item.quantity),
@@ -989,7 +992,7 @@ const loadInventoryReview = async (req, res) => {
               : Number(item.suggestionDefaultQuantity)
           }))
         : productsResult.rows
-          .filter((product) => product.is_suggested)
+          .filter((product) => product.is_suggested && !product.is_expired_for_appointment)
           .map((product) => ({
             productId: Number(product.product_id),
             quantity: product.default_quantity == null ? null : Number(product.default_quantity),
@@ -1002,13 +1005,16 @@ const loadInventoryReview = async (req, res) => {
       const removedMissingSelection = storedSelection.some((item) => (
         !productsById.has(Number(item.productId))
       ));
+      const removedExpiredSelection = storedSelection.some((item) => (
+        productsById.get(Number(item.productId))?.is_expired_for_appointment
+      ));
       if (!savedDraft) {
         await client.query(`
           INSERT INTO appointment_inventory_review_drafts
             (appointment_id, selected_items, updated_by, updated_at, reviewed_by, reviewed_at)
           VALUES ($1, $2::jsonb, $3, NOW(), NULL, NULL)
         `, [appointmentId, JSON.stringify(selectedItems), req.session.userId]);
-      } else if (removedMissingSelection) {
+      } else if (removedMissingSelection || removedExpiredSelection) {
         await client.query(`
           UPDATE appointment_inventory_review_drafts
           SET selected_items = $1::jsonb, updated_by = $2, updated_at = NOW(),
@@ -1037,8 +1043,10 @@ const loadInventoryReview = async (req, res) => {
         appointment,
         products,
         removedMissingSelection,
+        removedExpiredSelection,
         mappingConfigured,
         reviewStatus: savedDraft?.reviewed_by && savedDraft?.reviewed_at && !removedMissingSelection
+          && !removedExpiredSelection
           ? 'confirmed'
           : 'pending',
         reviewedAt: savedDraft?.reviewed_at || null,
@@ -1098,7 +1106,7 @@ const saveInventoryReview = async (req, res) => {
   try {
     const unchangedConfirmedReview = await db.transaction(async (client) => {
       const appointmentResult = await client.query(`
-        SELECT appointment_status
+        SELECT appointment_status, appointment_date::text AS service_date
         FROM appointments
         WHERE appointment_id = $1
         FOR UPDATE
@@ -1137,7 +1145,7 @@ const saveInventoryReview = async (req, res) => {
 
       if (selectedIds.size) {
         const products = await client.query(`
-          SELECT product_id, product_name, stock_quantity
+          SELECT product_id, product_name, stock_quantity, expiry_date::text AS expiry_date
           FROM inventory_products
           WHERE product_id = ANY($1::integer[])
           ORDER BY product_id
@@ -1145,6 +1153,18 @@ const saveInventoryReview = async (req, res) => {
         `, [[...selectedIds].sort((left, right) => left - right)]);
         if (products.rows.length !== selectedIds.size) {
           const error = new Error('One or more selected products are no longer available.');
+          error.statusCode = 409;
+          throw error;
+        }
+        const expiredProducts = products.rows.filter((product) => (
+          product.expiry_date && product.expiry_date < appointmentResult.rows[0].service_date
+        ));
+        if (expiredProducts.length) {
+          const error = new Error(
+            `Cannot save product use: ${expiredProducts.map((product) => (
+              `${product.product_name} expired on ${product.expiry_date}, before the appointment date.`
+            )).join(' ')}`
+          );
           error.statusCode = 409;
           throw error;
         }
@@ -1219,7 +1239,7 @@ router.post('/admin/:id/complete-with-inventory', requireRole('admin'), async (r
   try {
     const deduction = await db.transaction(async (client) => {
       const appointmentResult = await client.query(`
-        SELECT appointment_id, appointment_status, user_id
+        SELECT appointment_id, appointment_status, user_id, appointment_date::text AS service_date
         FROM appointments
         WHERE appointment_id = $1
         FOR UPDATE
@@ -1280,7 +1300,7 @@ router.post('/admin/:id/complete-with-inventory', requireRole('admin'), async (r
 
       const productIds = [...quantities.keys()].sort((left, right) => left - right);
       const productsResult = await client.query(`
-        SELECT product_id, product_name, stock_quantity
+        SELECT product_id, product_name, stock_quantity, expiry_date::text AS expiry_date
         FROM inventory_products
         WHERE product_id = ANY($1::integer[])
         ORDER BY product_id
@@ -1288,6 +1308,19 @@ router.post('/admin/:id/complete-with-inventory', requireRole('admin'), async (r
       `, [productIds]);
       if (productsResult.rows.length !== productIds.length) {
         const error = new Error('One or more selected products are no longer available.');
+        error.statusCode = 409;
+        throw error;
+      }
+
+      const expiredProducts = productsResult.rows.filter((product) => (
+        product.expiry_date && product.expiry_date < appointment.service_date
+      ));
+      if (expiredProducts.length) {
+        const error = new Error(
+          `Cannot complete appointment: ${expiredProducts.map((product) => (
+            `${product.product_name} expired on ${product.expiry_date}, before the appointment date.`
+          )).join(' ')}`
+        );
         error.statusCode = 409;
         throw error;
       }

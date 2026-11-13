@@ -555,6 +555,9 @@ document.addEventListener('DOMContentLoaded', () => {
     for (const product of productReview?.products || []) {
       const selection = productSelection.get(Number(product.product_id));
       if (!selection) continue;
+      if (product.is_expired_for_appointment) {
+        return `${product.product_name} expired before the appointment date and cannot be selected.`;
+      }
       if (Number(product.stock_quantity) <= 0) {
         return `${product.product_name} is out of stock (0 units available). Uncheck it if it was not used.`;
       }
@@ -639,16 +642,23 @@ document.addEventListener('DOMContentLoaded', () => {
       products.forEach((product) => {
         const productId = Number(product.product_id);
         const selection = productSelection.get(productId);
+        const expired = Boolean(product.is_expired_for_appointment);
         const row = el('article', 'appointment-product-row');
+        row.classList.toggle('appointment-product-row--expired', expired);
         const checkbox = el('input');
         checkbox.type = 'checkbox';
         checkbox.checked = Boolean(selection);
+        checkbox.disabled = expired;
         checkbox.setAttribute('aria-label', `Select ${product.product_name}`);
         const details = el('div', 'appointment-product-row__details');
         details.appendChild(el('strong', '', product.product_name));
         details.appendChild(el('span', '', Number(product.stock_quantity) <= 0
           ? `${product.category} · Current stock: ${product.stock_quantity} · Out of stock`
           : `${product.category} · Current stock: ${product.stock_quantity}`));
+        if (expired) {
+          details.appendChild(el('span', 'appointment-product-tag appointment-product-tag--expired',
+            `Expired before service date (expires ${product.expiry_date})`));
+        }
         if (!product.is_suggested && selection) {
           details.appendChild(el('span', 'appointment-product-tag appointment-product-tag--manual', 'Manually added'));
         }
@@ -658,7 +668,7 @@ document.addEventListener('DOMContentLoaded', () => {
         quantityInput.min = '1';
         quantityInput.step = '1';
         quantityInput.value = selection?.quantity ?? '';
-        quantityInput.disabled = !selection;
+        quantityInput.disabled = !selection || expired;
         quantityInput.setAttribute('aria-label', `Quantity to deduct for ${product.product_name}`);
         quantityLabel.appendChild(quantityInput);
         row.append(checkbox, details, quantityLabel);
@@ -752,7 +762,7 @@ document.addEventListener('DOMContentLoaded', () => {
     productReview = result;
     productSelection = new Map();
     result.products.forEach((product) => {
-      if (product.is_selected) {
+      if (product.is_selected && !product.is_expired_for_appointment) {
         productSelection.set(Number(product.product_id), {
           quantity: product.selected_quantity ?? '',
           isSuggested: Boolean(product.selected_is_suggested),
@@ -778,7 +788,9 @@ document.addEventListener('DOMContentLoaded', () => {
       message.classList.remove('appointment-inventory-message--error');
       showProductEditorStep();
       renderProductSelection();
-      if (result.removedMissingSelection) {
+      if (result.removedExpiredSelection) {
+        message.textContent = 'Previously selected products that were expired before the appointment date were removed. Review the products and quantities again.';
+      } else if (result.removedMissingSelection) {
         message.textContent = 'Previously selected products no longer in inventory were removed. Review the updated selection before confirming.';
       }
       setAppointmentModalOpen(productsModal, true);
