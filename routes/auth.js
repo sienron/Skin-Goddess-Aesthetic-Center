@@ -1200,7 +1200,8 @@ router.get('/profile', async (req, res) => {
 
   try {
     const result = await db.query(
-      `SELECT first_name, last_name, email, contact_number
+      `SELECT first_name, last_name, email, contact_number,
+              date_of_birth, gender, home_address, allergies, medical_conditions
        FROM users WHERE user_id = $1`,
       [req.session.userId]
     );
@@ -1215,6 +1216,11 @@ router.get('/profile', async (req, res) => {
       lastName: user.last_name,
       email: user.email,
       contactNumber: user.contact_number,
+      dateOfBirth: user.date_of_birth,
+      gender: user.gender,
+      address: user.home_address,
+      allergies: user.allergies,
+      medicalConditions: user.medical_conditions,
     });
   } catch (error) {
     console.log('Get profile error:', error);

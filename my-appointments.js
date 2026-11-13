@@ -25,19 +25,24 @@
   const upcomingCount = document.getElementById('upcomingAppointmentsCount');
   const historyList = document.getElementById('appointmentHistory');
   const historyCount = document.getElementById('appointmentHistoryCount');
-  const isAllAppointmentsView = new URLSearchParams(window.location.search).get('view') === 'all';
+  const profileAppointmentHistoryList = document.getElementById('profileAppointmentHistoryList');
+  const treatmentHistoryList = document.getElementById('treatmentHistoryList');
+  const historyToggle = document.getElementById('appointmentHistoryToggle');
+  const calendarToggle = document.getElementById('appointmentCalendarToggle');
+  const hasAppointmentHistoryNavigation = Boolean(appointmentLists && historyLinkWrap && calendarLinkWrap);
+  let isAllAppointmentsView = hasAppointmentHistoryNavigation &&
+    new URLSearchParams(window.location.search).get('view') === 'all';
 
   if (!grid || !weekdaysEl || !titleEl || !prevBtn || !nextBtn || !weekBtn || !monthBtn ||
       !message || !monthView || !weekView ||
-      !weekHeader || !weekTimeColumn || !weekDaysGrid || !appointmentLists || !calendar ||
-      !historyLinkWrap || !calendarLinkWrap || !pageTitle ||
+      !weekHeader || !weekTimeColumn || !weekDaysGrid || !calendar ||
       !upcomingList || !historyList) return;
 
-  appointmentLists.hidden = !isAllAppointmentsView;
+  if (appointmentLists) appointmentLists.hidden = !isAllAppointmentsView;
   calendar.hidden = isAllAppointmentsView;
-  historyLinkWrap.hidden = isAllAppointmentsView;
-  calendarLinkWrap.hidden = !isAllAppointmentsView;
-  if (isAllAppointmentsView) {
+  if (historyLinkWrap) historyLinkWrap.hidden = isAllAppointmentsView;
+  if (calendarLinkWrap) calendarLinkWrap.hidden = !isAllAppointmentsView;
+  if (isAllAppointmentsView && pageTitle) {
     const titleAccent = document.createElement('span');
     titleAccent.textContent = 'Appointments';
     pageTitle.replaceChildren(document.createTextNode('All '), titleAccent);
@@ -328,6 +333,28 @@
     if (historyCount) historyCount.textContent = String(history.length);
     renderAppointmentList(upcomingList, upcoming, 'No upcoming appointments. Book a visit to see it here.');
     renderAppointmentList(historyList, history, 'Past and cancelled appointments will appear here.');
+    if (profileAppointmentHistoryList) {
+      renderAppointmentList(profileAppointmentHistoryList, history, 'Your past appointments will appear here.');
+    }
+    if (treatmentHistoryList) {
+      const completed = history.filter((appointment) =>
+        String(appointment.status || appointment.appointment_status || '').toLowerCase().replace(/-/g, '_') === 'completed'
+      );
+      renderAppointmentList(treatmentHistoryList, completed, 'Completed treatments will appear here.');
+    }
+  }
+
+  function setAppointmentsView(showHistory) {
+    isAllAppointmentsView = showHistory;
+    if (appointmentLists) appointmentLists.hidden = !showHistory;
+    calendar.hidden = showHistory;
+    if (historyLinkWrap) historyLinkWrap.hidden = showHistory;
+    if (calendarLinkWrap) calendarLinkWrap.hidden = !showHistory;
+    if (pageTitle) {
+      if (showHistory) pageTitle.textContent = 'All Appointments';
+      else pageTitle.replaceChildren(document.createTextNode('My '), Object.assign(document.createElement('span'), { textContent: 'Appointments' }));
+    }
+    if (!showHistory) render();
   }
 
   // ---- Calendar rendering ----
@@ -521,6 +548,11 @@
 
   weekBtn.addEventListener('click', () => { view = 'week'; render(); });
   monthBtn.addEventListener('click', () => { view = 'month'; render(); });
+  if (historyToggle) historyToggle.addEventListener('click', () => setAppointmentsView(true));
+  if (calendarToggle) calendarToggle.addEventListener('click', () => setAppointmentsView(false));
+  document.addEventListener('profile:sectionchange', (event) => {
+    if (event.detail.section === 'appointments') render();
+  });
 
   // ---- Data ----
   async function loadAppointments() {

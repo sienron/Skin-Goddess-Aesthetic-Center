@@ -44,6 +44,7 @@ const browserScripts = [
   'rating-widget.js',
   'registration.js',
   'public-content.js',
+  'profile-page.js',
   'reset-password.js',
   'services-page.js',
   'staff-clients.js',

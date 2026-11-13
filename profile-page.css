@@ -1,0 +1,935 @@
+body.homepage.client-header[data-page="account"] {
+  --profile-background: #f7f7f4;
+  min-height: 100vh;
+  background: var(--profile-background);
+  color: var(--ink);
+}
+
+.account-page.profile-page {
+  min-height: calc(100vh - var(--homepage-header-height, 80px));
+  padding: 0;
+  background: var(--profile-background);
+}
+
+.profile-layout {
+  display: grid;
+  grid-template-columns: minmax(265px, 25%) minmax(0, 75%);
+  min-height: calc(100vh - var(--homepage-header-height, 80px));
+  background: var(--profile-background);
+}
+
+.profile-sidebar {
+  position: sticky;
+  top: var(--homepage-header-height, 80px);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: calc(100vh - var(--homepage-header-height, 80px));
+  min-height: calc(100vh - var(--homepage-header-height, 80px));
+  padding: clamp(32px, 4vw, 52px) clamp(22px, 2.7vw, 38px) 30px;
+  border-right: 1px solid #e6e2da;
+  background: var(--profile-background);
+  box-sizing: border-box;
+  align-self: start;
+}
+
+.profile-identity {
+  margin-bottom: 26px;
+  padding-bottom: 27px;
+  border-bottom: 1px solid rgba(90, 58, 30, 0.12);
+  text-align: center;
+}
+
+.profile-identity__avatar {
+  display: grid;
+  place-items: center;
+  width: 112px;
+  height: 112px;
+  margin: 0 auto 20px;
+  border-radius: 50%;
+  border: 1px solid #e3dfd7;
+  background: #f0eee9;
+  color: var(--espresso);
+  font: 500 2.65rem/1 "Playfair Display", serif;
+}
+
+.profile-identity__name,
+.profile-identity__email {
+  overflow-wrap: anywhere;
+}
+
+.profile-identity__name {
+  margin: 0;
+  color: var(--ink);
+  font: 500 1.18rem/1.4 "Playfair Display", serif;
+}
+
+.profile-identity__email {
+  margin: 6px 0 0;
+  color: var(--ink-soft);
+  font: 400 0.82rem/1.5 "Raleway", sans-serif;
+}
+
+.profile-nav {
+  display: grid;
+  gap: 7px;
+}
+
+.profile-nav__link {
+  position: relative;
+  min-height: 48px;
+  padding: 12px 16px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: #63584a;
+  font: 500 0.91rem/1.4 "Raleway", sans-serif;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
+}
+
+.profile-nav__link:hover {
+  background: rgba(32, 28, 24, 0.035);
+  color: var(--espresso-dark);
+}
+
+.profile-nav__link.is-active {
+  border-color: #e6e0d4;
+  background: #f1efe9;
+  color: var(--espresso-dark);
+  font-weight: 600;
+}
+
+.profile-nav__link.is-active::before {
+  position: absolute;
+  inset: 10px auto 10px 0;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--gold-dark);
+  content: "";
+}
+
+.profile-nav__link:focus-visible {
+  outline: 2px solid #a87d2c;
+  outline-offset: 3px;
+}
+
+.profile-content {
+  min-width: 0;
+  padding: clamp(32px, 3.8vw, 54px) clamp(24px, 4.8vw, 76px);
+  background: var(--profile-background);
+}
+
+.profile-panel[hidden] {
+  display: none !important;
+}
+
+.profile-content .account-container {
+  max-width: 1000px;
+  margin: 0;
+}
+
+.profile-content .account-heading {
+  margin-bottom: 30px;
+  color: var(--ink);
+  font: 500 clamp(1.9rem, 2.6vw, 2.3rem)/1.2 "Playfair Display", serif;
+}
+
+.profile-content .account-section {
+  margin-bottom: 22px;
+  padding: 22px 24px;
+  border: 1px solid #e8e6df;
+  border-radius: 10px;
+  background: #f1f0eb;
+  box-shadow: none;
+}
+
+.profile-content .account-section-header {
+  margin-bottom: 20px;
+}
+
+.profile-content .account-section-title {
+  color: var(--espresso);
+  font: 500 1.24rem/1.35 "Playfair Display", serif;
+}
+
+.profile-content .account-section label {
+  color: #776b5b;
+  font: 600 0.72rem/1.4 "Raleway", sans-serif;
+  letter-spacing: 0.045em;
+}
+
+.profile-panel__intro {
+  margin: -12px 0 26px;
+  color: var(--ink-soft);
+  font: 400 0.92rem/1.65 "Raleway", sans-serif;
+}
+
+.profile-content .my-appointments-main {
+  width: 100%;
+  max-width: 1380px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.profile-content .appointments-message:empty {
+  display: none;
+}
+
+.profile-content .client-calendar {
+  padding: clamp(20px, 2.6vw, 36px);
+  border: 1px solid #e5e1d9;
+  border-radius: 12px;
+  background: #f1f0eb;
+  box-shadow: none;
+}
+
+.profile-content .cal-cell,
+.profile-content .cal-nav-btn {
+  background: #f7f7f4;
+}
+
+.profile-content .cal-cell.other-month {
+  background: #e9e8e2;
+}
+
+.profile-content .profile-edit-fields {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  max-width: 720px;
+}
+
+.profile-personal-details {
+  display: grid;
+  gap: 0;
+  max-width: 720px;
+  margin: 0;
+}
+
+.profile-personal-details > div {
+  display: grid;
+  grid-template-columns: minmax(145px, 0.42fr) minmax(0, 1fr);
+  gap: 18px;
+  padding: 13px 0;
+  border-top: 1px solid #e1dfd8;
+}
+
+.profile-personal-details dt {
+  color: #776b5b;
+  font: 600 0.76rem/1.5 "Raleway", sans-serif;
+}
+
+.profile-personal-details dd {
+  min-width: 0;
+  margin: 0;
+  color: var(--ink);
+  font: 400 0.9rem/1.55 "Raleway", sans-serif;
+  overflow-wrap: anywhere;
+}
+
+.security-email-current {
+  display: grid;
+  gap: 5px;
+  margin: 0 0 18px;
+  color: var(--ink-soft);
+  font: 400 0.82rem/1.5 "Raleway", sans-serif;
+}
+
+.security-email-current strong {
+  color: var(--ink);
+  font-size: 0.95rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.security-email-form {
+  max-width: 720px;
+}
+
+.profile-content .account-section input {
+  background: #f7f7f4;
+}
+
+.profile-content .cal-toolbar {
+  gap: 18px;
+  margin-bottom: 22px;
+  padding-bottom: 19px;
+  border-color: rgba(90, 58, 30, 0.13);
+}
+
+.profile-content .cal-title {
+  color: var(--espresso);
+  font: 500 clamp(1.25rem, 2vw, 1.55rem)/1.25 "Playfair Display", serif;
+}
+
+.profile-content .cal-nav-btn {
+  width: 40px;
+  height: 40px;
+  border-color: rgba(90, 58, 30, 0.17);
+  border-radius: 9px;
+  background: var(--profile-background);
+  color: var(--espresso);
+  transition: border-color 180ms ease, background-color 180ms ease, color 180ms ease;
+}
+
+.profile-content .cal-nav-btn:hover {
+  border-color: var(--gold-dark);
+  background: #f1efe9;
+  color: var(--espresso-dark);
+}
+
+.profile-content .cal-toggle {
+  padding: 4px;
+  border-color: #e5e1d9;
+  border-radius: 8px;
+  background: transparent;
+}
+
+.profile-content .cal-toggle-btn {
+  min-height: 36px;
+  border-radius: 7px;
+  color: #716453;
+  font: 500 0.8rem "Raleway", sans-serif;
+}
+
+.profile-content .cal-toggle-btn.active {
+  border-color: #ddc98e;
+  background: transparent;
+  color: var(--espresso);
+  box-shadow: none;
+}
+
+.profile-content .cal-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.profile-content .cal-grid {
+  overflow: hidden;
+  border-color: #e7e3dc;
+  border-radius: 8px;
+  background: var(--profile-background);
+}
+
+.profile-content .cal-weekdays {
+  padding-bottom: 12px;
+  color: #897a64;
+  font: 600 0.64rem "Raleway", sans-serif;
+  letter-spacing: 0.12em;
+}
+
+.profile-content .cal-cell {
+  min-height: 112px;
+  padding: 10px;
+  border-color: #e7e3dc;
+  background: var(--profile-background);
+  transition: background-color 160ms ease;
+}
+
+.profile-content .cal-cell:hover:not(.other-month) {
+  background: #f4f3ef;
+}
+
+.profile-content .cal-cell.is-today {
+  background: var(--profile-background);
+}
+
+.profile-content .cal-cell.other-month {
+  background: var(--profile-background);
+}
+
+.profile-content .cal-daynum {
+  color: #4a3b2b;
+  font: 500 0.78rem "Raleway", sans-serif;
+}
+
+.profile-content .cal-daynum.is-today {
+  border-color: var(--gold-dark);
+  background: transparent;
+  color: var(--espresso-dark);
+}
+
+.profile-content .cal-chip {
+  border-radius: 5px;
+  font: 500 0.68rem/1.3 "Raleway", sans-serif;
+}
+
+.profile-content .cal-chip.status-confirmed {
+  border-left-color: #75876c;
+  background: #f1f0eb;
+  color: #42513d;
+}
+
+.profile-content .cal-chip.status-pending {
+  border-left-color: #ad873f;
+  background: #f1f0eb;
+  color: #65512e;
+}
+
+.profile-content .cal-chip.status-in-progress {
+  border-left-color: #a77a57;
+  background: #f1f0eb;
+  color: #694d38;
+}
+
+.profile-content .cal-chip.status-completed {
+  border-left-color: #7e8992;
+  background: #f1f0eb;
+  color: #46525b;
+}
+
+.profile-content .cal-chip.status-no-show,
+.profile-content .cal-chip.is-cancelled {
+  border-left-color: #a17870;
+  background: #f1f0eb;
+  color: #6f4a44;
+}
+
+.profile-content .week-header {
+  color: #897a64;
+}
+
+.profile-content .week-body {
+  border-color: #e8ddca;
+}
+
+.profile-ticket-form {
+  display: grid;
+  gap: 18px;
+  max-width: 760px;
+}
+
+.profile-ticket-history {
+  max-width: 760px;
+  margin: 0 0 36px;
+}
+
+.profile-ticket-history .account-section-title {
+  margin-bottom: 14px;
+}
+
+.profile-ticket-list {
+  display: grid;
+}
+
+.profile-ticket {
+  padding: 18px 0;
+  border-top: 1px solid #e6dfd5;
+}
+
+.profile-ticket__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.profile-ticket__header h3,
+.profile-ticket__meta,
+.profile-ticket__message,
+.profile-ticket__reply h4,
+.profile-ticket__reply p {
+  margin: 0;
+}
+
+.profile-ticket__header h3 {
+  color: #302923;
+  font: 500 1.08rem/1.35 "Playfair Display", serif;
+  text-transform: capitalize;
+}
+
+.profile-ticket__status {
+  flex: 0 0 auto;
+  color: #7d6130;
+  font: 600 0.78rem "Inter", sans-serif;
+}
+
+.profile-ticket__status.is-replied {
+  color: #3c6745;
+}
+
+.profile-ticket__meta {
+  margin-top: 5px;
+  color: #82786d;
+  font: 400 0.78rem "Inter", sans-serif;
+}
+
+.profile-ticket__message {
+  margin-top: 12px;
+  color: #51493f;
+  font: 400 0.91rem/1.6 "Inter", sans-serif;
+  white-space: pre-wrap;
+}
+
+.profile-ticket__reply {
+  margin-top: 15px;
+  padding: 14px 16px;
+  border-left: 2px solid #b69045;
+  background: var(--profile-background);
+}
+
+.profile-ticket__reply h4 {
+  color: #51432b;
+  font: 600 0.78rem "Inter", sans-serif;
+}
+
+.profile-ticket__reply p {
+  margin-top: 5px;
+  color: #51493f;
+  font: 400 0.88rem/1.6 "Inter", sans-serif;
+  white-space: pre-wrap;
+}
+
+.profile-ticket-form__row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.profile-ticket-form label {
+  display: grid;
+  gap: 7px;
+  color: #62594e;
+  font: 600 0.82rem "Raleway", sans-serif;
+}
+
+.profile-ticket-form input,
+.profile-ticket-form select,
+.profile-ticket-form textarea {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid #ded5ca;
+  border-radius: 6px;
+  background: #fff;
+  color: #302923;
+  box-sizing: border-box;
+  font: 400 0.92rem "Raleway", sans-serif;
+}
+
+.profile-ticket-form textarea {
+  min-height: 130px;
+  resize: vertical;
+}
+
+.profile-ticket-form input:focus,
+.profile-ticket-form select:focus,
+.profile-ticket-form textarea:focus {
+  border-color: #b69045;
+  outline: 2px solid rgb(182 144 69 / 18%);
+}
+
+.profile-ticket-form .btn-send {
+  justify-self: start;
+}
+
+@media (max-width: 900px) {
+  .profile-layout {
+    grid-template-columns: minmax(210px, 30%) minmax(0, 70%);
+  }
+
+  .profile-content {
+    padding: 34px 26px;
+  }
+
+  .profile-identity__avatar {
+    width: 98px;
+    height: 98px;
+    font-size: 2.3rem;
+  }
+
+  .profile-content .cal-cell {
+    min-height: 112px;
+    padding: 8px;
+  }
+}
+
+@media (max-width: 700px) {
+  .account-page.profile-page,
+  .profile-layout {
+    min-height: calc(100vh - var(--homepage-header-height, 68px));
+  }
+
+  .profile-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .profile-sidebar {
+    position: relative;
+    top: auto;
+    align-self: stretch;
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    padding: 20px 16px 12px;
+    border-right: 0;
+    border-bottom: 1px solid #e6e2da;
+  }
+
+  .profile-identity {
+    display: grid;
+    grid-template-columns: 68px minmax(0, 1fr);
+    width: 100%;
+    min-width: 0;
+    align-items: center;
+    column-gap: 16px;
+    margin-bottom: 18px;
+    padding-bottom: 18px;
+    text-align: left;
+  }
+
+  .profile-identity__avatar {
+    grid-row: span 2;
+    width: 68px;
+    height: 68px;
+    margin: 0;
+    font-size: 1.6rem;
+  }
+
+  .profile-identity__name {
+    align-self: end;
+    font-size: 1.08rem;
+  }
+
+  .profile-identity__email {
+    align-self: start;
+    margin-top: 1px;
+    font-size: 0.78rem;
+  }
+
+  .profile-nav {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    gap: 6px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding: 0 0 9px;
+    scrollbar-width: thin;
+    scroll-snap-type: x proximity;
+  }
+
+  .profile-nav__link {
+    flex: 0 0 auto;
+    min-height: 44px;
+    padding: 10px 13px;
+    border-radius: 8px;
+    white-space: nowrap;
+    font-size: 0.82rem;
+    scroll-snap-align: start;
+  }
+
+  .profile-nav__link.is-active::before {
+    inset: auto 12px 0;
+    width: calc(100% - 24px);
+    height: 2px;
+  }
+
+  .profile-content {
+    padding: 28px 20px 40px;
+  }
+
+  .profile-content .account-heading {
+    margin-bottom: 24px;
+  }
+
+  .profile-content .account-section {
+    padding: 18px 16px;
+  }
+
+  .profile-ticket-form__row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+
+  .profile-content .cal-toolbar {
+    gap: 14px;
+    margin-bottom: 17px;
+    padding-bottom: 15px;
+  }
+
+  .profile-content .cal-toolbar-left {
+    gap: 10px;
+  }
+
+  .profile-content .cal-cell {
+    min-height: 88px;
+    padding: 5px 4px;
+  }
+
+  .profile-content .cal-daynum {
+    min-width: 22px;
+    height: 22px;
+    margin-bottom: 4px;
+    font-size: 0.7rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .profile-content {
+    padding: 23px 14px 34px;
+  }
+
+  .profile-content .account-heading {
+    font-size: 1.8rem;
+  }
+
+  .profile-personal-details > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+
+  .profile-content .client-calendar {
+    padding: 15px 11px;
+    border-radius: 13px;
+  }
+
+  .profile-content .cal-toolbar-left {
+    flex-basis: 100%;
+  }
+
+  .profile-content .cal-toggle {
+    margin-left: auto;
+  }
+
+  .profile-content .cal-cell {
+    min-height: 79px;
+    padding: 4px 3px;
+  }
+
+  .profile-content .cal-chip {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 1px;
+    padding: 4px;
+    font-size: 0.58rem;
+  }
+
+  .profile-content .cal-chip-time {
+    font-size: 0.55rem;
+  }
+
+  .profile-content .cal-weekdays {
+    font-size: 0.56rem;
+    letter-spacing: 0.06em;
+  }
+}
+
+body.customer-theme-dark .account-page.profile-page,
+body.customer-theme-dark .profile-sidebar {
+  background: var(--profile-background, #181a19);
+}
+
+body.customer-theme-dark .profile-sidebar,
+body.customer-theme-dark .profile-nav__link,
+body.customer-theme-dark .profile-identity__name,
+body.customer-theme-dark .profile-content .account-heading {
+  color: #f1ede4;
+}
+
+body.customer-theme-dark .profile-identity__email,
+body.customer-theme-dark .profile-panel__intro {
+  color: #c1b9aa;
+}
+
+body.customer-theme-dark .profile-identity__avatar,
+body.customer-theme-dark .profile-nav__link.is-active,
+body.customer-theme-dark .profile-nav__link:hover {
+  background: #39342a;
+  color: #f3dfa9;
+}
+
+body.customer-theme-dark .profile-sidebar,
+body.customer-theme-dark .profile-content .account-section {
+  border-color: #454038;
+  background: #20211e;
+}
+
+body.customer-theme-dark .profile-ticket-form label {
+  color: #d7cebe;
+}
+
+body.customer-theme-dark .profile-ticket {
+  border-color: #454038;
+}
+
+body.customer-theme-dark .profile-ticket__header h3,
+body.customer-theme-dark .profile-ticket__message,
+body.customer-theme-dark .profile-ticket__reply p {
+  color: #f1ede4;
+}
+
+body.customer-theme-dark .profile-ticket__reply {
+  background: var(--profile-background, #181a19);
+}
+
+body.customer-theme-dark .profile-ticket__reply h4 {
+  color: #f3dfa9;
+}
+
+body.customer-theme-dark .profile-ticket-form input,
+body.customer-theme-dark .profile-ticket-form select,
+body.customer-theme-dark .profile-ticket-form textarea {
+  border-color: #514b40;
+  background: #2b2924;
+  color: #f1ede4;
+}
+
+body.homepage.client-header.customer-theme-dark[data-page="account"] {
+  --profile-background: #181a19;
+  background: var(--profile-background);
+}
+
+body.customer-theme-dark .profile-content {
+  background: var(--profile-background, #181a19);
+}
+
+body.customer-theme-dark .profile-identity__avatar {
+  border-color: #575044;
+  background: #343129;
+}
+
+body.customer-theme-dark .profile-nav__link {
+  color: #d3cabb;
+}
+
+body.customer-theme-dark .profile-nav__link.is-active {
+  border-color: rgba(212, 169, 55, 0.22);
+  background: #282824;
+  color: #f3dfa9;
+}
+
+body.customer-theme-dark .profile-content .cal-toolbar {
+  border-color: #454038;
+}
+
+body.customer-theme-dark .profile-content .cal-title,
+body.customer-theme-dark .profile-content .cal-daynum {
+  color: #efe7d8;
+}
+
+body.customer-theme-dark .profile-content .client-calendar {
+  border-color: #454038;
+  background: var(--profile-background, #181a19);
+}
+
+body.customer-theme-dark .profile-content .cal-nav-btn,
+body.customer-theme-dark .profile-content .cal-cell,
+body.customer-theme-dark .profile-content .cal-chip {
+  border-color: #454038;
+  background: var(--profile-background, #181a19);
+  color: #e9e1d3;
+}
+
+body.customer-theme-dark .profile-content .cal-grid {
+  border-color: #454038;
+  background: var(--profile-background, #181a19);
+}
+
+body.customer-theme-dark .profile-content .cal-cell.other-month {
+  background: var(--profile-background, #181a19);
+}
+
+body.customer-theme-dark .profile-content .cal-cell.is-today {
+  background: var(--profile-background, #181a19);
+}
+
+body.customer-theme-dark .profile-content .cal-toggle {
+  border-color: #454038;
+  background: transparent;
+}
+
+body.customer-theme-dark .profile-content .cal-toggle-btn {
+  color: #d3cabb;
+}
+
+body.customer-theme-dark .profile-content .cal-toggle-btn.active {
+  border-color: #9c824a;
+  background: transparent;
+  color: #f3dfa9;
+}
+
+body[data-page="account"] .profile-row:focus-visible,
+body[data-page="account"] .profile-row[aria-expanded="true"] {
+  outline: 2px solid rgba(181, 137, 42, 0.55);
+  outline-offset: 2px;
+}
+
+body[data-page="account"] .profile-dropdown {
+  display: block;
+  right: 0;
+  width: min(190px, calc(100vw - 24px));
+  max-width: calc(100vw - 24px);
+  padding: 5px;
+  border: 1px solid #e3dfd7;
+  border-radius: 8px;
+  background: var(--profile-background);
+  box-shadow: 0 6px 16px rgba(32, 28, 24, 0.08);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-4px);
+  pointer-events: none;
+  transition: opacity 150ms ease, transform 150ms ease, visibility 150ms ease;
+}
+
+body[data-page="account"] .profile-dropdown.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+body[data-page="account"] .profile-dropdown-item {
+  min-height: 40px;
+  padding: 10px 12px;
+  border-radius: 5px;
+  color: #4b463d;
+  font: 500 0.84rem "Raleway", sans-serif;
+}
+
+body[data-page="account"] .profile-dropdown-item:hover {
+  background: rgba(32, 28, 24, 0.045);
+  color: var(--espresso);
+}
+
+body[data-page="account"] .profile-dropdown-item--signout {
+  color: #6b5d51;
+}
+
+body[data-page="account"] .profile-dropdown-item--signout:hover {
+  color: #8d473c;
+}
+
+body.customer-theme-dark[data-page="account"] .profile-dropdown {
+  border-color: #454038;
+  background: #20211e;
+}
+
+body.customer-theme-dark[data-page="account"] .profile-dropdown-item,
+body.customer-theme-dark[data-page="account"] .profile-dropdown-item--signout {
+  color: #e9e1d3;
+}
+
+body.customer-theme-dark[data-page="account"] .profile-dropdown-item:hover {
+  background: #302f29;
+  color: #f3dfa9;
+}
+
+@media (max-width: 768px) {
+  body[data-page="account"] .public-header-actions > .book-now-btn {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-page="account"] .profile-dropdown {
+    transition: none;
+  }
+}

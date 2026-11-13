@@ -94,7 +94,6 @@
           </div>
         </div>
         <div class="um-header__actions-row">
-          <button class="um-btn um-btn--ghost" id="umExportBtn" type="button">Export</button>
           <button class="um-btn um-btn--primary" id="umCreateBtn" type="button">+ Create New User</button>
         </div>
       </div>
@@ -144,15 +143,18 @@
     </section>
 
     <section class="um-toolbar" aria-label="Filter and search users">
-      <nav class="um-tabs" id="umTabs" aria-label="Filter users by role">
-        <button class="um-tab um-tab--active" data-role="ALL" type="button" aria-pressed="true">All</button>
-        <button class="um-tab" data-role="client" type="button" aria-pressed="false">Clients</button>
-        <button class="um-tab" data-role="aesthetician" type="button" aria-pressed="false">Aesthetician</button>
-        <button class="um-tab" data-role="admin" type="button" aria-pressed="false">Admin</button>
-        <button class="um-tab" data-role="finance_officer" type="button" aria-pressed="false">Finance Officer</button>
-        <button class="um-tab" data-role="inventory_officer" type="button" aria-pressed="false">Inventory Procurement</button>
-        <button class="um-tab" data-role="SUSPENDED" type="button" aria-pressed="false">Suspended</button>
-      </nav>
+      <div class="um-toolbar__role-row">
+        <nav class="um-tabs" id="umTabs" aria-label="Filter users by role">
+          <button class="um-tab um-tab--active" data-role="ALL" type="button" aria-pressed="true">All</button>
+          <button class="um-tab" data-role="client" type="button" aria-pressed="false">Clients</button>
+          <button class="um-tab" data-role="aesthetician" type="button" aria-pressed="false">Aesthetician</button>
+          <button class="um-tab" data-role="admin" type="button" aria-pressed="false">Admin</button>
+          <button class="um-tab" data-role="finance_officer" type="button" aria-pressed="false">Finance Officer</button>
+          <button class="um-tab" data-role="inventory_officer" type="button" aria-pressed="false">Inventory Procurement</button>
+          <button class="um-tab" data-role="SUSPENDED" type="button" aria-pressed="false">Suspended</button>
+        </nav>
+        <button class="um-btn um-btn--export" id="umExportBtn" type="button">Export</button>
+      </div>
       <div class="um-toolbar__controls">
         <div id="umTableSearchSlot">
           <label class="um-search" id="umSearchControl">

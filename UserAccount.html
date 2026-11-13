@@ -3,11 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>My Account | Skin Goddess Aesthetic Center</title>
+<title>Profile | Skin Goddess Aesthetic Center</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600&family=Playfair+Display:ital,wght@1,500;1,600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="profile-page.css">
 </head>
 <body class="homepage client-header" data-page="account">
 
@@ -50,18 +51,16 @@
             <button class="book-now-btn" type="button" onclick="window.location.href='UserAppointment.html'">BOOK NOW</button>
 
             <div class="header-profile-wrap" id="profileWrap">
-              <button type="button" class="profile-row" id="profileBtn" aria-haspopup="true" aria-expanded="false">
+              <button type="button" class="profile-row" id="profileBtn" aria-haspopup="true" aria-expanded="false" aria-controls="profileDropdown" aria-label="Open profile menu">
                   <div class="profile-avatar">AR</div>
                   <div class="profile-info">
                       <span class="profile-name">Anna Reyes</span>
                   </div>
               </button>
           
-              <div class="profile-dropdown" id="profileDropdown">
-                  <a href="UserAccount.html" class="profile-dropdown-item">My Account</a>
-                  <a href="MyAppointments.html" class="profile-dropdown-item">My Appointments</a>
-                  <div class="profile-dropdown-divider"></div>
-                  <button type="button" class="profile-dropdown-item profile-dropdown-item--signout" id="signOutBtn">Sign out</button>
+              <div class="profile-dropdown" id="profileDropdown" role="group" aria-label="Profile actions">
+                  <a href="UserAccount.html#account" class="profile-dropdown-item">Profile</a>
+                  <button type="button" class="profile-dropdown-item profile-dropdown-item--signout" id="signOutBtn" data-sign-out>Sign out</button>
               </div>
           </div>
 
@@ -92,26 +91,37 @@
 
         <button class="book-now-btn mobile-nav-book-btn" type="button" onclick="window.location.href='UserAppointment.html'">BOOK NOW</button>
 
-        <div class="mobile-nav-profile">
-            <div class="profile-avatar">AR</div>
-            <div class="profile-info">
-                <span class="profile-name">Anna Reyes</span>
-            </div>
-        </div>
-
     </aside>
 
-<main class="account-page">
-  <div class="account-container">
-    <h1 class="account-heading">My Account</h1>
+<main class="account-page profile-page">
+  <div class="profile-layout">
+    <aside class="profile-sidebar" aria-label="Profile navigation">
+      <div class="profile-identity">
+        <div class="profile-identity__avatar" id="profileInitials" aria-hidden="true">--</div>
+        <p class="profile-identity__name" id="profileName">Loading profile</p>
+        <p class="profile-identity__email" id="profileEmail"></p>
+      </div>
+      <nav class="profile-nav" aria-label="Profile sections">
+        <button type="button" class="profile-nav__link is-active" data-profile-section="account" aria-controls="profile-account" aria-current="page">Account Management</button>
+        <button type="button" class="profile-nav__link" data-profile-section="appointments" aria-controls="profile-appointments">Appointments</button>
+        <button type="button" class="profile-nav__link" data-profile-section="appointment-history" aria-controls="profile-appointment-history">Appointment History</button>
+        <button type="button" class="profile-nav__link" data-profile-section="treatments" aria-controls="profile-treatments">Treatment History</button>
+        <button type="button" class="profile-nav__link" data-profile-section="tickets" aria-controls="profile-tickets">Ticket</button>
+        <button type="button" class="profile-nav__link" data-profile-section="security" aria-controls="profile-security">Security</button>
+      </nav>
+    </aside>
 
+    <div class="profile-content">
+      <section class="profile-panel" id="profile-account" data-profile-panel="account" aria-labelledby="profilePageTitle">
+        <div class="account-container">
+          <h1 class="account-heading" id="profilePageTitle">Account Management</h1>
     <section class="account-section">
       <div class="account-section-header">
         <h2 class="account-section-title">Profile Information</h2>
         <button type="button" class="account-edit-btn" id="profileEditBtn">Edit</button>
       </div>
       <form id="profile-form" novalidate>
-        <div class="account-fields-grid">
+        <div class="account-fields-grid profile-edit-fields">
           <div class="auth-form-group" id="firstName-group">
             <label for="firstName">First Name</label>
             <input type="text" id="firstName" name="firstName" disabled>
@@ -122,12 +132,6 @@
             <label for="lastName">Last Name</label>
             <input type="text" id="lastName" name="lastName" disabled>
             <span class="field-error" data-error-for="lastName"></span>
-          </div>
-
-          <div class="auth-form-group" id="email-group">
-            <label for="email">Email Address</label>
-            <input type="email" id="email" name="email" disabled>
-            <span class="field-error" data-error-for="email"></span>
           </div>
 
           <div class="auth-form-group" id="contactNumber-group">
@@ -149,6 +153,155 @@
       </form>
     </section>
 
+    <section class="account-section profile-personal-section" aria-labelledby="personalDetailsTitle">
+      <div class="account-section-header">
+        <h2 class="account-section-title" id="personalDetailsTitle">Personal &amp; Health Details</h2>
+      </div>
+      <dl class="profile-personal-details">
+        <div><dt>Date of Birth</dt><dd id="profileDateOfBirth">Not provided</dd></div>
+        <div><dt>Gender</dt><dd id="profileGender">Not provided</dd></div>
+        <div><dt>Home Address</dt><dd id="profileAddress">Not provided</dd></div>
+        <div><dt>Known Allergies</dt><dd id="profileAllergies">Not provided</dd></div>
+        <div><dt>Medical Conditions</dt><dd id="profileMedicalConditions">Not provided</dd></div>
+      </dl>
+    </section>
+
+        </div>
+      </section>
+
+      <section class="profile-panel" id="profile-appointments" data-profile-panel="appointments" aria-label="Appointments" hidden>
+        <div class="my-appointments-main">
+          <p class="appointments-message" id="appointmentsMessage" role="status" aria-live="polite"></p>
+          <div class="client-appointment-lists" id="clientAppointmentLists" hidden>
+            <section class="client-appointment-section" aria-labelledby="upcomingAppointmentsTitle">
+              <div class="client-appointment-section-heading">
+                <h2 id="upcomingAppointmentsTitle">Upcoming appointments</h2>
+                <span class="client-appointment-count" id="upcomingAppointmentsCount">0</span>
+              </div>
+              <div class="client-appointment-list" id="upcomingAppointments" aria-live="polite"></div>
+            </section>
+            <section class="client-appointment-section" aria-labelledby="appointmentHistoryTitle">
+              <div class="client-appointment-section-heading">
+                <h2 id="appointmentHistoryTitle">Appointment history</h2>
+                <span class="client-appointment-count" id="appointmentHistoryCount">0</span>
+              </div>
+              <div class="client-appointment-list" id="appointmentHistory" aria-live="polite"></div>
+            </section>
+          </div>
+          <section class="client-calendar" id="clientCalendar" aria-label="Appointment calendar">
+            <div class="cal-toolbar">
+              <div class="cal-toolbar-left">
+                <div class="cal-period-heading">
+                  <h2 class="cal-title" id="calTitle"></h2>
+                </div>
+                <div class="cal-nav-group" role="group" aria-label="Change calendar period">
+                  <button type="button" class="cal-nav-btn" id="calPrev" aria-label="Previous period">&larr;</button>
+                  <button type="button" class="cal-nav-btn" id="calNext" aria-label="Next period">&rarr;</button>
+                </div>
+              </div>
+              <div class="cal-toggle" role="group" aria-label="Calendar view">
+                <button type="button" class="cal-toggle-btn" id="calWeekBtn" aria-pressed="false">Week</button>
+                <button type="button" class="cal-toggle-btn active" id="calMonthBtn" aria-pressed="true">Month</button>
+              </div>
+            </div>
+            <div class="cal-scroll">
+              <div class="cal-inner" id="calMonthView">
+                <div class="cal-weekdays" id="calWeekdays"></div>
+                <div class="cal-grid" id="calGrid"></div>
+              </div>
+              <div class="week-view" id="calWeekView">
+                <div class="week-header" id="calWeekHeader"><div class="week-time-label"></div></div>
+                <div class="week-body">
+                  <div class="week-time-column" id="calWeekTimeColumn"></div>
+                  <div class="week-days-grid" id="calWeekDaysGrid"></div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="profile-panel" id="profile-appointment-history" data-profile-panel="appointment-history" aria-labelledby="profileAppointmentHistoryTitle" hidden>
+        <div class="account-container">
+          <h1 class="account-heading" id="profileAppointmentHistoryTitle">Appointment History</h1>
+          <p class="profile-panel__intro">Review past, cancelled, and completed appointments.</p>
+          <div class="client-appointment-list" id="profileAppointmentHistoryList" aria-live="polite">
+            <p class="client-appointment-empty">Loading your appointment history...</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="profile-panel" id="profile-treatments" data-profile-panel="treatments" aria-labelledby="treatmentHistoryTitle" hidden>
+        <div class="account-container">
+          <h1 class="account-heading" id="treatmentHistoryTitle">Treatment History</h1>
+          <p class="profile-panel__intro">Completed visits from your appointment history.</p>
+          <div class="client-appointment-list" id="treatmentHistoryList" aria-live="polite">
+            <p class="client-appointment-empty">Loading your treatment history...</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="profile-panel" id="profile-tickets" data-profile-panel="tickets" aria-labelledby="ticketTitle" hidden>
+        <div class="account-container">
+          <h1 class="account-heading" id="ticketTitle">Contact the clinic</h1>
+          <p class="profile-panel__intro">Send a message to the clinic. Your reference number will appear here after submission; replies are sent to your email.</p>
+          <section class="profile-ticket-history" aria-labelledby="ticketHistoryTitle">
+            <h2 class="account-section-title" id="ticketHistoryTitle">Your conversations</h2>
+            <div class="profile-ticket-list" id="customerTicketList" aria-live="polite">
+              <p class="client-appointment-empty">Loading your tickets...</p>
+            </div>
+          </section>
+          <form id="contactForm" class="profile-ticket-form" novalidate>
+            <div class="profile-ticket-form__row">
+              <label>First name<input type="text" id="ticketFirstName" name="firstName" autocomplete="given-name" required></label>
+              <label>Last name<input type="text" id="ticketLastName" name="lastName" autocomplete="family-name" required></label>
+            </div>
+            <div class="profile-ticket-form__row">
+              <label>Email address<input type="email" id="ticketEmail" name="email" autocomplete="email" required></label>
+              <label>Phone number<input type="tel" id="ticketPhone" name="phone" autocomplete="tel"></label>
+            </div>
+            <label>Subject
+              <select id="ticketSubject" name="subject" required>
+                <option value="" disabled selected>Select inquiry type</option>
+                <option value="booking">Booking Inquiry</option>
+                <option value="services">Services Inquiry</option>
+                <option value="feedback">Feedback</option>
+                <option value="other">Other</option>
+              </select>
+            </label>
+            <label>Message<textarea id="ticketMessage" name="message" rows="5" maxlength="5000" required></textarea></label>
+            <button type="submit" class="btn-send">Send message <span aria-hidden="true">&rarr;</span></button>
+            <p id="formStatus" class="form-status" role="status" aria-live="polite"></p>
+          </form>
+        </div>
+      </section>
+
+      <section class="profile-panel" id="profile-security" data-profile-panel="security" aria-labelledby="securityTitle" hidden>
+        <div class="account-container">
+          <h1 class="account-heading" id="securityTitle">Security</h1>
+    <section class="account-section">
+      <div class="account-section-header">
+        <h2 class="account-section-title">Email Address</h2>
+      </div>
+      <div class="security-email-current">
+        <span>Current registered email</span>
+        <strong id="currentEmail">Loading email address...</strong>
+      </div>
+      <form id="email-change-form" class="security-email-form" novalidate>
+        <div class="auth-form-group" id="newEmail-group">
+          <label for="newEmail">New email address</label>
+          <input type="email" id="newEmail" name="newEmail" autocomplete="email" required>
+          <span class="field-error" data-error-for="newEmail"></span>
+        </div>
+        <span class="field-error" data-error-for="email-change-form"></span>
+        <div class="account-form-actions">
+          <button type="submit" class="btn btn-primary" id="emailChangeSubmitBtn">
+            <span class="btn-label">SEND VERIFICATION CODE</span>
+          </button>
+        </div>
+        <p class="account-success" id="email-change-success" role="status" hidden></p>
+      </form>
+    </section>
     <section class="account-section">
       <div class="account-section-header">
         <h2 class="account-section-title">Change Password</h2>
@@ -211,6 +364,71 @@
         <p class="account-success" id="password-success" hidden>Password changed successfully.</p>
       </form>
     </section>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="apptModalOverlay">
+    <div class="appt-modal-wrap" id="apptModalWrap">
+      <div class="appt-modal" id="apptModal">
+        <div class="appt-modal-topbar" id="apptModalTopbar"></div>
+        <button class="modal-close" id="apptModalClose" aria-label="Close">&times;</button>
+        <div class="appt-modal-header">
+          <div class="appt-modal-avatar" id="apptModalAvatar"></div>
+          <div class="appt-modal-heading">
+            <h3 id="apptModalName"></h3>
+            <p id="apptModalSubtitle"></p>
+            <span class="appt-status-badge" id="apptModalStatus"></span>
+          </div>
+        </div>
+        <hr>
+        <div class="appt-modal-grid">
+          <div class="appt-field"><span class="appt-field-label">DATE</span><span class="appt-field-value" id="apptModalDate"></span></div>
+          <div class="appt-field"><span class="appt-field-label">TIME</span><span class="appt-field-value" id="apptModalTime"></span></div>
+          <div class="appt-field"><span class="appt-field-label">AESTHETICIAN</span><span class="appt-field-value" id="apptModalAesthetician"></span></div>
+          <div class="appt-field"><span class="appt-field-label">DURATION</span><span class="appt-field-value" id="apptModalDuration"></span></div>
+          <div class="appt-field"><span class="appt-field-label">SERVICE</span><span class="appt-field-value" id="apptModalService"></span></div>
+          <div class="appt-field"><span class="appt-field-label">SERVICE FEE</span><span class="appt-field-value" id="apptModalFee"></span></div>
+          <div class="appt-field"><span class="appt-field-label">RESERVATION DEPOSIT</span><span class="appt-field-value" id="apptModalDeposit"></span></div>
+          <div class="appt-field"><span class="appt-field-label">CONTACT</span><span class="appt-field-value" id="apptModalContact"></span></div>
+        </div>
+        <div class="appt-modal-rating-container" id="apptModalRatingContainer" hidden></div>
+        <p class="appt-action-message" id="apptActionMessage" role="status" aria-live="polite"></p>
+        <form class="appt-reschedule-form" id="apptRescheduleForm" hidden>
+          <label for="apptRescheduleDate">New date</label>
+          <input type="date" name="date" id="apptRescheduleDate" required>
+          <label for="apptRescheduleTime">New time</label>
+          <select name="time" id="apptRescheduleTime" required>
+            <option value="09:00">9:00 AM</option><option value="09:30">9:30 AM</option>
+            <option value="10:00">10:00 AM</option><option value="10:30">10:30 AM</option>
+            <option value="11:00">11:00 AM</option><option value="11:30">11:30 AM</option>
+            <option value="13:00">1:00 PM</option><option value="13:30">1:30 PM</option>
+            <option value="14:00">2:00 PM</option><option value="14:30">2:30 PM</option>
+            <option value="15:00">3:00 PM</option><option value="15:30">3:30 PM</option>
+            <option value="16:00">4:00 PM</option><option value="16:30">4:30 PM</option>
+            <option value="17:00">5:00 PM</option><option value="17:30">5:30 PM</option>
+          </select>
+          <label for="apptRescheduleReason">Reason</label>
+          <input type="text" name="reason" id="apptRescheduleReason" maxlength="255" required>
+          <label for="apptRescheduleDescription">Description</label>
+          <textarea name="description" id="apptRescheduleDescription" maxlength="2000" rows="4" required></textarea>
+          <button class="modal-btn modal-btn-reschedule" type="submit">Save new time</button>
+        </form>
+        <form class="appt-cancellation-form" id="apptCancellationForm" hidden>
+          <p class="appt-action-message">Submit cancellation requests more than 24 hours before your appointment to be eligible for a deposit refund. Requests submitted 24 hours or less before the appointment are not refundable.</p>
+          <label for="apptCancellationReason">Reason</label>
+          <input type="text" name="reason" id="apptCancellationReason" maxlength="255" required>
+          <label for="apptCancellationDescription">Description</label>
+          <textarea name="description" id="apptCancellationDescription" maxlength="2000" rows="4" required></textarea>
+          <button class="modal-btn modal-btn-cancel" type="submit">Send cancellation request</button>
+        </form>
+        <div class="appt-modal-actions">
+          <button class="modal-btn modal-btn-cancel" id="apptModalCancelBtn">Cancel</button>
+          <button class="modal-btn modal-btn-reschedule" id="apptModalRescheduleBtn">Reschedule</button>
+        </div>
+      </div>
+    </div>
   </div>
 
 <div class="auth-modal-overlay" id="emailOtpModal" hidden>
@@ -258,6 +476,10 @@
 <script src="header.js"></script>
 <script src="account.js"></script>
 <script src="account-edit-toggle.js"></script>
+<script src="appointment-modal.js"></script>
+<script src="my-appointments.js"></script>
+<script src="contact-us.js"></script>
+<script src="profile-page.js"></script>
 <script src="faq-chatbot.js"></script>
 </body>
 </html>
