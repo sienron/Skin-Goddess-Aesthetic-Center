@@ -408,6 +408,42 @@ test('account profile and email-change endpoints reject malformed values', async
   assert.equal(emailResponse.statusCode, 400);
 });
 
+test('account profile includes the personal details collected during registration', async () => {
+  const profileHandler = routeHandler(authRouter, '/profile', 'get');
+  db.query = async () => ({
+    rows: [{
+      first_name: 'Anna',
+      last_name: 'Reyes',
+      email: 'anna@example.com',
+      contact_number: '9123456789',
+      date_of_birth: '1998-04-12',
+      gender: 'female',
+      home_address: 'Imus, Cavite',
+      allergies: 'Fragrance',
+      medical_conditions: 'None',
+    }],
+  });
+  const response = responseCapture();
+
+  try {
+    await profileHandler({ session: { userId: 7 } }, response);
+    assert.equal(response.statusCode, 200);
+    assert.deepEqual(response.body, {
+      firstName: 'Anna',
+      lastName: 'Reyes',
+      email: 'anna@example.com',
+      contactNumber: '9123456789',
+      dateOfBirth: '1998-04-12',
+      gender: 'female',
+      address: 'Imus, Cavite',
+      allergies: 'Fragrance',
+      medicalConditions: 'None',
+    });
+  } finally {
+    db.query = originalQuery;
+  }
+});
+
 test.after(() => {
   db.query = originalQuery;
   db.transaction = originalTransaction;

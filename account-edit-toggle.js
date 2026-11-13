@@ -10,7 +10,6 @@
   const profileFields = [
     'firstName',
     'lastName',
-    'email',
     'contactNumber'
   ];
 

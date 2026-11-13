@@ -203,14 +203,35 @@
   box-shadow: 0 2px 8px rgb(45 36 23 / 3%);
 }
 
+#userManagementMain .um-toolbar__role-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+}
+
 #userManagementMain .um-tabs {
   display: flex;
   min-height: 0;
-  flex: none;
-  flex-wrap: wrap;
+  min-width: 0;
+  flex: 1 1 0;
+  flex-wrap: nowrap;
   gap: 5px;
-  overflow: visible;
+  overflow-x: auto;
   border: 0;
+  scrollbar-width: thin;
+}
+
+#userManagementMain .um-btn--export {
+  flex: 0 0 auto;
+  border: 1px solid #347a56;
+  background: #347a56;
+  color: #fff;
+}
+
+#userManagementMain .um-btn--export:hover {
+  border-color: #286344;
+  background: #286344;
 }
 
 #userManagementMain .um-tab {
@@ -712,6 +733,15 @@
     margin-left: auto;
   }
 
+  #userManagementMain .um-tabs {
+    margin: 0;
+    padding: 0;
+  }
+
+  #userManagementMain .um-toolbar__role-row {
+    gap: 8px;
+  }
+
   #userManagementMain .um-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
@@ -830,6 +860,15 @@
     width: auto;
     justify-content: flex-end;
     gap: 7px;
+  }
+
+  #userManagementMain .um-toolbar__role-row {
+    gap: 6px;
+  }
+
+  #userManagementMain .um-btn--export {
+    padding-right: 9px;
+    padding-left: 9px;
   }
 
   #userManagementMain .um-btn {
@@ -1057,4 +1096,28 @@ body.staff-theme-dark .um-allergy-tags {
 body.staff-theme-dark #userManagementMain > .um-header .admin-notification-btn {
   border-color: #4a4942;
   background: #292a27;
+}
+
+@media (min-width: 1025px) {
+  .um-shell > #userManagementMain {
+    box-sizing: border-box;
+    width: calc(100% - var(--staff-sidebar-expanded-width));
+    flex: 0 1 calc(100% - var(--staff-sidebar-expanded-width));
+    margin-left: var(--staff-sidebar-expanded-width) !important;
+  }
+
+  .um-shell > .um-sidebar:hover ~ #userManagementMain,
+  .um-shell > .um-sidebar:focus-within ~ #userManagementMain {
+    width: calc(100% - var(--staff-sidebar-expanded-width));
+    flex-basis: calc(100% - var(--staff-sidebar-expanded-width));
+    margin-left: var(--staff-sidebar-expanded-width) !important;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .um-shell > .um-sidebar:not(:hover):not(:focus-within) ~ #userManagementMain {
+      width: calc(100% - var(--staff-sidebar-rail-width));
+      flex-basis: calc(100% - var(--staff-sidebar-rail-width));
+      margin-left: var(--staff-sidebar-rail-width) !important;
+    }
+  }
 }

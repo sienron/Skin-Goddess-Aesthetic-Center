@@ -7,6 +7,30 @@
   --inquiry-canvas: #fbfaf7;
 }
 
+@media (min-width: 1025px) {
+  .um-shell > .inquiries-main {
+    box-sizing: border-box;
+    width: calc(100% - var(--staff-sidebar-expanded-width));
+    flex: 0 1 calc(100% - var(--staff-sidebar-expanded-width));
+    margin-left: var(--staff-sidebar-expanded-width) !important;
+  }
+
+  .um-shell > .um-sidebar:hover ~ .inquiries-main,
+  .um-shell > .um-sidebar:focus-within ~ .inquiries-main {
+    width: calc(100% - var(--staff-sidebar-expanded-width));
+    flex-basis: calc(100% - var(--staff-sidebar-expanded-width));
+    margin-left: var(--staff-sidebar-expanded-width) !important;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .um-shell > .um-sidebar:not(:hover):not(:focus-within) ~ .inquiries-main {
+      width: calc(100% - var(--staff-sidebar-rail-width));
+      flex-basis: calc(100% - var(--staff-sidebar-rail-width));
+      margin-left: var(--staff-sidebar-rail-width) !important;
+    }
+  }
+}
+
 .inquiries-main > .um-header {
   margin-bottom: 22px;
 }
@@ -614,14 +638,6 @@ body.staff-theme-dark .inquiries-main > .um-header #refreshInquiries {
 body.staff-theme-dark .inquiries-main > .um-header #refreshInquiries:hover {
   background: #373126;
   color: #ead9a9;
-}
-
-.inquiries-main .um-header__eyebrow {
-  margin: 0 0 5px;
-  color: #977221;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: .16em;
 }
 
 .inquiries-main > .um-header .um-header__title {

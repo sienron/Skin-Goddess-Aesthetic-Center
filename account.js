@@ -2,10 +2,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const profileForm = document.getElementById('profile-form');
   const firstNameInput = document.getElementById('firstName');
   const lastNameInput = document.getElementById('lastName');
-  const emailInput = document.getElementById('email');
   const contactNumberInput = document.getElementById('contactNumber');
   const profileSubmitBtn = document.getElementById('profileSubmitBtn');
   const profileSuccess = document.getElementById('profile-success');
+
+  const emailForm = document.getElementById('email-change-form');
+  const newEmailInput = document.getElementById('newEmail');
+  const emailChangeSubmitBtn = document.getElementById('emailChangeSubmitBtn');
+  const emailChangeSuccess = document.getElementById('email-change-success');
+  const currentEmailDisplay = document.getElementById('currentEmail');
 
   const passwordForm = document.getElementById('password-form');
   const currentPasswordInput = document.getElementById('currentPassword');
@@ -30,6 +35,45 @@ document.addEventListener('DOMContentLoaded', () => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
   }
 
+  let originalEmail = '';
+
+  function setProfileDetail(id, value) {
+    const element = document.getElementById(id);
+    if (element) element.textContent = value || 'Not provided';
+  }
+
+  function formatDate(value) {
+    if (!value) return '';
+    const [year, month, day] = String(value).slice(0, 10).split('-').map(Number);
+    if (!year || !month || !day) return String(value);
+    return new Intl.DateTimeFormat(undefined, {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    }).format(new Date(year, month - 1, day));
+  }
+
+  function syncProfileIdentity(emailOverride) {
+    const fullName = `${firstNameInput.value} ${lastNameInput.value}`.trim();
+    const initials = `${firstNameInput.value[0] || ''}${lastNameInput.value[0] || ''}`.toUpperCase();
+    const profileEmailValue = emailOverride === undefined ? originalEmail : emailOverride;
+    const profileName = document.getElementById('profileName');
+    const profileInitials = document.getElementById('profileInitials');
+    const profileEmail = document.getElementById('profileEmail');
+    if (profileName) profileName.textContent = fullName;
+    if (profileInitials) profileInitials.textContent = initials;
+    if (profileEmail) profileEmail.textContent = profileEmailValue;
+
+    const ticketFirstName = document.getElementById('ticketFirstName');
+    const ticketLastName = document.getElementById('ticketLastName');
+    const ticketEmail = document.getElementById('ticketEmail');
+    const ticketPhone = document.getElementById('ticketPhone');
+    if (ticketFirstName) ticketFirstName.value = firstNameInput.value;
+    if (ticketLastName) ticketLastName.value = lastNameInput.value;
+    if (ticketEmail) ticketEmail.value = profileEmailValue;
+    if (ticketPhone) ticketPhone.value = contactNumberInput.value;
+  }
+
   if (contactNumberInput) {
     contactNumberInput.addEventListener('input', (e) => {
       e.target.value = e.target.value.replace(/\D/g, '').slice(0, 10);
@@ -37,16 +81,24 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ---- Load current profile info ----
-  let originalEmail = '';
-
   fetch('/api/auth/profile')
     .then((res) => (res.ok ? res.json() : Promise.reject()))
     .then((data) => {
       firstNameInput.value = data.firstName || '';
       lastNameInput.value = data.lastName || '';
-      emailInput.value = data.email || '';
       contactNumberInput.value = data.contactNumber || '';
       originalEmail = data.email || '';
+      if (currentEmailDisplay) currentEmailDisplay.textContent = originalEmail || 'Not provided';
+      setProfileDetail('profileDateOfBirth', formatDate(data.dateOfBirth));
+      setProfileDetail('profileGender', ({
+        female: 'Female',
+        male: 'Male',
+        'prefer-not': 'Prefer not to say',
+      })[data.gender] || data.gender);
+      setProfileDetail('profileAddress', data.address);
+      setProfileDetail('profileAllergies', data.allergies);
+      setProfileDetail('profileMedicalConditions', data.medicalConditions);
+      syncProfileIdentity();
     })
     .catch(() => {
       setFieldError(profileForm, 'profile-form', 'Could not load your profile. Please refresh the page.');
@@ -110,7 +162,6 @@ document.addEventListener('DOMContentLoaded', () => {
   function closeEmailOtpModal() {
     emailOtpModal.hidden = true;
     document.body.classList.remove('modal-open');
-    emailInput.value = originalEmail; // revert visible field until confirmed
   }
 
   emailOtpClose.addEventListener('click', closeEmailOtpModal);
@@ -152,10 +203,13 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       originalEmail = data.newEmail;
-      emailInput.value = data.newEmail;
+      if (currentEmailDisplay) currentEmailDisplay.textContent = data.newEmail;
+      syncProfileIdentity();
       emailOtpModal.hidden = true;
       document.body.classList.remove('modal-open');
-      profileSuccess.hidden = false;
+      newEmailInput.value = '';
+      emailChangeSuccess.textContent = data.message || 'Email address updated successfully.';
+      emailChangeSuccess.hidden = false;
     } catch (err) {
       console.error('Confirm email change failed:', err);
       emailOtpError.textContent = 'Something went wrong. Please try again.';
@@ -183,7 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // ---- Update profile (name/contact save immediately; email triggers verification) ----
+  // ---- Update profile ----
   profileForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     clearErrors(profileForm);
@@ -191,7 +245,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const firstName = firstNameInput.value.trim();
     const lastName = lastNameInput.value.trim();
-    const email = emailInput.value.trim();
     const contactNumber = contactNumberInput.value.trim();
 
     let hasError = false;
@@ -204,23 +257,12 @@ document.addEventListener('DOMContentLoaded', () => {
       setFieldError(profileForm, 'lastName', 'Last name is required.');
       hasError = true;
     }
-    if (!email) {
-      setFieldError(profileForm, 'email', 'Email address is required.');
-      hasError = true;
-    } else if (!isValidEmail(email)) {
-      setFieldError(profileForm, 'email', 'Please enter a valid email address.');
-      hasError = true;
-    }
-
     if (hasError) return;
 
     profileSubmitBtn.disabled = true;
     profileSubmitBtn.querySelector('.btn-label').textContent = 'SAVING...';
 
-    const emailChanged = email.toLowerCase() !== originalEmail.toLowerCase();
-
     try {
-      // Save name/contact number immediately — email is handled separately
       const response = await fetch('/api/auth/update-profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -234,24 +276,8 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      if (emailChanged) {
-        const emailResponse = await fetch('/api/auth/request-email-change', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ newEmail: email }),
-        });
-        const emailData = await emailResponse.json().catch(() => ({}));
-
-        if (!emailResponse.ok) {
-          setFieldError(profileForm, 'email', emailData.message || 'Could not send verification code.');
-          emailInput.value = originalEmail;
-          return;
-        }
-
-        openEmailOtpModal(email);
-      } else {
-        profileSuccess.hidden = false;
-      }
+      syncProfileIdentity();
+      profileSuccess.hidden = false;
     } catch (err) {
       setFieldError(profileForm, 'profile-form', 'Something went wrong. Please try again.');
       console.error('Update profile failed:', err);
@@ -259,6 +285,48 @@ document.addEventListener('DOMContentLoaded', () => {
       profileSubmitBtn.disabled = false;
       profileSubmitBtn.querySelector('.btn-label').textContent = 'SAVE CHANGES';
       profileForm.dispatchEvent(new Event('profile:statechange'));
+    }
+  });
+
+  emailForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearErrors(emailForm);
+    emailChangeSuccess.hidden = true;
+
+    const newEmail = newEmailInput.value.trim();
+    if (!newEmail) {
+      setFieldError(emailForm, 'newEmail', 'New email address is required.');
+      return;
+    }
+    if (!isValidEmail(newEmail)) {
+      setFieldError(emailForm, 'newEmail', 'Please enter a valid email address.');
+      return;
+    }
+    if (newEmail.toLowerCase() === originalEmail.toLowerCase()) {
+      setFieldError(emailForm, 'newEmail', 'That is already your current email address.');
+      return;
+    }
+
+    emailChangeSubmitBtn.disabled = true;
+    emailChangeSubmitBtn.querySelector('.btn-label').textContent = 'SENDING...';
+    try {
+      const response = await fetch('/api/auth/request-email-change', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newEmail }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setFieldError(emailForm, 'email-change-form', data.message || 'Could not send the verification code.');
+        return;
+      }
+      openEmailOtpModal(newEmail);
+    } catch (err) {
+      console.error('Request email change failed:', err);
+      setFieldError(emailForm, 'email-change-form', 'Something went wrong. Please try again.');
+    } finally {
+      emailChangeSubmitBtn.disabled = false;
+      emailChangeSubmitBtn.querySelector('.btn-label').textContent = 'SEND VERIFICATION CODE';
     }
   });
 

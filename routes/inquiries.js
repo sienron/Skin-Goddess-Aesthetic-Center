@@ -67,6 +67,24 @@ router.post('/', inquirySubmissionLimiter, async (req, res) => {
   }
 });
 
+router.get('/mine', requireRole('client'), async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT i.inquiry_id, i.inquiry_type, i.message, i.admin_reply,
+              i.replied_at, i.created_at
+       FROM inquiries i
+       JOIN users u ON u.user_id = $1
+       WHERE LOWER(i.email) = LOWER(u.email)
+       ORDER BY i.created_at DESC, i.inquiry_id DESC`,
+      [req.session.userId]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('List customer inquiries error:', error);
+    res.status(500).json({ message: 'Could not load your tickets.' });
+  }
+});
+
 router.get('/', requireRole('admin'), async (req, res) => {
   try {
     const result = await db.query(

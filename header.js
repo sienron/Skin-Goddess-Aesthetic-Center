@@ -55,6 +55,40 @@
         if (roleEl && roleLabel) roleEl.textContent = roleLabel;
     }
 
+    function enableCustomerProfileNavigation() {
+        if (profileBtn) {
+            profileBtn.setAttribute('aria-haspopup', 'true');
+            profileBtn.setAttribute('aria-expanded', 'false');
+            profileBtn.setAttribute('aria-controls', 'profileDropdown');
+        }
+        if (profileDropdown) {
+            const signOutButton = profileDropdown.querySelector('[data-sign-out], #signOutBtn');
+            const profileLink = document.createElement('a');
+            profileLink.href = '/UserAccount.html#account';
+            profileLink.className = 'profile-dropdown-item';
+            profileLink.textContent = 'Profile';
+            profileDropdown.replaceChildren(profileLink);
+            if (signOutButton) {
+                signOutButton.textContent = 'Sign Out';
+                profileDropdown.appendChild(signOutButton);
+            }
+        }
+        if (mobileProfile) {
+            mobileProfile.setAttribute('role', 'link');
+            mobileProfile.setAttribute('tabindex', '0');
+            mobileProfile.setAttribute('aria-label', 'Open your profile');
+            mobileProfile.addEventListener('click', () => {
+                window.location.assign('/UserAccount.html');
+            });
+            mobileProfile.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    window.location.assign('/UserAccount.html');
+                }
+            });
+        }
+    }
+
     function showSignInButton(isMobile) {
         if (isMobile) {
             if (!mobileProfile) return;
@@ -81,7 +115,10 @@
             const roleLabel = formatRoleLabel(data.role);
             fillProfile(profileBtn, fullName, initials, roleLabel);
             fillProfile(mobileProfile, fullName, initials, roleLabel);
-            if (String(data.role || '').toLowerCase() === 'admin' && profileDropdown) {
+            const role = String(data.role || '').toLowerCase();
+            if (role === 'client') {
+                enableCustomerProfileNavigation();
+            } else if (role === 'admin' && profileDropdown) {
                 profileDropdown.querySelectorAll(
                     'a[href="UserAccount.html"], a[href="MyAppointments.html"]'
                 ).forEach((link) => link.remove());
@@ -99,7 +136,7 @@
             revealProfile();
         });
 
-    // Dropdown open/close (desktop only — wrap/dropdown don't exist once signed out)
+    // Keep the profile dropdown available to pointer and keyboard users.
     if (profileWrap && profileBtn && profileDropdown) {
         profileBtn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -115,23 +152,24 @@
         });
 
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
+            if (e.key === 'Escape' && profileDropdown.classList.contains('show')) {
                 profileDropdown.classList.remove('show');
                 profileBtn.setAttribute('aria-expanded', 'false');
+                profileBtn.focus();
             }
         });
     }
 
-    const signOutBtn = document.getElementById('signOutBtn');
-    if (signOutBtn) {
-        signOutBtn.addEventListener('click', () => {
-            fetch('/api/auth/logout', { method: 'POST' })
-                .catch(() => {})
-                .finally(() => {
-                    window.location.href = '/LoginPage.html';
-                });
-        });
-    }
+    document.addEventListener('click', (event) => {
+        const signOutBtn = event.target.closest('[data-sign-out], #signOutBtn');
+        if (!signOutBtn) return;
+        signOutBtn.disabled = true;
+        fetch('/api/auth/logout', { method: 'POST' })
+            .catch(() => {})
+            .finally(() => {
+                window.location.href = '/LoginPage.html';
+            });
+    });
 })();
 
 /* ===== Shared Header Behavior =====
