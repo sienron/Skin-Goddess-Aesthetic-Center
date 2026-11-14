@@ -140,6 +140,20 @@ test('aesthetician reschedule modal requires the details accepted by its request
   }
 });
 
+test('client account reschedule form uses availability controls and immediate cancellation endpoint', () => {
+  const accountPage = fs.readFileSync(path.join(root, 'UserAccount.html'), 'utf8');
+  const modalSource = fs.readFileSync(path.join(root, 'appointment-modal.js'), 'utf8');
+  const stylesheet = fs.readFileSync(path.join(root, 'style.css'), 'utf8');
+
+  assert.match(accountPage, /id="apptRescheduleMonth"/);
+  assert.match(accountPage, /<select name="date" id="apptRescheduleDate"/);
+  assert.match(accountPage, /<textarea name="reason" id="apptRescheduleReason"[^>]*required/);
+  assert.doesNotMatch(accountPage, /id="apptRescheduleDescription"/);
+  assert.match(modalSource, /dataset\?\.page === "account"/);
+  assert.match(modalSource, /cancel-mine/);
+  assert.match(stylesheet, /\.client-header \.appt-reschedule-form \{[\s\S]*?padding: 20px 30px 8px/);
+});
+
 test('staff dashboard month keys follow Manila boundaries and obsolete overview copy is absent', () => {
   const dashboardSource = fs.readFileSync(path.join(root, 'staff-dashboard.js'), 'utf8');
   const helperStart = dashboardSource.indexOf('    function localDateString(');

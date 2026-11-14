@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "prestart": "node scripts/run-migrations.js && node scripts/build-public.js",
+    "prestart": "node scripts/run-prestart.js",
     "start": "node index.js",
     "migrate": "node scripts/run-migrations.js",
     "migrate:status": "node scripts/run-migrations.js --status",

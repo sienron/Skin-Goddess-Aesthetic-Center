@@ -32260,6 +32260,40 @@ body.homepage.customer-theme-dark .treatments-section .carousel-nav:hover {
   padding: 20px 26px 26px;
 }
 
+.client-header .appt-modal {
+  max-width: 500px;
+}
+
+.client-header .appt-reschedule-form {
+  gap: 12px 16px;
+  padding: 20px 30px 8px;
+}
+
+.client-header .appt-reschedule-form input,
+.client-header .appt-reschedule-form select,
+.client-header .appt-reschedule-form textarea {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid #c9c9c9;
+  border-radius: 6px;
+  font: inherit;
+}
+
+.client-header .appt-reschedule-form textarea {
+  grid-column: 1 / -1;
+  resize: vertical;
+}
+
+.client-header .appt-reschedule-form button {
+  margin-top: 6px;
+}
+
+.client-header .appt-modal-actions {
+  padding: 22px 30px 30px;
+}
+
 section.staff-sidebar[aria-label="Aesthetician navigation"]>nav {
   flex: 0 0 auto;
 }

@@ -310,7 +310,9 @@ function openApptModal(appt) {
 
     if (apptModalCancelBtn) {
         apptModalCancelBtn.dataset.apptId = normalizedAppt.id;
-        apptModalCancelBtn.disabled = !canManageAppointment || Boolean(normalizedAppt.cancellationRequestStatus);
+        const cancellationPending = normalizedAppt.cancellationRequestStatus === "pending";
+        apptModalCancelBtn.disabled = !canManageAppointment
+            || (document.body?.dataset?.page === "account" ? cancellationPending : Boolean(normalizedAppt.cancellationRequestStatus));
     }
     if (apptModalRescheduleBtn) {
         apptModalRescheduleBtn.dataset.apptId = normalizedAppt.id;
@@ -382,11 +384,33 @@ if (apptModalOverlay) {
     });
 
     apptModalCancelBtn?.addEventListener("click", () => {
+        if (document.body?.dataset?.page === "account") {
+            void cancelClientAppointment();
+            return;
+        }
         if (!apptCancellationForm) return;
         apptCancellationForm.hidden = !apptCancellationForm.hidden;
         if (apptRescheduleForm) apptRescheduleForm.hidden = true;
         if (apptActionMessage) apptActionMessage.textContent = "";
     });
+
+    async function cancelClientAppointment() {
+        const appointmentId = apptModalCancelBtn?.dataset.apptId;
+        if (!appointmentId || apptModalCancelBtn.disabled) return;
+        apptModalCancelBtn.disabled = true;
+        if (apptActionMessage) apptActionMessage.textContent = "Cancelling appointment...";
+        try {
+            const response = await fetch(`/api/appointments/${appointmentId}/cancel-mine`, { method: "POST" });
+            const data = await readApiResponse(response);
+            if (!response.ok) throw new Error(data.message || "Could not cancel appointment.");
+            closeApptModal();
+            if (typeof refreshClientAppointments === "function") await refreshClientAppointments();
+            window.dispatchEvent(new CustomEvent("appointmentUpdated", { detail: { id: appointmentId } }));
+        } catch (error) {
+            if (apptActionMessage) apptActionMessage.textContent = error.message;
+            apptModalCancelBtn.disabled = false;
+        }
+    }
 
     apptCancellationForm?.addEventListener("submit", async (event) => {
         event.preventDefault();
