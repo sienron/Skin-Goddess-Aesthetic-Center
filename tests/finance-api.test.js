@@ -9,12 +9,75 @@ test('Sales & Transactions loads the client selection and payment-history handle
   const page = fs.readFileSync(path.join(__dirname, '..', 'FinancesTransactions.html'), 'utf8');
   const client = fs.readFileSync(path.join(__dirname, '..', 'finance-transactions.js'), 'utf8');
 
-  assert.match(page, /finance-transactions\.js\?v=20261115-3/);
+  assert.match(page, /finance-transactions\.js\?v=20261115-4/);
   assert.match(page, /id="saleClient"/);
   assert.match(page, /id="clientPaymentHistoryModal"/);
+  assert.match(page, /<option value="outstanding">Outstanding<\/option>/);
+  assert.match(page, /id="receivableStatus"/);
   assert.match(client, /common\.fetchJson\('\/api\/finance\/clients'\)/);
   assert.match(client, /\/api\/finance\/clients\/\$\{encodeURIComponent\(state\.selectedClient\.id\)\}\/payment-history/);
   assert.match(client, /historyButton\.addEventListener\('click', \(\) => showClientPaymentHistory\(\)\)/);
+});
+
+test('outstanding payment-ledger filter returns service balances as actionable rows', async () => {
+  const originalQuery = db.query;
+  db.query = async (sql) => {
+    assert.match(sql, /a\.booked_service_price > COALESCE\(paid\.amount, 0\)/);
+    return { rows: [{
+      appointment_id: 42,
+      customer_id: 19,
+      appointment_date: '2026-10-12',
+      client: 'Client One',
+      service: 'Facial',
+      service_price: 400,
+      amount_paid: 150,
+      outstanding: 250,
+      status: 'Partially paid',
+    }] };
+  };
+
+  try {
+    const result = await invoke(routeHandler('/transactions', 'get'), {
+      query: {
+        from: '2026-10-01',
+        to: '2026-10-31',
+        status: 'outstanding',
+        sort: 'date',
+        direction: 'desc',
+      },
+    });
+    assert.equal(result.statusCode, 200);
+    assert.equal(result.body.total, 1);
+    assert.equal(result.body.rows[0].status, 'outstanding');
+    assert.equal(result.body.rows[0].amount, 250);
+    assert.equal(result.body.rows[0].payment_type, 'service');
+    assert.equal(result.body.rows[0].customer_id, 19);
+  } finally {
+    db.query = originalQuery;
+  }
+});
+
+test('receivables can be filtered to unpaid services', async () => {
+  const originalQuery = db.query;
+  let sql = '';
+  db.query = async (query) => {
+    sql = query;
+    return { rows: [] };
+  };
+
+  try {
+    const result = await invoke(routeHandler('/receivables', 'get'), {
+      query: {
+        from: '2026-10-01',
+        to: '2026-10-31',
+        status: 'unpaid',
+      },
+    });
+    assert.equal(result.statusCode, 200);
+    assert.match(sql, /COALESCE\(paid\.amount, 0\) <= 0/);
+  } finally {
+    db.query = originalQuery;
+  }
 });
 
 function routeHandler(path, method) {
@@ -720,6 +783,57 @@ test('client payment history scopes all returned payments to the requested custo
     assert.match(calls[1].sql, /appointment\.user_id = \$1 AND appointment\.is_demo = FALSE/);
     assert.match(calls[1].sql, /OR payment\.customer_id = \$1/);
     assert.deepEqual(calls.map((call) => call.values), [[19], [19]]);
+  } finally {
+    db.query = originalQuery;
+  }
+});
+
+test('payment details include a linked product-sale client payment history', async () => {
+  const originalQuery = db.query;
+  const calls = [];
+  db.query = async (sql, values) => {
+    calls.push({ sql, values });
+    if (/WHERE p\.payment_id = \$1/.test(sql)) {
+      return { rows: [{
+        payment_id: 27,
+        appointment_id: null,
+        customer_id: 19,
+        payment_type: 'product_sale',
+        amount: 25,
+        method: 'cash',
+        status: 'posted',
+      }] };
+    }
+    return { rows: [{ payment_id: 27, payment_type: 'product_sale', amount: 25, status: 'posted' }] };
+  };
+
+  try {
+    const result = await invoke(routeHandler('/payments/:id', 'get'), {
+      params: { id: '27' },
+      query: {},
+    });
+    assert.equal(result.statusCode, 200);
+    assert.equal(result.body.history.length, 1);
+    assert.deepEqual(calls[1].values, [19]);
+    assert.match(calls[1].sql, /payment\.customer_id = \$1/);
+  } finally {
+    db.query = originalQuery;
+  }
+});
+
+test('sale client list returns active clients with selectable user ids', async () => {
+  const originalQuery = db.query;
+  let sql = '';
+  db.query = async (query) => {
+    sql = query;
+    return { rows: [{ user_id: 19, name: 'Client One', email: 'client@example.test' }] };
+  };
+
+  try {
+    const result = await invoke(routeHandler('/clients', 'get'), {});
+    assert.equal(result.statusCode, 200);
+    assert.equal(result.body[0].user_id, 19);
+    assert.match(sql, /role = 'client' AND status = 'active'/);
   } finally {
     db.query = originalQuery;
   }

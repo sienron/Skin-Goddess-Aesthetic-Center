@@ -54,8 +54,9 @@ async function recoverDatabase(client, expectedFingerprint) {
     if(verified.some((row) => !row.verified && row.unsafe))throw new Error('An unsafe migration is still unverified.');
     await createLedger(client);
     for(const row of verified.filter((entry) => entry.verified)) {
-      await client.query(`INSERT INTO schema_migrations(migration_id,filename,checksum,status,started_at,applied_at)
+      const inserted=await client.query(`INSERT INTO schema_migrations(migration_id,filename,checksum,status,started_at,applied_at)
         VALUES($1,$1,$2,'adopted',NOW(),NOW())`,[row.filename,row.checksum]);
+      if(inserted.rowCount!==1)throw new Error(`Could not record adoption for ${row.filename}.`);
     }
     const after=await tableHashes(client,tables);
     if(hash(before)!==hash(after))throw new Error('Existing business data changed during adoption. Rolling back.');

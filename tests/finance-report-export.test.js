@@ -53,7 +53,7 @@ function financeRows(sql) {
       { expense_id: 5, date: '2026-10-06', category: 'Utilities', description: 'Voided bill', amount: 25, supplier: null, reference_no: null, status: 'voided', void_reason: 'Duplicate' }
     ] };
   }
-  if (/SELECT\s+a\.appointment_id,\s*a\.appointment_date::text AS appointment_date/.test(sql)
+  if (/SELECT\s+a\.appointment_id,\s*(?:a\.user_id AS customer_id,\s*)?a\.appointment_date::text AS appointment_date/.test(sql)
     && (/ILIKE/.test(sql) || /appointment_date BETWEEN/.test(sql))) {
     return { rows: [{
       appointment_id: 42,
@@ -65,7 +65,7 @@ function financeRows(sql) {
       outstanding: 700,
     }] };
   }
-  if (/SELECT\s+a\.appointment_id,\s*a\.appointment_date::text AS appointment_date/.test(sql)
+  if (/SELECT\s+a\.appointment_id,\s*(?:a\.user_id AS customer_id,\s*)?a\.appointment_date::text AS appointment_date/.test(sql)
     && !/appointment_date BETWEEN/.test(sql)) {
     return { rows: [
       {

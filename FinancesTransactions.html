@@ -119,7 +119,7 @@
                     <article class="fin-kpi-card fin-kpi-card--payments">
                         <span class="fin-kpi-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M6.5 4.5h11a2 2 0 0 1 2 2v13l-2.7-1.6-2.8 1.6-2.8-1.6-2.7 1.6-2.7-1.6L3 19.5v-13a2 2 0 0 1 2-2h1.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M8 9h8m-8 4h5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span>
                         <strong id="paymentCountSummary">—</strong>
-                        <span class="fin-kpi-label">Matching payments</span>
+                        <span class="fin-kpi-label" id="paymentCountLabel">Matching payments</span>
                         <small>Transactions matching the current ledger filters</small>
                     </article>
                 </div>
@@ -148,7 +148,7 @@
                                     <th><button class="fin-sort-button" type="button" data-sort-column="service">Service / reference</button></th>
                                     <th><select id="transactionMethod" aria-label="Filter payments by method"><option value="">All methods</option><option value="paymongo">PayMongo (Other)</option><option value="cash">Cash</option><option value="gcash">GCash</option><option value="maya">Maya</option><option value="card">Credit/debit card</option></select></th>
                                     <th><button class="fin-sort-button" type="button" data-sort-column="amount">Amount (PHP)</button></th>
-                                    <th><select id="transactionStatus" aria-label="Filter payments by status"><option value="posted">Posted</option><option value="refunded">Refunded</option><option value="reversed">Reversed</option><option value="all">All statuses</option></select></th>
+                                    <th><select id="transactionStatus" aria-label="Filter payments by status"><option value="posted">Posted</option><option value="refunded">Refunded</option><option value="reversed">Reversed</option><option value="outstanding">Outstanding</option><option value="all">All statuses</option></select></th>
                                     <th>Action</th>
                                 </tr>
                             </thead>
@@ -187,6 +187,7 @@
                 <div class="staff-table-toolbar">
                     <h2>Outstanding balances</h2>
                     <div class="fin-ledger-tools">
+                        <select id="receivableStatus" aria-label="Filter service balances by status"><option value="all">All statuses</option><option value="outstanding">Outstanding</option><option value="unpaid">Unpaid</option><option value="partially_paid">Partially paid</option></select>
                         <input class="fin-ledger-search" id="receivableSearch" type="search" aria-label="Search outstanding balances" placeholder="Search clients or services">
                         <button class="fin-button fin-button-export" id="exportReceivablesXlsx" type="button">EXPORT</button>
                     </div>
@@ -357,6 +358,7 @@
                             <tbody id="paymentHistoryRows"></tbody>
                         </table>
                     </div>
+                    <div class="staff-empty-state fin-table-empty-state" id="paymentHistoryEmpty" hidden><strong>No payment history</strong><p>No related payments were found for this service or client.</p></div>
                 </section>
             </div>
             <div class="fin-modal-overlay" id="clientDetailsModal" hidden>
@@ -389,7 +391,7 @@
     <script src="header.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
     <script src="finance-common.js?v=20261115-1"></script>
-    <script src="finance-transactions.js?v=20261115-3"></script>
+    <script src="finance-transactions.js?v=20261115-4"></script>
     <script src="admin-context-nav.js"></script>
 </body>
 

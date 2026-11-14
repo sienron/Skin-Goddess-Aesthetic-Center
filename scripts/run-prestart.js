@@ -1,8 +1,8 @@
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
-function runStep(scriptName) {
-  const result = spawnSync(process.execPath, [path.join(__dirname, scriptName)], {
+function runStep(scriptName, args = []) {
+  const result = spawnSync(process.execPath, [path.join(__dirname, scriptName), ...args], {
     env: process.env,
     stdio: 'inherit',
   });
@@ -24,20 +24,22 @@ function runStep(scriptName) {
   return true;
 }
 
-function main() {
-  if (process.env.SKIP_AUTOMATIC_MIGRATIONS === 'true') {
+function main(env = process.env, executeStep = runStep) {
+  if (env.SKIP_AUTOMATIC_MIGRATIONS === 'true') {
     console.warn(
       '[startup] WARNING: Automatic migrations are disabled by '
       + 'SKIP_AUTOMATIC_MIGRATIONS=true. No migrations were run, adopted, or recorded. '
-      + 'The production schema has not been validated; newsletter signup, Finance '
-      + 'customer/product-sale paths, pending purchase review, and balance-payment '
-      + 'idempotency may fail until schema recovery is completed.'
+      + 'Validating the existing migration ledger and required schema postconditions.'
     );
-  } else if (!runStep('run-migrations.js')) {
+    if (!executeStep('run-migrations.js', ['--verify'])) return false;
+  } else if (!executeStep('run-migrations.js')) {
     return;
   }
 
-  runStep('build-public.js');
+  executeStep('build-public.js');
+  return true;
 }
 
-main();
+if (require.main === module) main();
+
+module.exports = { main, runStep };

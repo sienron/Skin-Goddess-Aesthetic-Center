@@ -654,6 +654,19 @@ router.get('/payments/:id', endpoint(async (req, res) => {
   if (payment.appointment_id) {
     const payments = await db.query(`SELECT payment_id, payment_type, amount::float8 AS amount, method, reference_no, note, status, (created_at AT TIME ZONE 'Asia/Manila')::date::text AS payment_date FROM payments WHERE appointment_id = $1 ORDER BY created_at, payment_id`, [payment.appointment_id]);
     history = payments.rows;
+  } else if (payment.customer_id) {
+    const payments = await financeQuery(`
+      SELECT payment.payment_id, payment.payment_type, payment.amount::float8 AS amount,
+        payment.method, payment.reference_no, payment.note, payment.status,
+        (payment.created_at AT TIME ZONE 'Asia/Manila')::date::text AS payment_date
+      FROM payments payment
+      LEFT JOIN appointments appointment ON appointment.appointment_id = payment.appointment_id
+      WHERE ((appointment.user_id = $1 AND appointment.is_demo = FALSE)
+        OR payment.customer_id = $1)
+        AND COALESCE(appointment.is_demo, FALSE) = FALSE
+      ORDER BY payment.created_at, payment.payment_id
+    `, [payment.customer_id]);
+    history = payments.rows;
   }
   res.json({ payment, history });
 }));
@@ -852,6 +865,51 @@ router.get('/transactions', endpoint(async (req, res) => {
   const direction = req.query.direction || 'desc';
   if (!Object.hasOwn(sortColumns, sort)) throw new ApiError(400, 'Invalid payment sort column.');
   if (!['asc', 'desc'].includes(direction)) throw new ApiError(400, 'Invalid payment sort direction.');
+  if (req.query.status === 'outstanding') {
+    if (req.query.type && ![...PAYMENT_TYPES, 'service'].includes(req.query.type)) {
+      throw new ApiError(400, 'Invalid payment type.');
+    }
+    if (req.query.method && !METHODS.includes(req.query.method)) {
+      throw new ApiError(400, 'Invalid payment method.');
+    }
+    const result = await receivableRows(from, to, req.query);
+    const rows = result.rows
+      .filter((row) => (!req.query.type || req.query.type === 'service') && !req.query.method)
+      .sort((left, right) => {
+        const values = {
+          date: [left.appointment_date, right.appointment_date],
+          receipt: [left.appointment_id, right.appointment_id],
+          client: [left.client, right.client],
+          type: ['service', 'service'],
+          service: [left.service, right.service],
+          method: ['', ''],
+          amount: [left.outstanding, right.outstanding],
+          status: ['outstanding', 'outstanding'],
+        }[sort];
+        const comparison = typeof values[0] === 'number'
+          ? values[0] - values[1]
+          : String(values[0]).localeCompare(String(values[1]), 'en', { numeric: true, sensitivity: 'base' });
+        return (direction === 'asc' ? comparison : -comparison)
+          || (direction === 'asc' ? left.appointment_id - right.appointment_id : right.appointment_id - left.appointment_id);
+      });
+    const total = rows.length;
+    res.json({
+      rows: rows.slice(offset, offset + limit).map((row) => ({
+        ...row,
+        payment_id: null,
+        payment_type: 'service',
+        amount: row.outstanding,
+        method: '',
+        receipt_number: '',
+        reference_no: `Appointment #${row.appointment_id}`,
+        status: 'outstanding',
+      })),
+      page,
+      limit,
+      total,
+    });
+    return;
+  }
   const values = [from, to];
   const where = ["(p.created_at AT TIME ZONE 'Asia/Manila')::date BETWEEN $1::date AND $2::date", 'COALESCE(a.is_demo, FALSE) = FALSE'];
   for (const [key, column, allowed, message] of [['type', 'p.payment_type', PAYMENT_TYPES, 'Invalid payment type.'], ['method', 'p.method', METHODS, 'Invalid payment method.']]) {
@@ -889,6 +947,11 @@ router.get('/sale-products', endpoint(async (req, res) => {
 async function receivableRows(from, to, query = {}, hasDateFilter = true) {
   const values = [DEPOSIT_DEDUCTED_FROM_PRICE];
   const where = ["a.is_demo = FALSE", "a.appointment_status <> 'cancelled'", "a.payment_status <> 'not_recorded'"];
+  if (query.status && !['all', 'outstanding', 'unpaid', 'partially_paid'].includes(query.status)) {
+    throw new ApiError(400, 'Invalid receivable status.');
+  }
+  if (query.status === 'unpaid') where.push('COALESCE(paid.amount, 0) <= 0');
+  if (query.status === 'partially_paid') where.push('COALESCE(paid.amount, 0) > 0');
   if (hasDateFilter) {
     values.push(from, to);
     where.push(`a.appointment_date BETWEEN $${values.length - 1}::date AND $${values.length}::date`);
@@ -901,6 +964,7 @@ async function receivableRows(from, to, query = {}, hasDateFilter = true) {
   return db.query(`
     SELECT
       a.appointment_id,
+      a.user_id AS customer_id,
       a.appointment_date::text AS appointment_date,
       a.appointment_status,
       a.booked_service_price::float8 AS service_price,
@@ -1692,6 +1756,30 @@ function receiptNumber(paymentId, paymentDate) {
 }
 
 async function transactionExportRows(from, to, query) {
+  if (query.status === 'outstanding') {
+    if (query.type && ![...PAYMENT_TYPES, 'service'].includes(query.type)) {
+      throw new ApiError(400, 'Invalid payment type.');
+    }
+    if (query.method && !METHODS.includes(query.method)) {
+      throw new ApiError(400, 'Invalid payment method.');
+    }
+    const result = await receivableRows(from, to, query);
+    const records = result.rows
+      .filter((row) => (!query.type || query.type === 'service') && !query.method)
+      .map((row) => ({
+        date: row.appointment_date,
+        receipt_number: `APT-${row.appointment_id}`,
+        client: row.client,
+        payment_type: 'service',
+        details: row.service,
+        method: '',
+        amount: row.outstanding,
+        status: 'outstanding',
+        reference_no: `Appointment #${row.appointment_id}`,
+        note: `${row.amount_paid > 0 ? 'Partially paid' : 'Unpaid'} service balance`,
+      }));
+    return { rows: records };
+  }
   const values = [from, to];
   const where = ["(payment.created_at AT TIME ZONE 'Asia/Manila')::date BETWEEN $1::date AND $2::date"];
   for (const [key, column, allowed, message] of [

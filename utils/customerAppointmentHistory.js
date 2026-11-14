@@ -5,6 +5,7 @@ const CUSTOMER_APPOINTMENTS_QUERY = `
          a.appointment_date::text AS date,
          a.appointment_time::text AS start,
          a.appointment_end_time::text AS end,
+         a.service_id,
          CASE WHEN a.booked_duration_is_estimated THEN NULL
            ELSE (a.appointment_time + (a.booked_duration_minutes * INTERVAL '1 minute'))::time::text
          END AS treatment_end,

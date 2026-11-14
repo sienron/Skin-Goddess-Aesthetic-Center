@@ -5,7 +5,7 @@ const path = require('node:path');
 const registry = require('../migrations/registry.json');
 const { checksum, validateRegistry } = require('./run-migrations');
 
-async function auditLegacyMigrations(client) {
+async function auditLegacyMigrations(client, { includeOptional = false } = {}) {
   validateRegistry();
   const columns = (await client.query(`SELECT table_name,column_name,udt_name,is_nullable,column_default
     FROM information_schema.columns WHERE table_schema='public' ORDER BY table_name,ordinal_position`)).rows;
@@ -88,9 +88,11 @@ async function auditLegacyMigrations(client) {
   check('051-hashed-email-otps.js','OTP stores contain non-null hashes and no plaintext code columns',col('otp_codes','code_hash')?.is_nullable==='NO' && !col('otp_codes','code') && col('pending_email_changes','code_hash')?.is_nullable==='NO' && !col('pending_email_changes','code'));
   check('056-finance-payment-idempotency.js','Payment request keys and unique retry index',has('payments','request_key') && idx('payments_request_key_unique'));
   check('056-allow-repeated-inventory-purchase-batches.js','Invoice source hashes no longer prohibit legitimate repeat purchases',has('inventory_purchase_batches','source_hash') && !con('inventory_purchase_batches','inventory_purchase_batches_source_hash_key'));
-  const missingRules=registry.required.filter((file) => !rules.has(file));
+  check('043-demo-customer-appointments.js','Opt-in demo appointment marker exists',has('appointments','is_demo'));
+  const filenames = includeOptional ? [...registry.required, ...registry.optional] : registry.required;
+  const missingRules=filenames.filter((file) => !rules.has(file));
   if(missingRules.length)throw new Error(`No reviewed verification rule for ${missingRules.join(', ')}`);
-  return registry.required.map((filename) => ({filename,checksum:checksum(filename),...rules.get(filename),unsafe:registry.unsafeNonTransactional.includes(filename)}));
+  return filenames.map((filename) => ({filename,checksum:checksum(filename),...rules.get(filename),unsafe:registry.unsafeNonTransactional.includes(filename)}));
 }
 
 module.exports={auditLegacyMigrations};

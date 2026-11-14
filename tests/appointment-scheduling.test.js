@@ -154,6 +154,67 @@ test('same-day availability excludes starts inside three hours and includes the 
   assert.equal(todaySlots.includes('11:00 AM'), true);
 });
 
+test('clients can view reschedule availability only for their own confirmed appointments', async () => {
+  const originalQuery = db.query;
+  const appointmentOwners = [7, 8];
+  const results = [];
+
+  try {
+    for (const ownerId of appointmentOwners) {
+      const queries = [];
+      db.query = async (sql, values = []) => {
+        if (/FROM clinic_operating_hours/.test(sql)) {
+          return { rows: require('../utils/clinicSchedule').DEFAULT_HOURS };
+        }
+        if (/SELECT closure_id, closure_date::text, reason FROM clinic_closures/.test(sql)) {
+          return { rows: [] };
+        }
+        queries.push({ sql, values });
+        if (/SELECT duration_minutes, buffer_minutes FROM services/.test(sql)) {
+          return { rows: [{ duration_minutes: 30, buffer_minutes: 0 }] };
+        }
+        if (/SELECT appointment_id, user_id, aesthetician_id, service_id, appointment_status/.test(sql)) {
+          return { rows: [{
+            appointment_id: 42,
+            user_id: 7,
+            aesthetician_id: 31,
+            service_id: 3,
+            appointment_status: 'confirmed'
+          }] };
+        }
+        if (/SELECT role FROM users WHERE user_id = \$1/.test(sql)) {
+          return { rows: [{ role: 'client' }] };
+        }
+        if (/SELECT user_id FROM users WHERE role = 'aesthetician'/.test(sql)) {
+          return { rows: [{ user_id: 31 }, { user_id: 32 }] };
+        }
+        if (/SELECT aesthetician_id, appointment_date::text/.test(sql)) {
+          return { rows: [] };
+        }
+        throw new Error(`Unexpected availability query: ${sql}`);
+      };
+
+      const response = responseCapture();
+      await withFrozenDate('2026-01-04T21:00:00.000Z', () => (
+        routeLayer(availabilityRouter, '/', 'get').stack.at(-1).handle({
+          session: { userId: ownerId },
+          query: { month: '2026-01', serviceId: '3', appointmentId: '42' }
+        }, response)
+      ));
+      results.push({ response, queries });
+    }
+  } finally {
+    db.query = originalQuery;
+  }
+
+  assert.equal(results[0].response.statusCode, 200);
+  assert.ok(results[0].response.body['2026-0-5'].length > 0);
+  assert.match(results[0].queries[1].sql, /SELECT appointment_id, user_id, aesthetician_id, service_id/);
+  assert.equal(results[1].response.statusCode, 403);
+  assert.match(results[1].response.body.message, /cannot view availability/i);
+  assert.equal(results[1].queries.some(({ sql }) => /SELECT user_id FROM users WHERE role = 'aesthetician'/.test(sql)), false);
+});
+
 async function runAdjustment({
   expectedEnd = '11:00',
   previousEnd = '10:30:00',

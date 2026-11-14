@@ -136,16 +136,18 @@ function adoptionPlan(databaseName) {
 
 async function recordAdoption(client, filenames) {
   for (const filename of filenames) {
-    await client.query(`
+    const result = await client.query(`
       INSERT INTO schema_migrations
         (migration_id, filename, checksum, status, started_at, applied_at)
       VALUES ($1, $1, $2, 'adopted', NOW(), NOW())
-      ON CONFLICT (migration_id) DO NOTHING
     `, [filename, checksum(filename)]);
+    if (result.rowCount !== 1) {
+      throw new Error(`Could not record adoption for ${filename}; no ledger row was created.`);
+    }
   }
 }
 
-function findPendingMigrations(requested, rows) {
+function findPendingMigrations(requested, rows, verifiedMigrations = new Set()) {
   const pending = [];
   for (const filename of requested) {
     const row = rows.get(filename);
@@ -156,7 +158,10 @@ function findPendingMigrations(requested, rows) {
     if (row.checksum !== checksum(filename)) {
       throw new Error(`Applied migration ${filename} has changed; restore its original contents and add a new migration.`);
     }
-    if (row.status === 'applied' || row.status === 'adopted') continue;
+    if (row.status === 'applied' || row.status === 'adopted') {
+      if (verifiedMigrations.has(filename)) continue;
+      throw new Error(`Migration ${filename} has ledger status ${row.status} without verified database postconditions.`);
+    }
     throw new Error(
       `Migration ${filename} is ${row.status}. It will not be rerun automatically; inspect the database and migration status first.`
     );
@@ -176,10 +181,69 @@ function findPendingMigrations(requested, rows) {
 
 async function migrationRows(client) {
   const result = await client.query(`
-    SELECT migration_id, checksum, status, started_at, applied_at, failure_message
+    SELECT migration_id, filename, checksum, status, started_at, applied_at, failure_message
     FROM schema_migrations
   `);
   return new Map(result.rows.map((row) => [row.migration_id, row]));
+}
+
+function migrationAuditErrors(rows, audit, requireAll = false) {
+  const registered = new Set([...registry.required, ...registry.optional]);
+  const auditByFilename = new Map(audit.map((entry) => [entry.filename, entry]));
+  const errors = [];
+
+  for (const [migrationId, row] of rows) {
+    const filename = row.filename || migrationId;
+    if (migrationId !== filename) {
+      errors.push(`Ledger migration_id "${migrationId}" does not match filename "${filename}".`);
+    }
+    if (!registered.has(filename)) {
+      errors.push(`Ledger contains unregistered migration "${filename}".`);
+      continue;
+    }
+    if (!['applied', 'adopted'].includes(row.status)) {
+      errors.push(`Migration ${filename} is ${row.status}${row.failure_message ? `: ${row.failure_message}` : ''}.`);
+      continue;
+    }
+    const evidence = auditByFilename.get(filename);
+    if (!evidence) {
+      errors.push(`Migration ${filename} has no reviewed database postcondition.`);
+      continue;
+    }
+    if (row.checksum !== evidence.checksum) {
+      errors.push(`Ledger checksum does not match the repository for ${filename}.`);
+    }
+    if (!evidence.verified) {
+      errors.push(`Ledger status ${row.status} for ${filename} is not supported by its database postconditions.`);
+    }
+  }
+
+  if (requireAll) {
+    for (const filename of registry.required) {
+      const row = rows.get(filename);
+      if (!row || !['applied', 'adopted'].includes(row.status)) {
+        errors.push(`Required migration ${filename} is not recorded as applied or verified adopted.`);
+      }
+    }
+  }
+  return errors;
+}
+
+async function verifyMigrationLedger(client, rows, requireAll = false) {
+  const audit = await require('./audit-legacy-migrations').auditLegacyMigrations(client, { includeOptional: true });
+  const errors = migrationAuditErrors(rows, audit, requireAll);
+  if (errors.length) {
+    throw new Error(`Migration ledger/schema verification failed:\n${errors.map((error) => `- ${error}`).join('\n')}`);
+  }
+  return audit;
+}
+
+function assertVerifiedMigrations(audit, filenames) {
+  const verified = new Set(audit.filter((entry) => entry.verified).map((entry) => entry.filename));
+  const missing = filenames.filter((filename) => !verified.has(filename));
+  if (missing.length) {
+    throw new Error(`Cannot adopt or apply unverified migration effects: ${missing.join(', ')}`);
+  }
 }
 
 function displayStatus(rows) {
@@ -231,22 +295,48 @@ async function applyMigration(client, filename, priorRows) {
   if (child.error || child.status !== 0) {
     const failure = child.error
       ? `Migration process could not be started: ${child.error.message}`
-      : `Migration process exited with status ${child.status === null ? 'unknown' : child.status}.`;
-    await client.query(`
+      : `Migration process exited with status ${child.status === null ? 'unknown' : child.status}${child.signal ? ` (signal ${child.signal})` : ''}.`;
+    const result = await client.query(`
       UPDATE schema_migrations
       SET status = 'failed', failure_message = $2
       WHERE migration_id = $1 AND status = 'running'
     `, [filename, failure]);
+    if (result.rowCount !== 1) {
+      throw new Error(`${filename} did not complete and its ledger row could not be transitioned to failed. ${failure}`);
+    }
     throw new Error(`${filename} failed. ${failure} Review the database before any retry.`);
   }
 
-  await client.query(`
+  let postconditionFailure;
+  try {
+    const audit = await require('./audit-legacy-migrations').auditLegacyMigrations(client, { includeOptional: true });
+    assertVerifiedMigrations(audit, [filename]);
+  } catch (error) {
+    postconditionFailure = `Migration process succeeded, but database postconditions were not verified: ${error.message}`;
+  }
+  if (postconditionFailure) {
+    const result = await client.query(`
+      UPDATE schema_migrations
+      SET status = 'failed', failure_message = $2
+      WHERE migration_id = $1 AND status = 'running'
+    `, [filename, postconditionFailure]);
+    if (result.rowCount !== 1) {
+      throw new Error(`${filename} postcondition verification failed and its ledger row could not be transitioned to failed. ${postconditionFailure}`);
+    }
+    throw new Error(`${filename} failed verification. ${postconditionFailure} Review the database before any retry.`);
+  }
+
+  const result = await client.query(`
     UPDATE schema_migrations
     SET status = 'applied', applied_at = NOW(), failure_message = NULL
     WHERE migration_id = $1 AND status = 'running'
   `, [filename]);
+  if (result.rowCount !== 1) {
+    throw new Error(`${filename} completed, but its ledger row was not transitioned from running to applied. Inspect the database before retrying.`);
+  }
   priorRows.set(filename, {
     migration_id: filename,
+    filename,
     checksum: expectedChecksum,
     status: 'applied',
   });
@@ -264,19 +354,26 @@ async function run(args) {
     const hasLedger = await ledgerExists(client);
     let rows = hasLedger ? await migrationRows(client) : new Map();
     let adoption = [];
+    let audit = [];
     if (hadApplicationTables && rows.size === 0) {
       const databaseName = (await client.query('SELECT current_database() AS name')).rows[0].name;
       adoption = adoptionPlan(databaseName);
+      audit = await require('./audit-legacy-migrations').auditLegacyMigrations(client, { includeOptional: true });
+      assertVerifiedMigrations(audit, adoption);
       for (const filename of adoption) {
         rows.set(filename, {
           migration_id: filename,
+          filename,
           checksum: checksum(filename),
           status: 'adopted',
         });
       }
+    } else if (rows.size) {
+      audit = await verifyMigrationLedger(client, rows);
     }
 
-    const pending = findPendingMigrations(requested, rows);
+    const verifiedMigrations = new Set(audit.filter((entry) => entry.verified).map((entry) => entry.filename));
+    const pending = findPendingMigrations(requested, rows, verifiedMigrations);
     if (adoption.length) {
       await client.query('BEGIN');
       try {
@@ -319,6 +416,26 @@ async function showStatus() {
   }
 }
 
+async function verifyDatabase() {
+  validateRegistry();
+  const client = await db.pool.connect();
+  let transactionStarted = false;
+  try {
+    await client.query('BEGIN READ ONLY');
+    transactionStarted = true;
+    if (!await ledgerExists(client)) {
+      throw new Error('Migration ledger is not initialized; no migration state can be verified.');
+    }
+    const rows = await migrationRows(client);
+    const audit = await verifyMigrationLedger(client, rows, true);
+    displayStatus(rows);
+    console.log(`Migration ledger and database postconditions verified for ${audit.length} registered migrations.`);
+  } finally {
+    if (transactionStarted) await client.query('ROLLBACK');
+    client.release();
+  }
+}
+
 async function main() {
   const args = process.argv.slice(2);
   if (args.includes('--validate')) {
@@ -333,6 +450,10 @@ async function main() {
     await showStatus();
     return;
   }
+  if (args.includes('--verify')) {
+    await verifyDatabase();
+    return;
+  }
   await run(args);
 }
 
@@ -343,4 +464,14 @@ if (require.main === module) {
   });
 }
 
-module.exports = { validateRegistry, requestedMigrations, findPendingMigrations, run, checksum, checksumContents, createLedger };
+module.exports = {
+  validateRegistry,
+  requestedMigrations,
+  findPendingMigrations,
+  migrationAuditErrors,
+  verifyMigrationLedger,
+  run,
+  checksum,
+  checksumContents,
+  createLedger,
+};

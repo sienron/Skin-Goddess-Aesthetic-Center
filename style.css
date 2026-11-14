@@ -23374,12 +23374,13 @@ body:has(.fin-transactions-page)>.staff-header .actions {
 .fin-transactions-page .fin-ledger-overview .fin-transaction-date-filters {
   min-width: 0;
   margin: 0;
+  padding-top: 0;
 }
 
 .fin-transactions-page .fin-filter-period-controls {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: 12px;
 }
 
@@ -23420,6 +23421,21 @@ body:has(.fin-transactions-page)>.staff-header .actions {
 .fin-transactions-page .fin-ledger-tools .fin-ledger-search {
   flex: 0 1 300px;
   justify-self: auto;
+}
+
+.fin-transactions-page .fin-ledger-tools select {
+  box-sizing: border-box;
+  min-height: 38px;
+  border: 1px solid #e3ded4;
+  border-radius: 7px;
+  background: #fff;
+  padding: 8px 10px;
+  color: #201c18;
+  font: .76rem "Raleway", sans-serif;
+}
+
+.fin-transactions-page #receivableStatus {
+  flex: 0 0 145px;
 }
 
 .fin-transactions-page .fin-table-info {
@@ -23517,6 +23533,10 @@ body:has(.fin-transactions-page)>.staff-header .actions {
   .fin-transactions-page .fin-ledger-tools .fin-ledger-search {
     flex: 1 1 180px;
     width: 100%;
+  }
+
+  .fin-transactions-page #receivableStatus {
+    flex: 1 1 140px;
   }
 
   .fin-transactions-page #transactionsPanel .fin-table-scroll,
@@ -32292,6 +32312,10 @@ body.homepage.customer-theme-dark .treatments-section .carousel-nav:hover {
 
 .client-header .appt-modal-actions {
   padding: 22px 30px 30px;
+}
+
+.client-header .appt-modal-actions .modal-btn {
+  padding: 11px 16px;
 }
 
 section.staff-sidebar[aria-label="Aesthetician navigation"]>nav {

@@ -144,14 +144,19 @@ test('client account reschedule form uses availability controls and immediate ca
   const accountPage = fs.readFileSync(path.join(root, 'UserAccount.html'), 'utf8');
   const modalSource = fs.readFileSync(path.join(root, 'appointment-modal.js'), 'utf8');
   const stylesheet = fs.readFileSync(path.join(root, 'style.css'), 'utf8');
+  const customerAppointmentHistory = fs.readFileSync(path.join(root, 'utils', 'customerAppointmentHistory.js'), 'utf8');
 
   assert.match(accountPage, /id="apptRescheduleMonth"/);
   assert.match(accountPage, /<select name="date" id="apptRescheduleDate"/);
   assert.match(accountPage, /<textarea name="reason" id="apptRescheduleReason"[^>]*required/);
+  assert.match(accountPage, /<button type="button" class="modal-btn modal-btn-cancel" id="apptModalCancelBtn"/);
+  assert.match(accountPage, /<button type="button" class="modal-btn modal-btn-reschedule" id="apptModalRescheduleBtn"/);
   assert.doesNotMatch(accountPage, /id="apptRescheduleDescription"/);
   assert.match(modalSource, /dataset\?\.page === "account"/);
   assert.match(modalSource, /cancel-mine/);
+  assert.match(customerAppointmentHistory, /a\.service_id/);
   assert.match(stylesheet, /\.client-header \.appt-reschedule-form \{[\s\S]*?padding: 20px 30px 8px/);
+  assert.match(stylesheet, /\.client-header \.appt-modal-actions \.modal-btn \{\s*padding: 11px 16px;/);
 });
 
 test('staff dashboard month keys follow Manila boundaries and obsolete overview copy is absent', () => {

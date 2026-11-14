@@ -56,7 +56,7 @@ router.get('/', async (req, res) => {
     let targetAestheticianId = null;
     if (appointmentId !== null) {
       const appointmentResult = await db.query(`
-        SELECT appointment_id, aesthetician_id, service_id, appointment_status
+        SELECT appointment_id, user_id, aesthetician_id, service_id, appointment_status
         FROM appointments
         WHERE appointment_id = $1
       `, [appointmentId]);
@@ -71,7 +71,8 @@ router.get('/', async (req, res) => {
       const isAdmin = role === 'admin';
       const isAssignedAesthetician = role === 'aesthetician'
         && Number(appointment.aesthetician_id) === Number(req.session.userId);
-      if (!isAdmin && !isAssignedAesthetician) {
+      const isClient = Number(appointment.user_id) === Number(req.session.userId);
+      if (!isAdmin && !isAssignedAesthetician && !isClient) {
         return res.status(403).json({ message: 'You cannot view availability for this appointment.' });
       }
       if (appointment.appointment_status !== 'confirmed') {

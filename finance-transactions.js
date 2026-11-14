@@ -8,6 +8,7 @@
     type: '',
     method: '',
     status: 'posted',
+    receivableStatus: 'all',
     search: '',
     receivableSearch: '',
     sort: 'date',
@@ -33,7 +34,7 @@
     const hex = [...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('');
     return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
   }
-  const refs = Object.fromEntries(['transactionFrom', 'transactionTo', 'transactionType', 'transactionMethod', 'transactionStatus', 'transactionSearch', 'transactionMessage', 'transactionRows', 'transactionCount', 'transactionEmpty', 'transactionPagination', 'transactionPrev', 'transactionNext', 'transactionPageLabel', 'transactionPageSize', 'transactionPeriodLabel', 'transactionComparison', 'ledgerHelp', 'transactionSummary', 'transactionOverview', 'paymentCountSummary', 'receivablesPanel', 'transactionsPanel', 'depositsPanel', 'methodChartSection', 'methodChartEmpty', 'receivableRows', 'receivableEmpty', 'receivableSearch', 'receivablePagination', 'receivablePrev', 'receivableNext', 'receivablePageLabel', 'receivablePageSize', 'exportReceivablesXlsx', 'depositRows', 'depositEmpty', 'depositCount', 'depositPagination', 'depositPrev', 'depositNext', 'depositPageLabel', 'depositPageSize', 'recordPaymentModal', 'recordPaymentForm', 'balanceAppointmentId', 'balanceAmount', 'balanceMethod', 'balanceReference', 'balanceNote', 'paymentBalanceText', 'paymentFormMessage', 'saleModal', 'saleForm', 'saleClient', 'saleProduct', 'saleQuantity', 'salePrice', 'saleTotal', 'saleMethod', 'saleReference', 'saleMessage', 'saleSubmit', 'recordSaleBtn', 'exportTransactionsXlsx', 'refundModal', 'refundForm', 'refundPaymentId', 'refundPaymentSummary', 'refundNote', 'refundFormMessage', 'reverseModal', 'reverseForm', 'reversePaymentId', 'reversePaymentSummary', 'reverseReason', 'reverseFormMessage', 'paymentDetailsModal', 'paymentDetails', 'paymentHistoryRows', 'receiptModal', 'receiptModalTitle', 'receiptFrame', 'clientDetailsModal', 'clientDetailsTitle', 'clientDetails', 'clientPaymentHistoryBtn', 'clientPaymentHistoryModal', 'clientPaymentHistoryTitle', 'clientPaymentHistoryMessage', 'clientPaymentHistoryRows', 'clientPaymentHistoryEmpty'].map((id) => [id, byId(id)]));
+  const refs = Object.fromEntries(['transactionFrom', 'transactionTo', 'transactionType', 'transactionMethod', 'transactionStatus', 'transactionSearch', 'transactionMessage', 'transactionRows', 'transactionCount', 'transactionEmpty', 'transactionPagination', 'transactionPrev', 'transactionNext', 'transactionPageLabel', 'transactionPageSize', 'transactionPeriodLabel', 'transactionComparison', 'ledgerHelp', 'transactionSummary', 'transactionOverview', 'paymentCountSummary', 'paymentCountLabel', 'receivablesPanel', 'transactionsPanel', 'depositsPanel', 'methodChartSection', 'methodChartEmpty', 'receivableRows', 'receivableEmpty', 'receivableSearch', 'receivableStatus', 'receivablePagination', 'receivablePrev', 'receivableNext', 'receivablePageLabel', 'receivablePageSize', 'exportReceivablesXlsx', 'depositRows', 'depositEmpty', 'depositCount', 'depositPagination', 'depositPrev', 'depositNext', 'depositPageLabel', 'depositPageSize', 'recordPaymentModal', 'recordPaymentForm', 'balanceAppointmentId', 'balanceAmount', 'balanceMethod', 'balanceReference', 'balanceNote', 'paymentBalanceText', 'paymentFormMessage', 'saleModal', 'saleForm', 'saleClient', 'saleProduct', 'saleQuantity', 'salePrice', 'saleTotal', 'saleMethod', 'saleReference', 'saleMessage', 'saleSubmit', 'recordSaleBtn', 'exportTransactionsXlsx', 'refundModal', 'refundForm', 'refundPaymentId', 'refundPaymentSummary', 'refundNote', 'refundFormMessage', 'reverseModal', 'reverseForm', 'reversePaymentId', 'reversePaymentSummary', 'reverseReason', 'reverseFormMessage', 'paymentDetailsModal', 'paymentDetails', 'paymentHistoryRows', 'paymentHistoryEmpty', 'receiptModal', 'receiptModalTitle', 'receiptFrame', 'clientDetailsModal', 'clientDetailsTitle', 'clientDetails', 'clientPaymentHistoryBtn', 'clientPaymentHistoryModal', 'clientPaymentHistoryTitle', 'clientPaymentHistoryMessage', 'clientPaymentHistoryRows', 'clientPaymentHistoryEmpty'].map((id) => [id, byId(id)]));
   const chartColors = ['#c9a84c', '#267447', '#3977b8', '#8c8c8c', '#8a6e2f'];
   refs.recordSaleBtn.classList.add('fin-sales-record-button');
   refs.methodChartLegend = element('ul', '', 'fin-chart-legend');
@@ -47,6 +48,7 @@
   methodChartFrame.append(refs.methodChartLoading);
   methodChartFrame.after(refs.methodChartLegend);
   let saleRequestKey = null;
+  let saleModalRequest = 0;
   let saleProducts = [];
 
   function element(tag, text = '', className = '') {
@@ -78,9 +80,10 @@
     state.rows.forEach((payment) => {
       const row = element('tr');
       row.tabIndex = 0;
-      row.dataset.paymentId = payment.payment_id;
+      if (payment.status === 'outstanding') row.dataset.appointmentId = payment.appointment_id;
+      else row.dataset.paymentId = payment.payment_id;
       cell(row, payment.payment_date);
-      cell(row, payment.receipt_number);
+      cell(row, payment.receipt_number || '-');
       const clientCell = element('td');
       if (payment.customer_id) {
         const clientButton = element('button', payment.client, 'fin-client-link');
@@ -100,11 +103,18 @@
       row.append(status);
       const action = element('td');
       const actionButtons = element('div', '', 'fin-row-actions');
-      const receiptButton = element('button', payment.status === 'posted' ? 'Receipt' : 'Adjustment notice', 'fin-button');
-      receiptButton.type = 'button';
-      receiptButton.dataset.receiptId = payment.payment_id;
-      receiptButton.dataset.receiptTitle = payment.status === 'posted' ? 'Payment receipt' : 'Payment adjustment notice';
-      actionButtons.append(receiptButton);
+      if (payment.status === 'outstanding') {
+        const recordButton = element('button', 'Record payment', 'fin-button fin-button-primary');
+        recordButton.type = 'button';
+        recordButton.dataset.outstandingAppointmentId = payment.appointment_id;
+        actionButtons.append(recordButton);
+      } else {
+        const receiptButton = element('button', payment.status === 'posted' ? 'Receipt' : 'Adjustment notice', 'fin-button');
+        receiptButton.type = 'button';
+        receiptButton.dataset.receiptId = payment.payment_id;
+        receiptButton.dataset.receiptTitle = payment.status === 'posted' ? 'Payment receipt' : 'Payment adjustment notice';
+        actionButtons.append(receiptButton);
+      }
       if (payment.status === 'posted') {
         const reverseButton = element('button', 'Reverse', 'fin-button fin-button-danger');
         reverseButton.type = 'button';
@@ -117,7 +127,8 @@
     });
     refs.transactionEmpty.hidden = state.rows.length > 0;
     const paymentCount = state.total.toLocaleString('en-PH');
-    refs.transactionCount.textContent = `${paymentCount} ${state.total === 1 ? 'payment' : 'payments'}`;
+    const itemLabel = state.status === 'outstanding' ? 'service' : 'payment';
+    refs.transactionCount.textContent = `${paymentCount} ${state.total === 1 ? itemLabel : `${itemLabel}s`}`;
     refs.transactionPageSize.value = String(state.limit);
     updatePagination(refs.transactionPagination, refs.transactionPrev, refs.transactionNext, refs.transactionPageLabel, state.total, state.page);
     refs.exportTransactionsXlsx.disabled = state.total <= 0;
@@ -129,10 +140,15 @@
     const filters = { page: state.page, limit: state.limit, type: state.type, method: state.method, status: state.status, q: state.search, sort: state.sort, direction: state.direction };
     const previousFilters = { type: state.type, method: state.method, q: state.search };
     refs.transactionPeriodLabel.textContent = `${state.from} to ${state.to}`;
+    refs.paymentCountLabel.textContent = state.status === 'outstanding' ? 'Outstanding services' : 'Matching payments';
     refs.paymentCountSummary.textContent = 'Loading…';
     refs.transactionComparison.textContent = '';
-    refs.transactionEmpty.querySelector('strong').textContent = 'No matching payments';
-    refs.transactionEmpty.querySelector('p').textContent = 'Try adjusting the dates or filters, or record a payment to get started.';
+    refs.transactionEmpty.querySelector('strong').textContent = state.status === 'outstanding'
+      ? 'No outstanding services'
+      : 'No matching payments';
+    refs.transactionEmpty.querySelector('p').textContent = state.status === 'outstanding'
+      ? 'No service balances are outstanding for the selected dates and filters.'
+      : 'Try adjusting the dates or filters, or record a payment to get started.';
     refs.methodChartEmpty.querySelector('strong').textContent = 'No collections in this period';
     refs.methodChartEmpty.querySelector('span:last-child').textContent = 'Payment method totals will appear here.';
     refs.methodChartLegend.replaceChildren();
@@ -187,7 +203,9 @@
       });
     } catch (error) {
       if (requestId === transactionRequest) {
-        refs.transactionEmpty.querySelector('strong').textContent = 'Payments could not be loaded';
+        refs.transactionEmpty.querySelector('strong').textContent = state.status === 'outstanding'
+          ? 'Outstanding services could not be loaded'
+          : 'Payments could not be loaded';
         refs.transactionEmpty.querySelector('p').textContent = 'Please try again when the connection is restored.';
         state.rows = [];
         state.total = 0;
@@ -222,6 +240,7 @@
   }
 
   async function openSaleModal() {
+    const requestId = ++saleModalRequest;
     refs.saleForm.reset();
     refs.saleQuantity.value = '1';
     refs.saleQuantity.removeAttribute('max');
@@ -234,51 +253,55 @@
     saleRequestKey = createSaleRequestKey();
     refs.saleSubmit.disabled = true;
     modalOpen(refs.saleModal);
-    const [productsResult, clientsResult] = await Promise.allSettled([
-      common.fetchJson('/api/finance/sale-products'),
-      common.fetchJson('/api/finance/clients'),
-    ]);
-
-    const notices = [];
-    if (clientsResult.status === 'fulfilled' && Array.isArray(clientsResult.value)) {
+    let clientNotice = '';
+    let productNotice = '';
+    const updateSaleMessage = () => {
+      refs.saleMessage.textContent = [clientNotice, productNotice].filter(Boolean).join(' ');
+    };
+    common.fetchJson('/api/finance/clients').then((clients) => {
+      if (requestId !== saleModalRequest) return;
+      if (!Array.isArray(clients)) throw new Error('The client list response was not a list.');
       refs.saleClient.replaceChildren(new Option(
-        clientsResult.value.length ? 'No client selected' : 'No active clients found',
+        clients.length ? 'No client selected' : 'No active clients found',
         '',
       ));
-      clientsResult.value.forEach((client) => {
+      clients.forEach((client) => {
         const label = client.name || client.email;
-        refs.saleClient.add(new Option(`${label} (${client.email})`, client.user_id));
+        refs.saleClient.add(new Option(`${label} (${client.email})`, String(client.user_id)));
       });
       refs.saleClient.disabled = false;
-      if (!clientsResult.value.length) notices.push('No active clients were found; client selection is optional.');
-    } else {
-      const error = clientsResult.status === 'rejected'
-        ? clientsResult.reason
-        : new Error('The client list response was not a list.');
+      clientNotice = clients.length ? '' : 'No active clients were found; client selection is optional.';
+      updateSaleMessage();
+    }).catch((error) => {
+      if (requestId !== saleModalRequest) return;
       refs.saleClient.replaceChildren(new Option('Client list unavailable', ''));
       refs.saleClient.disabled = true;
-      notices.push(`Client list could not be loaded: ${error.message}`);
-    }
+      clientNotice = `Client list could not be loaded: ${error.message}`;
+      updateSaleMessage();
+    });
 
-    if (productsResult.status !== 'fulfilled' || !Array.isArray(productsResult.value)) {
-      const error = productsResult.status === 'rejected'
-        ? productsResult.reason
-        : new Error('The inventory product response was not a list.');
+    let products;
+    try {
+      products = await common.fetchJson('/api/finance/sale-products');
+      if (requestId !== saleModalRequest) return;
+      if (!Array.isArray(products)) throw new Error('The inventory product response was not a list.');
+    } catch (error) {
+      if (requestId !== saleModalRequest) return;
       refs.saleProduct.replaceChildren(new Option('Inventory products unavailable', ''));
       refs.saleProduct.disabled = true;
       refs.saleSubmit.disabled = true;
-      notices.unshift(`Inventory products could not be loaded: ${error.message}`);
-      refs.saleMessage.textContent = notices.join(' ');
+      productNotice = `Inventory products could not be loaded: ${error.message}`;
+      updateSaleMessage();
       return;
     }
 
-    saleProducts = productsResult.value;
+    saleProducts = products;
     if (!saleProducts.length) {
       refs.saleProduct.replaceChildren(new Option('No inventory products found', ''));
       refs.saleProduct.disabled = true;
       refs.saleSubmit.disabled = true;
-      notices.unshift('No inventory products are available.');
-      refs.saleMessage.textContent = notices.join(' ');
+      productNotice = 'No inventory products are available.';
+      updateSaleMessage();
       return;
     }
 
@@ -295,8 +318,8 @@
     const hasStock = saleProducts.some((product) => Number(product.stock_quantity) > 0);
     refs.saleProduct.disabled = false;
     refs.saleSubmit.disabled = !hasStock;
-    if (!hasStock) notices.unshift('Products are listed, but none are currently in stock.');
-    refs.saleMessage.textContent = notices.join(' ');
+    productNotice = hasStock ? '' : 'Products are listed, but none are currently in stock.';
+    updateSaleMessage();
   }
 
   function updateSaleTotal() {
@@ -323,12 +346,13 @@
     const query = params({
       section: 'receivables',
       q: state.receivableSearch,
+      status: state.receivableStatus,
     });
     window.location.assign(`/api/finance/export.xlsx?${query}`);
   }
 
   async function loadReceivables() {
-    state.receivables = await common.fetchJson(`/api/finance/receivables?${params({ q: state.receivableSearch })}`);
+    state.receivables = await common.fetchJson(`/api/finance/receivables?${params({ q: state.receivableSearch, status: state.receivableStatus })}`);
     renderReceivables();
   }
 
@@ -359,6 +383,7 @@
       action.append(button); row.append(action); refs.receivableRows.append(row);
     });
     refs.receivableEmpty.hidden = total > 0;
+    refs.receivableStatus.value = state.receivableStatus;
     refs.receivablePageSize.value = String(state.limit);
     refs.exportReceivablesXlsx.disabled = total === 0;
     updatePagination(refs.receivablePagination, refs.receivablePrev, refs.receivableNext, refs.receivablePageLabel, total, state.receivablePage);
@@ -460,6 +485,7 @@
       const row = element('tr'); cell(row, record.payment_date); cell(row, record.payment_type); cell(row, common.paymentMethodLabel(record.method)); cell(row, common.formatPeso(record.amount));
       const status = element('td'); status.append(common.statusBadge(record.status)); row.append(status); refs.paymentHistoryRows.append(row);
     });
+    refs.paymentHistoryEmpty.hidden = data.history.length > 0;
     modalOpen(refs.paymentDetailsModal);
   }
 
@@ -519,6 +545,23 @@
         : '';
     } catch (error) {
       refs.clientPaymentHistoryMessage.textContent = `Could not load payment history: ${error.message}`;
+    }
+
+    function openRecordPayment(record, fromLedger = false) {
+      refs.balanceAppointmentId.value = record.appointment_id;
+      const appointmentId = Number(record.appointment_id);
+      if (!state.paymentRequestKeys.has(appointmentId)) {
+        state.paymentRequestKeys.set(appointmentId, createRequestKey());
+      }
+      refs.balanceAmount.value = Number(record.outstanding).toFixed(2);
+      refs.balanceAmount.max = Number(record.outstanding).toFixed(2);
+      refs.balanceMethod.value = '';
+      refs.balanceReference.value = '';
+      refs.balanceNote.value = '';
+      refs.paymentBalanceText.textContent = `${record.client} - ${record.service}: ${common.formatPeso(record.outstanding)} outstanding`;
+      refs.paymentFormMessage.textContent = '';
+      refs.recordPaymentForm.dataset.fromLedger = String(fromLedger);
+      modalOpen(refs.recordPaymentModal);
     }
   }
 
@@ -599,6 +642,11 @@
       loadReceivables().catch((error) => message(error.message, true));
     }, 250);
   });
+  refs.receivableStatus.addEventListener('change', () => {
+    state.receivableStatus = refs.receivableStatus.value;
+    state.receivablePage = 1;
+    loadReceivables().catch((error) => message(error.message, true));
+  });
   [refs.transactionPageSize, refs.receivablePageSize, refs.depositPageSize].forEach((select) => {
     select.addEventListener('change', () => {
       state.limit = Number(select.value);
@@ -625,6 +673,12 @@
   refs.depositNext.addEventListener('click', () => { state.depositPage += 1; renderDeposits(); });
   refs.exportReceivablesXlsx.addEventListener('click', exportReceivables);
   refs.transactionRows.addEventListener('click', (event) => {
+    const outstandingButton = event.target.closest('button[data-outstanding-appointment-id]');
+    if (outstandingButton) {
+      const record = state.rows.find((item) => Number(item.appointment_id) === Number(outstandingButton.dataset.outstandingAppointmentId));
+      if (record) openRecordPayment(record, true);
+      return;
+    }
     const clientButton = event.target.closest('button[data-client-id]');
     if (clientButton) {
       showClientDetails(clientButton);
@@ -652,11 +706,15 @@
       return;
     }
     if (event.target.closest('a, button')) return;
-    const row = event.target.closest('tr[data-payment-id]');
-    if (row) showPaymentDetails(row.dataset.paymentId).catch((error) => message(error.message, true));
+    const row = event.target.closest('tr[data-payment-id], tr[data-appointment-id]');
+    if (row?.dataset.appointmentId) showAppointmentDetails(row.dataset.appointmentId).catch((error) => message(error.message, true));
+    else if (row) showPaymentDetails(row.dataset.paymentId).catch((error) => message(error.message, true));
   });
   refs.transactionRows.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter' && event.target.matches('tr[data-payment-id]')) showPaymentDetails(event.target.dataset.paymentId).catch((error) => message(error.message, true));
+    if (event.key === 'Enter' && event.target.matches('tr[data-payment-id], tr[data-appointment-id]')) {
+      if (event.target.dataset.appointmentId) showAppointmentDetails(event.target.dataset.appointmentId).catch((error) => message(error.message, true));
+      else showPaymentDetails(event.target.dataset.paymentId).catch((error) => message(error.message, true));
+    }
   });
   refs.receivableRows.addEventListener('click', (event) => {
     const button = event.target.closest('button[data-appointment-id]');
@@ -666,17 +724,7 @@
       return;
     }
     const record = state.receivables.find((item) => Number(item.appointment_id) === Number(button.dataset.appointmentId));
-    if (!record) return;
-    refs.balanceAppointmentId.value = record.appointment_id;
-    const appointmentId = Number(record.appointment_id);
-    if (!state.paymentRequestKeys.has(appointmentId)) {
-      state.paymentRequestKeys.set(appointmentId, createRequestKey());
-    }
-    refs.balanceAmount.value = Number(record.outstanding).toFixed(2);
-    refs.balanceAmount.max = Number(record.outstanding).toFixed(2);
-    refs.balanceMethod.value = ''; refs.balanceReference.value = ''; refs.balanceNote.value = '';
-    refs.paymentBalanceText.textContent = `${record.client} - ${record.service}: ${common.formatPeso(record.outstanding)} outstanding`;
-    refs.paymentFormMessage.textContent = ''; modalOpen(refs.recordPaymentModal);
+    if (record) openRecordPayment(record);
   });
   refs.depositRows.addEventListener('click', (event) => {
     const refundButton = event.target.closest('button[data-refund-id]');
@@ -705,7 +753,10 @@
       await common.fetchJson('/api/finance/payments', { method: 'POST', body: JSON.stringify({ request_key: requestKey, appointment_id: appointmentId, payment_type: 'balance', amount: Number(refs.balanceAmount.value), method: refs.balanceMethod.value, reference_no: refs.balanceReference.value.trim(), note: refs.balanceNote.value.trim() }) });
       paymentRecorded = true;
       modalClose(refs.recordPaymentModal);
-      await loadReceivables();
+      const fromLedger = refs.recordPaymentForm.dataset.fromLedger === 'true';
+      refs.recordPaymentForm.dataset.fromLedger = 'false';
+      if (fromLedger) await loadTransactions();
+      else await loadReceivables();
       state.paymentRequestKeys.delete(appointmentId);
       message('Payment recorded.');
     } catch (error) {

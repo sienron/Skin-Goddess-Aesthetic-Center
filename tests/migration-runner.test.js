@@ -2,12 +2,13 @@ const assert = require('node:assert/strict');
 const test = require('node:test');
 const registry = require('../migrations/registry.json');
 const db = require('../db');
+const { checksumContents, checksum } = require('../scripts/run-migrations');
 const {
   findPendingMigrations,
+  migrationAuditErrors,
   requestedMigrations,
   run,
   validateRegistry,
-  checksumContents,
 } = require('../scripts/run-migrations');
 
 test('migration checksums are identical across Windows and Linux line endings', () => {
@@ -56,6 +57,38 @@ test('unsafe migrations block the whole run before any migration can be marked a
   );
 });
 
+test('applied and adopted migrations are not skipped without verified postconditions', () => {
+  const filename = registry.required[0];
+  const rows = new Map([[filename, {
+    migration_id: filename,
+    filename,
+    checksum: checksum(filename),
+    status: 'adopted',
+  }]]);
+  assert.throws(() => findPendingMigrations([filename], rows), /without verified database postconditions/);
+  assert.deepEqual(findPendingMigrations([filename], rows, new Set([filename])), []);
+  rows.get(filename).status = 'applied';
+  assert.throws(() => findPendingMigrations([filename], rows), /without verified database postconditions/);
+});
+
+test('ledger verification reports missing effects, checksum drift, and incomplete required history', () => {
+  const filename = registry.required[0];
+  const fileChecksum = checksum(filename);
+  const rows = new Map([[filename, {
+    migration_id: filename,
+    filename,
+    checksum: fileChecksum,
+    status: 'adopted',
+  }]]);
+  const audit = [{ filename, checksum: fileChecksum, verified: false }];
+  const errors = migrationAuditErrors(rows, audit, true);
+  assert.ok(errors.some((error) => /not supported by its database postconditions/.test(error)));
+  assert.ok(errors.some((error) => /Required migration .* is not recorded/.test(error)));
+  assert.deepEqual(migrationAuditErrors(rows, [{ filename, checksum: 'different', verified: true }]), [
+    `Ledger checksum does not match the repository for ${filename}.`,
+  ]);
+});
+
 test('fresh database preflight blocks before creating the ledger or running unsafe migrations', async () => {
   const originalConnect = db.pool.connect;
   const calls = [];
@@ -67,6 +100,37 @@ test('fresh database preflight blocks before creating the ledger or running unsa
       return { rows: [] };
     },
     release() {},
+  });
+
+  test('disabled automatic migrations verify the existing schema before startup continues', () => {
+    const { main } = require('../scripts/run-prestart');
+    const steps = [];
+    const originalWarn = console.warn;
+    console.warn = () => {};
+    try {
+      assert.equal(main({ SKIP_AUTOMATIC_MIGRATIONS: 'true' }, (...args) => {
+        steps.push(args);
+        return true;
+      }), true);
+    } finally {
+      console.warn = originalWarn;
+    }
+    assert.deepEqual(steps, [
+      ['run-migrations.js', ['--verify']],
+      ['build-public.js'],
+    ]);
+
+    const failedSteps = [];
+    console.warn = () => {};
+    try {
+      assert.equal(main({ SKIP_AUTOMATIC_MIGRATIONS: 'true' }, (...args) => {
+        failedSteps.push(args);
+        return false;
+      }), false);
+    } finally {
+      console.warn = originalWarn;
+    }
+    assert.deepEqual(failedSteps, [['run-migrations.js', ['--verify']]]);
   });
 
   try {
