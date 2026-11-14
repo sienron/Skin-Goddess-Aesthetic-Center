@@ -24751,9 +24751,9 @@ body.customer-theme-dark .header-pill,
 body.customer-theme-dark .mobile-nav-drawer,
 body.customer-theme-dark .profile-dropdown,
 body.customer-theme-dark .notification-dropdown {
-  border-color: #41413b;
-  background: #222421;
-  color: #e9e4da;
+  border-color: var(--line);
+  background: var(--white);
+  color: var(--text-dark);
 }
 
 body.customer-theme-dark .public-header .glass-pill,
@@ -24773,7 +24773,28 @@ body.customer-theme-dark .public-nav-links li a,
 body.customer-theme-dark .mobile-nav-links li a,
 body.customer-theme-dark .profile-dropdown-item,
 body.customer-theme-dark .notification-dropdown-header {
-  color: #e9e4da;
+  color: var(--text-dark);
+}
+
+body.customer-theme-dark .mobile-nav-links li a {
+  border-bottom-color: var(--line);
+}
+
+body.customer-theme-dark .profile-dropdown-divider {
+  background-color: var(--line);
+}
+
+body.customer-theme-dark .mobile-nav-profile {
+  border-color: var(--line);
+}
+
+body.customer-theme-dark .mobile-nav-close {
+  color: var(--text-muted);
+}
+
+body.customer-theme-dark .profile-dropdown-item:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: -2px;
 }
 
 body.customer-theme-dark .public-nav-links li a.active,
@@ -24797,8 +24818,8 @@ body.customer-theme-dark .profile-dropdown,
 body.customer-theme-dark .notification-dropdown,
 body.customer-theme-dark .notification-dropdown-header,
 body.customer-theme-dark .notification-list {
-  border-color: #41413b;
-  color: #e9e4da;
+  border-color: var(--line);
+  color: var(--text-dark);
 }
 
 body.customer-theme-dark .announcement-popup {
@@ -25148,9 +25169,9 @@ body.customer-theme-dark .account-success {
 
 body.customer-theme-dark .notification,
 body.customer-theme-dark .admin-notification-btn {
-  border-color: #45453f;
-  background: #292a27;
-  color: #e9e4da;
+  border-color: var(--line);
+  background: var(--bg-input);
+  color: var(--text-dark);
 }
 
 body.customer-theme-dark .notification:hover,
@@ -25161,6 +25182,32 @@ body.customer-theme-dark .admin-notification-btn:hover {
 body.customer-theme-dark .notification img,
 body.customer-theme-dark .notification-bell {
   filter: brightness(0) invert(0.9);
+}
+
+body.aesthetician-page > .staff-header {
+  gap: 12px;
+  padding: 10px 24px;
+}
+
+body.aesthetician-page > .staff-header .actions {
+  gap: 12px;
+  padding-right: 0;
+}
+
+@media (max-width: 860px) {
+  body.aesthetician-page > .staff-header {
+    gap: 8px;
+    min-height: 58px;
+    padding: 8px 16px;
+  }
+}
+
+@media (max-width: 360px) {
+  body.aesthetician-page > .staff-header {
+    gap: 4px;
+    padding-right: 8px;
+    padding-left: 8px;
+  }
 }
 
 body.customer-theme-dark .hero {
@@ -30807,5 +30854,452 @@ body .um-sidebar__nav .um-nav-link.admin-nav-child:hover {
   #appointmentsMain .apt-toolbar__search input {
     height: 36px;
     font-size: 12px;
+  }
+}
+
+body.homepage.customer-theme-dark .homepage-service-panels__explore,
+body.homepage.customer-theme-dark .homepage-service-panels__explore:hover,
+body.homepage.customer-theme-dark .homepage-service-panels__explore:focus-visible {
+  color: #fff;
+}
+
+body.homepage.customer-theme-dark .homepage-service-panels__explore-arrow {
+  border-color: rgba(255, 255, 255, 0.72);
+  color: #fff;
+}
+
+body.homepage.customer-theme-dark .homepage-service-panels__explore:hover .homepage-service-panels__explore-arrow,
+body.homepage.customer-theme-dark .homepage-service-panels__explore:focus-visible .homepage-service-panels__explore-arrow {
+  background: #8a6d1f;
+  color: #fff;
+}
+
+body.homepage.customer-theme-dark .treatments-section .carousel-nav {
+  border-color: #f0dfb1;
+  background: #292a27;
+}
+
+body.homepage.customer-theme-dark .treatments-section .carousel-nav-icon {
+  filter: brightness(0) invert(1);
+}
+
+body.homepage.customer-theme-dark .treatments-section .carousel-nav:hover {
+  border-color: #c9a84c;
+  background: #8a6d1f;
+}
+
+.client-header .appt-modal-header {
+  gap: 16px;
+  padding: 26px 26px 20px;
+}
+
+.client-header .appt-modal-grid {
+  gap: 22px 24px;
+  padding: 22px 26px;
+}
+
+.client-header .appt-modal-rating-container {
+  padding: 0 26px 20px;
+}
+
+.client-header .appt-action-message {
+  margin-top: 6px;
+  padding: 0 26px;
+}
+
+.client-header .appt-reschedule-form {
+  gap: 10px 14px;
+  padding: 16px 26px 0;
+}
+
+.client-header .appt-cancellation-form {
+  gap: 10px 14px;
+  padding: 16px 26px 0;
+}
+
+.client-header .appt-modal-actions {
+  gap: 14px;
+  padding: 20px 26px 26px;
+}
+
+section.staff-sidebar[aria-label="Aesthetician navigation"]>nav {
+  flex: 0 0 auto;
+}
+
+section.staff-sidebar[aria-label="Aesthetician navigation"]>hr {
+  margin: 14px 0;
+}
+
+.calendar-toolbar-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  min-width: 0;
+}
+
+.calendar-toolbar-controls .view-toggle {
+  flex: 0 0 auto;
+}
+
+.calendar-search {
+  z-index: 6;
+  box-sizing: border-box;
+  width: min(280px, 30vw);
+  min-height: 38px;
+}
+
+.calendar-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #302c26;
+  font: inherit;
+}
+
+.calendar-search input:focus-visible {
+  outline: 2px solid rgba(201, 168, 76, 0.55);
+  outline-offset: 3px;
+}
+
+body.staff-theme-dark .view-btn {
+  border-color: #4a4942;
+  background: #292a27;
+  color: #e9e4da;
+}
+
+body.staff-theme-dark .view-btn.active {
+  border-color: #c9a84c;
+  background: #c9a84c;
+  color: #181a19;
+  font-weight: 700;
+}
+
+body.staff-theme-dark .calendar-search {
+  border-color: #4a4942;
+  background: #292a27;
+}
+
+body.staff-theme-dark .calendar-search input {
+  color: #e9e4da;
+}
+
+.staff-ratings-content {
+  box-sizing: border-box;
+  min-height: 100%;
+  padding: 38px clamp(24px, 3.5vw, 52px);
+}
+
+.staff-ratings-inner {
+  width: 100%;
+  max-width: 1160px;
+  margin: 0;
+}
+
+.staff-ratings-page-header {
+  margin: 4px 0 26px;
+}
+
+.staff-ratings-page-header h1 {
+  margin: 0;
+  color: #302c26;
+  font: 600 clamp(26px, 3vw, 32px)/1.2 "Playfair Display", serif;
+}
+
+.staff-ratings-summary,
+.staff-ratings-reviews {
+  width: 100%;
+}
+
+.staff-ratings-summary {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.9fr) minmax(280px, 1.1fr);
+  align-items: center;
+  gap: 26px;
+  max-width: 900px;
+  margin: 0 0 34px;
+  padding: 22px 26px;
+  border: 1px solid #e8dfcd;
+  border-radius: 12px;
+  background: #fbf8f1;
+}
+
+.staff-ratings-summary__score {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.staff-ratings-summary__average {
+  color: #302c26;
+  font: 600 46px/1 "Playfair Display", serif;
+  font-variant-numeric: tabular-nums;
+}
+
+.staff-ratings-summary__meta {
+  display: grid;
+  gap: 5px;
+  color: #746d62;
+  font-size: 13px;
+}
+
+.staff-ratings-summary__count {
+  color: #302c26;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.staff-ratings-summary__stars {
+  color: #a18447;
+  font-size: 20px;
+  letter-spacing: 0.12em;
+}
+
+.staff-ratings-summary__breakdown {
+  display: grid;
+  gap: 7px;
+  padding-left: 26px;
+  border-left: 1px solid #e4dac7;
+}
+
+.staff-ratings-summary__breakdown .rating-breakdown-row {
+  gap: 10px;
+}
+
+.staff-ratings-summary__breakdown .rating-breakdown-track {
+  height: 7px;
+  border-radius: 999px;
+  background: #ece5d8;
+}
+
+.staff-ratings-summary__breakdown .rating-breakdown-fill {
+  background: #b18b3b;
+}
+
+.staff-ratings-reviews__heading {
+  margin-bottom: 16px;
+}
+
+.staff-ratings-reviews__heading h2 {
+  margin: 0;
+  color: #302c26;
+  font: 600 21px/1.3 "Playfair Display", serif;
+}
+
+.staff-ratings-review-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 390px), 1fr));
+  align-items: stretch;
+  gap: 16px;
+}
+
+.staff-review-card {
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid #e9e3d8;
+  border-radius: 12px;
+  background: #fffdfa;
+}
+
+.staff-review-card__header,
+.staff-review-card__meta {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.staff-review-card__client {
+  margin: 0;
+  color: #302c26;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.staff-review-card__rating {
+  color: #a18447;
+  font-size: 15px;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.staff-review-card__meta {
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 6px;
+  color: #746d62;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.staff-review-card__service {
+  color: #755c28;
+  font-weight: 600;
+}
+
+.staff-review-card__dates {
+  font-variant-numeric: tabular-nums;
+}
+
+.staff-review-card__comment {
+  margin: 14px 0 0;
+  color: #413c34;
+  font-size: 14px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.staff-ratings-status {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 24px;
+  border: 1px solid #e8dfcd;
+  border-radius: 12px;
+  background: #fbf8f1;
+  color: #746d62;
+}
+
+.staff-ratings-status h3 {
+  margin: 0;
+  color: #302c26;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.staff-ratings-status p {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+body.staff-theme-dark .staff-ratings-page-header h1,
+body.staff-theme-dark .staff-ratings-reviews__heading h2,
+body.staff-theme-dark .staff-ratings-summary__average,
+body.staff-theme-dark .staff-ratings-summary__count,
+body.staff-theme-dark .staff-review-card__client,
+body.staff-theme-dark .staff-ratings-status h3 {
+  color: #eee8dd;
+}
+
+body.staff-theme-dark .staff-ratings-page-header p,
+body.staff-theme-dark .staff-ratings-summary__meta,
+body.staff-theme-dark .staff-review-card__meta {
+  color: #aaa398;
+}
+
+body.staff-theme-dark .staff-ratings-summary__breakdown .rating-breakdown-row {
+  color: #c9c2b7;
+}
+
+body.staff-theme-dark .staff-ratings-summary__breakdown .rating-breakdown-track {
+  background: #41413b;
+}
+
+body.staff-theme-dark .staff-ratings-summary__breakdown {
+  border-color: #48463e;
+}
+
+body.staff-theme-dark .staff-ratings-summary__breakdown .rating-breakdown-fill {
+  background: #c9a84c;
+}
+
+body.staff-theme-dark .staff-ratings-summary {
+  border-color: #3d3e39;
+  background: #242522;
+}
+
+body.staff-theme-dark .staff-review-card {
+  border-color: #3d3e39;
+  background: #222421;
+}
+
+body.staff-theme-dark .staff-review-card__service {
+  color: #d7bd7a;
+}
+
+body.staff-theme-dark .staff-review-card__comment {
+  color: #d5cec2;
+}
+
+body.staff-theme-dark .staff-ratings-status {
+  border-color: #3d3e39;
+  background: #222421;
+  color: #aaa398;
+}
+
+body.staff-theme-dark .staff-ratings-status--error {
+  border-color: #684446;
+  background: #2b2222;
+  color: #e6b5b3;
+}
+
+body.staff-theme-dark .staff-ratings-status--error h3 {
+  color: #f0c6c3;
+}
+
+@media (max-width: 700px) {
+  .calendar-toolbar-controls {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    width: 100%;
+    gap: 10px;
+  }
+
+  .calendar-toolbar-controls .view-toggle {
+    width: auto;
+  }
+
+  .calendar-search {
+    width: 100%;
+  }
+
+  .staff-ratings-content {
+    padding: 26px 18px;
+  }
+
+  .staff-ratings-summary {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+    padding: 20px;
+  }
+
+  .staff-ratings-summary__breakdown {
+    padding: 16px 0 0;
+    border-top: 1px solid #e4dac7;
+    border-left: 0;
+  }
+}
+
+@media (max-width: 420px) {
+  .calendar-toolbar-controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .calendar-toolbar-controls .view-toggle {
+    justify-content: flex-start;
+  }
+
+  .staff-review-card__header,
+  .staff-review-card__meta {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .staff-ratings-content {
+    padding: 22px 14px;
+  }
+
+  .staff-ratings-summary__score {
+    gap: 14px;
+  }
+
+  .staff-ratings-summary__average {
+    font-size: 40px;
+  }
+
+  .staff-ratings-status {
+    padding: 20px;
   }
 }

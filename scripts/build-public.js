@@ -49,6 +49,7 @@ const browserScripts = [
   'services-page.js',
   'staff-clients.js',
   'staff-dashboard.js',
+  'staff-ratings.js',
   'staff-treatment-history.js',
   'treatment-notes.js',
   'tos-privacy-modal.js',

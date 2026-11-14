@@ -205,6 +205,7 @@ const protectedPages = [
   { path: '/StaffDashboard.html', roles: ['aesthetician', 'staff'] },
   { path: '/StaffTreatmentHistory.html', roles: ['aesthetician', 'staff'] },
   { path: '/StaffTreatmentNotes.html', roles: ['aesthetician', 'staff'] },
+  { path: '/StaffRatings.html', roles: ['aesthetician', 'staff'] },
   { path: '/StaffUserManagement.html', roles: ['aesthetician', 'staff'] },
 
   { path: '/AdminDashboard.html', roles: ['admin'] },

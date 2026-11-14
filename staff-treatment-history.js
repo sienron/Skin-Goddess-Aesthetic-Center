@@ -198,7 +198,6 @@
                 appointment.start,
                 status,
                 appointment.paymentStatus,
-                appointment.aesthetician,
                 appointment.remarks,
             ].join(" ").toLowerCase();
             return searchable.includes(query);
@@ -236,7 +235,6 @@
             case "payment": return appointment.paymentStatus;
             case "fee": return appointment.fee;
             case "deposit": return appointment.depositAmount;
-            case "aesthetician": return appointment.aesthetician;
             default: return null;
         }
     }
@@ -277,7 +275,7 @@
         if (visibleAppointments.length === 0) {
             const row = document.createElement("tr");
             const cell = document.createElement("td");
-            cell.colSpan = 12;
+            cell.colSpan = 11;
             cell.className = "clients-table-message";
             cell.textContent = appointments.length === 0 ? "No recent appointments." : "No appointments match your search.";
             row.appendChild(cell);
@@ -295,7 +293,6 @@
                 appendCell(row, appointment.paymentStatus);
                 appendCell(row, formatCurrency(appointment.fee));
                 appendCell(row, formatCurrency(appointment.depositAmount));
-                appendCell(row, appointment.aesthetician);
                 appendNotesButtonCell(row, appointment);
                 tableBody.appendChild(row);
             });
@@ -308,7 +305,7 @@
 
     async function loadAppointments() {
         try {
-            const response = await fetch(document.body.dataset.appointmentsEndpoint || "/api/appointments/mine");
+            const response = await fetch("/api/appointments/treatment-history/mine");
             if (!response.ok) throw new Error("Could not load appointments.");
             const data = await response.json();
             appointments = Array.isArray(data) ? data.map((appointment) => ({
@@ -326,7 +323,6 @@
                 fee: appointment.fee ?? appointment.booked_service_price,
                 depositAmount: appointment.depositAmount ?? appointment.booked_reservation_fee,
                 contact: appointment.contact ?? appointment.contact_number,
-                aesthetician: appointment.aesthetician ?? "Aesthetician",
                 remarks: appointment.remarks ?? appointment.notes,
                 apptNumber: appointment.apptNumber ?? appointment.appt_number ?? appointment.id,
             })) : [];
@@ -335,7 +331,7 @@
             tableBody.innerHTML = "";
             const row = document.createElement("tr");
             const cell = document.createElement("td");
-            cell.colSpan = 12;
+            cell.colSpan = 11;
             cell.className = "clients-table-message";
             cell.textContent = error.message;
             row.appendChild(cell);

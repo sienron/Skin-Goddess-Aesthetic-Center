@@ -31,7 +31,9 @@ const AGGREGATE_SQL = `
          COUNT(*) FILTER (WHERE rating = 2) AS s2,
          COUNT(*) FILTER (WHERE rating = 1) AS s1
   FROM appointment_ratings r
-  LEFT JOIN appointments a ON a.appointment_id = r.appointment_id
+  JOIN appointments a ON a.appointment_id = r.appointment_id
+    AND a.aesthetician_id = r.staff_id
+    AND a.appointment_status = 'completed'
   WHERE r.staff_id = $1 AND a.is_demo IS DISTINCT FROM TRUE
 `;
 
@@ -43,6 +45,50 @@ router.get('/mine', requireRole('aesthetician'), async (req, res) => {
   } catch (error) {
     console.error('Error fetching staff rating summary:', error.message);
     return res.status(500).json({ message: 'Could not load rating summary.' });
+  }
+});
+
+router.get('/mine/reviews', requireRole('aesthetician', 'staff'), async (req, res) => {
+  try {
+    const [summaryResult, reviewsResult] = await Promise.all([
+      db.query(AGGREGATE_SQL, [req.session.userId]),
+      db.query(`
+        SELECT r.rating_id, r.rating, r.comment, r.is_automatic, r.created_at,
+               a.appointment_date::text AS appointment_date,
+               s.service_name,
+               COALESCE(NULLIF(BTRIM(c.first_name), ''), 'Client') AS client_first_name,
+               LEFT(NULLIF(BTRIM(c.last_name), ''), 1) AS client_last_initial
+        FROM appointment_ratings r
+        JOIN appointments a ON a.appointment_id = r.appointment_id
+          AND a.aesthetician_id = r.staff_id
+          AND a.appointment_status = 'completed'
+        JOIN services s ON s.service_id = r.service_id
+        LEFT JOIN users c ON c.user_id = r.client_id
+        WHERE r.staff_id = $1 AND a.is_demo IS DISTINCT FROM TRUE
+        ORDER BY r.created_at DESC, r.rating_id DESC
+      `, [req.session.userId]),
+    ]);
+
+    const reviews = reviewsResult.rows.map((row) => ({
+      id: row.rating_id,
+      rating: Number(row.rating),
+      comment: row.comment,
+      isAutomatic: row.is_automatic === true,
+      createdAt: row.created_at,
+      appointmentDate: row.appointment_date,
+      service: row.service_name,
+      client: row.client_last_initial
+        ? `${row.client_first_name} ${row.client_last_initial}.`
+        : row.client_first_name,
+    }));
+
+    return res.json({
+      ...aggregateResponse(summaryResult.rows[0]),
+      reviews,
+    });
+  } catch (error) {
+    console.error('Error fetching aesthetician reviews:', error.message);
+    return res.status(500).json({ message: 'Could not load reviews.' });
   }
 });
 

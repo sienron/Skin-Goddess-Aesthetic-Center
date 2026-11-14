@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>Customer Ratings — Skin Goddess Aesthetic Center</title>
+</head>
+
+<body class="aesthetician-page staff-ratings-page">
+    <header class="staff-header">
+        <button type="button" class="staff-hamburger-btn" id="hamburgerBtn" aria-label="Open menu"
+            aria-expanded="false" aria-controls="mobileNavDrawer">
+            <img src="icons/hamburger.svg" alt="" class="staff-hamburger-icon">
+        </button>
+        <div class="page-title">
+            <h2>Customer Ratings</h2>
+        </div>
+        <div class="actions">
+            <div class="notification-wrap" id="notificationWrap">
+                <button class="notification" id="notificationBtn" type="button" aria-label="View notifications"
+                    aria-haspopup="true" aria-expanded="false" aria-controls="notificationDropdown">
+                    <img src="icons/notification-bell.svg" alt="" class="notification-bell">
+                    <span class="badge"></span>
+                </button>
+                <div class="notification-dropdown" id="notificationDropdown">
+                    <div class="notification-dropdown-header"><span>Notifications</span></div>
+                    <div class="notification-list" id="notificationList"></div>
+                </div>
+            </div>
+            <button class="logout-btn" id="logoutBtn"><span>Logout</span></button>
+        </div>
+    </header>
+
+    <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
+    <aside class="mobile-nav-drawer" id="mobileNavDrawer" aria-hidden="true" inert>
+        <div class="mobile-nav-top">
+            <img src="images/logo_horizontal.jpg" alt="Skin Goddess logo" class="mobile-nav-logo">
+            <button type="button" class="mobile-nav-close" id="mobileNavClose" aria-label="Close menu">&times;</button>
+        </div>
+        <ul class="mobile-nav-links">
+            <li><a href="StaffDashboard.html">Dashboard</a></li>
+            <li><a href="StaffUserManagement.html">My Clients</a></li>
+            <li><a href="StaffAppointmentPage.html">Appointments</a></li>
+            <li><a href="StaffTreatmentHistory.html">Treatment History</a></li>
+            <li><a href="StaffRatings.html" class="active" aria-current="page">Customer Ratings</a></li>
+        </ul>
+    </aside>
+
+    <main>
+        <section class="sidebar staff-sidebar" aria-label="Aesthetician navigation">
+            <div class="staff-sidebar-logo-wrap">
+                <img src="images/logo_horizontal.jpg" alt="Skin Goddess logo" class="staff-sidebar-logo">
+            </div>
+            <h4 class="sidebar-heading">My Links</h4>
+            <nav>
+                <ul>
+                    <li class="nav-item"><a href="StaffDashboard.html"><img src="icons/finance-dashboard.svg" alt=""
+                                class="finance-nav-icon"><span>Dashboard</span></a></li>
+                    <li class="nav-item"><a href="StaffUserManagement.html"><img src="icons/staff-users.svg" alt=""
+                                class="finance-nav-icon"><span>My Clients</span></a></li>
+                    <li class="nav-item"><a href="StaffAppointmentPage.html"><img src="icons/staff-appointments.svg"
+                                alt="" class="finance-nav-icon"><span>Appointments</span></a></li>
+                    <li class="nav-item"><a href="StaffTreatmentHistory.html"><img src="icons/finance-reports.svg"
+                                alt="" class="finance-nav-icon"><span>Treatment History</span></a></li>
+                    <li class="nav-item active"><a href="StaffRatings.html" aria-current="page"><img
+                                src="icons/finance-reports.svg" alt="" class="finance-nav-icon"><span>Customer Ratings</span></a>
+                    </li>
+                </ul>
+            </nav>
+            <hr>
+            <h4 class="sidebar-heading">STATUS LEGEND</h4>
+            <div class="status-item"><span class="Confirmed-icon"></span><span>Confirmed</span></div>
+            <div class="status-item"><span class="Completed-icon"></span><span>Completed</span></div>
+            <div class="status-item"><span class="Pending-icon"></span><span>In Progress</span></div>
+            <div class="status-item"><span class="Cancelled-icon"></span><span>Cancelled</span></div>
+            <div class="status-item"><span class="No-Show-icon"></span><span>No Show</span></div>
+            <div class="profile-wrap">
+                <hr class="profile-divider">
+                <div class="profile-menu" id="profileWrap">
+                    <button type="button" class="profile-card" id="profileBtn" aria-haspopup="true" aria-expanded="false">
+                        <div class="profile-row">
+                            <div class="profile-avatar">--</div>
+                            <div class="profile-info">
+                                <span class="profile-name">Loading...</span>
+                                <span class="profile-role">Aesthetician</span>
+                            </div>
+                            <span class="profile-status"></span>
+                        </div>
+                    </button>
+                    <div class="profile-dropdown" id="profileDropdown">
+                        <button type="button" class="profile-dropdown-item profile-dropdown-item--signout"
+                            id="signOutBtn">Sign out</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="main-content staff-ratings-content" aria-labelledby="ratingsPageTitle">
+            <div class="staff-ratings-inner">
+                <header class="staff-ratings-page-header">
+                    <h1 id="ratingsPageTitle">Customer Ratings</h1>
+                </header>
+                <section class="staff-ratings-summary" aria-label="Overall rating summary">
+                    <div class="staff-ratings-summary__score">
+                        <strong class="staff-ratings-summary__average" id="ratingsAverage">—</strong>
+                        <div class="staff-ratings-summary__meta">
+                            <span class="staff-ratings-summary__stars" id="ratingsSummaryStars"
+                                aria-label="No ratings yet">☆☆☆☆☆</span>
+                            <span class="staff-ratings-summary__count" id="ratingsCount">Loading ratings...</span>
+                            <span>Average rating for completed appointments</span>
+                        </div>
+                    </div>
+                    <div class="staff-ratings-summary__breakdown" id="ratingsBreakdown"
+                        aria-label="Rating breakdown"></div>
+                </section>
+                <section class="staff-ratings-reviews" aria-labelledby="customerReviewsTitle">
+                    <header class="staff-ratings-reviews__heading">
+                        <h2 id="customerReviewsTitle">Reviews</h2>
+                    </header>
+                    <div class="staff-ratings-review-list" id="staffRatingsList" aria-live="polite">
+                        <div class="staff-ratings-status staff-ratings-status--loading" role="status">
+                            <p>Loading customer reviews...</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </section>
+    </main>
+
+    <script src="header.js"></script>
+    <script src="staff-ratings.js"></script>
+</body>
+
+</html>

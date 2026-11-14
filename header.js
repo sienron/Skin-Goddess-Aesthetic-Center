@@ -66,7 +66,7 @@
             const profileLink = document.createElement('a');
             profileLink.href = '/UserAccount.html#account';
             profileLink.className = 'profile-dropdown-item';
-            profileLink.textContent = 'Profile';
+            profileLink.textContent = 'My Account';
             profileDropdown.replaceChildren(profileLink);
             if (signOutButton) {
                 signOutButton.textContent = 'Sign Out';

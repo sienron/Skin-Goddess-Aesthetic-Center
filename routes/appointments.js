@@ -2185,6 +2185,41 @@ async function recoverPendingCheckoutPayment(payment) {
 }
 
 // Must stay before any future /:id GET route so "mine" is never treated as an ID.
+router.get('/treatment-history/mine', requireRole('aesthetician', 'staff'), async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT a.appointment_id, a.is_demo,
+             a.appointment_date::text AS date,
+             a.appointment_time::text AS start,
+             a.appointment_end_time::text AS end,
+             a.appointment_status AS status,
+             a.payment_status,
+             a.booked_service_price AS fee,
+             a.booked_reservation_fee AS deposit_amount,
+             a.user_id AS client_id,
+             COALESCE(NULLIF(BTRIM(CONCAT_WS(' ', a.customer_first_name, a.customer_last_name)), ''),
+                      NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''),
+                      a.walk_in_name, 'Walk-in') AS client,
+             COALESCE(a.customer_email, c.email) AS client_email,
+             COALESCE(a.customer_phone, c.contact_number) AS contact,
+             s.service_name AS service
+      FROM appointments a
+      JOIN services s ON s.service_id = a.service_id
+      LEFT JOIN users c ON c.user_id = a.user_id
+      WHERE a.aesthetician_id = $1
+      ORDER BY a.appointment_date DESC, a.appointment_time DESC
+    `, [req.session.userId]);
+    return res.json(result.rows.map((row) => ({
+      ...row,
+      id: row.appointment_id,
+      apptNumber: row.appointment_id,
+    })));
+  } catch (error) {
+    console.error('Error fetching aesthetician treatment history:', error);
+    return res.status(500).json({ message: 'Could not load treatment history.' });
+  }
+});
+
 router.get('/mine', requireActiveAccount, async (req, res) => {
   try {
     const userResult = await db.query('SELECT role FROM users WHERE user_id = $1', [req.session.userId]);
@@ -3226,24 +3261,29 @@ router.post('/paymongo/webhook', async (req, res) => {
       if (paymentResult.rows.length === 0) return { type: 'unmatched' };
 
       const payment = paymentResult.rows[0];
-      if (payment.status === 'consumed') {
+      if (payment.status === 'consumed' || payment.appointment_id) {
         await client.query(`
           UPDATE paymongo_checkout_sessions
           SET payment_id = COALESCE(payment_id, $2), payment_method = $3, updated_at = NOW()
           WHERE reference_number = $1
         `, [referenceNumber, paidPayment.id, paymentMethod]);
-        await client.query(`
-          UPDATE payments SET method = $1
-          WHERE appointment_id = $2 AND payment_type = 'reservation'
-        `, [paymentMethod, payment.appointment_id]);
+        if (payment.appointment_id) {
+          await client.query(`
+            UPDATE payments SET method = $1
+            WHERE appointment_id = $2 AND payment_type = 'reservation'
+          `, [paymentMethod, payment.appointment_id]);
+        }
         return { type: 'already-created' };
       }
       if (!['pending', 'paid'].includes(payment.status)) return { type: 'ignored' };
       await client.query(`
         UPDATE paymongo_checkout_sessions
-        SET payment_id = COALESCE(payment_id, $2), payment_method = $3, updated_at = NOW()
-        WHERE reference_number = $1
-      `, [referenceNumber, paidPayment.id, paymentMethod]);
+        SET status = CASE WHEN status IN ('pending', 'paid') THEN 'paid' ELSE status END,
+            payment_id = COALESCE(payment_id, $2),
+            payment_method = $3,
+            updated_at = NOW()
+        WHERE reference_number = $1 AND checkout_session_id = $4 AND livemode = $5
+      `, [referenceNumber, paidPayment.id, paymentMethod, session.id, config.isLive]);
       if (isSlotInPast(payment.appointment_date, String(payment.appointment_time).slice(0, 5))) {
         if (payment.status === 'pending') {
           await client.query(`

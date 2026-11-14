@@ -93,6 +93,16 @@ test('appointment modal enables no-show for started in-progress appointments onl
   assert.equal(node('apptModalNoShowBtn').disabled, true);
 });
 
+test('aesthetician reschedule modal requires the details accepted by its request endpoint', () => {
+  for (const filename of ['AestheticianAppointmentPage.html', 'StaffAppointmentPage.html']) {
+    const pageSource = fs.readFileSync(path.join(root, filename), 'utf8');
+    assert.match(pageSource, /<button[^>]*type="button"[^>]*id="apptModalRescheduleBtn"/);
+    assert.match(pageSource, /id="apptRescheduleReason"[^>]*required/);
+    assert.match(pageSource, /id="apptRescheduleDescription"[^>]*required/);
+    assert.doesNotMatch(pageSource, /Start Service/);
+  }
+});
+
 test('staff dashboard month keys follow Manila boundaries instead of UTC month boundaries', () => {
   const dashboardSource = fs.readFileSync(path.join(root, 'staff-dashboard.js'), 'utf8');
   const helperStart = dashboardSource.indexOf('    function localDateString(');
