@@ -198,15 +198,18 @@
                                 <th>Appointment date</th>
                                 <th>Client</th>
                                 <th>Service</th>
+                                <th>Appointment status</th>
                                 <th>Service price</th>
+                                <th>Amount paid</th>
                                 <th>Outstanding</th>
+                                <th>Payment status</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
                         <tbody id="receivableRows"></tbody>
                     </table>
                     <div class="staff-empty-state fin-table-empty-state" id="receivableEmpty"><strong>No outstanding balances</strong>
-                        <p>Fully paid completed appointments disappear from this list.</p>
+                        <p>Fully paid or cancelled appointments are not listed.</p>
                     </div>
                 </div>
                 <div class="fin-pagination" id="receivablePagination" hidden>
@@ -385,8 +388,8 @@
     </main>
     <script src="header.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
-    <script src="finance-common.js"></script>
-    <script src="finance-transactions.js"></script>
+    <script src="finance-common.js?v=20261115-1"></script>
+    <script src="finance-transactions.js?v=20261115-3"></script>
     <script src="admin-context-nav.js"></script>
 </body>
 

@@ -1,7 +1,21 @@
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
+const fs = require('node:fs');
+const path = require('node:path');
 const db = require('../db');
 const financeRouter = require('../routes/finance');
+
+test('Sales & Transactions loads the client selection and payment-history handlers', () => {
+  const page = fs.readFileSync(path.join(__dirname, '..', 'FinancesTransactions.html'), 'utf8');
+  const client = fs.readFileSync(path.join(__dirname, '..', 'finance-transactions.js'), 'utf8');
+
+  assert.match(page, /finance-transactions\.js\?v=20261115-3/);
+  assert.match(page, /id="saleClient"/);
+  assert.match(page, /id="clientPaymentHistoryModal"/);
+  assert.match(client, /common\.fetchJson\('\/api\/finance\/clients'\)/);
+  assert.match(client, /\/api\/finance\/clients\/\$\{encodeURIComponent\(state\.selectedClient\.id\)\}\/payment-history/);
+  assert.match(client, /historyButton\.addEventListener\('click', \(\) => showClientPaymentHistory\(\)\)/);
+});
 
 function routeHandler(path, method) {
   return financeRouter.stack
@@ -72,12 +86,21 @@ test('payment ledger rejects unsupported sort columns', async () => {
   assert.match(result.body.message, /sort column/);
 });
 
-test('receivables apply the selected date range and client or service search', async () => {
+test('receivables include active appointment statuses and only eligible posted payments', async () => {
   const originalQuery = db.query;
   let call;
   db.query = async (sql, values) => {
     call = { sql, values };
-    return { rows: [{ appointment_id: 42, client: 'Client One', service: 'Facial', outstanding: 100 }] };
+    return { rows: [{
+      appointment_id: 42,
+      appointment_status: 'confirmed',
+      client: 'Client One',
+      service: 'Facial',
+      service_price: 400,
+      amount_paid: 300,
+      outstanding: 100,
+      status: 'Partially paid',
+    }] };
   };
 
   try {
@@ -90,11 +113,170 @@ test('receivables apply the selected date range and client or service search', a
     });
     assert.equal(result.statusCode, 200);
     assert.equal(result.body[0].appointment_id, 42);
+    assert.equal(result.body[0].appointment_status, 'confirmed');
+    assert.equal(result.body[0].amount_paid, 300);
+    assert.equal(result.body[0].outstanding, 100);
+    assert.equal(result.body[0].status, 'Partially paid');
     assert.match(call.sql, /a\.appointment_date BETWEEN \$2::date AND \$3::date/);
     assert.match(call.sql, /ILIKE \$4/);
+    assert.match(call.sql, /a\.appointment_status <> 'cancelled'/);
+    assert.doesNotMatch(call.sql, /a\.appointment_status = 'completed'/);
+    assert.match(call.sql, /WHERE status = 'posted'/);
+    assert.match(call.sql, /payment_type IN \('reservation', 'balance'\)/);
+    assert.match(call.sql, /a\.booked_service_price > COALESCE\(paid\.amount, 0\)/);
     assert.deepEqual(call.values.slice(1), ['2026-10-01', '2026-10-31', '%Client One%']);
   } finally {
     db.query = originalQuery;
+  }
+});
+
+test('balance payments are accepted before completion and remain capped at the booked balance', async () => {
+  const originalTransaction = db.transaction;
+  const calls = [];
+  db.transaction = async (callback) => callback({
+    query: async (sql, values) => {
+      calls.push({ sql, values });
+      if (/SELECT booked_service_price, is_demo/.test(sql)) {
+        return { rows: [{ booked_service_price: 400, is_demo: false }] };
+      }
+      if (/pg_advisory_xact_lock/.test(sql)) return { rows: [] };
+      if (/WHERE request_key = \$1/.test(sql)) return { rows: [] };
+      if (/SELECT COALESCE\(SUM\(amount\), 0\) AS paid/.test(sql)) {
+        return { rows: [{ paid: 300 }] };
+      }
+      if (/INSERT INTO payments/.test(sql)) {
+        return { rows: [{ payment_id: 90, appointment_id: 42, payment_type: 'balance', amount: 100 }] };
+      }
+      throw new Error(`Unexpected query: ${sql}`);
+    },
+  });
+
+  try {
+    const result = await invoke(routeHandler('/payments', 'post'), {
+      body: {
+        appointment_id: 42,
+        payment_type: 'balance',
+        amount: 100,
+        method: 'gcash',
+        request_key: '123e4567-e89b-42d3-a456-426614174001',
+      },
+      session: { userId: 7 },
+    });
+    assert.equal(result.statusCode, 201);
+    assert.equal(result.body.amount, 100);
+    const appointmentLock = calls.find((call) => /SELECT booked_service_price, is_demo/.test(call.sql));
+    assert.match(appointmentLock.sql, /appointment_status <> 'cancelled'/);
+    assert.match(appointmentLock.sql, /is_demo = FALSE/);
+    assert.match(appointmentLock.sql, /FOR UPDATE/);
+    const paidQuery = calls.find((call) => /SELECT COALESCE\(SUM\(amount\), 0\) AS paid/.test(call.sql));
+    assert.match(paidQuery.sql, /status = 'posted'/);
+    assert.match(paidQuery.sql, /payment_type IN \('reservation', 'balance'\)/);
+    assert.match(calls.find((call) => /INSERT INTO payments/.test(call.sql)).sql, /request_key/);
+  } finally {
+    db.transaction = originalTransaction;
+  }
+});
+
+test('balance payments cannot exceed the remaining amount or target cancelled appointments', async () => {
+  const originalTransaction = db.transaction;
+  let insertCount = 0;
+  db.transaction = async (callback) => callback({
+    query: async (sql) => {
+      if (/pg_advisory_xact_lock/.test(sql)) return { rows: [] };
+      if (/WHERE request_key = \$1/.test(sql)) return { rows: [] };
+      if (/SELECT booked_service_price, is_demo/.test(sql)) {
+        return { rows: [{ booked_service_price: 400, is_demo: false }] };
+      }
+      if (/SELECT COALESCE\(SUM\(amount\), 0\) AS paid/.test(sql)) {
+        return { rows: [{ paid: 300 }] };
+      }
+      if (/INSERT INTO payments/.test(sql)) {
+        insertCount += 1;
+        return { rows: [{ payment_id: 90, amount: 101 }] };
+      }
+      throw new Error(`Unexpected query: ${sql}`);
+    },
+  });
+
+  try {
+    const overpayment = await invoke(routeHandler('/payments', 'post'), {
+      body: { appointment_id: 42, payment_type: 'balance', amount: 101, method: 'gcash', request_key: '123e4567-e89b-42d3-a456-426614174002' },
+      session: { userId: 7 },
+    });
+    assert.equal(overpayment.statusCode, 400);
+    assert.match(overpayment.body.message, /exceeds the outstanding balance/);
+    assert.equal(insertCount, 0);
+
+    db.transaction = async (callback) => callback({
+      query: async (sql) => {
+        if (/pg_advisory_xact_lock/.test(sql)) return { rows: [] };
+        if (/WHERE request_key = \$1/.test(sql)) return { rows: [] };
+        if (/SELECT booked_service_price, is_demo/.test(sql)) return { rows: [] };
+        throw new Error(`Unexpected query after cancelled appointment lookup: ${sql}`);
+      },
+    });
+    const cancelled = await invoke(routeHandler('/payments', 'post'), {
+      body: { appointment_id: 42, payment_type: 'balance', amount: 100, method: 'gcash', request_key: '123e4567-e89b-42d3-a456-426614174003' },
+      session: { userId: 7 },
+    });
+
+    assert.equal(cancelled.statusCode, 404);
+    assert.match(cancelled.body.message, /Active appointment not found/);
+    assert.equal(insertCount, 0);
+  } finally {
+    db.transaction = originalTransaction;
+  }
+});
+
+test('balance payment retries are idempotent and reject reused keys with changed details', async () => {
+  const originalTransaction = db.transaction;
+  const calls = [];
+  db.transaction = async (callback) => callback({
+    query: async (sql, values) => {
+      calls.push({ sql, values });
+      if (/pg_advisory_xact_lock/.test(sql)) return { rows: [] };
+      if (/WHERE request_key = \$1/.test(sql)) {
+        return { rows: [{
+          payment_id: 90,
+          appointment_id: 42,
+          payment_type: 'balance',
+          amount: 100,
+          method: 'gcash',
+          reference_no: null,
+          note: null,
+          recorded_by: 7,
+          status: 'posted',
+        }] };
+      }
+      throw new Error(`Unexpected query for idempotent retry: ${sql}`);
+    },
+  });
+
+  try {
+    const request = {
+      body: {
+        appointment_id: 42,
+        payment_type: 'balance',
+        amount: 100,
+        method: 'gcash',
+        request_key: '123e4567-e89b-42d3-a456-426614174004',
+      },
+      session: { userId: 7 },
+    };
+    const retry = await invoke(routeHandler('/payments', 'post'), request);
+    assert.equal(retry.statusCode, 200);
+    assert.equal(retry.body.payment_id, 90);
+
+    const mismatch = await invoke(routeHandler('/payments', 'post'), {
+      ...request,
+      body: { ...request.body, amount: 99 },
+    });
+    assert.equal(mismatch.statusCode, 409);
+    assert.match(mismatch.body.message, /already used for different payment details/);
+    assert.equal(calls.some((call) => /INSERT INTO payments/.test(call.sql)), false);
+    assert.equal(calls.some((call) => /FROM appointments/.test(call.sql)), false);
+  } finally {
+    db.transaction = originalTransaction;
   }
 });
 

@@ -8,6 +8,7 @@ const { LOW_STOCK_THRESHOLD } = require('../utils/inventoryThresholds');
 const { escapeCsvCell } = require('../utils/csv');
 
 const router = express.Router();
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const PAYMENT_TYPES = ['reservation', 'balance', 'product_sale'];
 const METHODS = ['paymongo', 'cash', 'gcash', 'maya', 'card'];
 const PAYMENT_STATUSES = ['posted', 'refunded', 'reversed'];
@@ -195,16 +196,9 @@ const salesUnion = `
     AND a.is_demo = FALSE AND ${RETAINED_DEPOSIT_REVENUE} AND a.appointment_date BETWEEN $1::date AND $2::date
 `;
 
-async function outstandingBalance() {
-  const result = await db.query(`
-    SELECT COALESCE(SUM(GREATEST(a.booked_service_price - COALESCE(p.paid, 0), 0)), 0)::float8 AS amount
-    FROM appointments a LEFT JOIN (
-      SELECT appointment_id, SUM(amount) AS paid FROM payments
-      WHERE status = 'posted' AND ($1::boolean OR payment_type <> 'reservation') GROUP BY appointment_id
-    ) p ON p.appointment_id = a.appointment_id
-    WHERE a.is_demo = FALSE AND a.appointment_status = 'completed'
-  `, [DEPOSIT_DEDUCTED_FROM_PRICE]);
-  return Number(result.rows[0].amount || 0);
+async function outstandingBalance(from, to) {
+  const result = await receivableRows(from, to, {}, true);
+  return result.rows.reduce((total, row) => total + Number(row.outstanding), 0);
 }
 
 async function reportData(from, to) {
@@ -265,7 +259,7 @@ async function reportData(from, to) {
     date_basis: 'Sales earned uses completed appointment dates, posted eligible product-sale payment dates, and retained deposits under the active finance rules. Cash collected includes posted payments across all methods by payment date in Asia/Manila. Expenses use expense_date.',
     accounting_basis: 'Mixed operational metrics. Net cash after expenses is posted collections less non-voided recorded expenses; expense payment method is not stored, so this is not a complete cash-flow statement.',
     active_filters: 'Date range only',
-    income_statement: { sales: totalSales, collected: totalCollected, expenses: totalExpenses, net_income: totalCollected - totalExpenses, outstanding_balance: await outstandingBalance() },
+    income_statement: { sales: totalSales, collected: totalCollected, expenses: totalExpenses, net_income: totalCollected - totalExpenses, outstanding_balance: await outstandingBalance(from, to) },
     daily_cash: daily.rows.map((row) => ({ ...row, collected: Number(row.collected), expenses: Number(row.expenses) })),
     online_reservations: onlineReservations.rows.map((row) => ({ ...row, count: Number(row.count) })),
     service_categories: topCategories,
@@ -891,7 +885,7 @@ router.get('/sale-products', endpoint(async (req, res) => {
 
 async function receivableRows(from, to, query = {}, hasDateFilter = true) {
   const values = [DEPOSIT_DEDUCTED_FROM_PRICE];
-  const where = ["a.is_demo = FALSE", "a.appointment_status = 'completed'"];
+  const where = ["a.is_demo = FALSE", "a.appointment_status <> 'cancelled'"];
   if (hasDateFilter) {
     values.push(from, to);
     where.push(`a.appointment_date BETWEEN $${values.length - 1}::date AND $${values.length}::date`);
@@ -899,25 +893,33 @@ async function receivableRows(from, to, query = {}, hasDateFilter = true) {
   const search = String(query.q || '').trim().slice(0, 100);
   if (search) {
     values.push(`%${search}%`);
-    where.push(`(COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Client') ILIKE $${values.length} OR s.service_name ILIKE $${values.length})`);
+    where.push(`(COALESCE(NULLIF(BTRIM(CONCAT_WS(' ', NULLIF(BTRIM(a.customer_first_name), ''), NULLIF(BTRIM(a.customer_last_name), ''))), ''), NULLIF(BTRIM(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), ''))), ''), a.walk_in_name, 'Client') ILIKE $${values.length} OR s.service_name ILIKE $${values.length})`);
   }
   return db.query(`
     SELECT
       a.appointment_id,
       a.appointment_date::text AS appointment_date,
+      a.appointment_status,
       a.booked_service_price::float8 AS service_price,
-      COALESCE(SUM(p.amount) FILTER (WHERE p.status = 'posted' AND ($1::boolean OR p.payment_type <> 'reservation')), 0)::float8 AS amount_paid,
-      GREATEST(a.booked_service_price - COALESCE(SUM(p.amount) FILTER (WHERE p.status = 'posted' AND ($1::boolean OR p.payment_type <> 'reservation')), 0), 0)::float8 AS outstanding,
-      COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Client') AS client,
+      COALESCE(paid.amount, 0)::float8 AS amount_paid,
+      GREATEST(a.booked_service_price - COALESCE(paid.amount, 0), 0)::float8 AS outstanding,
+      CASE WHEN COALESCE(paid.amount, 0) <= 0 THEN 'Unpaid' ELSE 'Partially paid' END AS status,
+      COALESCE(NULLIF(BTRIM(CONCAT_WS(' ', NULLIF(BTRIM(a.customer_first_name), ''), NULLIF(BTRIM(a.customer_last_name), ''))), ''), NULLIF(BTRIM(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), ''))), ''), a.walk_in_name, 'Client') AS client,
       c.email,
       s.service_name AS service
     FROM appointments a
     LEFT JOIN users c ON c.user_id = a.user_id
     JOIN services s ON s.service_id = a.service_id
-    LEFT JOIN payments p ON p.appointment_id = a.appointment_id
+    LEFT JOIN (
+      SELECT appointment_id, SUM(amount) AS amount
+      FROM payments
+      WHERE status = 'posted'
+        AND payment_type IN ('reservation', 'balance')
+        AND ($1::boolean OR payment_type <> 'reservation')
+      GROUP BY appointment_id
+    ) paid ON paid.appointment_id = a.appointment_id
     WHERE ${where.join(' AND ')}
-    GROUP BY a.appointment_id, c.user_id, s.service_id
-    HAVING GREATEST(a.booked_service_price - COALESCE(SUM(p.amount) FILTER (WHERE p.status = 'posted' AND ($1::boolean OR p.payment_type <> 'reservation')), 0), 0) > 0
+      AND a.booked_service_price > COALESCE(paid.amount, 0)
     ORDER BY a.appointment_date, a.appointment_id
   `, values);
 }
@@ -937,6 +939,10 @@ router.post('/payments', endpoint(async (req, res) => {
     throw new ApiError(400, 'Use the Record Sale form so the inventory deduction and payment are recorded together.');
   }
   const amount = amountValue(body.amount);
+  const requestKey = typeof body.request_key === 'string' ? body.request_key.toLowerCase() : '';
+  if (body.payment_type === 'balance' && !UUID_PATTERN.test(requestKey)) {
+    throw new ApiError(400, 'A valid payment request key is required.');
+  }
   const appointmentId = body.payment_type === 'product_sale'
     ? null
     : body.appointment_id == null ? null : idValue(body.appointment_id, 'Appointment ID');
@@ -945,18 +951,61 @@ router.post('/payments', endpoint(async (req, res) => {
   const reference = body.reference_no == null || body.reference_no === '' ? null : String(body.reference_no).trim().slice(0, 100);
   const note = body.note == null || body.note === '' ? null : String(body.note).trim().slice(0, 2000);
   const result = await db.transaction(async (client) => {
+    await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`finance-payment:${requestKey}`]);
+    const duplicate = await client.query(`
+      SELECT payment_id, appointment_id, payment_type, amount::float8 AS amount,
+        method, reference_no, note, recorded_by, status, created_at
+      FROM payments
+      WHERE request_key = $1
+    `, [requestKey]);
+    if (duplicate.rows.length) {
+      const existing = duplicate.rows[0];
+      if (Number(existing.appointment_id) !== appointmentId
+        || existing.payment_type !== body.payment_type
+        || Math.round(Number(existing.amount) * 100) !== Math.round(amount * 100)
+        || existing.method !== body.method
+        || existing.reference_no !== reference
+        || existing.note !== note
+        || Number(existing.recorded_by) !== Number(req.session.userId)) {
+        throw new ApiError(409, 'This payment request key was already used for different payment details.');
+      }
+      return { payment: existing, replayed: true };
+    }
+
     if (body.method === 'cash') await lockCurrentCashBusinessDateIfOpen(client);
     if (body.payment_type === 'balance') {
-      const appointment = await client.query(`SELECT booked_service_price, is_demo FROM appointments WHERE appointment_id = $1 AND appointment_status = 'completed' FOR UPDATE`, [appointmentId]);
-      if (!appointment.rows.length) throw new ApiError(404, 'Completed appointment not found.');
+      const appointment = await client.query(`
+        SELECT booked_service_price, is_demo
+        FROM appointments
+        WHERE appointment_id = $1
+          AND appointment_status <> 'cancelled'
+          AND is_demo = FALSE
+        FOR UPDATE
+      `, [appointmentId]);
+      if (!appointment.rows.length) throw new ApiError(404, 'Active appointment not found.');
       if (appointment.rows[0].is_demo) throw new ApiError(409, 'Payments are disabled for synthetic survey appointments.');
-      const paid = await client.query(`SELECT COALESCE(SUM(amount), 0) AS paid FROM payments WHERE appointment_id = $1 AND status = 'posted' AND ($2::boolean OR payment_type <> 'reservation')`, [appointmentId, DEPOSIT_DEDUCTED_FROM_PRICE]);
+      const paid = await client.query(`
+        SELECT COALESCE(SUM(amount), 0) AS paid
+        FROM payments
+        WHERE appointment_id = $1
+          AND status = 'posted'
+          AND payment_type IN ('reservation', 'balance')
+          AND ($2::boolean OR payment_type <> 'reservation')
+      `, [appointmentId, DEPOSIT_DEDUCTED_FROM_PRICE]);
       const outstanding = Math.max(0, Number(appointment.rows[0].booked_service_price) - Number(paid.rows[0].paid));
       if (amount > outstanding) throw new ApiError(400, `Payment exceeds the outstanding balance of ${outstanding.toFixed(2)}.`);
     }
-    return client.query(`INSERT INTO payments (appointment_id, payment_type, amount, method, reference_no, note, recorded_by) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING payment_id, appointment_id, payment_type, amount::float8 AS amount, method, reference_no, note, status, created_at`, [appointmentId, body.payment_type, amount, body.method, reference, note, req.session.userId || null]);
+    const payment = await client.query(`
+      INSERT INTO payments
+        (appointment_id, payment_type, amount, method, reference_no, note, recorded_by, request_key)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING payment_id, appointment_id, payment_type, amount::float8 AS amount,
+        method, reference_no, note, recorded_by, status, created_at
+    `, [appointmentId, body.payment_type, amount, body.method, reference, note,
+      req.session.userId || null, requestKey]);
+    return { payment: payment.rows[0], replayed: false };
   });
-  res.status(201).json(result.rows[0]);
+  res.status(result.replayed ? 200 : 201).json(result.payment);
 }));
 
 router.post('/product-sales', endpoint(async (req, res) => {
@@ -2333,30 +2382,16 @@ function addProfessionalReportSheet(workbook, options) {
 }
 
 async function detailedReceivables() {
-  return financeQuery(`
-    SELECT appointment.appointment_id,
-      appointment.appointment_date::text AS transaction_date,
-      COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(customer.first_name), ''),
-        NULLIF(BTRIM(customer.last_name), '')), ''), appointment.walk_in_name, 'Client') AS client,
-      service.service_name,
-      appointment.booked_service_price::float8 AS original_amount,
-      COALESCE(paid.amount, 0)::float8 AS amount_paid,
-      GREATEST(appointment.booked_service_price - COALESCE(paid.amount, 0), 0)::float8 AS outstanding,
-      CASE WHEN COALESCE(paid.amount, 0) = 0 THEN 'Unpaid' ELSE 'Partially paid' END AS status
-    FROM appointments appointment
-    LEFT JOIN users customer ON customer.user_id = appointment.user_id
-    JOIN services service ON service.service_id = appointment.service_id
-    LEFT JOIN (
-      SELECT appointment_id, SUM(amount) AS amount
-      FROM payments
-      WHERE status = 'posted' AND ($1::boolean OR payment_type <> 'reservation')
-      GROUP BY appointment_id
-    ) paid ON paid.appointment_id = appointment.appointment_id
-    WHERE appointment.is_demo = FALSE
-      AND appointment.appointment_status = 'completed'
-      AND appointment.booked_service_price > COALESCE(paid.amount, 0)
-    ORDER BY appointment.appointment_date, appointment.appointment_id
-  `, [DEPOSIT_DEDUCTED_FROM_PRICE]);
+  const result = await receivableRows(null, null, {}, false);
+  return {
+    ...result,
+    rows: result.rows.map((row) => ({
+      ...row,
+      transaction_date: row.appointment_date,
+      original_amount: row.service_price,
+      service_name: row.service,
+    })),
+  };
 }
 
 async function refundableDepositLiabilities() {
@@ -2571,7 +2606,7 @@ async function sendCompleteFinanceWorkbook(res, from, to) {
     ['ASSETS', '', ''],
     ['Current Assets', '', ''],
     ['Cash on hand / digital balances', 'Not recorded', 'No complete opening balance or current cash/bank balance is maintained.'],
-    ['Accounts receivable', receivablesTotal, 'Completed appointments only, following the existing finance outstanding-balance calculation.'],
+    ['Accounts receivable', receivablesTotal, 'Outstanding balances for non-cancelled appointments, using booked service prices and eligible posted payments.'],
     ['Inventory (known recorded-cost valuation)', knownInventoryValue,
       `Quantity × latest recorded procurement unit cost. ${missingInventoryCosts} product(s) have no unit cost and are excluded from this subtotal.`],
     ['Non-Current Assets', '', ''],
@@ -2617,7 +2652,7 @@ async function sendCompleteFinanceWorkbook(res, from, to) {
     title: 'Accounts Receivable Subsidiary Ledger',
     periodLabel: snapshotDate,
     generatedAt,
-    description: 'Point-in-time outstanding balances for completed appointments, using the same deposit treatment as the existing Finance outstanding-balance calculation. Due dates are not recorded, so aging / overdue classification is unavailable.',
+    description: 'Point-in-time outstanding balances for non-cancelled appointments, using booked service prices and eligible posted payments. Due dates are not recorded, so aging / overdue classification is unavailable.',
     headers: ['Customer / client name', 'Appointment reference', 'Transaction date', 'Due date', 'Service', 'Original amount (PHP)', 'Payments received (PHP)', 'Outstanding balance (PHP)', 'Payment status'],
     widths: [25, 23, 16, 16, 26, 20, 20, 21, 17],
     records: receivables.map((row) => [

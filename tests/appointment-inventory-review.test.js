@@ -286,10 +286,7 @@ async function completeAppointment({
   alreadyDeducted = false,
   reviewConfirmed = true,
   failOnInventoryLog = false,
-  failOnConditionalUpdate = false,
-  servicePrice = 2000,
-  reservationPayments = [500],
-  failOnBalanceInsert = false
+  failOnConditionalUpdate = false
 }) {
   const originalTransaction = db.transaction;
   const queryCalls = [];
@@ -305,12 +302,11 @@ async function completeAppointment({
       const result = await callback({
         async query(sql, values = []) {
           queryCalls.push({ sql, values });
-          if (/SELECT appointment_id, appointment_status, user_id, booked_service_price/.test(sql)) {
+          if (/SELECT appointment_id, appointment_status, user_id,/.test(sql)) {
             return { rows: [{
               appointment_id: 42,
               appointment_status: currentStatus,
               user_id: null,
-              booked_service_price: servicePrice,
               service_date: serviceDate
             }] };
           }
@@ -352,13 +348,6 @@ async function completeAppointment({
           }
           if (/INSERT INTO inventory_transactions/.test(sql) && failOnInventoryLog) {
             throw new Error('Simulated inventory transaction failure.');
-          }
-          if (/SELECT ROUND\(GREATEST/.test(sql)) {
-            return { rows: [{ remaining_balance: Math.max(0, servicePrice - reservationPayments.reduce((sum, amount) => sum + amount, 0)).toFixed(2) }] };
-          }
-          if (/INSERT INTO payments/.test(sql)) {
-            if (failOnBalanceInsert) throw new Error('Simulated balance payment failure.');
-            return { rows: [{ payment_id: 501, amount: Number(values[1]) }] };
           }
           if (/UPDATE appointments\s+SET appointment_status = 'completed'/.test(sql)) {
             return { rows: [{ appointment_id: 42, user_id: null }] };
@@ -1369,25 +1358,9 @@ test('completion rolls back a stock update if transaction logging fails', async 
   assert.equal(result.queryCalls.some(({ sql }) => /UPDATE appointments\s+SET appointment_status = 'completed'/.test(sql)), false);
 });
 
-test('completion records only the remaining posted reservation balance in the same transaction', async () => {
+test('completion does not fabricate a cash payment for an outstanding balance', async () => {
   const result = await completeAppointment({
     selectedItems: [{ productId: 12, quantity: 2, isSuggested: false }]
-  });
-
-  assert.equal(result.statusCode, 200);
-  const paymentInsert = result.queryCalls.find(({ sql }) => /INSERT INTO payments/.test(sql));
-  assert.ok(paymentInsert);
-  assert.equal(paymentInsert.values[0], 42);
-  assert.equal(Number(paymentInsert.values[1]), 1500);
-  assert.equal(paymentInsert.values[2], 7);
-  assert.equal(result.responseBody.balance_payment.amount, 1500);
-});
-
-test('completion skips a zero-value balance payment', async () => {
-  const result = await completeAppointment({
-    selectedItems: [],
-    servicePrice: 500,
-    reservationPayments: [500]
   });
 
   assert.equal(result.statusCode, 200);
@@ -1395,7 +1368,17 @@ test('completion skips a zero-value balance payment', async () => {
   assert.equal(result.responseBody.balance_payment, null);
 });
 
-test('a repeated completion request cannot create another balance payment', async () => {
+test('completion remains payment-free when the appointment is already fully paid', async () => {
+  const result = await completeAppointment({
+    selectedItems: [],
+  });
+
+  assert.equal(result.statusCode, 200);
+  assert.equal(result.queryCalls.some(({ sql }) => /INSERT INTO payments/.test(sql)), false);
+  assert.equal(result.responseBody.balance_payment, null);
+});
+
+test('a repeated completion request cannot create another payment', async () => {
   const result = await completeAppointment({
     selectedItems: [{ productId: 12, quantity: 1, isSuggested: false }],
     currentStatus: 'completed'
@@ -1406,16 +1389,17 @@ test('a repeated completion request cannot create another balance payment', asyn
   assert.equal(result.queryCalls.some(({ sql }) => /UPDATE inventory_products/.test(sql)), false);
 });
 
-test('completion rolls back inventory and status if balance payment insertion fails', async () => {
+test('appointment completion succeeds without attempting to insert a balance payment', async () => {
   const result = await completeAppointment({
     selectedItems: [{ productId: 12, quantity: 1, isSuggested: false }],
-    failOnBalanceInsert: true
   });
 
-  assert.equal(result.statusCode, 500);
-  assert.equal(result.rolledBack, true);
+  assert.equal(result.statusCode, 200);
+  assert.equal(result.committed, true);
+  assert.equal(result.rolledBack, false);
   assert.equal(result.queryCalls.some(({ sql }) => /UPDATE inventory_products/.test(sql)), true);
   assert.equal(result.queryCalls.some(({ sql }) => /UPDATE appointments\s+SET appointment_status = 'completed'/.test(sql)), true);
+  assert.equal(result.queryCalls.some(({ sql }) => /INSERT INTO payments/.test(sql)), false);
 });
 
 test('completion logs the appointment deduction and updates status in one successful transaction', async () => {
@@ -1437,7 +1421,7 @@ test('completion logs the appointment deduction and updates status in one succes
   assert.equal(result.queryCalls.some(({ sql }) => /DELETE FROM appointment_inventory_review_drafts/.test(sql)), false);
   assert.ok(statusUpdate);
   assert.ok(result.queryCalls.indexOf(deductionLog) < result.queryCalls.indexOf(statusUpdate));
-  assert.ok(result.queryCalls.some(({ sql }) => /INSERT INTO payments/.test(sql)));
+  assert.equal(result.queryCalls.some(({ sql }) => /INSERT INTO payments/.test(sql)), false);
 });
 
 test('suggestion migration enables all candidates without assigning or overwriting quantities', async () => {

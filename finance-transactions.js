@@ -21,9 +21,18 @@
     receivables: [],
     deposits: [],
     selectedClient: null,
+    paymentRequestKeys: new Map(),
   };
   let transactionRequest = 0;
   const byId = (id) => document.getElementById(id);
+  function createRequestKey() {
+    const bytes = new Uint8Array(16);
+    window.crypto.getRandomValues(bytes);
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = [...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+  }
   const refs = Object.fromEntries(['transactionFrom', 'transactionTo', 'transactionType', 'transactionMethod', 'transactionStatus', 'transactionSearch', 'transactionMessage', 'transactionRows', 'transactionCount', 'transactionEmpty', 'transactionPagination', 'transactionPrev', 'transactionNext', 'transactionPageLabel', 'transactionPageSize', 'transactionPeriodLabel', 'transactionComparison', 'ledgerHelp', 'transactionSummary', 'transactionOverview', 'paymentCountSummary', 'receivablesPanel', 'transactionsPanel', 'depositsPanel', 'methodChartSection', 'methodChartEmpty', 'receivableRows', 'receivableEmpty', 'receivableSearch', 'receivablePagination', 'receivablePrev', 'receivableNext', 'receivablePageLabel', 'receivablePageSize', 'exportReceivablesXlsx', 'depositRows', 'depositEmpty', 'depositCount', 'depositPagination', 'depositPrev', 'depositNext', 'depositPageLabel', 'depositPageSize', 'recordPaymentModal', 'recordPaymentForm', 'balanceAppointmentId', 'balanceAmount', 'balanceMethod', 'balanceReference', 'balanceNote', 'paymentBalanceText', 'paymentFormMessage', 'saleModal', 'saleForm', 'saleClient', 'saleProduct', 'saleQuantity', 'salePrice', 'saleTotal', 'saleMethod', 'saleReference', 'saleMessage', 'saleSubmit', 'recordSaleBtn', 'exportTransactionsXlsx', 'refundModal', 'refundForm', 'refundPaymentId', 'refundPaymentSummary', 'refundNote', 'refundFormMessage', 'reverseModal', 'reverseForm', 'reversePaymentId', 'reversePaymentSummary', 'reverseReason', 'reverseFormMessage', 'paymentDetailsModal', 'paymentDetails', 'paymentHistoryRows', 'receiptModal', 'receiptModalTitle', 'receiptFrame', 'clientDetailsModal', 'clientDetailsTitle', 'clientDetails', 'clientPaymentHistoryBtn', 'clientPaymentHistoryModal', 'clientPaymentHistoryTitle', 'clientPaymentHistoryMessage', 'clientPaymentHistoryRows', 'clientPaymentHistoryEmpty'].map((id) => [id, byId(id)]));
   const chartColors = ['#c9a84c', '#267447', '#3977b8', '#8c8c8c', '#8a6e2f'];
   refs.recordSaleBtn.classList.add('fin-sales-record-button');
@@ -332,8 +341,18 @@
       const row = element('tr');
       row.tabIndex = 0;
       row.dataset.appointmentId = item.appointment_id;
-      cell(row, item.appointment_date); cell(row, item.client); cell(row, item.service);
-      cell(row, common.formatPeso(item.service_price)); cell(row, common.formatPeso(item.outstanding));
+      cell(row, item.appointment_date);
+      cell(row, item.client);
+      cell(row, item.service);
+      const appointmentStatus = element('td');
+      appointmentStatus.append(common.statusBadge(item.appointment_status));
+      row.append(appointmentStatus);
+      cell(row, common.formatPeso(item.service_price));
+      cell(row, common.formatPeso(item.amount_paid));
+      cell(row, common.formatPeso(item.outstanding));
+      const paymentStatus = element('td');
+      paymentStatus.append(common.statusBadge(item.status));
+      row.append(paymentStatus);
       const action = element('td');
       const button = element('button', 'Record payment', 'fin-button fin-button-primary');
       button.type = 'button'; button.dataset.appointmentId = item.appointment_id;
@@ -649,6 +668,10 @@
     const record = state.receivables.find((item) => Number(item.appointment_id) === Number(button.dataset.appointmentId));
     if (!record) return;
     refs.balanceAppointmentId.value = record.appointment_id;
+    const appointmentId = Number(record.appointment_id);
+    if (!state.paymentRequestKeys.has(appointmentId)) {
+      state.paymentRequestKeys.set(appointmentId, createRequestKey());
+    }
     refs.balanceAmount.value = Number(record.outstanding).toFixed(2);
     refs.balanceAmount.max = Number(record.outstanding).toFixed(2);
     refs.balanceMethod.value = ''; refs.balanceReference.value = ''; refs.balanceNote.value = '';
@@ -672,10 +695,24 @@
   });
   refs.recordPaymentForm.addEventListener('submit', async (event) => {
     event.preventDefault(); if (!refs.recordPaymentForm.reportValidity()) return;
+    const submitButton = refs.recordPaymentForm.querySelector('button[type="submit"]');
+    const appointmentId = Number(refs.balanceAppointmentId.value);
+    submitButton.disabled = true;
+    let paymentRecorded = false;
     try {
-      await common.fetchJson('/api/finance/payments', { method: 'POST', body: JSON.stringify({ appointment_id: Number(refs.balanceAppointmentId.value), payment_type: 'balance', amount: Number(refs.balanceAmount.value), method: refs.balanceMethod.value, reference_no: refs.balanceReference.value.trim(), note: refs.balanceNote.value.trim() }) });
-      modalClose(refs.recordPaymentModal); await loadReceivables(); message('Payment recorded.');
-    } catch (error) { refs.paymentFormMessage.textContent = error.message; }
+      const requestKey = state.paymentRequestKeys.get(appointmentId);
+      if (!requestKey) throw new Error('Reopen the payment form to create a secure payment request.');
+      await common.fetchJson('/api/finance/payments', { method: 'POST', body: JSON.stringify({ request_key: requestKey, appointment_id: appointmentId, payment_type: 'balance', amount: Number(refs.balanceAmount.value), method: refs.balanceMethod.value, reference_no: refs.balanceReference.value.trim(), note: refs.balanceNote.value.trim() }) });
+      paymentRecorded = true;
+      modalClose(refs.recordPaymentModal);
+      await loadReceivables();
+      state.paymentRequestKeys.delete(appointmentId);
+      message('Payment recorded.');
+    } catch (error) {
+      if (paymentRecorded) message(`Payment recorded, but Receivables could not refresh: ${error.message}`, true);
+      else refs.paymentFormMessage.textContent = error.message;
+    }
+    finally { submitButton.disabled = false; }
   });
   refs.refundForm.addEventListener('submit', async (event) => {
     event.preventDefault(); if (!refs.refundForm.reportValidity()) return;

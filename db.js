@@ -18,17 +18,6 @@ const pool = new Pool({
 // Ito yung "settings" ng koneksyon natin — kinukuha lahat mula sa .env file,
 // para hindi natin kailangang i-type nang diretso yung password sa code
 
-// Simpleng test: pag na-start ang server, susubukan nitong kumonekta agad,
-// tapos sasabihin sa atin sa terminal kung successful o hindi.
-pool.connect((error, client, releaseConnection) => {
-  if (error) {
-    console.log('Not Connected to Database:', error.message);
-    return;
-  }
-  console.log('Connected to Database:', process.env.DB_NAME);
-  releaseConnection(); // ibinabalik yung koneksyon na 'to sa Pool para pwede ulit gamitin
-});
-
 // Ito yung ie-export natin papunta sa ibang files. Sa halip na i-expose yung
 // buong Pool, ginagawa lang nating isang simpleng function na "query" —
 // mas malinis, at ito lang naman ang kailangan ng ibang files.

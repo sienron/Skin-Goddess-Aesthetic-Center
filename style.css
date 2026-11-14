@@ -16535,6 +16535,24 @@ textarea.cm-editor__input {
   color: #80651e;
 }
 
+.fin-status-badge--unpaid {
+  border-color: #ead9a9;
+  background: #fbf5e5;
+  color: #80651e;
+}
+
+.fin-status-badge--partially-paid {
+  border-color: #b8cce7;
+  background: #edf3fa;
+  color: #315d8a;
+}
+
+.fin-status-badge--overdue {
+  border-color: #e6bcbc;
+  background: #fbefef;
+  color: #982f2f;
+}
+
 .fin-status-badge--refunded,
 .fin-status-badge--reversed,
 .fin-status-badge--voided,

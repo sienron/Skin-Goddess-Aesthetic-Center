@@ -1250,7 +1250,7 @@ router.post('/admin/:id/complete-with-inventory', requireRole('admin'), async (r
   try {
     const deduction = await db.transaction(async (client) => {
       const appointmentResult = await client.query(`
-        SELECT appointment_id, appointment_status, user_id, booked_service_price, is_demo,
+        SELECT appointment_id, appointment_status, user_id,
           appointment_date::text AS service_date
         FROM appointments
         WHERE appointment_id = $1
@@ -1400,24 +1400,7 @@ router.post('/admin/:id/complete-with-inventory', requireRole('admin'), async (r
         error.statusCode = 409;
         throw error;
       }
-      const balanceResult = await client.query(`
-        SELECT ROUND(GREATEST($1::numeric - COALESCE(SUM(amount), 0), 0), 2) AS remaining_balance
-        FROM payments
-        WHERE appointment_id = $2 AND payment_type = 'reservation' AND status = 'posted'
-      `, [appointment.booked_service_price, appointmentId]);
-      const remainingBalance = Number(balanceResult.rows[0].remaining_balance);
-      let balancePayment = null;
-      if (!appointment.is_demo && remainingBalance > 0) {
-        const paymentResult = await client.query(`
-          INSERT INTO payments
-            (appointment_id, payment_type, amount, method, note, recorded_by)
-          VALUES ($1, 'balance', $2, 'cash',
-            'Automatically recorded on completion; payment received in person.', $3)
-          RETURNING payment_id, amount::float8 AS amount
-        `, [appointmentId, balanceResult.rows[0].remaining_balance, req.session.userId || null]);
-        balancePayment = paymentResult.rows[0];
-      }
-      return { appointment: statusResult.rows[0], updatedProducts, balancePayment };
+      return { appointment: statusResult.rows[0], updatedProducts };
     });
 
     for (const product of deduction.updatedProducts) {
@@ -1453,7 +1436,7 @@ router.post('/admin/:id/complete-with-inventory', requireRole('admin'), async (r
       appointment_id: appointmentId,
       status: 'completed',
       products: deduction.updatedProducts,
-      balance_payment: deduction.balancePayment
+      balance_payment: null
     });
   } catch (error) {
     if (error.code === 'P0001' || error.statusCode) return res.status(error.statusCode || 409).json({ message: error.message });

@@ -205,6 +205,7 @@ async function requireIsolatedReadyDatabase() {
     ['payments', 'payment_type'],
     ['payments', 'payment_id'],
     ['payments', 'recorded_by'],
+    ['payments', 'request_key'],
     ['payments', 'status'],
     ['product_sale_details', 'payment_id'],
     ['product_sale_details', 'product_id'],

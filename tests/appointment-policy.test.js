@@ -967,22 +967,26 @@ test('admin rescheduling rejects a slot blocked by an adjusted expected end', as
   assert.equal(transactionQueries.some(({ sql }) => /SET appointment_date =/.test(sql)), false);
 });
 
-test('migration scripts reference inventory, customer, and flexible scheduling migrations', () => {
+test('migration registry covers inventory, customer, and flexible scheduling migrations', () => {
   const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
-  const allScripts = Object.values(packageJson.scripts).join('\n');
+  const registry = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'migrations', 'registry.json'), 'utf8'));
+  const allMigrations = [...registry.required, ...registry.optional];
   const correctMigration = '040-enable-service-inventory-suggestions.js';
-  const inventoryMigrationRefs = [...allScripts.matchAll(/040-enable-(?:appointment|service)-inventory-suggestions\.js/g)]
-    .map(([reference]) => reference);
+  const migrationIndex = (filename) => registry.required.indexOf(filename);
 
   assert.equal(fs.existsSync(path.join(__dirname, '..', 'migrations', correctMigration)), true);
-  assert.ok(inventoryMigrationRefs.length > 0);
-  assert.ok(inventoryMigrationRefs.every((reference) => reference === correctMigration));
-  assert.match(packageJson.scripts.migrate, /040-enable-service-inventory-suggestions\.js/);
-  assert.match(packageJson.scripts.migrate, /039-appointment-inventory-mappings\.js.*040-enable-service-inventory-suggestions\.js/);
-  assert.match(packageJson.scripts.postmigrate, /042-appointment-review-timezones\.js.*043-appointment-customer-details\.js/);
-  assert.match(packageJson.scripts.postmigrate, /046-announcement-reads\.js.*047-flexible-appointment-scheduling\.js.*048-appointment-delay-retries\.js/);
-  assert.match(packageJson.scripts['migrate:appointment-scheduling'], /047-flexible-appointment-scheduling\.js.*048-appointment-delay-retries\.js/);
-  assert.doesNotMatch(packageJson.scripts.migrate, /043-appointment-customer-details\.js/);
+  assert.ok(allMigrations.includes(correctMigration));
+  assert.equal(packageJson.scripts.migrate, 'node scripts/run-migrations.js');
+  assert.equal(packageJson.scripts.postmigrate, undefined);
+  assert.equal(packageJson.scripts['migrate:appointment-inventory-suggestions'],
+    `node scripts/run-migrations.js --target=${correctMigration}`);
+  assert.ok(migrationIndex('039-appointment-inventory-mappings.js') < migrationIndex(correctMigration));
+  assert.ok(migrationIndex('042-appointment-review-timezones.js')
+    < migrationIndex('043-appointment-customer-details.js'));
+  assert.ok(migrationIndex('046-announcement-reads.js') < migrationIndex('047-flexible-appointment-scheduling.js'));
+  assert.ok(migrationIndex('047-flexible-appointment-scheduling.js') < migrationIndex('048-appointment-delay-retries.js'));
+  assert.equal(packageJson.scripts['migrate:appointment-scheduling'],
+    'node scripts/run-migrations.js --target=049-consolidate-aesthetician-roles.js');
   assert.equal(fs.existsSync(path.join(__dirname, '..', 'migrations', '043-appointment-customer-details.js')), true);
   assert.equal(fs.existsSync(path.join(__dirname, '..', 'migrations', '047-flexible-appointment-scheduling.js')), true);
   assert.equal(fs.existsSync(path.join(__dirname, '..', 'migrations', '048-appointment-delay-retries.js')), true);

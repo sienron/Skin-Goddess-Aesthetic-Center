@@ -53,7 +53,8 @@ function financeRows(sql) {
       { expense_id: 5, date: '2026-10-06', category: 'Utilities', description: 'Voided bill', amount: 25, supplier: null, reference_no: null, status: 'voided', void_reason: 'Duplicate' }
     ] };
   }
-  if (/SELECT\s+a\.appointment_id,\s*a\.appointment_date::text AS appointment_date/.test(sql)) {
+  if (/SELECT\s+a\.appointment_id,\s*a\.appointment_date::text AS appointment_date/.test(sql)
+    && (/ILIKE/.test(sql) || /appointment_date BETWEEN/.test(sql))) {
     return { rows: [{
       appointment_id: 42,
       appointment_date: '2026-10-10',
@@ -64,28 +65,29 @@ function financeRows(sql) {
       outstanding: 700,
     }] };
   }
-  if (/SELECT appointment\.appointment_id,\s+appointment\.appointment_date::text AS transaction_date/.test(sql)) {
+  if (/SELECT\s+a\.appointment_id,\s*a\.appointment_date::text AS appointment_date/.test(sql)
+    && !/appointment_date BETWEEN/.test(sql)) {
     return { rows: [
       {
         appointment_id: 1,
-        transaction_date: '2026-10-02',
+        appointment_date: '2026-10-02',
         client: 'Client One',
-        service_name: 'Facial',
-        original_amount: 1000,
+        service: 'Facial',
+        service_price: 1000,
         amount_paid: 300,
         outstanding: 700,
-        status: 'Partially paid'
+        status: 'Partially paid',
       },
       {
-        appointment_id: 2,
-        transaction_date: '2026-10-11',
-        client: 'Client Two',
-        service_name: 'Laser',
-        original_amount: 500,
-        amount_paid: 500,
-        outstanding: 0,
-        status: 'Paid'
-      }
+        appointment_id: 3,
+        appointment_date: '2026-10-11',
+        client: 'Client Three',
+        service: 'Laser',
+        service_price: 500,
+        amount_paid: 0,
+        outstanding: 500,
+        status: 'Unpaid',
+      },
     ] };
   }
   if (/payment_date/.test(sql) && /appointment_status IN/.test(sql)) {
@@ -262,6 +264,7 @@ test('finance export creates six reports and labels unsupported accounting value
     assert.equal(receivables.getCell('D8').value, 'Not recorded');
     assert.equal(receivables.getCell('C8').numFmt, 'dd mmm yyyy');
     assert.equal(receivables.getCell('A9').fill.fgColor.argb, 'FFF7F7F7');
+    assert.equal(receivables.getCell('H9').value, 500);
     for (const sheet of [income, cashFlow, balanceSheet, receivables]) {
       assert.equal(sheet.views[0].showGridLines, false);
       assert.match(sheet.headerFooter.oddHeader, /Skin Goddess Aesthetic Center/);

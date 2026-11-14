@@ -29,7 +29,7 @@
       common.fetchJson(`/api/finance/summary?${common.rangeParams(previous.from, previous.to)}`),
       common.fetchJson('/api/finance/monthly?months=6'),
       common.fetchJson(`/api/finance/activity?${common.rangeParams(state.from, state.to, { limit: 10 })}`),
-      common.fetchJson('/api/finance/receivables'),
+      common.fetchJson(`/api/finance/receivables?${query}`),
     ]);
     if (requestId !== overviewRequest) return;
     refs.dashSales.textContent = common.formatPeso(summary.sales);

@@ -182,11 +182,14 @@
       cancelled: 'Cancelled',
       completed: 'Completed',
       forfeited: 'Forfeited',
+      'partially-paid': 'Partially Paid',
+      overdue: 'Overdue',
       paid: 'Paid',
       pending: 'Pending',
       posted: 'Posted',
       refunded: 'Refunded',
       reversed: 'Reversed',
+      unpaid: 'Unpaid',
       voided: 'Voided',
     };
     const normalized = String(status || 'unknown').toLowerCase().replace(/[^a-z0-9_-]/g, '-');

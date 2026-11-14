@@ -4,18 +4,20 @@ const db = require('../db');
 
 async function migrate() {
   try {
-    await db.query(`
-      ALTER TABLE paymongo_checkout_sessions
-        ADD COLUMN IF NOT EXISTS payment_id VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS refunded_at TIMESTAMPTZ
-    `);
+    await db.transaction(async (client) => {
+      await client.query(`
+        ALTER TABLE paymongo_checkout_sessions
+          ADD COLUMN IF NOT EXISTS payment_id VARCHAR(100),
+          ADD COLUMN IF NOT EXISTS refunded_at TIMESTAMPTZ
+      `);
 
-    await db.query(`ALTER TABLE paymongo_checkout_sessions DROP CONSTRAINT IF EXISTS paymongo_checkout_sessions_status_check`);
-    await db.query(`
-      ALTER TABLE paymongo_checkout_sessions
-        ADD CONSTRAINT paymongo_checkout_sessions_status_check
-        CHECK (status IN ('pending', 'paid', 'failed', 'expired', 'consumed', 'refunded'))
-    `);
+      await client.query(`ALTER TABLE paymongo_checkout_sessions DROP CONSTRAINT IF EXISTS paymongo_checkout_sessions_status_check`);
+      await client.query(`
+        ALTER TABLE paymongo_checkout_sessions
+          ADD CONSTRAINT paymongo_checkout_sessions_status_check
+          CHECK (status IN ('pending', 'paid', 'failed', 'expired', 'consumed', 'refunded'))
+      `);
+    });
 
     console.log('Payment refunds migration completed successfully.');
   } catch (error) {
