@@ -52,11 +52,11 @@ test('invalid Groq API key falls back to the keyword clinic FAQ', async () => {
   process.env.GROQ_API_KEY = 'invalid-test-key';
   global.fetch = async () => ({ ok: false, status: 401 });
 
-  const response = await ask('Where is the clinic located?');
+  const response = await ask('Tell me more about Skin Goddess.');
 
   assert.equal(response.statusCode, 200);
   assert.equal(response.body.fallback, true);
-  assert.match(response.body.answer, /KW Plaza Building/);
+  assert.match(response.body.answer, /skingoddess456@gmail\.com/);
 });
 
 test('missing Groq API key still serves a keyword clinic FAQ answer', async () => {
@@ -65,11 +65,31 @@ test('missing Groq API key still serves a keyword clinic FAQ answer', async () =
     throw new Error('Fetch should not run when the key is missing.');
   };
 
-  const response = await ask('How can I book an appointment?');
+  const response = await ask('Tell me more about Skin Goddess.');
 
   assert.equal(response.statusCode, 200);
   assert.equal(response.body.fallback, true);
-  assert.match(response.body.answer, /Book Now/);
+  assert.match(response.body.answer, /services and prices/);
+});
+
+test('contact fallback uses the clinic email shown on customer-facing pages', async () => {
+  delete process.env.GROQ_API_KEY;
+  const response = await ask('What is your contact email?');
+
+  assert.match(response.body.answer, /skingoddess456@gmail\.com/);
+  assert.doesNotMatch(response.body.answer, /info@skingoddess\.ph/);
+});
+
+test('services and pricing questions use verified information instead of generated answers', async () => {
+  process.env.GROQ_API_KEY = 'test-key';
+  global.fetch = async () => {
+    throw new Error('Verified services and pricing questions must not use generated answers.');
+  };
+
+  const response = await ask('What services and prices do you offer?');
+
+  assert.match(response.body.answer, /Services page/);
+  assert.doesNotMatch(response.body.answer, /info@skingoddess\.ph/);
 });
 
 test('opening-hours answers use the current customer-facing weekly schedule without AI generation', async () => {
@@ -104,11 +124,15 @@ test('AI context includes public hours only, not private schedule or customer fi
     customer_name: 'PRIVATE CUSTOMER',
   }));
 
-  await ask('How do I book an appointment?', schedule);
+  await ask('Tell me more about Skin Goddess.', schedule);
 
   const systemPrompt = requestBody.messages[0].content;
   assert.match(systemPrompt, /Regular weekly operating hours \(Asia\/Manila\)/);
   assert.match(systemPrompt, /Sunday: 9 AM–6 PM/);
+  assert.match(systemPrompt, /2nd floor, KW Plaza Building, Pasong Buaya 2, Imus, Cavite/);
+  assert.match(systemPrompt, /\+63 945 611 9436/);
+  assert.match(systemPrompt, /skingoddess456@gmail\.com/);
+  assert.doesNotMatch(systemPrompt, /info@skingoddess\.ph/);
   assert.match(systemPrompt, /Only provide information intended for customers/);
   assert.doesNotMatch(systemPrompt, /PRIVATE NOTE|PRIVATE CUSTOMER/);
 });
@@ -136,6 +160,29 @@ test('Groq network errors fall back to a safe clinic FAQ response', async () => 
   assert.equal(response.statusCode, 200);
   assert.equal(response.body.fallback, true);
   assert.match(response.body.answer, /can’t provide medical advice/i);
+});
+
+test('AI answers containing outdated contact details are replaced with the verified fallback', async () => {
+  process.env.GROQ_API_KEY = 'test-key';
+  const outdatedDetails = [
+    'Contact us at info@skingoddess.ph for more information.',
+    'Call +63 900 123 4567 for more information.',
+    'The clinic is located in Las Piñas.',
+    'The clinic is open Monday to Saturday.',
+  ];
+
+  for (const detail of outdatedDetails) {
+    global.fetch = async () => ({
+      ok: true,
+      json: async () => ({ choices: [{ message: { content: detail } }] }),
+    });
+
+    const response = await ask('Tell me more about Skin Goddess.');
+
+    assert.equal(response.body.fallback, true);
+    assert.match(response.body.answer, /skingoddess456@gmail\.com/);
+    assert.doesNotMatch(response.body.answer, /info@skingoddess\.ph|Las Piñas|Monday to Saturday/);
+  }
 });
 
 test.after(() => {

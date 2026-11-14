@@ -114,7 +114,7 @@
         visible.forEach((appointment) => {
             const status = String(appointment.status || "unknown").toLowerCase();
             const row = document.createElement("tr");
-            row.innerHTML = `<td><div class="client-name-cell"><span class="client-avatar">${escapeHtml(initials(appointment.client))}</span><span><strong>${escapeHtml(appointment.client || "Client")}</strong><small>Appointment #${escapeHtml(appointment.id || "—")}</small></span></div></td><td>${escapeHtml(appointment.service || "—")}</td><td><div class="client-appointment-cell"><strong>${formatDate(appointment.date, appointment.start)}</strong><span>${formatTime(appointment.start)}</span></div></td><td><span class="client-status ${statusClass(status)}"><span></span>${statusLabels[status] || status.toUpperCase()}</span></td>`;
+            row.innerHTML = `<td><div class="client-name-cell"><span class="client-avatar">${escapeHtml(initials(appointment.client))}</span><span><strong>${escapeHtml(appointment.client || "Client")}</strong><small>Appointment #${escapeHtml(appointment.id || "—")}</small></span></div></td><td>${escapeHtml(appointment.service || "—")}</td><td><div class="client-appointment-cell"><strong>${formatDate(appointment.date, appointment.start)}</strong><span>${formatTime(appointment.start)}</span></div></td><td><span class="client-status ${statusClass(status)}"><span></span>${escapeHtml(statusLabels[status] || status.toUpperCase())}</span></td>`;
             tableBody.appendChild(row);
         });
         if (!visible.length) tableBody.innerHTML = '<tr><td colspan="4" class="clients-table-message">No client appointments found.</td></tr>';
@@ -142,7 +142,7 @@
             const item = document.createElement("div");
             const status = String(appointment.status || "unknown").toLowerCase();
             item.className = `timeline-item ${statusClass(status)}`;
-            item.innerHTML = `<span class="timeline-dot"></span><div><time>${formatTime(appointment.start)}</time><strong>${escapeHtml(appointment.client || "Client")} - ${escapeHtml(appointment.service || "Appointment")}</strong><small>${statusLabels[status] || status.toUpperCase()}</small></div>`;
+            item.innerHTML = `<span class="timeline-dot"></span><div><time>${formatTime(appointment.start)}</time><strong>${escapeHtml(appointment.client || "Client")} - ${escapeHtml(appointment.service || "Appointment")}</strong><small>${escapeHtml(statusLabels[status] || status.toUpperCase())}</small></div>`;
             timeline.appendChild(item);
         });
         if (!todayAppointments.length) timeline.innerHTML = '<p class="dashboard-empty-state">No appointments today.</p>';

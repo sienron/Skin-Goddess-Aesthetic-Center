@@ -1,11 +1,13 @@
 const express = require('express');
 const { rateLimit } = require('express-rate-limit');
 const db = require('../db');
+const { PostgresRateLimitStore } = require('../utils/postgresRateLimitStore');
 
 const router = express.Router();
 const subscriptionLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   limit: 5,
+  store: new PostgresRateLimitStore('newsletter-subscriptions'),
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Too many subscription attempts. Please try again later.' },

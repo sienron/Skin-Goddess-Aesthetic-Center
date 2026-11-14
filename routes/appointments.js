@@ -16,7 +16,8 @@ const { randomBytes } = require('crypto');
 const ExcelJS = require('exceljs');
 const { verifyPayMongoWebhookSignature } = require('../utils/paymongoWebhookSecurity');
 const { RATING_WINDOW_DAYS } = require('../utils/appointmentRatings');
-const ratingLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, message: { message: 'Too many rating attempts. Try again later.' } });
+const { PostgresRateLimitStore } = require('../utils/postgresRateLimitStore');
+const ratingLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, store: new PostgresRateLimitStore('appointment-ratings'), message: { message: 'Too many rating attempts. Try again later.' } });
 const { VALID_SLOTS, CLOSING_TIME, CLOSED_WEEKDAYS, MAX_ADVANCE_DAYS, MIN_BOOKING_LEAD_MINUTES, DEFAULT_BUFFER_MINUTES, to24h, from24h, addMinutes, overlapsLunchBreak, manilaNow, isAppointmentStartedToday, isSlotInPast, isSlotTooSoon } = require('../utils/slots');
 
 function checkoutReturnUrl(baseUrl, outcome, referenceNumber) {

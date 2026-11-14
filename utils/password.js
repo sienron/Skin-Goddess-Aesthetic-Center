@@ -7,4 +7,6 @@ function isValidPassword(password) {
     && /[^A-Za-z0-9\s]/.test(password);
 }
 
+isValidPassword.BCRYPT_SALT_ROUNDS = 12;
+
 module.exports = isValidPassword;

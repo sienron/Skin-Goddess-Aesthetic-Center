@@ -3,12 +3,14 @@ const { rateLimit } = require('express-rate-limit');
 const db = require('../db');
 const { requireRole } = require('../middleware/auth');
 const { sendInquiryReply, sendInquiryNotification } = require('../utils/mailer');
+const { PostgresRateLimitStore } = require('../utils/postgresRateLimitStore');
 
 const router = express.Router();
 const INQUIRY_TYPES = new Set(['booking', 'services', 'feedback', 'other']);
 const inquirySubmissionLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 5,
+  store: new PostgresRateLimitStore('inquiry-submissions'),
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Too many inquiry submissions. Please try again later.' },

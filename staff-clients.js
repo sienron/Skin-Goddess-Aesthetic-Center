@@ -88,7 +88,7 @@
         setModalValue("clientModalAesthetician", appointment.aesthetician);
         const statusBadge = document.getElementById("clientModalStatus");
         statusBadge.className = `client-status ${statusClass(status)}`;
-        statusBadge.innerHTML = `<span></span>${statusLabels[status] || status.toUpperCase()}`;
+        statusBadge.innerHTML = `<span></span>${escapeHtml(statusLabels[status] || status.toUpperCase())}`;
         clientModalOverlay.classList.add("show");
         clientModalOverlay.setAttribute("aria-hidden", "false");
     }
@@ -151,7 +151,7 @@
                     </td>
                     <td>${escapeHtml(appointment.service || "—")}</td>
                     <td></td>
-                    <td><span class="client-status ${statusClass(status)}"><span></span>${statusLabels[status] || status.toUpperCase()}</span></td>
+                    <td><span class="client-status ${statusClass(status)}"><span></span>${escapeHtml(statusLabels[status] || status.toUpperCase())}</span></td>
                     <td><button class="client-action" type="button" data-appointment-id="${escapeHtml(appointment.id || "")}">View</button><button class="client-action client-action--muted" type="button" disabled>Add Notes</button></td>
                 `;
                 row.children[2].replaceWith(createAppointmentCell(appointment));

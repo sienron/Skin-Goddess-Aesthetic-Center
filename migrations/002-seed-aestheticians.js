@@ -1,10 +1,20 @@
-// Phase A: development/staging aestheticians for appointment assignment.
+// Local development aestheticians for appointment assignment.
 // The password is never hard-coded; set SEED_AESTHETICIAN_PASSWORD in .env.
+require('dotenv').config();
+
+const LOCAL_DATABASE_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
+const databaseHost = String(process.env.DB_HOST || '').trim().toLowerCase();
+
+if (process.env.NODE_ENV === 'production' || !LOCAL_DATABASE_HOSTS.has(databaseHost)) {
+  console.log('Skipped development aesthetician seed outside a local environment.');
+  process.exit(0);
+}
+
 const bcrypt = require('bcryptjs');
 const db = require('../db');
 
 const AESTHETICIANS = [
-  { email: 'geraselragudo123@gmail.com', firstName: 'Gerase', lastName: 'Ragudo' },
+  { email: 'demo.aesthetician@skingoddess.test', firstName: 'Demo', lastName: 'Aesthetician' },
 ];
 
 async function seedAestheticians() {
