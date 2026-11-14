@@ -88,6 +88,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     return {
       id,
+      isHistoricalRecord: record.is_historical_record === true,
+      timeAssigned: record.time_assigned_by_admin === true,
       clinicPendingResolution: record.clinic_pending_resolution === true,
       ref: 'APT-' + id.padStart(4, '0'),
       client: String(record.client || `${record.first_name || ''} ${record.last_name || ''}`.trim() || 'Client'),
@@ -106,8 +108,8 @@ document.addEventListener('DOMContentLoaded', () => {
       assignedTo: String(record.assigned_to || record.aesthetician || 'Unassigned'),
       status: String(record.status || record.appointment_status || '').toLowerCase().replace(/_/g, '-'),
       isToday: dateKey === manilaDateKey(),
-      fee: Number(record.fee ?? record.booked_service_price) || 0,
-      depositAmount: Number(record.deposit_amount ?? record.depositAmount ?? record.booked_reservation_fee) || 0,
+      fee: (record.fee ?? record.booked_service_price) == null ? null : Number(record.fee ?? record.booked_service_price),
+      depositAmount: (record.deposit_amount ?? record.depositAmount ?? record.booked_reservation_fee) == null ? null : Number(record.deposit_amount ?? record.depositAmount ?? record.booked_reservation_fee),
       paymentStatus: String(record.payment_status || 'unpaid').toLowerCase(),
       contact: String(record.contact || record.contact_number || '—'),
       cancellationRequestStatus: record.cancellation_request_status || null,
@@ -263,7 +265,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('appointmentDetailsReference').textContent = appointment.ref;
     document.getElementById('appointmentDetailsClient').textContent = appointment.client;
     document.getElementById('appointmentDetailsService').textContent = appointment.service;
-    document.getElementById('appointmentDetailsDate').textContent = `${appointment.date} · ${appointment.time}`;
+    document.getElementById('appointmentDetailsDate').textContent = `${appointment.date} · ${appointment.time}${appointment.timeAssigned ? ' (assigned time)' : ''}`;
     document.getElementById('appointmentDetailsDuration').textContent = appointment.duration;
     document.getElementById('appointmentDetailsScheduledEnd').textContent = displayTime(appointment.scheduledEnd);
     document.getElementById('appointmentDetailsExpectedEnd').textContent = displayTime(appointment.expectedEnd);
@@ -1167,7 +1169,7 @@ document.addEventListener('DOMContentLoaded', () => {
     clientTd.appendChild(clientBox);
 
     const serviceTd = stackCell(a.service, a.duration, 'apt-name');
-    const dateTd = stackCell(a.date, a.time, 'apt-name');
+    const dateTd = stackCell(a.date, a.time + (a.timeAssigned ? ' · Assigned time' : ''), 'apt-name');
     const assignedTd = el('td', '', a.assignedTo);
 
     const statusTd = el('td');
@@ -1193,6 +1195,10 @@ document.addEventListener('DOMContentLoaded', () => {
     secondBtn.classList.add(isClosed ? 'apt-action--rebook' : 'apt-action--edit');
     secondBtn.type = 'button';
     secondBtn.dataset.action = isClosed ? 'rebook' : 'edit';
+    if (a.isHistoricalRecord) {
+      secondBtn.disabled = true;
+      secondBtn.title = 'Choose a current service through New Appointment to make another booking.';
+    }
     secondBtn.dataset.ref = a.ref;
     actions.appendChild(viewBtn);
     actions.appendChild(secondBtn);
@@ -1624,6 +1630,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (!cancelledModal || !cancelledViewBtn || !cancelledBody || !cancelledPills || !reasonList) return;
 
   function formatFee(amount) {
+    if (amount == null || !Number.isFinite(amount)) return 'Not recorded';
     return '₱' + amount.toLocaleString('en-US');
   }
 

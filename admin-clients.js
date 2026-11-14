@@ -54,9 +54,9 @@ document.addEventListener("DOMContentLoaded", () => {
     set("clientModalAvatar", name.split(" ").map((part) => part[0] || "").slice(0, 2).join("").toUpperCase() || "--");
     set("clientModalNumber", `Appointment #${appointment.appointment_id}`);
     set("clientModalDate", dateLabel(appointment.date, appointment.start));
-    set("clientModalTime", timeLabel(appointment.start));
+    set("clientModalTime", timeLabel(appointment.start) + (appointment.time_assigned_by_admin ? " (assigned time)" : ""));
     set("clientModalService", appointment.service);
-    set("clientModalDuration", appointment.end ? `${timeLabel(appointment.start)} - ${timeLabel(appointment.end)}` : "—");
+    set("clientModalDuration", appointment.duration_is_estimated ? "Not recorded" : appointment.end ? `${timeLabel(appointment.start)} - ${timeLabel(appointment.end)}` : "—");
     set("clientModalFee", currency(appointment.fee));
     set("clientModalDeposit", currency(appointment.deposit_amount));
     set("clientModalContact", appointment.contact);

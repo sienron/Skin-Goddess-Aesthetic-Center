@@ -281,6 +281,8 @@ function getCustomerDetails(body, user, res) {
 const ADMIN_APPOINTMENT_SELECT = `
   SELECT a.appointment_id,
          a.is_demo,
+         a.historical_import_key IS NOT NULL AS is_historical_record,
+         COALESCE(a.historical_source->>'time_assigned_by_admin' = 'true', FALSE) AS time_assigned_by_admin,
          EXISTS(SELECT 1 FROM clinic_appointment_impacts ci WHERE ci.appointment_id=a.appointment_id AND ci.resolution='pending') AS clinic_pending_resolution,
          a.service_id,
          a.aesthetician_id AS assigned_staff_id,
@@ -416,14 +418,17 @@ async function createAppointmentWorkbook(records) {
       displayAppointmentStatus(record.status),
       record.duration_is_estimated ? 'Not recorded' : Number(record.duration_minutes) || 0,
       record.duration_is_estimated ? 'Not recorded' : Number(record.buffer_minutes) || 0,
-      Number(record.fee) || 0,
-      Number(record.deposit_amount) || 0,
+      record.fee == null ? null : Number(record.fee),
+      record.deposit_amount == null ? null : Number(record.deposit_amount),
       String(record.payment_status || 'unpaid').replace(/_/g, ' '),
       record.contact || '—'
     ]);
     row.getCell(4).numFmt = 'dd mmm yyyy';
     [5, 6, 7].forEach((column) => {
       row.getCell(column).numFmt = 'h:mm AM/PM';
+      if (record.time_assigned_by_admin) {
+        row.getCell(column).note = 'Assigned by admin. Original appointment time and duration were not recorded.';
+      }
     });
     [12, 13].forEach((column) => {
       row.getCell(column).numFmt = '₱#,##0.00';
@@ -1458,7 +1463,7 @@ router.post('/admin/:id/rebook', requireRole('admin'), async (req, res) => {
       await client.query('SELECT pg_advisory_xact_lock_shared(5032026,1)');
       const originalResult = await client.query(`
         SELECT appointment_id, user_id, walk_in_name, service_id,
-               booked_service_price, booked_reservation_fee, appointment_status, is_demo
+               booked_service_price, booked_reservation_fee, appointment_status, is_demo, historical_import_key
         FROM appointments
         WHERE appointment_id = $1
         FOR UPDATE
@@ -1469,6 +1474,11 @@ router.post('/admin/:id/rebook', requireRole('admin'), async (req, res) => {
         throw error;
       }
       const original = originalResult.rows[0];
+      if (original.historical_import_key) {
+        const error = new Error('Choose a current service through New Appointment to make another booking.');
+        error.statusCode = 409;
+        throw error;
+      }
       if (original.is_demo) {
         const error = new Error('Synthetic survey appointments cannot be rebooked.');
         error.statusCode = 409;

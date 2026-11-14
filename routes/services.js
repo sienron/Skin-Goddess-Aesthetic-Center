@@ -28,7 +28,7 @@ function readServiceInput(body) {
 router.get('/admin', requireRole('admin'), async (req, res) => {
     try {
         const result = await db.query(
-            'SELECT service_id, service_name, category, description, duration_minutes, buffer_minutes, service_price, reservation_fee, is_active FROM services ORDER BY category, service_name'
+            'SELECT service_id, service_name, category, description, duration_minutes, buffer_minutes, service_price, reservation_fee, is_active FROM services WHERE is_historical_only = FALSE ORDER BY category, service_name'
         );
         res.json(result.rows);
     } catch (error) {
@@ -210,7 +210,7 @@ router.put('/category-prices', requireRole('admin'), async (req, res) => {
     try {
         const updatedServices = await db.transaction(async (client) => {
             const categoryServices = await client.query(
-                'SELECT service_id FROM services WHERE category = $1 FOR UPDATE',
+                'SELECT service_id FROM services WHERE category = $1 AND is_historical_only = FALSE FOR UPDATE',
                 [category]
             );
             if (categoryServices.rows.length !== submittedPrices.size
@@ -225,7 +225,7 @@ router.put('/category-prices', requireRole('admin'), async (req, res) => {
                 const result = await client.query(`
                     UPDATE services
                     SET service_price = $1, updated_at = NOW()
-                    WHERE service_id = $2 AND category = $3
+                    WHERE service_id = $2 AND category = $3 AND is_historical_only = FALSE
                     RETURNING service_id, service_name, service_price
                 `, [servicePrice, serviceId, category]);
                 updates.push(result.rows[0]);
@@ -256,7 +256,7 @@ router.put('/:id', requireRole('admin'), async (req, res) => {
             UPDATE services
             SET service_name = $1, category = $2, description = $3, duration_minutes = $4,
                 buffer_minutes = $5, service_price = $6, reservation_fee = $7, updated_at = NOW()
-            WHERE service_id = $8
+            WHERE service_id = $8 AND is_historical_only = FALSE
             RETURNING service_id, service_name, category, description, duration_minutes, buffer_minutes, service_price, reservation_fee, is_active
         `, [service.serviceName, service.category, service.description, service.durationMinutes, service.bufferMinutes, service.servicePrice, service.reservationFee, serviceId]);
         if (!result.rows.length) return res.status(404).json({ message: 'Service not found.' });
@@ -276,7 +276,7 @@ router.patch('/:id/status', requireRole('admin'), async (req, res) => {
     try {
         const result = await db.query(`
             UPDATE services SET is_active = $1, updated_at = NOW()
-            WHERE service_id = $2
+            WHERE service_id = $2 AND is_historical_only = FALSE
             RETURNING service_id, is_active
         `, [req.body.isActive, serviceId]);
         if (!result.rows.length) return res.status(404).json({ message: 'Service not found.' });
