@@ -42,6 +42,43 @@ The runner records required migrations through the selected baseline as
 afterward. If the existing database's baseline is unknown, leave the variables
 unset; startup remains blocked until its history is established.
 
+### Audited legacy recovery (non-contiguous migration state)
+
+For the reviewed legacy production schema, `node scripts/recover-existing-database.js`
+performs a read-only postcondition audit for all required migrations. It distinguishes
+verified current schema from genuinely missing changes, including changes applied out
+of registry order. `adopted` records mean the equivalent current state was verified;
+their timestamp is the review time, not a reconstructed historical execution date.
+Seeded content, catalog prices and inventory are mutable clinic data and are never
+reseeded as part of recovery. Local development staff seeds are production no-ops.
+
+Back up and restore to a disposable copy before applying recovery. Review the
+preview, then use `--apply --expected-host HOST --expected-database DATABASE
+--fingerprint PREVIEW_FINGERPRINT`. The command takes the same advisory lock as
+startup, verifies the preview again, and compares every existing application table's
+row count and content fingerprint before committing adoption. Its only reviewed
+legacy repair is newsletter table/index creation, enclosed in the same transaction.
+Any other unverified unsafe migration still blocks recovery. It does not infer a
+contiguous baseline or bypass the startup guard.
+
+After adoption, `npm run migrate` applies the remaining safe migrations through the
+ordinary runner. For the November 15, 2026 snapshot, those were product-sale customer
+links, review timestamp timezones, the existing nail-tech-to-aesthetician migration
+(one account and one team listing), purchase review audit fields, and payment retry
+keys. Existing appointments, service prices, payments and inventory stock are
+preserved. Re-running the normal runner performs no completed migration again.
+Migration checksums normalize CRLF to LF so Windows checkouts match Linux deployment
+bytes; actual source edits still change the checksum. Recovery tests also compare
+every recorded checksum against committed repository bytes.
+
+`tests/legacy-migration-recovery.test.js` rehearses recovery only on a restored local
+copy with DB_HOST=127.0.0.1, DB_PORT=55440, DB_NAME matching
+`sg_migration_recovery_test_` followed by digits, and matching
+LEGACY_RECOVERY_TEST_DATABASE. It covers rollback, stale previews, data preservation,
+remaining migrations, repeated startup and Finance handlers. Use a fresh restored
+copy for each run. `GET /api/health` checks DB readiness without a session and reports
+the deployed commit when Render supplies it; database errors return a sanitized 503.
+
 ### Unsafe legacy migrations
 
 Some legacy migrations are not enclosed in one migration-wide transaction, so

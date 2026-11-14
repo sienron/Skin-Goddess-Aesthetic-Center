@@ -32,6 +32,9 @@ const sessionSecret = process.env.SESSION_SECRET;
 app.set('trust proxy', 1);
 app.use(createSecurityHeaders());
 
+// Public readiness check, before session/auth middleware; never exposes DB details.
+app.get('/api/health', require('./utils/health').createHealthHandler(db));
+
 app.use('/api/appointments/paymongo/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json({ limit: '8mb' }));
 
