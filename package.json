@@ -50,6 +50,7 @@
     "test:clinic": "node --test tests/clinic-management.test.js",
     "migrate:historical-appointments": "node scripts/run-migrations.js --target=052-historical-appointment-records.js",
     "maintenance:october-appointments": "node scripts/replace-test-appointments.js",
+    "maintenance:october-prices": "node scripts/reconcile-october-prices.js",
     "migrate:manual-testimonials": "node scripts/run-migrations.js --target=053-manual-testimonials.js"
   },
   "dependencies": {

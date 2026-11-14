@@ -293,7 +293,7 @@ test('admin and finance password-to-TOTP logins honor the stay-signed-in selecti
     assert.equal(req.session.role, role);
     assert.equal(req.session.staySignedIn, staySignedIn ? true : undefined);
     const maxAge = staySignedIn ? STAY_SIGNED_IN_MAX_AGE_MS : DEFAULT_SESSION_MAX_AGE_MS;
-    assert.equal(req.session.cookie.maxAge, maxAge);
+    assert.equal(req.session.cookie.maxAge, staySignedIn ? maxAge : null);
     assert.ok(req.session.sessionExpiresAt >= beforeLogin + maxAge);
     assert.ok(req.session.sessionExpiresAt <= Date.now() + maxAge);
     assert.equal(req.session.pendingPrivilegedMfaStaySignedIn, undefined);
@@ -360,7 +360,7 @@ test('email OTP cannot authenticate a privileged account via a stale or alternat
   assert.equal(req.session.userId, undefined);
 });
 
-test('client email OTP flow remains available without a privileged MFA marker', async () => {
+test('client email OTP honors the stay-signed-in selection without a privileged MFA marker', async () => {
   const user = authUser({ role: 'client', totp_enabled: false });
   const codeHash = hashOtpCode('123456', user.user_id, 'login_verification');
   db.query = async () => ({ rows: [user] });
@@ -369,24 +369,26 @@ test('client email OTP flow remains available without a privileged MFA marker', 
       ? { rows: [{ otp_id: 1, code_hash: codeHash }] }
       : { rows: [] },
   });
-  const req = {
-    body: { code: '123456' },
-    session: sessionWith({
-      pendingLoginUserId: 17,
-      pendingLoginStaySignedIn: true,
-      pendingLoginExpiresAt: Date.now() + 10 * 60 * 1000,
-    }),
-  };
-  const response = responseCapture();
+  for (const staySignedIn of [true, false]) {
+    const req = {
+      body: { code: '123456' },
+      session: sessionWith({
+        pendingLoginUserId: 17,
+        pendingLoginStaySignedIn: staySignedIn,
+        pendingLoginExpiresAt: Date.now() + 10 * 60 * 1000,
+      }),
+    };
+    const response = responseCapture();
 
-  await routeHandler('/login/verify-otp', 'post')(req, response);
+    await routeHandler('/login/verify-otp', 'post')(req, response);
 
-  assert.equal(response.statusCode, 200);
-  assert.equal(response.body.role, 'client');
-  assert.equal(req.session.userId, 17);
-  assert.equal(req.session.mfaVerifiedAt, undefined);
-  assert.equal(req.session.staySignedIn, true);
-  assert.equal(req.session.cookie.maxAge, 1000 * 60 * 60 * 24 * 30);
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.body.role, 'client');
+    assert.equal(req.session.userId, 17);
+    assert.equal(req.session.mfaVerifiedAt, undefined);
+    assert.equal(req.session.staySignedIn, staySignedIn ? true : undefined);
+    assert.equal(req.session.cookie.maxAge, staySignedIn ? STAY_SIGNED_IN_MAX_AGE_MS : null);
+  }
 });
 
 test('valid recovery code rotates the stored recovery set and authenticates once', async () => {

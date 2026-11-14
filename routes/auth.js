@@ -31,7 +31,7 @@ const { createPreserveDemoCustomerAccess } = require('../utils/demoCustomerAcces
 const { isValidName, isValidEmail } = require('../utils/userValidation');
 const { hashOtpCode, verifyOtpCode } = require('../utils/otpSecurity');
 const { isPrivilegedRole } = require('../utils/privilegedMfa');
-const { getSessionMaxAge } = require('../utils/sessionSecurity');
+const { getSessionMaxAge, setSessionCookieLifetime } = require('../utils/sessionSecurity');
 const {
   createTotpSecret,
   matchTotpStep,
@@ -248,7 +248,7 @@ async function establishAuthenticatedSession(req, user, staySignedIn) {
   }
   const maxAge = getSessionMaxAge(req.session);
   req.session.sessionExpiresAt = Date.now() + maxAge;
-  req.session.cookie.maxAge = maxAge;
+  setSessionCookieLifetime(req.session, maxAge);
 }
 
 async function recentLoginOtpCount(userId) {

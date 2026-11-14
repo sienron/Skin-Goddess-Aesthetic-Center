@@ -58,7 +58,7 @@ async function buildPlan(client) {
   const imported = hasImportKey
     ? (await client.query(`SELECT a.historical_import_key AS key, a.walk_in_name AS name, a.appointment_date::text AS date,
           a.appointment_time::text AS start, a.appointment_end_time::text AS end, a.appointment_status AS status,
-          s.service_name AS treatment FROM appointments a JOIN services s USING(service_id)
+          COALESCE(a.historical_source->>'original_treatment', s.service_name) AS treatment FROM appointments a JOIN services s USING(service_id)
           WHERE historical_import_key LIKE $1 ORDER BY historical_import_key`, [`${IMPORT_PREFIX}%`])).rows
     : [];
   const hours = (await client.query('SELECT weekday,is_open,opening_time::text,closing_time::text FROM clinic_operating_hours ORDER BY weekday')).rows;

@@ -13,8 +13,12 @@ function migrationPath(filename) {
   return path.join(migrationsDirectory, filename);
 }
 
+function checksumContents(contents) {
+  return crypto.createHash('sha256').update(String(contents).replace(/\r\n/g, '\n')).digest('hex');
+}
+
 function checksum(filename) {
-  return crypto.createHash('sha256').update(fs.readFileSync(migrationPath(filename))).digest('hex');
+  return checksumContents(fs.readFileSync(migrationPath(filename), 'utf8'));
 }
 
 function validateRegistry() {
@@ -339,4 +343,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { validateRegistry, requestedMigrations, findPendingMigrations, run };
+module.exports = { validateRegistry, requestedMigrations, findPendingMigrations, run, checksum, checksumContents, createLedger };

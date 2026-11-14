@@ -7,7 +7,14 @@ const {
   requestedMigrations,
   run,
   validateRegistry,
+  checksumContents,
 } = require('../scripts/run-migrations');
+
+test('migration checksums are identical across Windows and Linux line endings', () => {
+  const lf='const value = 1;\nmodule.exports = value;\n';
+  assert.equal(checksumContents(lf),checksumContents(lf.replace(/\n/g,'\r\n')));
+  assert.notEqual(checksumContents(lf),checksumContents(lf.replace('1','2')));
+});
 
 test('migration registry covers every migration file with unique full-filename IDs', () => {
   assert.doesNotThrow(validateRegistry);

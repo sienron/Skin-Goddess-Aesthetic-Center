@@ -17,7 +17,7 @@ const {
 } = require('./utils/privilegedMfa');
 const { requirePrivilegedMfa } = require('./middleware/privilegedMfa');
 const { createSecurityHeaders } = require('./middleware/securityHeaders');
-const { destroySession, DEFAULT_SESSION_MAX_AGE_MS } = require('./utils/sessionSecurity');
+const { destroySession } = require('./utils/sessionSecurity');
 const { enforceSessionLifetime } = require('./middleware/sessionLifetime');
 const PgSession = require('connect-pg-simple')(session);
 
@@ -32,6 +32,9 @@ const sessionSecret = process.env.SESSION_SECRET;
 app.set('trust proxy', 1);
 app.use(createSecurityHeaders());
 
+// Public readiness check, before session/auth middleware; never exposes DB details.
+app.get('/api/health', require('./utils/health').createHealthHandler(db));
+
 app.use('/api/appointments/paymongo/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json({ limit: '8mb' }));
 
@@ -42,7 +45,7 @@ app.use(session({
   saveUninitialized: false,
   rolling: true,
   cookie: {
-    maxAge: DEFAULT_SESSION_MAX_AGE_MS,
+    maxAge: null,
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
     sameSite: 'lax'
