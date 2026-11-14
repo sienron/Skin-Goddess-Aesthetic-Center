@@ -148,21 +148,32 @@
                             <p>OCR-confirmed purchases awaiting Finance review will appear here.</p>
                         </div>
                     </div>
-                    <div id="pendingPurchaseDetailView" hidden>
-                        <button class="fin-button fin-purchase-review-back" id="pendingPurchaseBackBtn"
-                            type="button">Back to pending purchases</button>
-                        <dl class="fin-detail-grid fin-purchase-review-details" id="purchaseReviewDetails"></dl>
-                        <form class="fin-form fin-purchase-rejection-form" id="purchaseRejectionForm">
-                            <label>Rejection reason<textarea id="purchaseRejectionReason" rows="3"
-                                    maxlength="2000" required></textarea></label>
-                            <p class="fin-form-message" id="purchaseReviewActionMessage" role="alert"></p>
-                            <div class="fin-modal-actions">
-                                <button class="fin-button fin-button-primary" id="approvePurchaseBtn"
-                                    type="button">Approve &amp; Record Expense</button>
-                                <button class="fin-button fin-button-danger" id="rejectPurchaseBtn"
-                                    type="button">Reject Purchase</button>
-                            </div>
-                        </form>
+                </section>
+            </div>
+            <div class="fin-modal-overlay" id="pendingPurchaseDetailModal" hidden>
+                <section class="fin-modal fin-modal--wide" id="pendingPurchaseDetailView" role="dialog"
+                    aria-modal="true" aria-labelledby="purchaseReviewTitle">
+                    <button class="fin-modal-close" type="button" data-close-purchase-details
+                        aria-label="Close purchase review">&times;</button>
+                    <h2 id="purchaseReviewTitle">Review inventory purchase</h2>
+                    <p class="fin-modal-copy" id="pendingPurchaseDetailMessage" role="status"
+                        aria-live="polite"></p>
+                    <dl class="fin-detail-grid fin-purchase-review-details" id="purchaseReviewDetails"></dl>
+                    <form class="fin-form fin-purchase-rejection-form" id="purchaseRejectionForm" hidden>
+                        <label>Rejection reason<textarea id="purchaseRejectionReason" rows="3"
+                                maxlength="2000" required></textarea></label>
+                        <p class="fin-form-message" id="purchaseReviewActionMessage" role="alert"></p>
+                        <div class="fin-modal-actions">
+                            <button class="fin-button" id="cancelPurchaseReviewBtn" type="button"
+                                data-close-purchase-details>Cancel</button>
+                            <button class="fin-button fin-button-danger" id="rejectPurchaseBtn"
+                                type="button">Reject Purchase</button>
+                            <button class="fin-button fin-button-primary" id="approvePurchaseBtn"
+                                type="button">Confirm &amp; Record Expense</button>
+                        </div>
+                    </form>
+                    <div class="fin-modal-actions" id="purchaseReviewCancelActions">
+                        <button class="fin-button" type="button" data-close-purchase-details>Cancel</button>
                     </div>
                 </section>
             </div>
@@ -172,7 +183,7 @@
     <script src="header.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
     <script src="finance-common.js"></script>
-    <script src="finance-expenses.js?v=20261115-3"></script>
+    <script src="finance-expenses.js?v=20261115-4"></script>
     <script src="admin-context-nav.js"></script>
 </body>
 

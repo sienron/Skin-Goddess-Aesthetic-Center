@@ -26,8 +26,21 @@ test('Admin and Finance Officer share Finance pages, navigation, and review APIs
   }
 
   assert.match(expensesPage, /id="pendingExpenseReviewBtn"/);
+  assert.match(expensesPage, /id="pendingPurchaseDetailModal"/);
+  assert.match(expensesPage, /Confirm &amp; Record Expense/);
+  assert.match(expensesPage, /data-close-purchase-details/);
   assert.match(expensesPage, /<script src="admin-context-nav\.js"><\/script>/);
   assert.match(expensesClient, /\/api\/finance\/inventory-purchase-suggestions/);
+  assert.doesNotMatch(expensesClient, /pendingPurchaseBackBtn/);
+  const detailFlow = expensesClient.slice(
+    expensesClient.indexOf('async function openPurchaseReviewDetails'),
+    expensesClient.indexOf('function closePurchaseReviewDetails'),
+  );
+  assert.ok(
+    detailFlow.indexOf('openModal(elements.pendingPurchaseDetailModal)')
+      < detailFlow.indexOf('await common.fetchJson'),
+    'the separate details modal should open immediately and show loading/errors',
+  );
   assert.match(financeApi, /router\.use\(requireRole\('finance_officer', 'admin'\)\)/);
 });
 

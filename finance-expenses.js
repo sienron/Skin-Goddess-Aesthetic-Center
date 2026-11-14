@@ -3,6 +3,7 @@
   if (!common) return;
   const state = { from: common.monthStart(), to: common.manilaToday(), category: '', search: '', sort: 'date', direction: 'desc', page: 1, limit: 25, total: 0, rows: [], pendingPurchases: [], selectedPurchase: null, reviewBusy: false };
   let expenseRequest = 0;
+  let purchaseDetailRequest = 0;
   const elements = Object.fromEntries([
     'expenseFrom', 'expenseTo', 'expenseCategory', 'expenseSearch', 'expenseTotal', 'expenseComparison', 'utilitiesExpenseTotal',
     'expenseRows', 'expenseEmpty', 'expensePrev', 'expenseNext', 'expensePageLabel',
@@ -13,7 +14,8 @@
     'expenseHistoryModal', 'expenseHistoryMessage', 'expenseHistoryRows', 'expenseHistoryEmpty',
     'pendingExpenseReviewBtn', 'pendingExpenseReviewBadge', 'pendingExpenseReviewModal',
     'pendingExpenseReviewMessage', 'pendingPurchaseListView', 'pendingPurchaseRows',
-    'pendingPurchaseEmpty', 'pendingPurchaseDetailView', 'pendingPurchaseBackBtn',
+    'pendingPurchaseEmpty', 'pendingPurchaseDetailModal', 'pendingPurchaseDetailView',
+    'pendingPurchaseDetailMessage', 'purchaseReviewCancelActions',
     'purchaseReviewDetails', 'purchaseRejectionForm', 'purchaseRejectionReason',
     'purchaseReviewActionMessage', 'approvePurchaseBtn', 'rejectPurchaseBtn',
   ].map((id) => [id, document.getElementById(id)]));
@@ -151,7 +153,6 @@
 
   async function openPendingExpenseReview() {
     elements.pendingPurchaseListView.hidden = false;
-    elements.pendingPurchaseDetailView.hidden = true;
     elements.pendingExpenseReviewMessage.textContent = 'Loading pending purchases…';
     elements.pendingPurchaseEmpty.hidden = true;
     openModal(elements.pendingExpenseReviewModal);
@@ -173,14 +174,22 @@
   }
 
   async function openPurchaseReviewDetails(purchaseId) {
-    elements.pendingExpenseReviewMessage.textContent = 'Loading purchase details…';
-    elements.pendingPurchaseRows.querySelectorAll('button').forEach((button) => { button.disabled = true; });
+    const requestId = ++purchaseDetailRequest;
+    state.selectedPurchase = null;
+    elements.purchaseReviewDetails.replaceChildren();
+    elements.pendingPurchaseDetailMessage.textContent = 'Loading purchase details…';
+    elements.purchaseReviewActionMessage.textContent = '';
+    elements.purchaseRejectionReason.value = '';
+    elements.purchaseRejectionForm.hidden = true;
+    elements.purchaseReviewCancelActions.hidden = false;
+    closeModal(elements.pendingExpenseReviewModal);
+    openModal(elements.pendingPurchaseDetailModal);
     try {
       const purchase = await common.fetchJson(
         `/api/finance/inventory-purchase-suggestions/${encodeURIComponent(purchaseId)}`,
       );
+      if (requestId !== purchaseDetailRequest) return;
       state.selectedPurchase = purchase;
-      elements.purchaseReviewDetails.replaceChildren();
       appendPurchaseDetail('Product name', purchase.product_name);
       appendPurchaseDetail('Quantity received', purchase.quantity);
       appendPurchaseDetail('Unit purchase cost', common.formatPeso(purchase.unit_price));
@@ -206,20 +215,26 @@
       const canReview = purchase.review_status === 'pending' && !purchase.expense_id;
       const hasPositiveCost = Number(purchase.total_cost) > 0;
       elements.purchaseRejectionForm.hidden = !canReview;
+      elements.purchaseReviewCancelActions.hidden = canReview;
       elements.purchaseRejectionReason.value = '';
       elements.purchaseReviewActionMessage.textContent = canReview
         ? (hasPositiveCost ? '' : 'A purchase with a zero total cannot be recorded as an expense.')
         : `This purchase is already ${purchase.review_status}.`;
       elements.approvePurchaseBtn.disabled = !canReview || !hasPositiveCost;
       elements.rejectPurchaseBtn.disabled = !canReview;
-      elements.pendingPurchaseListView.hidden = true;
-      elements.pendingPurchaseDetailView.hidden = false;
-      elements.pendingExpenseReviewMessage.textContent = '';
+      elements.pendingPurchaseDetailMessage.textContent = '';
     } catch (error) {
-      elements.pendingExpenseReviewMessage.textContent = `Could not load purchase details: ${error.message}`;
-    } finally {
-      elements.pendingPurchaseRows.querySelectorAll('button').forEach((button) => { button.disabled = false; });
+      if (requestId === purchaseDetailRequest) {
+        elements.pendingPurchaseDetailMessage.textContent = `Could not load purchase details: ${error.message}`;
+      }
     }
+  }
+
+  function closePurchaseReviewDetails() {
+    purchaseDetailRequest += 1;
+    state.selectedPurchase = null;
+    closeModal(elements.pendingPurchaseDetailModal);
+    openModal(elements.pendingExpenseReviewModal);
   }
 
   async function submitPurchaseReview(action) {
@@ -243,8 +258,7 @@
       );
       updatePendingPurchaseBadge(state.pendingPurchases.length);
       renderPendingPurchases();
-      elements.pendingPurchaseDetailView.hidden = true;
-      elements.pendingPurchaseListView.hidden = false;
+      closePurchaseReviewDetails();
       elements.pendingExpenseReviewMessage.textContent = action === 'approve'
         ? 'Purchase approved and expense recorded.'
         : 'Purchase rejected. Inventory stock was not changed.';
@@ -419,11 +433,6 @@
   });
   elements.exportExpensesXlsx.addEventListener('click', exportExpenses);
   elements.pendingExpenseReviewBtn.addEventListener('click', openPendingExpenseReview);
-  elements.pendingPurchaseBackBtn.addEventListener('click', () => {
-    elements.pendingPurchaseDetailView.hidden = true;
-    elements.pendingPurchaseListView.hidden = false;
-    elements.pendingExpenseReviewMessage.textContent = '';
-  });
   elements.approvePurchaseBtn.addEventListener('click', () => submitPurchaseReview('approve'));
   elements.rejectPurchaseBtn.addEventListener('click', () => submitPurchaseReview('reject'));
   elements.expenseRows.addEventListener('click', (event) => {
@@ -445,9 +454,22 @@
   document.querySelectorAll('[data-close-void]').forEach((button) => button.addEventListener('click', () => closeModal(elements.voidModal)));
   document.querySelectorAll('[data-close-expense-history]').forEach((button) => button.addEventListener('click', () => closeModal(elements.expenseHistoryModal)));
   document.querySelectorAll('[data-close-pending-review]').forEach((button) => button.addEventListener('click', () => closeModal(elements.pendingExpenseReviewModal)));
-  [elements.expenseModal, elements.voidModal, elements.expenseHistoryModal, elements.pendingExpenseReviewModal].forEach((modal) => {
+  document.querySelectorAll('[data-close-purchase-details]').forEach((button) => button.addEventListener('click', closePurchaseReviewDetails));
+  [elements.expenseModal, elements.voidModal, elements.expenseHistoryModal, elements.pendingExpenseReviewModal, elements.pendingPurchaseDetailModal].forEach((modal) => {
     common.bindAccessibleModal(modal);
-    modal.addEventListener('click', (event) => { if (event.target === modal) closeModal(modal); });
+    modal.addEventListener('click', (event) => {
+      if (event.target !== modal) return;
+      if (modal === elements.pendingPurchaseDetailModal) closePurchaseReviewDetails();
+      else closeModal(modal);
+    });
+    if (modal === elements.pendingPurchaseDetailModal) {
+      modal.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+          purchaseDetailRequest += 1;
+          state.selectedPurchase = null;
+        }
+      });
+    }
   });
 
   elements.expenseForm.addEventListener('submit', async (event) => {
