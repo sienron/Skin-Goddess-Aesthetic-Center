@@ -821,13 +821,16 @@ router.get('/payments/:id/receipt', endpoint(async (req, res) => {
 router.get('/appointments/:id', endpoint(async (req, res) => {
   dateRange(req.query);
   const appointmentId = idValue(req.params.id, 'Appointment ID');
-  const result = await db.query(`SELECT a.appointment_id, a.user_id AS customer_id, a.appointment_date::text AS appointment_date, a.appointment_status, a.booked_service_price::float8 AS service_price, COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Client') AS client, c.email, s.service_name AS service FROM appointments a LEFT JOIN users c ON c.user_id = a.user_id JOIN services s ON s.service_id = a.service_id WHERE a.appointment_id = $1 AND a.is_demo = FALSE`, [appointmentId]);
+  const result = await db.query(`SELECT a.appointment_id, a.user_id AS customer_id, a.appointment_date::text AS appointment_date, a.appointment_status, a.payment_status, a.booked_service_price::float8 AS service_price, COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Client') AS client, c.email, s.service_name AS service FROM appointments a LEFT JOIN users c ON c.user_id = a.user_id JOIN services s ON s.service_id = a.service_id WHERE a.appointment_id = $1 AND a.is_demo = FALSE`, [appointmentId]);
   if (!result.rows.length) throw new ApiError(404, 'Appointment not found.');
   const appointment = result.rows[0];
   const payments = await db.query(`SELECT payment_id, payment_type, amount::float8 AS amount, method, reference_no, note, status, (created_at AT TIME ZONE 'Asia/Manila')::date::text AS payment_date FROM payments WHERE appointment_id = $1 ORDER BY created_at, payment_id`, [appointmentId]);
   const paid = payments.rows.filter((payment) => payment.status === 'posted').reduce((sum, payment) => sum + Number(payment.amount), 0);
+  const balanceNote = appointment.payment_status === 'not_recorded' || appointment.service_price == null
+    ? 'Service price or payment history not recorded; outstanding balance is unknown.'
+    : `Outstanding balance: ${Math.max(0, appointment.service_price - paid).toFixed(2)}`;
   res.json({
-    payment: { payment_id: null, appointment_id: appointment.appointment_id, customer_id: appointment.customer_id, payment_type: 'appointment', amount: appointment.service_price, method: '—', reference_no: null, note: `Outstanding balance: ${Math.max(0, appointment.service_price - paid).toFixed(2)}`, status: appointment.appointment_status, payment_date: appointment.appointment_date, appointment_date: appointment.appointment_date, appointment_status: appointment.appointment_status, service_price: appointment.service_price, client: appointment.client, email: appointment.email, service: appointment.service },
+    payment: { payment_id: null, appointment_id: appointment.appointment_id, customer_id: appointment.customer_id, payment_type: 'appointment', amount: appointment.service_price, method: '—', reference_no: null, note: balanceNote, status: appointment.appointment_status, payment_date: appointment.appointment_date, appointment_date: appointment.appointment_date, appointment_status: appointment.appointment_status, service_price: appointment.service_price, client: appointment.client, email: appointment.email, service: appointment.service },
     history: payments.rows,
   });
 }));
@@ -885,7 +888,7 @@ router.get('/sale-products', endpoint(async (req, res) => {
 
 async function receivableRows(from, to, query = {}, hasDateFilter = true) {
   const values = [DEPOSIT_DEDUCTED_FROM_PRICE];
-  const where = ["a.is_demo = FALSE", "a.appointment_status <> 'cancelled'"];
+  const where = ["a.is_demo = FALSE", "a.appointment_status <> 'cancelled'", "a.payment_status <> 'not_recorded'"];
   if (hasDateFilter) {
     values.push(from, to);
     where.push(`a.appointment_date BETWEEN $${values.length - 1}::date AND $${values.length}::date`);

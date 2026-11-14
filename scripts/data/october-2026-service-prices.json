@@ -1,0 +1,13 @@
+{
+  "version": "october-2026-client-confirmed-v1",
+  "confirmedOn": "2026-11-15",
+  "confirmation": "User confirmed the Excel aliases and that the client-approved catalog rates applied in October 2026. Payments were not supplied.",
+  "mappings": [
+    { "label": "ECT", "service": "Warts & Milia Removal", "price": "3000.00" },
+    { "label": "SF", "service": "RM Signature Facial", "price": "1500.00" },
+    { "label": "Signature facial", "service": "RM Signature Facial", "price": "1500.00" },
+    { "label": "Bf", "service": "Basic Facial", "price": "1000.00" },
+    { "label": "BF/MB", "service": "Basic Facial w/ Microboost", "price": "5000.00" },
+    { "label": "Meso Face / Fvl", "service": "Mesotherapy - Face w/ V-Lifting", "price": "3000.00" }
+  ]
+}

@@ -120,6 +120,7 @@ test('receivables include active appointment statuses and only eligible posted p
     assert.match(call.sql, /a\.appointment_date BETWEEN \$2::date AND \$3::date/);
     assert.match(call.sql, /ILIKE \$4/);
     assert.match(call.sql, /a\.appointment_status <> 'cancelled'/);
+    assert.match(call.sql, /a\.payment_status <> 'not_recorded'/);
     assert.doesNotMatch(call.sql, /a\.appointment_status = 'completed'/);
     assert.match(call.sql, /WHERE status = 'posted'/);
     assert.match(call.sql, /payment_type IN \('reservation', 'balance'\)/);
