@@ -138,6 +138,24 @@
     return new URLSearchParams({ from, to, ...extras }).toString();
   }
 
+  function paginateRows(rows, page, limit) {
+    if (!Array.isArray(rows) || !Number.isInteger(page) || !Number.isInteger(limit) || limit < 1) {
+      throw new TypeError('Pagination requires rows and positive integer page and limit values.');
+    }
+    const total = rows.length;
+    const pageCount = Math.max(1, Math.ceil(total / limit));
+    const currentPage = Math.max(1, Math.min(page, pageCount));
+    const start = (currentPage - 1) * limit;
+    return {
+      rows: rows.slice(start, start + limit),
+      page: currentPage,
+      pageCount,
+      total,
+      first: total ? start + 1 : 0,
+      last: Math.min(start + limit, total),
+    };
+  }
+
   async function fetchJson(url, options = {}) {
     const headers = new Headers(options.headers || {});
     if (options.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
@@ -302,6 +320,7 @@
     formatComparison,
     bindPeriodControls,
     rangeParams,
+    paginateRows,
     fetchJson,
     statusBadge,
     bindAccessibleModal,

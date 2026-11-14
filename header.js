@@ -19,6 +19,12 @@
         document.body.classList.add('profile-ready');
     }
 
+    function revealSignedInNavigation() {
+        document.querySelectorAll('[data-auth-required-nav]').forEach((item) => {
+            item.hidden = false;
+        });
+    }
+
     if (authPages.includes(currentPage)) {
         fetch('/api/auth/me')
             .then((res) => {
@@ -110,6 +116,7 @@
             throw new Error('not logged in');
         })
         .then((data) => {
+            revealSignedInNavigation();
             const fullName = `${data.firstName} ${data.lastName}`.trim();
             const initials = `${data.firstName?.[0] || ''}${data.lastName?.[0] || ''}`.toUpperCase();
             const roleLabel = formatRoleLabel(data.role);

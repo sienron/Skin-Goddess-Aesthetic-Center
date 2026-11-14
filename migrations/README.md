@@ -45,6 +45,14 @@ appointment workflows reschedule or cancel appointments. Pending Resolution is
 separate from the appointment's original status. Reminders and automatic status
 advancement skip unresolved appointments.
 
+## Finance Inventory Purchase Review
+
+Run `npm run migrate:finance-inventory-purchase-review` before using Pending
+Expense Review on an existing database. The standard `npm run migrate` also
+applies migration 053 through `postmigrate`. The migration marks already-linked
+purchase expenses as approved and adds pending/approved/rejected status plus
+reviewer, rejection-reason, and rejection-time audit fields.
+
 Notifications use the existing `notifications` table and Brevo mailer. Email
 delivery runs immediately after schedule changes and every minute through the
 existing notification jobs. There are three automatic attempts, durable claim

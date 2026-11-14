@@ -291,6 +291,7 @@ const ADMIN_APPOINTMENT_SELECT = `
          GREATEST(a.appointment_end_time, COALESCE(a.adjusted_expected_end_time, a.appointment_end_time))::text AS expected_end,
          a.appointment_status AS status,
          a.payment_status,
+         a.service_id,
          s.service_name AS service,
          CASE WHEN a.booked_duration_is_estimated THEN NULL ELSE a.booked_duration_minutes END AS duration_minutes,
          a.booked_duration_is_estimated AS duration_is_estimated,
@@ -1243,7 +1244,8 @@ router.post('/admin/:id/complete-with-inventory', requireRole('admin'), async (r
   try {
     const deduction = await db.transaction(async (client) => {
       const appointmentResult = await client.query(`
-        SELECT appointment_id, appointment_status, user_id, appointment_date::text AS service_date
+        SELECT appointment_id, appointment_status, user_id, booked_service_price, is_demo,
+          appointment_date::text AS service_date
         FROM appointments
         WHERE appointment_id = $1
         FOR UPDATE
@@ -1392,7 +1394,24 @@ router.post('/admin/:id/complete-with-inventory', requireRole('admin'), async (r
         error.statusCode = 409;
         throw error;
       }
-      return { appointment: statusResult.rows[0], updatedProducts };
+      const balanceResult = await client.query(`
+        SELECT ROUND(GREATEST($1::numeric - COALESCE(SUM(amount), 0), 0), 2) AS remaining_balance
+        FROM payments
+        WHERE appointment_id = $2 AND payment_type = 'reservation' AND status = 'posted'
+      `, [appointment.booked_service_price, appointmentId]);
+      const remainingBalance = Number(balanceResult.rows[0].remaining_balance);
+      let balancePayment = null;
+      if (!appointment.is_demo && remainingBalance > 0) {
+        const paymentResult = await client.query(`
+          INSERT INTO payments
+            (appointment_id, payment_type, amount, method, note, recorded_by)
+          VALUES ($1, 'balance', $2, 'cash',
+            'Automatically recorded on completion; payment received in person.', $3)
+          RETURNING payment_id, amount::float8 AS amount
+        `, [appointmentId, balanceResult.rows[0].remaining_balance, req.session.userId || null]);
+        balancePayment = paymentResult.rows[0];
+      }
+      return { appointment: statusResult.rows[0], updatedProducts, balancePayment };
     });
 
     for (const product of deduction.updatedProducts) {
@@ -1427,7 +1446,8 @@ router.post('/admin/:id/complete-with-inventory', requireRole('admin'), async (r
       message: 'Products were deducted and the appointment was completed.',
       appointment_id: appointmentId,
       status: 'completed',
-      products: deduction.updatedProducts
+      products: deduction.updatedProducts,
+      balance_payment: deduction.balancePayment
     });
   } catch (error) {
     if (error.code === 'P0001' || error.statusCode) return res.status(error.statusCode || 409).json({ message: error.message });
@@ -1980,6 +2000,32 @@ async function getValidatedBooking(userId, body, res) {
   return schedule ? { user, customer, ...schedule } : null;
 }
 
+async function assertAestheticianAvailable(queryable, aestheticianId, appointmentId, date, time, endTime) {
+  if (!aestheticianId) return;
+
+  const conflictResult = await queryable.query(`
+    SELECT 1
+    FROM appointments
+    WHERE aesthetician_id = $1
+      AND appointment_id <> $2
+      AND appointment_status IN ('confirmed', 'in_progress', 'completed')
+      AND tsrange(
+        appointment_date + appointment_time,
+        appointment_date + GREATEST(appointment_end_time, COALESCE(adjusted_expected_end_time, appointment_end_time))
+      ) && tsrange(
+        $3::date + $4::time,
+        $3::date + $5::time
+      )
+    LIMIT 1
+  `, [aestheticianId, appointmentId, date, time, endTime]);
+
+  if (conflictResult.rows.length > 0) {
+    const error = new Error('The requested slot is no longer available. Choose another slot.');
+    error.statusCode = 409;
+    throw error;
+  }
+}
+
 async function findAvailableAestheticians(
   queryClient,
   booking,
@@ -2523,32 +2569,14 @@ router.post('/:id/cancellation-request/review', requireRole('admin'), async (req
         }
         await assertClinicAvailable(client, requestedDate, requestedTime, requestedEndTime);
         await client.query('SELECT pg_advisory_xact_lock($1, $2)', [1042026, currentAppointment.aesthetician_id]);
-        const conflictResult = await client.query(`
-          SELECT 1
-          FROM appointments
-          WHERE aesthetician_id = $1
-            AND appointment_id <> $2
-            AND appointment_status IN ('confirmed', 'in_progress', 'completed')
-            AND tsrange(
-              appointment_date + appointment_time,
-              appointment_date + GREATEST(appointment_end_time, COALESCE(adjusted_expected_end_time, appointment_end_time))
-            ) && tsrange(
-              $3::date + $4::time,
-              $3::date + $5::time
-            )
-          LIMIT 1
-        `, [
+        await assertAestheticianAvailable(
+          client,
           currentAppointment.aesthetician_id,
           appointmentId,
           requestedDate,
           requestedTime,
           requestedEndTime
-        ]);
-        if (conflictResult.rows.length > 0) {
-          const error = new Error('The requested slot is no longer available. Choose another slot.');
-          error.statusCode = 409;
-          throw error;
-        }
+        );
 
         await client.query(`
           UPDATE appointments
@@ -2839,6 +2867,19 @@ router.post('/:id/reschedule', requireActiveAccount, async (req, res) => {
 
     try { await assertClinicAvailable(db, appointmentDate, appointmentTime, appointmentEndTime); }
     catch (error) { if (error.statusCode) return res.status(400).json({ message:error.message });throw error; }
+    try {
+      await assertAestheticianAvailable(
+        db,
+        appointment.aesthetician_id,
+        appointmentId,
+        appointmentDate,
+        appointmentTime,
+        appointmentEndTime
+      );
+    } catch (error) {
+      if (error.statusCode) return res.status(error.statusCode).json({ message: error.message });
+      throw error;
+    }
     if (!isAdmin && (isAssignedAesthetician || isClient)) {
       await db.query(`
         UPDATE appointments

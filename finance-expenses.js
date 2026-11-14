@@ -1,16 +1,21 @@
 (function () {
   const common = window.FinanceCommon;
   if (!common) return;
-  const state = { from: common.monthStart(), to: common.manilaToday(), category: '', search: '', page: 1, limit: 25, total: 0, rows: [] };
+  const state = { from: common.monthStart(), to: common.manilaToday(), category: '', search: '', sort: 'date', direction: 'desc', page: 1, limit: 25, total: 0, rows: [], pendingPurchases: [], selectedPurchase: null, reviewBusy: false };
   let expenseRequest = 0;
   const elements = Object.fromEntries([
-    'expenseFrom', 'expenseTo', 'expenseCategory', 'expenseSearch', 'expenseTotal', 'expenseComparison', 'machineExpenseTotal', 'utilitiesExpenseTotal', 'expensePeriodLabel',
+    'expenseFrom', 'expenseTo', 'expenseCategory', 'expenseSearch', 'expenseTotal', 'expenseComparison', 'utilitiesExpenseTotal',
     'expenseRows', 'expenseEmpty', 'expensePrev', 'expenseNext', 'expensePageLabel',
     'expensePageMessage', 'expenseModal', 'expenseForm', 'expenseId', 'expenseDate', 'expenseCategoryInput',
     'expenseDescription', 'expenseAmount', 'expenseSupplier', 'expenseReference', 'expenseFormMessage',
     'voidModal', 'voidForm', 'voidExpenseId', 'voidExpenseSummary', 'voidReason', 'voidFormMessage', 'addExpenseBtn',
     'exportExpensesXlsx',
     'expenseHistoryModal', 'expenseHistoryMessage', 'expenseHistoryRows', 'expenseHistoryEmpty',
+    'pendingExpenseReviewBtn', 'pendingExpenseReviewBadge', 'pendingExpenseReviewModal',
+    'pendingExpenseReviewMessage', 'pendingPurchaseListView', 'pendingPurchaseRows',
+    'pendingPurchaseEmpty', 'pendingPurchaseDetailView', 'pendingPurchaseBackBtn',
+    'purchaseReviewDetails', 'purchaseRejectionForm', 'purchaseRejectionReason',
+    'purchaseReviewActionMessage', 'approvePurchaseBtn', 'rejectPurchaseBtn',
   ].map((id) => [id, document.getElementById(id)]));
 
   function node(tag, className, text) {
@@ -39,6 +44,14 @@
       if (expense.voided_at && expense.void_reason) status.title = `Voided: ${expense.void_reason}`;
       statusCell.append(status);
       row.append(statusCell);
+      const recordedByName = expense.recorded_by_name
+        || (expense.recorded_by ? `User #${expense.recorded_by}` : 'Unknown');
+      const recordedByRole = {
+        admin: 'Admin',
+        finance_officer: 'Finance Officer',
+        inventory_officer: 'Inventory Officer',
+      }[expense.recorded_by_role] || expense.recorded_by_role || 'Unknown role';
+      row.append(node('td', '', `${recordedByName} (${recordedByRole})`));
       const actionsCell = node('td');
       const actions = node('div', 'fin-row-actions');
       const history = node('button', 'fin-button', 'History');
@@ -63,11 +76,10 @@
     const requestId = ++expenseRequest;
     const previous = common.previousRange(state.from, state.to);
     showMessage('');
-    const params = common.rangeParams(state.from, state.to, { page: state.page, limit: state.limit, category: state.category, q: state.search });
-    const [data, chartData, machineTrend, previousChartData] = await Promise.all([
+    const params = common.rangeParams(state.from, state.to, { page: state.page, limit: state.limit, category: state.category, q: state.search, sort: state.sort, direction: state.direction });
+    const [data, chartData, previousChartData] = await Promise.all([
       common.fetchJson(`/api/finance/expenses?${params}`),
       common.fetchJson(`/api/finance/expenses/by-category?${common.rangeParams(state.from, state.to, { category: state.category, q: state.search })}`),
-      common.fetchJson(`/api/finance/expenses/machine-trend?${common.rangeParams(state.from, state.to, { category: state.category, q: state.search })}`),
       common.fetchJson(`/api/finance/expenses/by-category?${common.rangeParams(previous.from, previous.to, { category: state.category, q: state.search })}`),
     ]);
     if (requestId !== expenseRequest) return;
@@ -79,48 +91,194 @@
     const previousRecordedTotal = previousChartData.reduce((sum, item) => sum + Number(item.amount), 0);
     elements.expenseTotal.textContent = common.formatPeso(total);
     elements.expenseComparison.textContent = `Recorded active expenses · ${common.formatComparison(total, previousRecordedTotal)} · previous ${previous.from} to ${previous.to}`;
-    const machineTotal = machineTrend.reduce((sum, item) => sum + Number(item.amount), 0);
-    elements.machineExpenseTotal.textContent = common.formatPeso(machineTotal);
     elements.utilitiesExpenseTotal.textContent = common.formatPeso(
       categoryTotals.find((item) => item.category === 'Utilities')?.amount || 0
     );
-    elements.expensePeriodLabel.textContent = `${state.from} to ${state.to}`;
-    const hasCategoryChartData = categoryTotals.some((item) => Number.isFinite(item.amount) && item.amount !== 0);
-    document.getElementById('expenseCategoryChart').closest('.fin-chart-frame')
-      .classList.toggle('is-empty', !hasCategoryChartData);
-    common.renderChart('expenseCategoryChart', {
-      type: 'bar',
-      data: { labels: categoryTotals.map((item) => item.category), datasets: [{ label: 'Expenses', data: categoryTotals.map((item) => item.amount), backgroundColor: '#B93C3C', borderRadius: 3 }] },
-      options: { indexAxis: 'y', plugins: { legend: { display: false }, tooltip: { callbacks: { label: (item) => common.formatPeso(item.raw) } } } },
+  }
+
+  function updatePendingPurchaseBadge(count) {
+    elements.pendingExpenseReviewBadge.textContent = String(count);
+    elements.pendingExpenseReviewBtn.setAttribute(
+      'aria-label',
+      `Pending expense review, ${count} pending purchase${count === 1 ? '' : 's'}`,
+    );
+    elements.pendingExpenseReviewBtn.title = `${count} pending inventory purchase${count === 1 ? '' : 's'}`;
+  }
+
+  function markPendingPurchaseCountUnavailable(error) {
+    elements.pendingExpenseReviewBadge.textContent = '!';
+    elements.pendingExpenseReviewBtn.setAttribute(
+      'aria-label',
+      'Pending expense review, pending count unavailable',
+    );
+    elements.pendingExpenseReviewBtn.title = `Pending purchase count unavailable: ${error.message}`;
+  }
+
+  function renderPendingPurchases() {
+    elements.pendingPurchaseRows.replaceChildren();
+    state.pendingPurchases.forEach((purchase) => {
+      const row = node('tr');
+      [
+        purchase.purchase_date,
+        purchase.product_name,
+        purchase.quantity,
+        common.formatPeso(purchase.unit_price),
+        common.formatPeso(purchase.total_cost),
+        purchase.recorded_by || 'Unknown',
+      ].forEach((value) => row.append(node('td', '', value)));
+      const actionCell = node('td');
+      const reviewButton = node('button', 'fin-button', 'Review');
+      reviewButton.type = 'button';
+      reviewButton.dataset.purchaseId = purchase.purchase_id;
+      reviewButton.addEventListener('click', () => {
+        if (!reviewButton.disabled) openPurchaseReviewDetails(String(purchase.purchase_id));
+      });
+      actionCell.append(reviewButton);
+      row.append(actionCell);
+      elements.pendingPurchaseRows.append(row);
     });
-    const hasMachineChartData = machineTrend.some((item) => Number.isFinite(Number(item.amount)) && Number(item.amount) !== 0);
-    document.getElementById('machineExpenseChart').closest('.fin-chart-frame')
-      .classList.toggle('is-empty', !hasMachineChartData);
-    common.renderChart('machineExpenseChart', {
-      type: 'line',
-      data: {
-        labels: machineTrend.map((item) => item.week.slice(5)),
-        datasets: [{
-          label: 'Machine expenses',
-          data: machineTrend.map((item) => Number(item.amount)),
-          borderColor: '#B5892A',
-          backgroundColor: 'rgba(181, 137, 42, 0.15)',
-          pointBackgroundColor: '#B5892A',
-          fill: true,
-          tension: 0.25,
-        }],
-      },
-      options: {
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: { callbacks: { label: (item) => common.formatPeso(item.raw) } },
-        },
-        scales: {
-          y: { beginAtZero: true, ticks: { callback: (value) => common.formatPeso(value) } },
-        },
-      },
-    });
+    elements.pendingPurchaseEmpty.hidden = state.pendingPurchases.length > 0;
+  }
+
+  async function refreshPendingPurchases() {
+    const records = await common.fetchJson('/api/finance/inventory-purchase-suggestions');
+    if (!Array.isArray(records)) throw new Error('Pending purchase response was not a list.');
+    state.pendingPurchases = records;
+    updatePendingPurchaseBadge(records.length);
+    renderPendingPurchases();
+    return records;
+  }
+
+  async function openPendingExpenseReview() {
+    elements.pendingPurchaseListView.hidden = false;
+    elements.pendingPurchaseDetailView.hidden = true;
+    elements.pendingExpenseReviewMessage.textContent = 'Loading pending purchases…';
+    elements.pendingPurchaseEmpty.hidden = true;
+    openModal(elements.pendingExpenseReviewModal);
+    try {
+      const records = await refreshPendingPurchases();
+      elements.pendingExpenseReviewMessage.textContent = records.length
+        ? `${records.length} purchase${records.length === 1 ? '' : 's'} awaiting review.`
+        : '';
+    } catch (error) {
+      markPendingPurchaseCountUnavailable(error);
+      elements.pendingExpenseReviewMessage.textContent = `Could not load pending purchases: ${error.message}`;
+    }
+  }
+
+  function appendPurchaseDetail(label, value) {
+    const wrapper = node('div');
+    wrapper.append(node('dt', '', label), node('dd', '', value == null || value === '' ? '—' : value));
+    elements.purchaseReviewDetails.append(wrapper);
+  }
+
+  async function openPurchaseReviewDetails(purchaseId) {
+    elements.pendingExpenseReviewMessage.textContent = 'Loading purchase details…';
+    elements.pendingPurchaseRows.querySelectorAll('button').forEach((button) => { button.disabled = true; });
+    try {
+      const purchase = await common.fetchJson(
+        `/api/finance/inventory-purchase-suggestions/${encodeURIComponent(purchaseId)}`,
+      );
+      state.selectedPurchase = purchase;
+      elements.purchaseReviewDetails.replaceChildren();
+      appendPurchaseDetail('Product name', purchase.product_name);
+      appendPurchaseDetail('Quantity received', purchase.quantity);
+      appendPurchaseDetail('Unit purchase cost', common.formatPeso(purchase.unit_price));
+      appendPurchaseDetail('Total purchase cost', common.formatPeso(purchase.total_cost));
+      appendPurchaseDetail('Purchase date', purchase.purchase_date);
+      appendPurchaseDetail('Inventory Officer', purchase.recorded_by || 'Unknown');
+      appendPurchaseDetail('Purchase batch', `#${purchase.purchase_batch_id}`);
+      appendPurchaseDetail(
+        'Original invoice/receipt',
+        purchase.invoice_source_hash
+          ? `Invoice file is not retained. Source image SHA-256: ${purchase.invoice_source_hash}`
+          : 'No original invoice image fingerprint is available.',
+      );
+      if (purchase.review_status === 'rejected') {
+        appendPurchaseDetail('Rejection reason', purchase.rejection_reason);
+        appendPurchaseDetail('Rejected by', purchase.rejector_name);
+        appendPurchaseDetail('Rejected at', purchase.rejected_at);
+      } else if (purchase.review_status === 'approved') {
+        appendPurchaseDetail('Expense ID', purchase.expense_id);
+        appendPurchaseDetail('Reviewed by', purchase.reviewer_name);
+        appendPurchaseDetail('Reviewed at', purchase.reviewed_at);
+      }
+      const canReview = purchase.review_status === 'pending' && !purchase.expense_id;
+      const hasPositiveCost = Number(purchase.total_cost) > 0;
+      elements.purchaseRejectionForm.hidden = !canReview;
+      elements.purchaseRejectionReason.value = '';
+      elements.purchaseReviewActionMessage.textContent = canReview
+        ? (hasPositiveCost ? '' : 'A purchase with a zero total cannot be recorded as an expense.')
+        : `This purchase is already ${purchase.review_status}.`;
+      elements.approvePurchaseBtn.disabled = !canReview || !hasPositiveCost;
+      elements.rejectPurchaseBtn.disabled = !canReview;
+      elements.pendingPurchaseListView.hidden = true;
+      elements.pendingPurchaseDetailView.hidden = false;
+      elements.pendingExpenseReviewMessage.textContent = '';
+    } catch (error) {
+      elements.pendingExpenseReviewMessage.textContent = `Could not load purchase details: ${error.message}`;
+    } finally {
+      elements.pendingPurchaseRows.querySelectorAll('button').forEach((button) => { button.disabled = false; });
+    }
+  }
+
+  async function submitPurchaseReview(action) {
+    const purchase = state.selectedPurchase;
+    if (!purchase || state.reviewBusy) return;
+    if (action === 'reject' && !elements.purchaseRejectionForm.reportValidity()) return;
+
+    state.reviewBusy = true;
+    elements.approvePurchaseBtn.disabled = true;
+    elements.rejectPurchaseBtn.disabled = true;
+    elements.purchaseReviewActionMessage.textContent = '';
+    try {
+      const endpoint = `/api/finance/inventory-purchase-suggestions/${encodeURIComponent(purchase.purchase_id)}/${action}`;
+      const body = action === 'reject'
+        ? { reason: elements.purchaseRejectionReason.value.trim() }
+        : {};
+      await common.fetchJson(endpoint, { method: 'POST', body: JSON.stringify(body) });
+
+      state.pendingPurchases = state.pendingPurchases.filter(
+        (item) => Number(item.purchase_id) !== Number(purchase.purchase_id),
+      );
+      updatePendingPurchaseBadge(state.pendingPurchases.length);
+      renderPendingPurchases();
+      elements.pendingPurchaseDetailView.hidden = true;
+      elements.pendingPurchaseListView.hidden = false;
+      elements.pendingExpenseReviewMessage.textContent = action === 'approve'
+        ? 'Purchase approved and expense recorded.'
+        : 'Purchase rejected. Inventory stock was not changed.';
+      state.selectedPurchase = null;
+
+      try {
+        await refreshPendingPurchases();
+      } catch (error) {
+        markPendingPurchaseCountUnavailable(error);
+        elements.pendingExpenseReviewMessage.textContent += ` Pending count refresh failed: ${error.message}`;
+      }
+      if (action === 'approve') {
+        try {
+          await loadExpenses();
+          showMessage('Purchase approved and recorded as an expense.');
+        } catch (error) {
+          showMessage(`Purchase was approved, but expense records could not be refreshed: ${error.message}`, true);
+        }
+      }
+    } catch (error) {
+      elements.purchaseReviewActionMessage.textContent = error.message;
+      try {
+        await refreshPendingPurchases();
+      } catch (refreshError) {
+        markPendingPurchaseCountUnavailable(refreshError);
+        elements.purchaseReviewActionMessage.textContent += ` Pending count refresh failed: ${refreshError.message}`;
+      }
+    } finally {
+      state.reviewBusy = false;
+      if (state.selectedPurchase?.review_status === 'pending') {
+        elements.approvePurchaseBtn.disabled = Number(state.selectedPurchase.total_cost) <= 0;
+        elements.rejectPurchaseBtn.disabled = false;
+      }
+    }
   }
 
   function serializeForm() {
@@ -216,6 +374,26 @@
   elements.expenseTo.value = state.to;
   elements.expenseDate.value = common.manilaToday();
   elements.expenseCategory.addEventListener('change', () => { state.category = elements.expenseCategory.value; state.page = 1; loadExpenses().catch((error) => showMessage(error.message, true)); });
+  const expenseSortButtons = [...document.querySelectorAll('.fin-expense-records [data-sort-column]')];
+  function updateExpenseSortIndicators() {
+    expenseSortButtons.forEach((button) => {
+      const active = button.dataset.sortColumn === state.sort;
+      const heading = button.closest('th');
+      heading.setAttribute('aria-sort', active ? (state.direction === 'asc' ? 'ascending' : 'descending') : 'none');
+      button.dataset.direction = active ? state.direction : '';
+    });
+  }
+  updateExpenseSortIndicators();
+  expenseSortButtons.forEach((button) => button.addEventListener('click', () => {
+    if (state.sort === button.dataset.sortColumn) state.direction = state.direction === 'asc' ? 'desc' : 'asc';
+    else {
+      state.sort = button.dataset.sortColumn;
+      state.direction = 'asc';
+    }
+    state.page = 1;
+    updateExpenseSortIndicators();
+    loadExpenses().catch((error) => showMessage(error.message, true));
+  }));
   common.bindPeriodControls({
     fromInput: elements.expenseFrom,
     toInput: elements.expenseTo,
@@ -240,6 +418,14 @@
     document.getElementById('expenseModalTitle').textContent = 'Add expense'; elements.expenseFormMessage.textContent = ''; openModal(elements.expenseModal);
   });
   elements.exportExpensesXlsx.addEventListener('click', exportExpenses);
+  elements.pendingExpenseReviewBtn.addEventListener('click', openPendingExpenseReview);
+  elements.pendingPurchaseBackBtn.addEventListener('click', () => {
+    elements.pendingPurchaseDetailView.hidden = true;
+    elements.pendingPurchaseListView.hidden = false;
+    elements.pendingExpenseReviewMessage.textContent = '';
+  });
+  elements.approvePurchaseBtn.addEventListener('click', () => submitPurchaseReview('approve'));
+  elements.rejectPurchaseBtn.addEventListener('click', () => submitPurchaseReview('reject'));
   elements.expenseRows.addEventListener('click', (event) => {
     const button = event.target.closest('button[data-action]');
     if (!button) return;
@@ -258,7 +444,8 @@
   document.querySelectorAll('[data-close-expense]').forEach((button) => button.addEventListener('click', () => closeModal(elements.expenseModal)));
   document.querySelectorAll('[data-close-void]').forEach((button) => button.addEventListener('click', () => closeModal(elements.voidModal)));
   document.querySelectorAll('[data-close-expense-history]').forEach((button) => button.addEventListener('click', () => closeModal(elements.expenseHistoryModal)));
-  [elements.expenseModal, elements.voidModal, elements.expenseHistoryModal].forEach((modal) => {
+  document.querySelectorAll('[data-close-pending-review]').forEach((button) => button.addEventListener('click', () => closeModal(elements.pendingExpenseReviewModal)));
+  [elements.expenseModal, elements.voidModal, elements.expenseHistoryModal, elements.pendingExpenseReviewModal].forEach((modal) => {
     common.bindAccessibleModal(modal);
     modal.addEventListener('click', (event) => { if (event.target === modal) closeModal(modal); });
   });
@@ -290,4 +477,8 @@
   });
 
   loadExpenses().catch((error) => showMessage(error.message, true));
+  refreshPendingPurchases().catch((error) => {
+    markPendingPurchaseCountUnavailable(error);
+    showMessage(`Pending purchase count could not be loaded: ${error.message}`, true);
+  });
 })();

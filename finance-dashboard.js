@@ -3,7 +3,7 @@
   if (!common) return;
   const today = common.manilaToday();
   const ids = [
-    'dashboardFrom', 'dashboardTo', 'dashboardMonthLabel', 'dashSales', 'dashCollected', 'dashExpenses', 'dashNet',
+    'dashboardFrom', 'dashboardTo', 'dashSales', 'dashCollected', 'dashExpenses', 'dashNet',
     'dashSalesComparison', 'dashCollectedComparison', 'dashExpensesComparison', 'dashNetComparison',
     'dashOutstanding', 'dashToday', 'dashReceivables', 'dashNoShows',
     'dashboardRecentRows', 'dashboardRecentEmpty', 'dashboardMessage',
@@ -22,14 +22,12 @@
   async function loadOverview() {
     const requestId = ++overviewRequest;
     const previous = common.previousRange(state.from, state.to);
-    refs.dashboardMonthLabel.textContent = `${state.from} to ${state.to}`;
     refs.dashboardMessage.textContent = 'Loading finance overview...';
     const query = common.rangeParams(state.from, state.to);
-    const [summary, previousSummary, monthly, daily, activityData, receivables] = await Promise.all([
+    const [summary, previousSummary, monthly, activityData, receivables] = await Promise.all([
       common.fetchJson(`/api/finance/summary?${query}`),
       common.fetchJson(`/api/finance/summary?${common.rangeParams(previous.from, previous.to)}`),
       common.fetchJson('/api/finance/monthly?months=6'),
-      common.fetchJson(`/api/finance/daily?${query}`),
       common.fetchJson(`/api/finance/activity?${common.rangeParams(state.from, state.to, { limit: 10 })}`),
       common.fetchJson('/api/finance/receivables'),
     ]);
@@ -58,12 +56,6 @@
       },
       options: { scales: { x: { stacked: false }, y: { beginAtZero: true } }, plugins: { tooltip: { callbacks: { label: (item) => `${item.dataset.label}: ${common.formatPeso(item.raw)}` } } } },
     });
-    common.renderChart('dashboardDailyChart', {
-      type: 'line',
-      data: { labels: daily.map((item) => item.date.slice(5)), datasets: [{ label: 'Posted collections', data: daily.map((item) => Number(item.collected)), borderColor: '#228B46', backgroundColor: 'rgba(34,139,70,.12)', fill: true, tension: 0.25, pointRadius: 2 }] },
-      options: { plugins: { legend: { display: false }, tooltip: { callbacks: { label: (item) => common.formatPeso(item.raw) } } } },
-    });
-
     const activity = activityData.rows || [];
     refs.dashboardRecentRows.replaceChildren();
     activity.forEach((item) => {

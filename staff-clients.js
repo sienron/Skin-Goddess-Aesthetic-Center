@@ -186,7 +186,23 @@
         try {
             const response = await fetch("/api/appointments/mine");
             if (!response.ok) throw new Error("Could not load client appointments.");
-            renderAppointments(await response.json());
+            const appointments = await response.json();
+            renderAppointments(appointments);
+            const requestedAppointmentId = new URLSearchParams(window.location.search).get("appointmentId");
+            if (requestedAppointmentId) {
+                const requestedAppointment = appointments.find((appointment) =>
+                    String(appointment.id) === requestedAppointmentId
+                );
+                const currentUrl = new URL(window.location.href);
+                currentUrl.searchParams.delete("appointmentId");
+                window.history.replaceState({}, "", currentUrl.toString());
+                if (requestedAppointment) {
+                    openClientModal(requestedAppointment);
+                } else {
+                    errorMessage.textContent = "The requested client appointment could not be found.";
+                    errorMessage.hidden = false;
+                }
+            }
         } catch (error) {
             errorMessage.textContent = error.message;
             errorMessage.hidden = false;

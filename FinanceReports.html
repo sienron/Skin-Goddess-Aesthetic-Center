@@ -49,15 +49,15 @@
             <h4 class="sidebar-heading">My Links</h4>
             <nav>
                 <ul>
-                    <li class="nav-item"><a href="FinanceDashboard.html"><img src="icons/finance-dashboard.svg" alt=""
-                                class="finance-nav-icon"><span>Dashboard</span></a></li>
-                    <li class="nav-item"><a href="FinancesTransactions.html"><img src="icons/finance-transactions.svg"
-                                alt="" class="finance-nav-icon"><span>Sales &amp;
+                    <li class="nav-item"><a href="FinanceDashboard.html"><span class="finance-nav-icon-slot"><img src="icons/finance-dashboard.svg" alt=""
+                                class="finance-nav-icon"></span><span>Dashboard</span></a></li>
+                    <li class="nav-item"><a href="FinancesTransactions.html"><span class="finance-nav-icon-slot"><img src="icons/finance-transactions.svg"
+                                alt="" class="finance-nav-icon"></span><span>Sales &amp;
                                 Transactions</span></a></li>
-                    <li class="nav-item"><a href="FinanceExpenses.html"><img src="icons/finance-expenses.svg" alt=""
-                                class="finance-nav-icon"><span>Expenses</span></a></li>
-                    <li class="nav-item active"><a href="FinanceReports.html" aria-current="page"><img
-                                src="icons/finance-reports.svg" alt="" class="finance-nav-icon"><span>Reports</span></a>
+                    <li class="nav-item"><a href="FinanceExpenses.html"><span class="finance-nav-icon-slot"><img src="icons/finance-expenses.svg" alt=""
+                                class="finance-nav-icon"></span><span>Expenses</span></a></li>
+                    <li class="nav-item active"><a href="FinanceReports.html" aria-current="page"><span class="finance-nav-icon-slot"><img
+                                src="icons/finance-reports.svg" alt="" class="finance-nav-icon"></span><span>Reports</span></a>
                     </li>
                 </ul>
             </nav>
@@ -86,8 +86,8 @@
                         month</button></div>
                 <label>From<input id="reportFrom" type="date"></label>
                 <label>To<input id="reportTo" type="date"></label>
-                <button class="fin-button fin-report-toolbar-export" type="button"
-                    data-export="income-statement">Export All Reports (Excel)</button>
+                <button class="fin-button fin-button-export fin-report-toolbar-export" type="button"
+                    data-export="income-statement">EXPORT</button>
             </div>
             <p class="fin-page-message" id="reportMessage" role="status"></p>
             <section class="fin-report-section" id="incomeStatementSection">
@@ -117,16 +117,16 @@
                 <div class="fin-report-grid">
                     <article class="fin-report-panel fin-chart-section" id="salesExpensesSection">
                         <div class="fin-report-panel-heading">
-                            <h3>Sales earned vs recorded expenses trend</h3><button class="fin-button fin-report-export"
-                                type="button" data-export="sales-expenses">Export CSV</button>
+                            <h3>Sales earned vs recorded expenses trend</h3><button class="fin-button fin-button-export fin-report-export"
+                                type="button" data-export="sales-expenses">EXPORT</button>
                         </div>
                         <div class="fin-chart-frame"><canvas id="reportSalesExpensesChart"
                                 aria-label="Sales versus expenses" role="img" hidden></canvas></div>
                     </article>
                     <article class="fin-report-panel fin-chart-section" id="onlineReservationsSection">
                         <div class="fin-report-panel-heading">
-                            <h3>Online reservation deposits</h3><button class="fin-button fin-report-export"
-                                type="button" data-export="online-reservations">Export CSV</button>
+                            <h3>Online reservation deposits</h3><button class="fin-button fin-button-export fin-report-export"
+                                type="button" data-export="online-reservations">EXPORT</button>
                         </div>
                         <div class="fin-chart-frame"><canvas id="reportOnlineReservationsChart"
                                 aria-label="Online reservations by payment date" role="img" hidden></canvas></div>
@@ -142,8 +142,8 @@
                 <div class="fin-report-grid">
                     <article class="fin-report-panel fin-chart-section" id="paymentMethodsSection">
                         <div class="fin-report-panel-heading">
-                            <h3>Payment method breakdown</h3><button class="fin-button fin-report-export" type="button"
-                                data-export="payment-methods">Export CSV</button>
+                            <h3>Payment method breakdown</h3><button class="fin-button fin-button-export fin-report-export" type="button"
+                                data-export="payment-methods">EXPORT</button>
                         </div>
                         <div class="fin-chart-frame"><canvas id="reportMethodsChart"
                                 aria-label="Payment method breakdown for posted payments" role="img" hidden></canvas>
@@ -151,8 +151,8 @@
                     </article>
                     <article class="fin-report-panel fin-deposit-panel" id="depositSection">
                         <div class="fin-report-panel-heading">
-                            <h3>Deposit / refund summary</h3><button class="fin-button fin-report-export" type="button"
-                                data-export="deposits">Export CSV</button>
+                            <h3>Deposit / refund summary</h3><button class="fin-button fin-button-export fin-report-export" type="button"
+                                data-export="deposits">EXPORT</button>
                         </div>
                         <div class="fin-deposit-content">
                             <div class="fin-chart-frame fin-chart-frame--deposit"><canvas id="reportDepositsChart"
@@ -187,16 +187,16 @@
                 <div class="fin-report-grid">
                     <article class="fin-report-panel fin-chart-section" id="topServicesSection">
                         <div class="fin-report-panel-heading">
-                            <h3>Top services by revenue</h3><button class="fin-button fin-report-export" type="button"
-                                data-export="top-services">Export CSV</button>
+                            <h3>Top services by revenue</h3><button class="fin-button fin-button-export fin-report-export" type="button"
+                                data-export="top-services">EXPORT</button>
                         </div>
                         <div class="fin-chart-frame"><canvas id="reportTopServicesChart" aria-label="Top services"
                                 role="img" hidden></canvas></div>
                     </article>
                     <article class="fin-report-panel fin-chart-section" id="expenseCategorySection">
                         <div class="fin-report-panel-heading">
-                            <h3>Expenses by category</h3><button class="fin-button fin-report-export" type="button"
-                                data-export="expense-categories">Export CSV</button>
+                            <h3>Expenses by category</h3><button class="fin-button fin-button-export fin-report-export" type="button"
+                                data-export="expense-categories">EXPORT</button>
                         </div>
                         <div class="fin-chart-frame"><canvas id="reportExpenseCategoryChart"
                                 aria-label="Expenses by category" role="img" hidden></canvas></div>
@@ -205,16 +205,16 @@
                 <div class="fin-report-detail-grid">
                     <article class="fin-report-panel fin-chart-section" id="serviceCategorySection">
                         <div class="fin-report-panel-heading">
-                            <h3>Revenue by service category</h3><button class="fin-button fin-report-export"
-                                type="button" data-export="service-categories">Export CSV</button>
+                            <h3>Revenue by service category</h3><button class="fin-button fin-button-export fin-report-export"
+                                type="button" data-export="service-categories">EXPORT</button>
                         </div>
                         <div class="fin-chart-frame fin-chart-frame--compact"><canvas id="reportServiceCategoryChart"
                                 aria-label="Revenue by service category" role="img" hidden></canvas></div>
                     </article>
                     <article class="fin-report-panel fin-daily-cash" id="dailyCashSection">
                         <div class="fin-report-panel-heading">
-                            <h3>Daily cash summary</h3><button class="fin-button fin-report-export" type="button"
-                                data-export="daily-cash">Export CSV</button>
+                            <h3>Daily cash summary</h3><button class="fin-button fin-button-export fin-report-export" type="button"
+                                data-export="daily-cash">EXPORT</button>
                         </div>
                         <div class="fin-table-scroll fin-daily-cash-scroll">
                             <table class="fin-table">

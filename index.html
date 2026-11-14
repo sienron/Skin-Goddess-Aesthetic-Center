@@ -15,7 +15,7 @@
     <link rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&family=Poppins:wght@500;600;700&display=swap">
   </noscript>
-  <link rel="stylesheet" href="style.css?v=homepage-benefit-color-filter-20261114">
+  <link rel="stylesheet"             href="style.css?v=my-appointments-nav-20261114">
 </head>
 
 <body class="homepage">
@@ -39,6 +39,7 @@
           <li><a href="ServicesPage.html">Services</a></li>
           <li><a href="AboutUsPage.html">About</a></li>
           <li><a href="ContactUsPage.html">Contact</a></li>
+          <li data-auth-required-nav hidden><a href="UserAccount.html#appointments.html">My appointments</a></li>
         </ul>
       </nav>
 
@@ -101,6 +102,7 @@
       <li><a href="ServicesPage.html">Services</a></li>
       <li><a href="AboutUsPage.html">About</a></li>
       <li><a href="ContactUsPage.html">Contact</a></li>
+      <li data-auth-required-nav hidden><a href="UserAccount.html#appointments.html">My appointments</a></li>
     </ul>
 
     <a class="book-now-btn mobile-nav-book-btn" href="/UserAppointment.html">BOOK NOW</a>
@@ -115,6 +117,12 @@
   </aside>
 
   <section class="hero">
+    <div class="homepage-ambient-glows homepage-ambient-glows--hero" aria-hidden="true">
+      <span class="homepage-ambient-glow homepage-ambient-glow--large" data-ambient-motion="horizontal"></span>
+      <span class="homepage-ambient-glow homepage-ambient-glow--medium" data-ambient-motion="diagonal"></span>
+      <span class="homepage-ambient-glow homepage-ambient-glow--small homepage-ambient-glow--small-one" data-ambient-motion="vertical"></span>
+      <span class="homepage-ambient-glow homepage-ambient-glow--small homepage-ambient-glow--small-two" data-ambient-motion="circular"></span>
+    </div>
     <div class="hero-visual" aria-hidden="true">
       <img class="hero-photo-img" src="images/GSAP%20Hero%20aurad.webp?v=20261015" alt="" width="1157" height="1350" fetchpriority="high"
         decoding="async">
@@ -131,11 +139,21 @@
     <div class="hero-band" aria-hidden="true"></div>
 
     <section class="homepage-service-panels-section" id="featuredServices" aria-labelledby="featuredServicesHeading">
+      <div class="homepage-ambient-glows homepage-ambient-glows--care" aria-hidden="true">
+        <span class="homepage-ambient-glow homepage-ambient-glow--large" data-ambient-motion="horizontal"></span>
+        <span class="homepage-ambient-glow homepage-ambient-glow--medium" data-ambient-motion="diagonal"></span>
+        <span class="homepage-ambient-glow homepage-ambient-glow--small homepage-ambient-glow--small-one" data-ambient-motion="vertical"></span>
+        <span class="homepage-ambient-glow homepage-ambient-glow--small homepage-ambient-glow--small-two" data-ambient-motion="circular"></span>
+      </div>
       <div class="homepage-service-panels">
         <header class="homepage-service-panels__header">
           <div class="homepage-service-panels__intro">
             <h2 id="featuredServicesHeading">Care for Every Skin Story</h2>
           </div>
+          <a class="homepage-service-panels__description-link" href="AboutUsPage.html">
+            Learn more about us
+            <span class="homepage-service-panels__description-link-arrow" aria-hidden="true">&#8594;</span>
+          </a>
         </header>
         <div class="homepage-benefits-grid" aria-label="What you can expect">
           <button class="homepage-benefit-card" type="button" aria-expanded="false">
@@ -569,8 +587,8 @@
     crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.15.0/ScrollTrigger.min.js" crossorigin="anonymous"
     referrerpolicy="no-referrer"></script>
-  <script src="homepage-hero.js?v=homepage-signatures-20261019" defer></script>
-  <script src="header.js"></script>
+  <script src="homepage-hero.js?v=my-appointments-nav-20261114" defer></script>
+  <script src="header.js?v=signed-in-appointments-20261114"></script>
   <script src="homepage-treatments-carousel.js"></script>
   <script src="homepage-testimonials.js"></script>
   <script src="public-content.js?v=homepage-sections-20261011"></script>

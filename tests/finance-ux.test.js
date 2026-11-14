@@ -85,6 +85,28 @@ describe('Finance UX shared helpers', () => {
     assert.match(common.formatComparison(75, 50), /Increase of .*50\.0%/);
   });
 
+  it('paginates local table rows across page changes and page-size changes', () => {
+    const { common } = loadCommon();
+    const rows = Array.from({ length: 23 }, (_, index) => ({ id: index + 1 }));
+
+    const secondPage = common.paginateRows(rows, 2, 10);
+    assert.equal(secondPage.page, 2);
+    assert.equal(secondPage.pageCount, 3);
+    assert.equal(secondPage.first, 11);
+    assert.equal(secondPage.last, 20);
+    assert.equal(secondPage.rows[0].id, 11);
+
+    const lastPage = common.paginateRows(rows, 3, 10);
+    assert.equal(lastPage.rows.length, 3);
+    assert.equal(lastPage.rows.at(-1).id, 23);
+
+    const largerPageSize = common.paginateRows(rows, 1, 25);
+    assert.equal(largerPageSize.pageCount, 1);
+    assert.equal(largerPageSize.rows.length, 23);
+    assert.equal(common.paginateRows(rows, 9, 10).page, 3);
+    assert.equal(common.paginateRows([], 1, 10).total, 0);
+  });
+
   it('creates readable payment and expense status badges', () => {
     const { common } = loadCommon();
     const posted = common.statusBadge('posted');

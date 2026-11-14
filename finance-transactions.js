@@ -1,13 +1,32 @@
 (function () {
   const common = window.FinanceCommon;
   if (!common) return;
-  const state = { tab: 'transactions', from: common.monthStart(), to: common.manilaToday(), type: '', method: '', status: 'posted', search: '', page: 1, limit: 25, rows: [], receivables: [], deposits: [] };
+  const state = {
+    tab: 'transactions',
+    from: common.monthStart(),
+    to: common.manilaToday(),
+    type: '',
+    method: '',
+    status: 'posted',
+    search: '',
+    receivableSearch: '',
+    sort: 'date',
+    direction: 'desc',
+    page: 1,
+    receivablePage: 1,
+    depositPage: 1,
+    limit: 25,
+    rows: [],
+    total: 0,
+    receivables: [],
+    deposits: [],
+    selectedClient: null,
+  };
   let transactionRequest = 0;
   const byId = (id) => document.getElementById(id);
-  const refs = Object.fromEntries(['transactionFrom', 'transactionTo', 'transactionType', 'transactionMethod', 'transactionStatus', 'transactionSearch', 'transactionMessage', 'transactionRows', 'transactionTableScroll', 'transactionCount', 'transactionEmpty', 'transactionPagination', 'transactionPrev', 'transactionNext', 'transactionPageLabel', 'transactionPeriodLabel', 'transactionComparison', 'ledgerHelp', 'transactionSummary', 'postedCollectionsSummary', 'paymentCountSummary', 'receivablesPanel', 'transactionsPanel', 'depositsPanel', 'methodChartSection', 'methodChartEmpty', 'receivableRows', 'receivableEmpty', 'receivableCount', 'depositRows', 'depositEmpty', 'depositCount', 'recordPaymentModal', 'recordPaymentForm', 'balanceAppointmentId', 'balanceAmount', 'balanceMethod', 'balanceReference', 'balanceNote', 'paymentBalanceText', 'paymentFormMessage', 'saleModal', 'saleForm', 'saleProduct', 'saleQuantity', 'salePrice', 'saleTotal', 'saleMethod', 'saleReference', 'saleMessage', 'saleSubmit', 'recordSaleBtn', 'exportTransactionsXlsx', 'refundModal', 'refundForm', 'refundPaymentId', 'refundPaymentSummary', 'refundNote', 'refundFormMessage', 'reverseModal', 'reverseForm', 'reversePaymentId', 'reversePaymentSummary', 'reverseReason', 'reverseFormMessage', 'paymentDetailsModal', 'paymentDetails', 'paymentHistoryRows', 'receiptModal', 'receiptModalTitle', 'receiptFrame'].map((id) => [id, byId(id)]));
+  const refs = Object.fromEntries(['transactionFrom', 'transactionTo', 'transactionType', 'transactionMethod', 'transactionStatus', 'transactionSearch', 'transactionMessage', 'transactionRows', 'transactionCount', 'transactionEmpty', 'transactionPagination', 'transactionPrev', 'transactionNext', 'transactionPageLabel', 'transactionPageSize', 'transactionPeriodLabel', 'transactionComparison', 'ledgerHelp', 'transactionSummary', 'transactionOverview', 'paymentCountSummary', 'receivablesPanel', 'transactionsPanel', 'depositsPanel', 'methodChartSection', 'methodChartEmpty', 'receivableRows', 'receivableEmpty', 'receivableSearch', 'receivablePagination', 'receivablePrev', 'receivableNext', 'receivablePageLabel', 'receivablePageSize', 'exportReceivablesXlsx', 'depositRows', 'depositEmpty', 'depositCount', 'depositPagination', 'depositPrev', 'depositNext', 'depositPageLabel', 'depositPageSize', 'recordPaymentModal', 'recordPaymentForm', 'balanceAppointmentId', 'balanceAmount', 'balanceMethod', 'balanceReference', 'balanceNote', 'paymentBalanceText', 'paymentFormMessage', 'saleModal', 'saleForm', 'saleClient', 'saleProduct', 'saleQuantity', 'salePrice', 'saleTotal', 'saleMethod', 'saleReference', 'saleMessage', 'saleSubmit', 'recordSaleBtn', 'exportTransactionsXlsx', 'refundModal', 'refundForm', 'refundPaymentId', 'refundPaymentSummary', 'refundNote', 'refundFormMessage', 'reverseModal', 'reverseForm', 'reversePaymentId', 'reversePaymentSummary', 'reverseReason', 'reverseFormMessage', 'paymentDetailsModal', 'paymentDetails', 'paymentHistoryRows', 'receiptModal', 'receiptModalTitle', 'receiptFrame', 'clientDetailsModal', 'clientDetailsTitle', 'clientDetails', 'clientPaymentHistoryBtn', 'clientPaymentHistoryModal', 'clientPaymentHistoryTitle', 'clientPaymentHistoryMessage', 'clientPaymentHistoryRows', 'clientPaymentHistoryEmpty'].map((id) => [id, byId(id)]));
   const chartColors = ['#c9a84c', '#267447', '#3977b8', '#8c8c8c', '#8a6e2f'];
   refs.recordSaleBtn.classList.add('fin-sales-record-button');
-  byId('salesHeaderAction').append(refs.recordSaleBtn);
   refs.methodChartLegend = element('ul', '', 'fin-chart-legend');
   refs.methodChartLegend.setAttribute('aria-label', 'Payment methods, amounts, and share of posted collections');
   const methodChartFrame = byId('methodChart').closest('.fin-chart-frame');
@@ -37,6 +56,14 @@
   function modalClose(modal) { common.closeAccessibleModal(modal); }
   function params(extra = {}) { return common.rangeParams(state.from, state.to, extra); }
 
+  function updatePagination(container, previous, next, label, total, page) {
+    const pageCount = Math.max(1, Math.ceil(total / state.limit));
+    container.hidden = total === 0;
+    label.textContent = `Page ${page} of ${pageCount}`;
+    previous.disabled = page <= 1;
+    next.disabled = page >= pageCount;
+  }
+
   function renderTransactions() {
     refs.transactionRows.replaceChildren();
     state.rows.forEach((payment) => {
@@ -45,7 +72,16 @@
       row.dataset.paymentId = payment.payment_id;
       cell(row, payment.payment_date);
       cell(row, payment.receipt_number);
-      cell(row, payment.client);
+      const clientCell = element('td');
+      if (payment.customer_id) {
+        const clientButton = element('button', payment.client, 'fin-client-link');
+        clientButton.type = 'button';
+        clientButton.dataset.clientId = payment.customer_id;
+        clientButton.dataset.clientName = payment.client;
+        clientButton.dataset.clientEmail = payment.customer_email || '';
+        clientCell.append(clientButton);
+      } else clientCell.textContent = payment.client;
+      row.append(clientCell);
       cell(row, payment.payment_type.replace('_', ' '));
       cell(row, payment.service || payment.reference_no || '-');
       cell(row, common.paymentMethodLabel(payment.method));
@@ -71,22 +107,19 @@
       refs.transactionRows.append(row);
     });
     refs.transactionEmpty.hidden = state.rows.length > 0;
-    refs.transactionTableScroll.hidden = state.rows.length === 0;
-    refs.transactionCount.textContent = `${state.total} payments`;
-    refs.transactionPageLabel.textContent = `Page ${state.page}`;
-    refs.transactionPagination.hidden = state.total <= state.limit;
+    const paymentCount = state.total.toLocaleString('en-PH');
+    refs.transactionCount.textContent = `${paymentCount} ${state.total === 1 ? 'payment' : 'payments'}`;
+    refs.transactionPageSize.value = String(state.limit);
+    updatePagination(refs.transactionPagination, refs.transactionPrev, refs.transactionNext, refs.transactionPageLabel, state.total, state.page);
     refs.exportTransactionsXlsx.disabled = state.total <= 0;
-    refs.transactionPrev.disabled = state.page <= 1;
-    refs.transactionNext.disabled = state.page * state.limit >= state.total;
   }
 
   async function loadTransactions() {
     const requestId = ++transactionRequest;
     const previous = common.previousRange(state.from, state.to);
-    const filters = { page: state.page, limit: state.limit, type: state.type, method: state.method, status: state.status, q: state.search };
+    const filters = { page: state.page, limit: state.limit, type: state.type, method: state.method, status: state.status, q: state.search, sort: state.sort, direction: state.direction };
     const previousFilters = { type: state.type, method: state.method, q: state.search };
     refs.transactionPeriodLabel.textContent = `${state.from} to ${state.to}`;
-    refs.postedCollectionsSummary.textContent = 'Loading…';
     refs.paymentCountSummary.textContent = 'Loading…';
     refs.transactionComparison.textContent = '';
     refs.transactionEmpty.querySelector('strong').textContent = 'No matching payments';
@@ -114,7 +147,6 @@
       const previousCollected = previousChartRows.reduce((sum, row) => sum + Number(row.amount), 0);
       methodChartFrame.classList.toggle('is-empty', collected <= 0);
       refs.methodChartEmpty.hidden = collected > 0;
-      refs.postedCollectionsSummary.textContent = common.formatPeso(collected);
       refs.paymentCountSummary.textContent = Number(result.total).toLocaleString('en-PH');
       refs.transactionComparison.textContent = `Posted collections: ${common.formatComparison(collected, previousCollected)} · previous ${previous.from} to ${previous.to}`;
       refs.methodChartLegend.replaceChildren();
@@ -151,7 +183,6 @@
         state.rows = [];
         state.total = 0;
         renderTransactions();
-        refs.postedCollectionsSummary.textContent = '—';
         refs.paymentCountSummary.textContent = '—';
         refs.transactionComparison.textContent = 'Posted collections could not be loaded.';
         refs.methodChartLegend.replaceChildren();
@@ -185,24 +216,78 @@
     refs.saleForm.reset();
     refs.saleQuantity.value = '1';
     refs.saleQuantity.removeAttribute('max');
-    refs.saleProduct.replaceChildren(new Option('Choose product', ''));
+    refs.saleProduct.replaceChildren(new Option('Loading inventory products…', ''));
+    refs.saleProduct.disabled = true;
+    refs.saleClient.replaceChildren(new Option('Loading clients…', ''));
+    refs.saleClient.disabled = true;
     refs.saleMessage.textContent = '';
+    saleProducts = [];
     saleRequestKey = createSaleRequestKey();
     refs.saleSubmit.disabled = true;
     modalOpen(refs.saleModal);
-    try {
-      saleProducts = await common.fetchJson('/api/finance/sale-products');
-      saleProducts.forEach((product) => {
-        refs.saleProduct.add(new Option(
-          `${product.product_name} (${product.stock_quantity} in stock)`,
-          product.product_id,
-        ));
+    const [productsResult, clientsResult] = await Promise.allSettled([
+      common.fetchJson('/api/finance/sale-products'),
+      common.fetchJson('/api/finance/clients'),
+    ]);
+
+    const notices = [];
+    if (clientsResult.status === 'fulfilled' && Array.isArray(clientsResult.value)) {
+      refs.saleClient.replaceChildren(new Option(
+        clientsResult.value.length ? 'No client selected' : 'No active clients found',
+        '',
+      ));
+      clientsResult.value.forEach((client) => {
+        const label = client.name || client.email;
+        refs.saleClient.add(new Option(`${label} (${client.email})`, client.user_id));
       });
-      refs.saleSubmit.disabled = saleProducts.length === 0;
-      if (!saleProducts.length) refs.saleMessage.textContent = 'There are no in-stock products to sell.';
-    } catch (error) {
-      refs.saleMessage.textContent = error.message;
+      refs.saleClient.disabled = false;
+      if (!clientsResult.value.length) notices.push('No active clients were found; client selection is optional.');
+    } else {
+      const error = clientsResult.status === 'rejected'
+        ? clientsResult.reason
+        : new Error('The client list response was not a list.');
+      refs.saleClient.replaceChildren(new Option('Client list unavailable', ''));
+      refs.saleClient.disabled = true;
+      notices.push(`Client list could not be loaded: ${error.message}`);
     }
+
+    if (productsResult.status !== 'fulfilled' || !Array.isArray(productsResult.value)) {
+      const error = productsResult.status === 'rejected'
+        ? productsResult.reason
+        : new Error('The inventory product response was not a list.');
+      refs.saleProduct.replaceChildren(new Option('Inventory products unavailable', ''));
+      refs.saleProduct.disabled = true;
+      refs.saleSubmit.disabled = true;
+      notices.unshift(`Inventory products could not be loaded: ${error.message}`);
+      refs.saleMessage.textContent = notices.join(' ');
+      return;
+    }
+
+    saleProducts = productsResult.value;
+    if (!saleProducts.length) {
+      refs.saleProduct.replaceChildren(new Option('No inventory products found', ''));
+      refs.saleProduct.disabled = true;
+      refs.saleSubmit.disabled = true;
+      notices.unshift('No inventory products are available.');
+      refs.saleMessage.textContent = notices.join(' ');
+      return;
+    }
+
+    refs.saleProduct.replaceChildren(new Option('Choose product', ''));
+    saleProducts.forEach((product) => {
+      const stock = Number(product.stock_quantity);
+      const option = new Option(
+        `${product.product_name} — ${stock > 0 ? `${stock} in stock` : 'Out of stock'}`,
+        product.product_id,
+      );
+      option.disabled = stock <= 0;
+      refs.saleProduct.add(option);
+    });
+    const hasStock = saleProducts.some((product) => Number(product.stock_quantity) > 0);
+    refs.saleProduct.disabled = false;
+    refs.saleSubmit.disabled = !hasStock;
+    if (!hasStock) notices.unshift('Products are listed, but none are currently in stock.');
+    refs.saleMessage.textContent = notices.join(' ');
   }
 
   function updateSaleTotal() {
@@ -213,6 +298,7 @@
   }
 
   function exportTransactions() {
+    state.search = refs.transactionSearch.value.trim();
     const query = params({
       section: 'transactions',
       type: state.type,
@@ -223,10 +309,26 @@
     window.location.assign(`/api/finance/export.xlsx?${query}`);
   }
 
+  function exportReceivables() {
+    state.receivableSearch = refs.receivableSearch.value.trim();
+    const query = params({
+      section: 'receivables',
+      q: state.receivableSearch,
+    });
+    window.location.assign(`/api/finance/export.xlsx?${query}`);
+  }
+
   async function loadReceivables() {
-    state.receivables = await common.fetchJson(`/api/finance/receivables?${params()}`);
+    state.receivables = await common.fetchJson(`/api/finance/receivables?${params({ q: state.receivableSearch })}`);
+    renderReceivables();
+  }
+
+  function renderReceivables() {
+    const total = state.receivables.length;
+    const pagination = common.paginateRows(state.receivables, state.receivablePage, state.limit);
+    state.receivablePage = pagination.page;
     refs.receivableRows.replaceChildren();
-    state.receivables.forEach((item) => {
+    pagination.rows.forEach((item) => {
       const row = element('tr');
       row.tabIndex = 0;
       row.dataset.appointmentId = item.appointment_id;
@@ -237,14 +339,23 @@
       button.type = 'button'; button.dataset.appointmentId = item.appointment_id;
       action.append(button); row.append(action); refs.receivableRows.append(row);
     });
-    refs.receivableEmpty.hidden = state.receivables.length > 0;
-    refs.receivableCount.textContent = `${state.receivables.length} appointment${state.receivables.length === 1 ? '' : 's'}`;
+    refs.receivableEmpty.hidden = total > 0;
+    refs.receivablePageSize.value = String(state.limit);
+    refs.exportReceivablesXlsx.disabled = total === 0;
+    updatePagination(refs.receivablePagination, refs.receivablePrev, refs.receivableNext, refs.receivablePageLabel, total, state.receivablePage);
   }
 
   async function loadDeposits() {
     state.deposits = await common.fetchJson(`/api/finance/deposits?${params()}`);
+    renderDeposits();
+  }
+
+  function renderDeposits() {
+    const total = state.deposits.length;
+    const pagination = common.paginateRows(state.deposits, state.depositPage, state.limit);
+    state.depositPage = pagination.page;
     refs.depositRows.replaceChildren();
-    state.deposits.forEach((deposit) => {
+    pagination.rows.forEach((deposit) => {
       const row = element('tr'); row.dataset.paymentId = deposit.payment_id; row.tabIndex = 0;
       cell(row, deposit.payment_date); cell(row, deposit.client); cell(row, deposit.appointment_date); cell(row, common.formatPeso(deposit.amount)); cell(row, common.paymentMethodLabel(deposit.method));
       const status = element('td');
@@ -260,8 +371,10 @@
       } else action.textContent = '-';
       row.append(action); refs.depositRows.append(row);
     });
-    refs.depositEmpty.hidden = state.deposits.length > 0;
-    refs.depositCount.textContent = `${state.deposits.length} deposits`;
+    refs.depositEmpty.hidden = total > 0;
+    refs.depositCount.textContent = `${total.toLocaleString('en-PH')} deposits`;
+    refs.depositPageSize.value = String(state.limit);
+    updatePagination(refs.depositPagination, refs.depositPrev, refs.depositNext, refs.depositPageLabel, total, state.depositPage);
   }
 
   async function loadCurrentTab() {
@@ -272,11 +385,8 @@
     refs.depositsPanel.hidden = state.tab !== 'deposits';
     refs.methodChartSection.hidden = state.tab !== 'transactions';
     refs.transactionSummary.hidden = state.tab !== 'transactions';
+    refs.transactionOverview.classList.toggle('is-ledger', state.tab === 'transactions');
     refs.ledgerHelp.hidden = state.tab !== 'transactions';
-    byId('typeFilterWrap').hidden = state.tab !== 'transactions';
-    byId('methodFilterWrap').hidden = state.tab !== 'transactions';
-    byId('statusFilterWrap').hidden = state.tab !== 'transactions';
-    byId('transactionSearchWrap').hidden = state.tab !== 'transactions';
     if (state.tab === 'transactions') await loadTransactions();
     if (state.tab === 'receivables') await loadReceivables();
     if (state.tab === 'deposits') await loadDeposits();
@@ -284,6 +394,13 @@
 
   function renderPaymentDetails(data) {
     refs.paymentDetails.replaceChildren();
+    state.selectedClient = data.payment.customer_id
+      ? {
+        id: data.payment.customer_id,
+        name: data.payment.client || 'Client',
+        email: data.payment.email || '',
+      }
+      : null;
     const details = [
       ['Client', data.payment.client], ['Receipt number', data.payment.receipt_number],
       ['Service', data.payment.service || 'Product sale'],
@@ -301,8 +418,20 @@
     }
     details.forEach(([label, value]) => {
       const wrapper = document.createElement('div');
-      const term = element('dt', label);
+      const term = element('dt');
       const description = element('dd');
+      if (label === 'Client') {
+        term.className = 'fin-payment-client-heading';
+        term.append(element('span', label));
+        const historyButton = element('button', 'Payment History', 'fin-button fin-client-payment-history-inline');
+        historyButton.type = 'button';
+        historyButton.disabled = !state.selectedClient;
+        if (!state.selectedClient) historyButton.title = 'Payment history is unavailable for this client.';
+        historyButton.addEventListener('click', () => showClientPaymentHistory());
+        term.append(historyButton);
+      } else {
+        term.textContent = label;
+      }
       if (label === 'Status') description.append(common.statusBadge(value));
       else description.textContent = value == null ? '-' : String(value);
       wrapper.append(term, description); refs.paymentDetails.append(wrapper);
@@ -323,6 +452,67 @@
     renderPaymentDetails(await common.fetchJson(`/api/finance/appointments/${encodeURIComponent(appointmentId)}`));
   }
 
+  function showClientDetails(button) {
+    state.selectedClient = {
+      id: button.dataset.clientId,
+      name: button.dataset.clientName,
+      email: button.dataset.clientEmail,
+    };
+    refs.clientDetailsTitle.textContent = state.selectedClient.name || 'Client details';
+    refs.clientDetails.replaceChildren();
+    [['Client', state.selectedClient.name], ['Email', state.selectedClient.email || 'Not provided']].forEach(([label, value]) => {
+      const wrapper = document.createElement('div');
+      wrapper.append(element('dt', label), element('dd', value));
+      refs.clientDetails.append(wrapper);
+    });
+    refs.clientPaymentHistoryBtn.disabled = false;
+    modalOpen(refs.clientDetailsModal);
+  }
+
+  async function showClientPaymentHistory() {
+    if (!state.selectedClient) return;
+    refs.clientPaymentHistoryRows.replaceChildren();
+    refs.clientPaymentHistoryEmpty.hidden = true;
+    refs.clientPaymentHistoryTitle.textContent = `${state.selectedClient.name} · Payment history`;
+    refs.clientPaymentHistoryMessage.textContent = 'Loading payment history…';
+    modalOpen(refs.clientPaymentHistoryModal);
+    try {
+      const result = await common.fetchJson(`/api/finance/clients/${encodeURIComponent(state.selectedClient.id)}/payment-history`);
+      refs.clientPaymentHistoryTitle.textContent = `${result.client.name || state.selectedClient.name} · Payment history`;
+      result.rows.forEach((payment) => {
+        const row = element('tr');
+        cell(row, payment.payment_date);
+        cell(row, payment.appointment_reference || '-');
+        cell(row, payment.description || '-');
+        cell(row, payment.payment_type.replace('_', ' '));
+        cell(row, common.paymentMethodLabel(payment.method));
+        cell(row, common.formatPeso(payment.amount));
+        const status = element('td');
+        status.append(common.statusBadge(payment.status));
+        row.append(status);
+        const reference = payment.reference_no || payment.receipt_number || 'No reference';
+        cell(row, payment.payment_id ? `#${payment.payment_id} · ${reference}` : reference);
+        refs.clientPaymentHistoryRows.append(row);
+      });
+      refs.clientPaymentHistoryEmpty.hidden = result.rows.length > 0;
+      refs.clientPaymentHistoryMessage.textContent = result.rows.length
+        ? `${result.rows.length} payment${result.rows.length === 1 ? '' : 's'} recorded.`
+        : '';
+    } catch (error) {
+      refs.clientPaymentHistoryMessage.textContent = `Could not load payment history: ${error.message}`;
+    }
+  }
+
+  const transactionSortButtons = [...document.querySelectorAll('#transactionsPanel [data-sort-column]')];
+  function updateTransactionSortIndicators() {
+    transactionSortButtons.forEach((button) => {
+      const active = button.dataset.sortColumn === state.sort;
+      button.closest('th').setAttribute('aria-sort', active ? (state.direction === 'asc' ? 'ascending' : 'descending') : 'none');
+      button.dataset.direction = active ? state.direction : '';
+    });
+  }
+  updateTransactionSortIndicators();
+
   function setViewMenuExpanded(expanded) {
     const toggle = byId('transactionViewToggle');
     if (toggle) {
@@ -335,6 +525,8 @@
   function setTab(tab) {
     state.tab = tab;
     state.page = 1;
+    state.receivablePage = 1;
+    state.depositPage = 1;
     setViewMenuExpanded(true);
     document.querySelectorAll('.fin-nav-view-tab').forEach((button) => {
       const active = button.dataset.tab === tab;
@@ -356,6 +548,8 @@
       state.from = range.from;
       state.to = range.to;
       state.page = 1;
+      state.receivablePage = 1;
+      state.depositPage = 1;
       loadCurrentTab().catch((error) => message(error.message, true));
     },
     onInvalid: (error) => message(error, true),
@@ -363,9 +557,37 @@
   refs.transactionType.addEventListener('change', () => { state.type = refs.transactionType.value; state.page = 1; loadTransactions().catch((error) => message(error.message, true)); });
   refs.transactionMethod.addEventListener('change', () => { state.method = refs.transactionMethod.value; state.page = 1; loadTransactions().catch((error) => message(error.message, true)); });
   refs.transactionStatus.addEventListener('change', () => { state.status = refs.transactionStatus.value; state.page = 1; loadTransactions().catch((error) => message(error.message, true)); });
+  transactionSortButtons.forEach((button) => button.addEventListener('click', () => {
+    if (state.sort === button.dataset.sortColumn) state.direction = state.direction === 'asc' ? 'desc' : 'asc';
+    else {
+      state.sort = button.dataset.sortColumn;
+      state.direction = 'asc';
+    }
+    state.page = 1;
+    updateTransactionSortIndicators();
+    loadTransactions().catch((error) => message(error.message, true));
+  }));
   let searchTimer;
   refs.transactionSearch.addEventListener('input', () => {
     clearTimeout(searchTimer); searchTimer = setTimeout(() => { state.search = refs.transactionSearch.value.trim(); state.page = 1; loadTransactions().catch((error) => message(error.message, true)); }, 250);
+  });
+  let receivableSearchTimer;
+  refs.receivableSearch.addEventListener('input', () => {
+    clearTimeout(receivableSearchTimer);
+    receivableSearchTimer = setTimeout(() => {
+      state.receivableSearch = refs.receivableSearch.value.trim();
+      state.receivablePage = 1;
+      loadReceivables().catch((error) => message(error.message, true));
+    }, 250);
+  });
+  [refs.transactionPageSize, refs.receivablePageSize, refs.depositPageSize].forEach((select) => {
+    select.addEventListener('change', () => {
+      state.limit = Number(select.value);
+      state.page = 1;
+      state.receivablePage = 1;
+      state.depositPage = 1;
+      loadCurrentTab().catch((error) => message(error.message, true));
+    });
   });
   byId('transactionViewToggle').addEventListener('click', () => {
     const expanded = byId('transactionViewToggle').getAttribute('aria-expanded') === 'true';
@@ -378,7 +600,17 @@
   });
   refs.transactionPrev.addEventListener('click', () => { state.page -= 1; loadTransactions().catch((error) => message(error.message, true)); });
   refs.transactionNext.addEventListener('click', () => { state.page += 1; loadTransactions().catch((error) => message(error.message, true)); });
+  refs.receivablePrev.addEventListener('click', () => { state.receivablePage -= 1; renderReceivables(); });
+  refs.receivableNext.addEventListener('click', () => { state.receivablePage += 1; renderReceivables(); });
+  refs.depositPrev.addEventListener('click', () => { state.depositPage -= 1; renderDeposits(); });
+  refs.depositNext.addEventListener('click', () => { state.depositPage += 1; renderDeposits(); });
+  refs.exportReceivablesXlsx.addEventListener('click', exportReceivables);
   refs.transactionRows.addEventListener('click', (event) => {
+    const clientButton = event.target.closest('button[data-client-id]');
+    if (clientButton) {
+      showClientDetails(clientButton);
+      return;
+    }
     const receiptButton = event.target.closest('button[data-receipt-id]');
     if (receiptButton) {
       refs.receiptModalTitle.textContent = receiptButton.dataset.receiptTitle;
@@ -474,6 +706,7 @@
   });
   refs.recordSaleBtn.addEventListener('click', () => openSaleModal());
   refs.exportTransactionsXlsx.addEventListener('click', exportTransactions);
+  refs.clientPaymentHistoryBtn.addEventListener('click', () => showClientPaymentHistory());
   [refs.salePrice, refs.saleQuantity, refs.saleProduct].forEach((input) => input.addEventListener('input', updateSaleTotal));
   refs.saleProduct.addEventListener('change', updateSaleTotal);
   refs.saleForm.addEventListener('submit', async (event) => {
@@ -486,6 +719,7 @@
         method: 'POST',
         body: JSON.stringify({
           request_key: saleRequestKey,
+          customer_id: Number(refs.saleClient.value) || null,
           product_id: Number(refs.saleProduct.value),
           quantity: Number(refs.saleQuantity.value),
           unit_price: Number(refs.salePrice.value),
@@ -502,8 +736,8 @@
       refs.saleSubmit.disabled = false;
     }
   });
-  [['[data-close-payment]', refs.recordPaymentModal], ['[data-close-sale]', refs.saleModal], ['[data-close-refund]', refs.refundModal], ['[data-close-reverse]', refs.reverseModal], ['[data-close-details]', refs.paymentDetailsModal], ['[data-close-receipt]', refs.receiptModal]].forEach(([selector, modal]) => document.querySelectorAll(selector).forEach((button) => button.addEventListener('click', () => modalClose(modal))));
-  [refs.recordPaymentModal, refs.saleModal, refs.refundModal, refs.reverseModal, refs.paymentDetailsModal, refs.receiptModal].forEach((modal) => {
+  [['[data-close-payment]', refs.recordPaymentModal], ['[data-close-sale]', refs.saleModal], ['[data-close-refund]', refs.refundModal], ['[data-close-reverse]', refs.reverseModal], ['[data-close-details]', refs.paymentDetailsModal], ['[data-close-receipt]', refs.receiptModal], ['[data-close-client]', refs.clientDetailsModal], ['[data-close-client-history]', refs.clientPaymentHistoryModal]].forEach(([selector, modal]) => document.querySelectorAll(selector).forEach((button) => button.addEventListener('click', () => modalClose(modal))));
+  [refs.recordPaymentModal, refs.saleModal, refs.refundModal, refs.reverseModal, refs.paymentDetailsModal, refs.receiptModal, refs.clientDetailsModal, refs.clientPaymentHistoryModal].forEach((modal) => {
     common.bindAccessibleModal(modal);
     modal.addEventListener('click', (event) => { if (event.target === modal) modalClose(modal); });
   });

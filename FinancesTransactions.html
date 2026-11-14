@@ -20,6 +20,7 @@
         </div>
         <div class="actions">
             <div id="salesHeaderAction" class="fin-sales-header-action" role="group" aria-label="Sales actions">
+                <button class="fin-button fin-button-primary fin-sales-record-button" id="recordSaleBtn" type="button">Record Sale</button>
             </div>
             <button class="logout-btn" id="logoutBtn"><span>Logout</span></button>
             <div class="notification-wrap" id="notificationWrap"><button class="notification" id="notificationBtn"
@@ -51,12 +52,12 @@
             <h4 class="sidebar-heading">My Links</h4>
             <nav>
                 <ul>
-                    <li class="nav-item"><a href="FinanceDashboard.html"><img src="icons/finance-dashboard.svg" alt=""
-                                class="finance-nav-icon"><span>Dashboard</span></a></li>
+                    <li class="nav-item"><a href="FinanceDashboard.html"><span class="finance-nav-icon-slot"><img src="icons/finance-dashboard.svg" alt=""
+                                class="finance-nav-icon"></span><span>Dashboard</span></a></li>
                     <li class="nav-item active fin-nav-dropdown">
                         <div class="fin-nav-dropdown-head">
-                            <a class="fin-nav-parent-link" href="FinancesTransactions.html" aria-current="page"><img
-                                    src="icons/finance-transactions.svg" alt="" class="finance-nav-icon"><span>Sales
+                            <a class="fin-nav-parent-link" href="FinancesTransactions.html" aria-current="page"><span class="finance-nav-icon-slot"><img
+                                    src="icons/finance-transactions.svg" alt="" class="finance-nav-icon"></span><span>Sales
                                     &amp; Transactions</span></a>
                             <button type="button" class="fin-nav-dropdown-toggle" id="transactionViewToggle"
                                 aria-label="Collapse Sales &amp; Transactions submenu" aria-expanded="true"
@@ -77,10 +78,10 @@
                             </li>
                         </ul>
                     </li>
-                    <li class="nav-item"><a href="FinanceExpenses.html"><img src="icons/finance-expenses.svg" alt=""
-                                class="finance-nav-icon"><span>Expenses</span></a></li>
-                    <li class="nav-item"><a href="FinanceReports.html"><img src="icons/finance-reports.svg" alt=""
-                                class="finance-nav-icon"><span>Reports</span></a></li>
+                    <li class="nav-item"><a href="FinanceExpenses.html"><span class="finance-nav-icon-slot"><img src="icons/finance-expenses.svg" alt=""
+                                class="finance-nav-icon"></span><span>Expenses</span></a></li>
+                    <li class="nav-item"><a href="FinanceReports.html"><span class="finance-nav-icon-slot"><img src="icons/finance-reports.svg" alt=""
+                                class="finance-nav-icon"></span><span>Reports</span></a></li>
                 </ul>
             </nav>
             <div class="profile-wrap">
@@ -101,74 +102,53 @@
             </div>
         </section>
         <section class="main-content staff-page-content fin-page-flow fin-transactions-page">
-            <div class="fin-summary-grid fin-sales-summary" id="transactionSummary" aria-label="Payment summary">
-                <article class="fin-kpi-card fin-kpi-card--collections">
-                    <span class="fin-kpi-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3v18m5-14.5a4 4 0 0 0-4-2.5h-2a3.5 3.5 0 0 0 0 7h2a3.5 3.5 0 0 1 0 7h-2a4 4 0 0 1-4-2.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span>
-                    <strong id="postedCollectionsSummary">—</strong>
-                    <span class="fin-kpi-label">Posted collections</span>
-                    <small>Posted payments for the selected filters</small>
-                </article>
-                <article class="fin-kpi-card fin-kpi-card--payments">
-                    <span class="fin-kpi-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M6.5 4.5h11a2 2 0 0 1 2 2v13l-2.7-1.6-2.8 1.6-2.8-1.6-2.7 1.6-2.7-1.6L3 19.5v-13a2 2 0 0 1 2-2h1.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M8 9h8m-8 4h5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span>
-                    <strong id="paymentCountSummary">—</strong>
-                    <span class="fin-kpi-label">Matching payments</span>
-                    <small>Transactions matching the current ledger filters</small>
-                </article>
-            </div>
-            <div class="fin-filters">
-                <div class="fin-period-controls fin-filter-period-controls">
-                    <div class="fin-segmented" role="group" aria-label="Transaction date range"><button type="button"
-                            data-period="today">Today</button><button type="button" data-period="month"
-                            class="is-active">This month</button><button type="button" data-period="last-month">Last
-                            month</button></div>
-                    <div class="fin-date-range-fields">
-                        <label>From<input id="transactionFrom" type="date"></label><label>To<input id="transactionTo"
-                                type="date"></label>
+            <div class="fin-ledger-overview" id="transactionOverview">
+                <div class="fin-filters fin-transaction-date-filters">
+                    <div class="fin-period-controls fin-filter-period-controls">
+                        <div class="fin-segmented" role="group" aria-label="Transaction date range"><button type="button"
+                                data-period="today">Today</button><button type="button" data-period="month"
+                                class="is-active">This month</button><button type="button" data-period="last-month">Last
+                                month</button></div>
+                        <div class="fin-date-range-fields">
+                            <label>From<input id="transactionFrom" type="date"></label><label>To<input id="transactionTo"
+                                    type="date"></label>
+                        </div>
                     </div>
-                </div><label id="typeFilterWrap">Payment type<select id="transactionType">
-                        <option value="">All types</option>
-                        <option value="reservation">Reservation</option>
-                        <option value="balance">Balance</option>
-                        <option value="product_sale">Product sale</option>
-                    </select></label><label id="methodFilterWrap">Payment method<select id="transactionMethod">
-                        <option value="">All methods</option>
-                        <option value="paymongo">PayMongo (Other)</option>
-                        <option value="cash">Cash</option>
-                        <option value="gcash">GCash</option>
-                        <option value="maya">Maya</option>
-                        <option value="card">Credit/debit card</option>
-                    </select></label><label id="statusFilterWrap">Status<select id="transactionStatus">
-                        <option value="posted">Posted</option>
-                        <option value="refunded">Refunded</option>
-                        <option value="reversed">Reversed</option>
-                        <option value="all">All</option>
-                    </select></label><label class="fin-search-field" id="transactionSearchWrap">Client search<input
-                        id="transactionSearch" type="search" placeholder="Name, service, reference"></label>
+                </div>
+                <div class="fin-summary-grid fin-sales-summary" id="transactionSummary" aria-label="Payment summary">
+                    <article class="fin-kpi-card fin-kpi-card--payments">
+                        <span class="fin-kpi-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M6.5 4.5h11a2 2 0 0 1 2 2v13l-2.7-1.6-2.8 1.6-2.8-1.6-2.7 1.6-2.7-1.6L3 19.5v-13a2 2 0 0 1 2-2h1.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M8 9h8m-8 4h5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span>
+                        <strong id="paymentCountSummary">—</strong>
+                        <span class="fin-kpi-label">Matching payments</span>
+                        <small>Transactions matching the current ledger filters</small>
+                    </article>
+                </div>
             </div>
             <p class="fin-modal-copy" id="ledgerHelp">Includes deposits, balances, product sales, refunds, and
                 reversals.</p>
             <div class="fin-sales-analytics-row" id="transactionAnalyticsRow">
                 <section class="staff-table-card" id="transactionsPanel" role="tabpanel"
                     aria-labelledby="transactionViewTransactions">
-                    <div class="staff-table-toolbar">
-                        <h2>Payment ledger</h2>
-                        <div class="fin-row-actions"><span id="transactionCount">0 payments</span><button
-                                class="fin-button fin-button-primary" id="recordSaleBtn" type="button">Record
-                                Sale</button><button class="fin-button" id="exportTransactionsXlsx" type="button">Export
-                                XLSX</button></div>
+                    <div class="staff-table-toolbar fin-ledger-toolbar">
+                        <h2>Payment Ledger</h2>
+                        <div class="fin-ledger-tools">
+                            <input class="fin-ledger-search" id="transactionSearch" type="search" aria-label="Client search" placeholder="Client search">
+                            <button class="fin-button fin-button-export" id="exportTransactionsXlsx" type="button">EXPORT</button>
+                        </div>
                     </div>
+                    <div class="fin-table-info" id="transactionCount" aria-live="polite">0 payments</div>
                     <div class="fin-table-scroll" id="transactionTableScroll">
                         <table class="fin-table">
                             <thead>
                                 <tr>
-                                    <th>Date</th>
-                                    <th>Receipt number</th>
-                                    <th>Client</th>
-                                    <th>Type</th>
-                                    <th>Service / reference</th>
-                                    <th>Method</th>
-                                    <th>Amount (PHP)</th>
-                                    <th>Status</th>
+                                    <th><button class="fin-sort-button" type="button" data-sort-column="date">Date</button></th>
+                                    <th><button class="fin-sort-button" type="button" data-sort-column="receipt">Receipt number</button></th>
+                                    <th><button class="fin-sort-button" type="button" data-sort-column="client">Client</button></th>
+                                    <th><select id="transactionType" aria-label="Filter payments by type"><option value="">All types</option><option value="reservation">Reservation</option><option value="balance">Balance</option><option value="product_sale">Product sale</option></select></th>
+                                    <th><button class="fin-sort-button" type="button" data-sort-column="service">Service / reference</button></th>
+                                    <th><select id="transactionMethod" aria-label="Filter payments by method"><option value="">All methods</option><option value="paymongo">PayMongo (Other)</option><option value="cash">Cash</option><option value="gcash">GCash</option><option value="maya">Maya</option><option value="card">Credit/debit card</option></select></th>
+                                    <th><button class="fin-sort-button" type="button" data-sort-column="amount">Amount (PHP)</button></th>
+                                    <th><select id="transactionStatus" aria-label="Filter payments by status"><option value="posted">Posted</option><option value="refunded">Refunded</option><option value="reversed">Reversed</option><option value="all">All statuses</option></select></th>
                                     <th>Action</th>
                                 </tr>
                             </thead>
@@ -180,9 +160,12 @@
                         <strong>No matching payments</strong>
                         <p>Try adjusting the dates or filters, or record a payment to get started.</p>
                     </div>
-                    <div class="fin-pagination" id="transactionPagination" hidden><button class="fin-button" id="transactionPrev"
-                            type="button">Previous</button><span id="transactionPageLabel">Page 1</span><button
-                            class="fin-button" id="transactionNext" type="button">Next</button></div>
+                    <div class="fin-pagination" id="transactionPagination" hidden>
+                        <label class="fin-page-size">Rows per page<select id="transactionPageSize" aria-label="Payment ledger rows per page"><option value="10">10</option><option value="25" selected>25</option><option value="50">50</option><option value="100">100</option></select></label>
+                        <button class="fin-button" id="transactionPrev" type="button">Previous</button>
+                        <span id="transactionPageLabel">Page 1 of 1</span>
+                        <button class="fin-button" id="transactionNext" type="button">Next</button>
+                    </div>
                 </section>
                 <section class="staff-table-card fin-chart-section" id="methodChartSection">
                     <div class="fin-section-heading">
@@ -202,9 +185,13 @@
             <section class="staff-table-card" id="receivablesPanel" role="tabpanel"
                 aria-labelledby="transactionViewReceivables" hidden>
                 <div class="staff-table-toolbar">
-                    <h2>Outstanding balances</h2><span id="receivableCount">0 appointments</span>
+                    <h2>Outstanding balances</h2>
+                    <div class="fin-ledger-tools">
+                        <input class="fin-ledger-search" id="receivableSearch" type="search" aria-label="Search outstanding balances" placeholder="Search clients or services">
+                        <button class="fin-button fin-button-export" id="exportReceivablesXlsx" type="button">EXPORT</button>
+                    </div>
                 </div>
-                <div class="fin-table-scroll">
+                <div class="fin-table-scroll fin-receivable-table-scroll">
                     <table class="fin-table">
                         <thead>
                             <tr>
@@ -218,16 +205,23 @@
                         </thead>
                         <tbody id="receivableRows"></tbody>
                     </table>
+                    <div class="staff-empty-state fin-table-empty-state" id="receivableEmpty"><strong>No outstanding balances</strong>
+                        <p>Fully paid completed appointments disappear from this list.</p>
+                    </div>
                 </div>
-                <div class="staff-empty-state" id="receivableEmpty"><strong>No outstanding balances</strong>
-                    <p>Fully paid completed appointments disappear from this list.</p>
+                <div class="fin-pagination" id="receivablePagination" hidden>
+                    <label class="fin-page-size">Rows per page<select id="receivablePageSize" aria-label="Outstanding balances rows per page"><option value="10">10</option><option value="25" selected>25</option><option value="50">50</option><option value="100">100</option></select></label>
+                    <button class="fin-button" id="receivablePrev" type="button">Previous</button>
+                    <span id="receivablePageLabel">Page 1 of 1</span>
+                    <button class="fin-button" id="receivableNext" type="button">Next</button>
                 </div>
             </section>
             <section class="staff-table-card" id="depositsPanel" role="tabpanel"
                 aria-labelledby="transactionViewDeposits" hidden>
                 <div class="staff-table-toolbar">
-                    <h2>Reservation deposits</h2><span id="depositCount">0 deposits</span>
+                    <h2>Reservation deposits</h2>
                 </div>
+                <div class="fin-table-info" id="depositCount" aria-live="polite">0 deposits</div>
                 <div class="fin-table-scroll">
                     <table class="fin-table">
                         <thead>
@@ -243,6 +237,12 @@
                         </thead>
                         <tbody id="depositRows"></tbody>
                     </table>
+                </div>
+                <div class="fin-pagination" id="depositPagination" hidden>
+                    <label class="fin-page-size">Rows per page<select id="depositPageSize" aria-label="Reservation deposits rows per page"><option value="10">10</option><option value="25" selected>25</option><option value="50">50</option><option value="100">100</option></select></label>
+                    <button class="fin-button" id="depositPrev" type="button">Previous</button>
+                    <span id="depositPageLabel">Page 1 of 1</span>
+                    <button class="fin-button" id="depositNext" type="button">Next</button>
                 </div>
                 <div class="staff-empty-state" id="depositEmpty"><strong>No reservation deposits</strong>
                     <p>Deposits will appear here for the selected dates.</p>
@@ -279,7 +279,9 @@
                     aria-labelledby="saleTitle"><button class="fin-modal-close" type="button" data-close-sale
                         aria-label="Close">&times;</button>
                     <h2 id="saleTitle">Record product sale</h2>
-                    <form id="saleForm" class="fin-form"><label>Inventory product<select id="saleProduct" required>
+                    <form id="saleForm" class="fin-form"><label>Client (optional)<select id="saleClient">
+                                <option value="">No client selected</option>
+                            </select></label><label>Inventory product<select id="saleProduct" required>
                                 <option value="">Choose product</option>
                             </select></label><label>Quantity<input id="saleQuantity" type="number" min="1" step="1"
                                 value="1" required></label><label>Sale price per unit (PHP)<input id="salePrice"
@@ -352,6 +354,22 @@
                             <tbody id="paymentHistoryRows"></tbody>
                         </table>
                     </div>
+                </section>
+            </div>
+            <div class="fin-modal-overlay" id="clientDetailsModal" hidden>
+                <section class="fin-modal fin-modal--compact" role="dialog" aria-modal="true" aria-labelledby="clientDetailsTitle">
+                    <button class="fin-modal-close" type="button" data-close-client aria-label="Close">&times;</button>
+                    <div class="fin-client-modal-heading"><h2 id="clientDetailsTitle">Client details</h2><button class="fin-button" id="clientPaymentHistoryBtn" type="button">Payment History</button></div>
+                    <dl class="fin-detail-grid" id="clientDetails"></dl>
+                </section>
+            </div>
+            <div class="fin-modal-overlay fin-client-history-overlay" id="clientPaymentHistoryModal" hidden>
+                <section class="fin-modal" role="dialog" aria-modal="true" aria-labelledby="clientPaymentHistoryTitle">
+                    <button class="fin-modal-close" type="button" data-close-client-history aria-label="Close">&times;</button>
+                    <h2 id="clientPaymentHistoryTitle">Payment history</h2>
+                    <p class="fin-modal-copy" id="clientPaymentHistoryMessage" role="status" aria-live="polite"></p>
+                    <div class="fin-table-scroll"><table class="fin-table"><thead><tr><th>Date</th><th>Appointment</th><th>Description</th><th>Type</th><th>Method</th><th>Amount</th><th>Status</th><th>Transaction ID / reference</th></tr></thead><tbody id="clientPaymentHistoryRows"></tbody></table></div>
+                    <div class="staff-empty-state" id="clientPaymentHistoryEmpty" hidden><strong>No payment history</strong><p>This client has no recorded payments.</p></div>
                 </section>
             </div>
             <div class="fin-modal-overlay" id="receiptModal" hidden>

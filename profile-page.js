@@ -5,6 +5,10 @@
   if (!navigation || !buttons.length || !panels.length) return;
 
   const validSections = new Set(buttons.map((button) => button.dataset.profileSection));
+  const sectionFromHash = () => {
+    const section = window.location.hash.slice(1);
+    return section === 'appointments.html' ? 'appointments' : section;
+  };
 
   function activateSection(section, updateHash) {
     if (!validSections.has(section)) section = 'account';
@@ -35,8 +39,8 @@
   });
 
   window.addEventListener('hashchange', () => {
-    activateSection(window.location.hash.slice(1), false);
+    activateSection(sectionFromHash(), false);
   });
 
-  activateSection(window.location.hash.slice(1), false);
+  activateSection(sectionFromHash(), false);
 })();

@@ -9,10 +9,9 @@
 </head>
 
 <body>
-    <header class="staff-header"><button type="button" class="staff-hamburger-btn" id="hamburgerBtn"
+    <header class="staff-header fin-dashboard-header"><button type="button" class="staff-hamburger-btn" id="hamburgerBtn"
             aria-label="Open menu" aria-expanded="false" aria-controls="mobileNavDrawer"><img src="icons/hamburger.svg"
                 alt="" class="staff-hamburger-icon"></button>
-        <div class="logo-container"><a href="index.html"><img src="images/logo_horizontal-removebg.webp" alt="Skin Goddess logo" id="logo"></a></div>
         <div class="page-title">
             <h2>Finance Dashboard</h2>
             <p>Monthly financial overview</p>
@@ -48,17 +47,17 @@
             <h4 class="sidebar-heading">My Links</h4>
             <nav>
                 <ul>
-                    <li class="nav-item active"><a href="FinanceDashboard.html" aria-current="page"><img
+                    <li class="nav-item active"><a href="FinanceDashboard.html" aria-current="page"><span class="finance-nav-icon-slot"><img
                                 src="icons/finance-dashboard.svg" alt=""
-                                class="finance-nav-icon"><span>Dashboard</span></a>
+                                class="finance-nav-icon"></span><span>Dashboard</span></a>
                     </li>
-                    <li class="nav-item"><a href="FinancesTransactions.html"><img src="icons/finance-transactions.svg"
-                                alt="" class="finance-nav-icon"><span>Sales &amp;
+                    <li class="nav-item"><a href="FinancesTransactions.html"><span class="finance-nav-icon-slot"><img src="icons/finance-transactions.svg"
+                                alt="" class="finance-nav-icon"></span><span>Sales &amp;
                                 Transactions</span></a></li>
-                    <li class="nav-item"><a href="FinanceExpenses.html"><img src="icons/finance-expenses.svg" alt=""
-                                class="finance-nav-icon"><span>Expenses</span></a></li>
-                    <li class="nav-item"><a href="FinanceReports.html"><img src="icons/finance-reports.svg" alt=""
-                                class="finance-nav-icon"><span>Reports</span></a></li>
+                    <li class="nav-item"><a href="FinanceExpenses.html"><span class="finance-nav-icon-slot"><img src="icons/finance-expenses.svg" alt=""
+                                class="finance-nav-icon"></span><span>Expenses</span></a></li>
+                    <li class="nav-item"><a href="FinanceReports.html"><span class="finance-nav-icon-slot"><img src="icons/finance-reports.svg" alt=""
+                                class="finance-nav-icon"></span><span>Reports</span></a></li>
                 </ul>
             </nav>
             <div class="profile-wrap">
@@ -105,6 +104,7 @@
                 <a href="FinancesTransactions.html#receivables"><span>Receivables</span><strong id="dashReceivables">0</strong></a>
                 <div><span>No-shows this week</span><strong id="dashNoShows">0</strong></div>
             </div>
+            <div class="fin-dashboard-columns">
             <section class="staff-table-card fin-dashboard-activity" aria-labelledby="dashboardActivityTitle">
                 <div class="staff-table-toolbar">
                     <h2 id="dashboardActivityTitle">Recent finance activity</h2><a href="FinancesTransactions.html">View all transactions</a>
@@ -129,7 +129,7 @@
                 <p class="fin-page-message" id="dashboardMessage" role="status" aria-live="polite">Loading finance
                     overview...</p>
             </section>
-            <div class="fin-chart-grid fin-dashboard-chart-grid">
+            <div class="fin-dashboard-side">
                 <section class="staff-table-card fin-chart-section fin-dashboard-chart">
                     <div class="fin-section-heading">
                         <h2>Sales earned vs recorded expenses</h2><span>Last six months</span>
@@ -138,16 +138,6 @@
                             aria-label="Sales earned versus recorded expenses for the last six months"
                             role="img"></canvas></div>
                 </section>
-                <section class="staff-table-card fin-chart-section fin-dashboard-chart">
-                    <div class="fin-section-heading">
-                        <h2>Posted collections</h2><span id="dashboardMonthLabel"></span>
-                    </div>
-                    <div class="fin-chart-frame"><canvas id="dashboardDailyChart"
-                            aria-label="Posted collections by received date for the selected period"
-                            role="img"></canvas></div>
-                </section>
-            </div>
-            <div class="fin-chart-grid fin-dashboard-trends-grid">
                 <section class="staff-table-card fin-chart-section fin-dashboard-chart fin-dashboard-trends">
                     <div class="fin-section-heading">
                         <h2>Appointment trends</h2><span>Last six months by appointment date</span>
@@ -159,12 +149,14 @@
                         appointment trends...</p>
                 </section>
             </div>
+            </div>
         </section>
     </main>
     <script src="header.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
     <script src="finance-common.js"></script>
     <script src="finance-dashboard.js"></script>
+    <script src="admin-context-nav.js"></script>
 </body>
 
 </html>

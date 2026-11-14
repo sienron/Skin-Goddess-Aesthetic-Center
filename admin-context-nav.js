@@ -52,9 +52,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     ["AdminDashboard.html", "Dashboard", "icons/finance-dashboard.svg"],
     ["AdminClients.html", "Clients", "icons/staff-users.svg"],
     ["AdminAppointment.html", "Appointments", "icons/staff-appointments.svg"],
-    ["AdminTreatmentHistory.html", "Treatment History", "icons/finance-reports.svg"],
+    ["AdminTreatmentHistory.html", "Treatment History", "icons/staff-content.svg"],
     ["AdminInventoryManagement.html", "Inventory", "icons/staff-inventory.svg"],
     ["AdminInventoryTransactions.html", "Stock Transaction Log", "icons/finance-transactions.svg"],
+    ["FinanceDashboard.html", "Finance Dashboard", "icons/finance-dashboard.svg"],
     ["FinancesTransactions.html", "Sales & Transactions", "icons/finance-transactions.svg"],
     ["FinanceExpenses.html", "Expenses", "icons/finance-expenses.svg"],
     ["FinanceReports.html", "Reports", "icons/finance-reports.svg"],
@@ -66,7 +67,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const groups = [
     { label: "Appointments", icon: "icons/staff-appointments.svg", pages: links.slice(1, 4) },
     { label: "Inventory", icon: "icons/staff-inventory.svg", pages: links.slice(4, 6) },
-    { label: "Finance", icon: "icons/finance-transactions.svg", pages: links.slice(6, 9) },
+    { label: "Finance", icon: "icons/finance-transactions.svg", pages: links.slice(6, 10) },
   ];
 
   function makeLink([href, label, icon], child = false) {
@@ -144,7 +145,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   groups.forEach((group) => {
     nav.appendChild(groupElement(group, group.label === "Finance" ? financeViews : null));
   });
-  links.slice(9).forEach((page) => nav.appendChild(makeLink(page)));
+  links.slice(10).forEach((page) => nav.appendChild(makeLink(page)));
 
   const mobileLinks = document.querySelector(".mobile-nav-links");
   if (mobileLinks) {

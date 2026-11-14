@@ -94,14 +94,6 @@
         document.getElementById("dashboardConfirmedCount").textContent = count("confirmed");
         document.getElementById("dashboardCancelledCount").textContent = appointments.filter((item) => String(item.status || "").toLowerCase() === "cancelled" && String(item.date || "").startsWith(thisMonth)).length;
         document.getElementById("dashboardClientTotal").textContent = `(${appointments.length})`;
-        const currentMonth = document.getElementById("current-month");
-        if (currentMonth) {
-            currentMonth.textContent = new Intl.DateTimeFormat("en-US", {
-                timeZone: "Asia/Manila",
-                month: "long",
-                year: "numeric"
-            }).format(now);
-        }
     }
 
     function renderClientPage() {

@@ -83,6 +83,52 @@
         return `/api/appointments/${encodeURIComponent(currentApptId)}/notes${noteId ? `/${encodeURIComponent(noteId)}` : ""}`;
     }
 
+    function confirmNoteRemoval(returnFocus) {
+        return new Promise((resolve) => {
+            if (document.querySelector(".treatment-note-confirm-overlay")) {
+                resolve(false);
+                return;
+            }
+
+            const overlay = document.createElement("div");
+            overlay.className = "treatment-notes-modal-overlay show treatment-note-confirm-overlay";
+            overlay.innerHTML = `
+                <section class="treatment-notes-modal treatment-note-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="treatmentNoteRemoveTitle" aria-describedby="treatmentNoteRemoveDescription">
+                    <p class="treatment-notes-modal-eyebrow">TREATMENT NOTES</p>
+                    <h2 id="treatmentNoteRemoveTitle">Remove this treatment note?</h2>
+                    <p class="treatment-note-confirm-copy" id="treatmentNoteRemoveDescription">This action cannot be undone.</p>
+                    <div class="treatment-note-confirm-actions">
+                        <button type="button" class="treatment-note-confirm-button treatment-note-confirm-button--secondary">Keep note</button>
+                        <button type="button" class="treatment-note-confirm-button treatment-note-confirm-button--primary">Remove note</button>
+                    </div>
+                </section>`;
+
+            const cancelButton = overlay.querySelector(".treatment-note-confirm-button--secondary");
+            const confirmButton = overlay.querySelector(".treatment-note-confirm-button--primary");
+            const close = (confirmed) => {
+                document.removeEventListener("keydown", handleKeydown);
+                overlay.remove();
+                if (!confirmed) returnFocus.focus();
+                resolve(confirmed);
+            };
+            const handleKeydown = (event) => {
+                if (event.key === "Escape") {
+                    event.preventDefault();
+                    close(false);
+                }
+            };
+
+            cancelButton.addEventListener("click", () => close(false));
+            confirmButton.addEventListener("click", () => close(true));
+            overlay.addEventListener("click", (event) => {
+                if (event.target === overlay) close(false);
+            });
+            document.addEventListener("keydown", handleKeydown);
+            document.body.appendChild(overlay);
+            cancelButton.focus();
+        });
+    }
+
     async function loadNotes() {
         if (currentApptId == null) return;
         const notes = await notesRequest(notesPath());
@@ -242,7 +288,57 @@
 
         saveBtn.addEventListener("click", (e) => {
             e.stopPropagation();
-            void commitEdit().catch((error) => window.alert(error.message));
+            if (document.querySelector(".treatment-note-confirm-overlay")) return;
+
+            const overlay = document.createElement("div");
+            overlay.className = "treatment-notes-modal-overlay show treatment-note-confirm-overlay";
+            overlay.innerHTML = `
+                <section class="treatment-notes-modal treatment-note-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="treatmentNoteSaveConfirmTitle" aria-describedby="treatmentNoteSaveConfirmDescription">
+                    <p class="treatment-notes-modal-eyebrow">TREATMENT NOTES</p>
+                    <h2 id="treatmentNoteSaveConfirmTitle">Save treatment notes?</h2>
+                    <p class="treatment-note-confirm-copy" id="treatmentNoteSaveConfirmDescription">Do you want to save your changes?</p>
+                    <div class="treatment-note-confirm-actions">
+                        <button type="button" class="treatment-note-confirm-button treatment-note-confirm-button--secondary">No, Edit Again</button>
+                        <button type="button" class="treatment-note-confirm-button treatment-note-confirm-button--primary">Yes, Save</button>
+                    </div>
+                </section>`;
+
+            const cancelButton = overlay.querySelector(".treatment-note-confirm-button--secondary");
+            const confirmButton = overlay.querySelector(".treatment-note-confirm-button--primary");
+            let saving = false;
+            const close = () => {
+                document.removeEventListener("keydown", handleKeydown);
+                overlay.remove();
+                saveBtn.focus();
+            };
+            const handleKeydown = (event) => {
+                if (event.key === "Escape" && !saving) {
+                    event.preventDefault();
+                    close();
+                }
+            };
+
+            cancelButton.addEventListener("click", close);
+            overlay.addEventListener("click", (event) => {
+                if (event.target === overlay && !saving) close();
+            });
+            confirmButton.addEventListener("click", async () => {
+                if (saving) return;
+                saving = true;
+                confirmButton.disabled = true;
+                cancelButton.disabled = true;
+                confirmButton.textContent = "Saving...";
+                try {
+                    await commitEdit();
+                    close();
+                } catch (error) {
+                    close();
+                    window.alert(error.message);
+                }
+            });
+            document.addEventListener("keydown", handleKeydown);
+            document.body.appendChild(overlay);
+            cancelButton.focus();
         });
 
         textarea.addEventListener("keydown", (e) => {
@@ -254,17 +350,19 @@
 
         closeBtn.addEventListener("click", (e) => {
             e.stopPropagation();
-            if (!note.text || window.confirm("Remove this treatment note?")) {
-                void notesRequest(notesPath(note.id), { method: "DELETE" })
-                    .then(() => {
-                        const list = getNotesForCurrentAppt();
-                        const idx = list.findIndex((n) => n.id === note.id);
-                        if (idx !== -1) list.splice(idx, 1);
-                        el.remove();
-                        updateNotesScrollIndicator();
-                    })
-                    .catch((error) => window.alert(error.message));
-            }
+            void (async () => {
+                if (!await confirmNoteRemoval(closeBtn)) return;
+                try {
+                    await notesRequest(notesPath(note.id), { method: "DELETE" });
+                    const list = getNotesForCurrentAppt();
+                    const idx = list.findIndex((n) => n.id === note.id);
+                    if (idx !== -1) list.splice(idx, 1);
+                    el.remove();
+                    updateNotesScrollIndicator();
+                } catch (error) {
+                    window.alert(error.message);
+                }
+            })();
         });
 
         return el;

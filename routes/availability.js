@@ -34,8 +34,15 @@ router.get('/', async (req, res) => {
 
   const monthMatch = typeof req.query.month === 'string' && req.query.month.match(/^(\d{4})-(\d{2})$/);
   const serviceId = validServiceId(req.query.serviceId);
+  const appointmentIdValue = req.query.appointmentId;
+  const appointmentId = typeof appointmentIdValue === 'string' && /^\d+$/.test(appointmentIdValue)
+    ? Number(appointmentIdValue)
+    : null;
   if (!monthMatch) return res.status(400).json({ message: 'month must use YYYY-MM.' });
   if (!serviceId) return res.status(400).json({ message: 'Choose a valid service.' });
+  if (appointmentIdValue !== undefined && (!Number.isSafeInteger(appointmentId) || appointmentId <= 0)) {
+    return res.status(400).json({ message: 'Choose a valid appointment.' });
+  }
 
   const year = Number(monthMatch[1]);
   const month = Number(monthMatch[2]);
@@ -46,8 +53,45 @@ router.get('/', async (req, res) => {
     if (serviceResult.rows.length === 0) return res.status(404).json({ message: 'Service not found.' });
     const duration = Number(serviceResult.rows[0].duration_minutes)
       + Number(serviceResult.rows[0].buffer_minutes ?? DEFAULT_BUFFER_MINUTES);
+    let targetAestheticianId = null;
+    if (appointmentId !== null) {
+      const appointmentResult = await db.query(`
+        SELECT appointment_id, aesthetician_id, service_id, appointment_status
+        FROM appointments
+        WHERE appointment_id = $1
+      `, [appointmentId]);
+      const appointment = appointmentResult.rows[0];
+      if (!appointment) return res.status(404).json({ message: 'Appointment not found.' });
+
+      const userResult = await db.query(
+        'SELECT role FROM users WHERE user_id = $1 AND status = $2',
+        [req.session.userId, 'active']
+      );
+      const role = userResult.rows[0]?.role;
+      const isAdmin = role === 'admin';
+      const isAssignedAesthetician = role === 'aesthetician'
+        && Number(appointment.aesthetician_id) === Number(req.session.userId);
+      if (!isAdmin && !isAssignedAesthetician) {
+        return res.status(403).json({ message: 'You cannot view availability for this appointment.' });
+      }
+      if (appointment.appointment_status !== 'confirmed') {
+        return res.status(400).json({ message: 'Only confirmed appointments can be rescheduled.' });
+      }
+      if (Number(appointment.service_id) !== Number(serviceId)) {
+        return res.status(400).json({ message: 'Choose the service assigned to this appointment.' });
+      }
+      if (!appointment.aesthetician_id) {
+        return res.status(409).json({ message: 'This appointment has no assigned aesthetician.' });
+      }
+      targetAestheticianId = appointment.aesthetician_id;
+    }
+
     const aestheticians = await db.query("SELECT user_id FROM users WHERE role = 'aesthetician' AND status = 'active' AND email_verified = TRUE ORDER BY user_id");
     if (aestheticians.rows.length === 0) return res.json({});
+    const availableAestheticians = targetAestheticianId === null
+      ? aestheticians.rows
+      : aestheticians.rows.filter(({ user_id }) => String(user_id) === String(targetAestheticianId));
+    if (availableAestheticians.length === 0) return res.json({});
 
     const firstDate = formatDate(year, month, 1);
     const lastDate = formatDate(year, month, daysInMonth(year, month));
@@ -73,7 +117,7 @@ router.get('/', async (req, res) => {
         const end = addMinutes(start, duration);
         if (!end || !fitsSchedule(clinicSchedule, dateStr, start, end)
           || isSlotInPast(dateStr, start) || isSlotTooSoon(dateStr, start)) return false;
-        return aestheticians.rows.some(({ user_id }) => !appointments.rows.some((appointment) => (
+        return availableAestheticians.some(({ user_id }) => !appointments.rows.some((appointment) => (
           appointment.aesthetician_id === user_id
           && appointment.appointment_date === dateStr
           && minutes(appointment.appointment_time) < minutes(end)

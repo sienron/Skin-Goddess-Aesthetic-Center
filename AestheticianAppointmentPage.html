@@ -77,8 +77,8 @@
                     <li class="nav-item"><a href="StaffDashboard.html"><img src="icons/finance-dashboard.svg" alt="" class="finance-nav-icon"><span>Dashboard</span></a></li>
                     <li class="nav-item"><a href="StaffUserManagement.html"><img src="icons/staff-users.svg" alt="" class="finance-nav-icon"><span>My Clients</span></a></li>
                     <li class="nav-item active"><a href="AestheticianAppointmentPage.html" aria-current="page"><img src="icons/staff-appointments.svg" alt="" class="finance-nav-icon"><span>Appointments</span></a></li>
-                    <li class="nav-item"><a href="StaffTreatmentHistory.html"><img src="icons/finance-reports.svg" alt="" class="finance-nav-icon"><span>Treatment History</span></a></li>
-                    <li class="nav-item"><a href="StaffRatings.html"><img src="icons/finance-reports.svg" alt="" class="finance-nav-icon"><span>Customer Ratings</span></a></li>
+                    <li class="nav-item"><a href="StaffTreatmentHistory.html"><img src="icons/staff-content.svg" alt="" class="finance-nav-icon"><span>Treatment History</span></a></li>
+                    <li class="nav-item"><a href="StaffRatings.html"><img src="icons/star.svg" alt="" class="finance-nav-icon"><span>Customer Ratings</span></a></li>
                 </ul>
             </nav>
 
@@ -219,6 +219,7 @@
                     <div class="appt-modal-heading">
                         <h3 id="apptModalName"></h3>
                         <p id="apptModalSubtitle"></p>
+                        <button type="button" class="appt-client-info-btn" id="apptModalClientInfoBtn">View Client Information</button>
                         <span class="appt-status-badge" id="apptModalStatus"></span>
                     </div>
                 </div>
@@ -265,8 +266,12 @@
 
                 <p class="appt-action-message" id="apptActionMessage" role="status" aria-live="polite"></p>
                 <form class="appt-reschedule-form" id="apptRescheduleForm" hidden>
+                    <label for="apptRescheduleMonth">Availability month</label>
+                    <input type="month" id="apptRescheduleMonth" required>
                     <label for="apptRescheduleDate">New date</label>
-                    <input type="date" name="date" id="apptRescheduleDate" required>
+                    <select name="date" id="apptRescheduleDate" required disabled>
+                        <option value="">Choose a month first</option>
+                    </select>
                     <label for="apptRescheduleTime">New time</label>
                     <select name="time" id="apptRescheduleTime" required>
                         <option value="09:00">9:00 AM</option>
@@ -304,7 +309,6 @@
                 <div class="appt-modal-actions">
                     <button class="modal-btn modal-btn-cancel" id="apptModalCancelBtn">Cancel</button>
                     <button class="modal-btn modal-btn-reschedule" type="button" id="apptModalRescheduleBtn">Reschedule</button>
-                    <button class="modal-btn modal-btn-no-show" id="apptModalNoShowBtn">No Show</button>
                 </div>
             </div>
         </div>

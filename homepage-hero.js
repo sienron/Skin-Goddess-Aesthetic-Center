@@ -20,6 +20,115 @@
   const mm = gsap.matchMedia();
   mm.add("(prefers-reduced-motion: no-preference)", () => {
     const image = hero.querySelector(".hero-photo-img");
+    const addWanderingTimeline = ({
+      target,
+      xProperty = "x",
+      yProperty = "y",
+      xRange,
+      yRange,
+      xCenter = 0,
+      yCenter = 0,
+      duration,
+      delay,
+      index = 0,
+      durationOffset = 0,
+      unit = "",
+    }) => {
+      const wander = gsap.timeline({
+        repeat: -1,
+        repeatRefresh: true,
+        delay,
+      });
+
+      const randomOffset = (range, center) => {
+        const value = gsap.utils.random(center - range, center + range);
+        return unit ? `${value}${unit}` : value;
+      };
+
+      for (let waypoint = 0; waypoint < 4; waypoint += 1) {
+        wander.to(target, {
+          [xProperty]: () => randomOffset(xRange, xCenter),
+          [yProperty]: () => randomOffset(yRange, yCenter),
+          duration: duration + ((index + waypoint) % 3) * 0.22 + durationOffset,
+          ease: "sine.inOut",
+        });
+      }
+    };
+    const motionProfiles = {
+      horizontal: { x: 150, y: 95, duration: 3.15 },
+      diagonal: { x: 135, y: 125, duration: 3.3 },
+      vertical: { x: 95, y: 135, duration: 3 },
+      circular: { x: 120, y: 105, duration: 3.5 },
+    };
+    const ambientGroups = [
+      { selector: ".homepage-ambient-glows--hero", delay: 0, rangeScale: 1 },
+      { selector: ".homepage-ambient-glows--care", delay: 1.4, rangeScale: 0.9 },
+    ];
+
+    ambientGroups.forEach(({ selector, delay, rangeScale }, groupIndex) => {
+      hero.querySelectorAll(`${selector} .homepage-ambient-glow`).forEach((glow, index) => {
+        const profile = motionProfiles[glow.dataset.ambientMotion];
+        if (!profile) return;
+
+        const viewportScale = window.matchMedia("(max-width: 700px)").matches ? 0.72 : 1;
+        const xRange = profile.x * rangeScale * viewportScale;
+        const yRange = profile.y * rangeScale * viewportScale;
+        const startDelay = delay + index * 0.65;
+        addWanderingTimeline({
+          target: glow,
+          xRange,
+          yRange,
+          duration: profile.duration,
+          delay: startDelay,
+          index,
+          durationOffset: groupIndex * 0.18,
+        });
+      });
+    });
+
+    [
+      {
+        target: hero.querySelector(".hero-copy"),
+        xProperty: "--hero-copy-glow-x",
+        yProperty: "--hero-copy-glow-y",
+        xRange: 70,
+        yRange: 50,
+        duration: 3.2,
+        delay: 0.35,
+      },
+      {
+        target: hero.querySelector(".hero-visual"),
+        xProperty: "--hero-visual-glow-x",
+        yProperty: "--hero-visual-glow-y",
+        xRange: 80,
+        yRange: 60,
+        duration: 3.5,
+        delay: 1.1,
+      },
+      {
+        target: hero,
+        xProperty: "--hero-dark-glow-x",
+        yProperty: "--hero-dark-glow-y",
+        xRange: 14,
+        yRange: 10,
+        xCenter: 77,
+        yCenter: 48,
+        duration: 3.4,
+        delay: 0.75,
+        unit: "%",
+      },
+    ].forEach((glow, index) => {
+      const viewportScale = window.matchMedia("(max-width: 700px)").matches ? 0.72 : 1;
+      addWanderingTimeline({
+        ...glow,
+        xRange: glow.xRange * viewportScale,
+        yRange: glow.yRange * viewportScale,
+        index,
+        durationOffset: index * 0.2,
+        unit: glow.unit || "px",
+      });
+    });
+
     const intro = gsap.timeline();
     intro
       .from(hero.querySelectorAll(".hero-copy > *"), {

@@ -28,69 +28,106 @@ test('appointment modal keeps shared helpers private while retaining its public 
   assert.doesNotMatch(staffSource, /function formatTime\(/);
 });
 
-test('appointment modal enables no-show for started in-progress appointments only', () => {
+test('appointment modal compares service dates using the Manila calendar day', () => {
   const modalSource = fs.readFileSync(path.join(root, 'appointment-modal.js'), 'utf8');
-  const nodes = new Map();
-  function node(id) {
-    if (!nodes.has(id)) {
-      nodes.set(id, {
-        dataset: {},
-        classList: { add() {}, remove() {}, contains: () => false },
-        style: {},
-        addEventListener() {},
-        textContent: '',
-        disabled: false
-      });
-    }
-    return nodes.get(id);
+  const helperStart = modalSource.indexOf('function getApptManilaDateKey(');
+  const helperEnd = modalSource.indexOf('\nconst apptModalOverlay', helperStart);
+  assert.ok(helperStart >= 0 && helperEnd > helperStart, 'Manila date helper should be present');
+  const getApptManilaDateKey = vm.runInNewContext(
+    `(() => { ${modalSource.slice(helperStart, helperEnd)}; return getApptManilaDateKey; })()`
+  );
+
+  assert.equal(getApptManilaDateKey(new Date('2026-11-14T15:59:00.000Z')), '2026-11-14');
+  assert.equal(getApptManilaDateKey(new Date('2026-11-14T16:00:00.000Z')), '2026-11-15');
+});
+
+test('opening an appointment modal populates details and displays the overlay', () => {
+  const modalSource = fs.readFileSync(path.join(root, 'appointment-modal.js'), 'utf8');
+  const ids = [
+    'apptModalOverlay', 'apptModal', 'apptModalTopbar', 'apptModalClose',
+    'apptModalCancelBtn', 'apptModalRescheduleBtn', 'apptModalFinishBtn',
+    'apptModalClientInfoBtn', 'apptRescheduleForm', 'apptCancellationForm',
+    'apptActionMessage', 'apptRescheduleMonth', 'apptRescheduleDate',
+    'apptRescheduleTime', 'apptModalStatus', 'apptModalAvatar', 'apptModalName',
+    'apptModalSubtitle', 'apptModalDate', 'apptModalTime', 'apptModalAesthetician',
+    'apptModalDuration', 'apptModalService', 'apptModalFee', 'apptModalDeposit',
+    'apptModalContact'
+  ];
+  const elements = new Map();
+  function createElement() {
+    const classes = new Set();
+    return {
+      className: '',
+      classList: {
+        add: (...names) => names.forEach((name) => classes.add(name)),
+        remove: (...names) => names.forEach((name) => classes.delete(name)),
+        contains: (name) => classes.has(name)
+      },
+      dataset: {},
+      style: {},
+      addEventListener() {},
+      replaceChildren(...children) { this.children = children; },
+      add(child) { (this.children ||= []).push(child); },
+      reset() {},
+      querySelector() { return createElement(); }
+    };
   }
+  ids.forEach((id) => elements.set(id, createElement()));
+  const rescheduleForm = elements.get('apptRescheduleForm');
+  rescheduleForm.elements = {
+    date: elements.get('apptRescheduleDate'),
+    time: elements.get('apptRescheduleTime'),
+    reason: createElement(),
+    description: createElement()
+  };
+  rescheduleForm.querySelector = () => createElement();
   const document = {
     body: { style: {} },
-    getElementById(id) {
-      return ['apptRescheduleForm', 'apptCancellationForm', 'apptActionMessage'].includes(id)
-        ? null
-        : node(id);
-    },
+    getElementById: (id) => elements.get(id) || null,
+    createElement,
     addEventListener() {}
   };
-  const context = {
-    document,
-    window: { confirm: () => true, dispatchEvent() {} },
-    fetch: async () => ({ ok: true, text: async () => '{}' }),
-    CustomEvent: class {}
-  };
-  vm.runInNewContext(modalSource, context);
+  const window = {};
 
-  const date = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Manila',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  }).format(new Date());
-  context.window.openApptModal({
+  vm.runInNewContext(modalSource, { document, window });
+  window.openApptModal({
     id: 42,
-    status: 'in_progress',
-    date,
-    start: '09:00',
-    end: '10:30',
-    duration_minutes: 60,
-    client: 'Jamie Client',
-    service: 'Facial'
+    status: 'confirmed',
+    date: '2026-11-14',
+    start: '10:00',
+    end: '11:00',
+    client: 'Test Client',
+    service: 'Test Service'
   });
-  assert.equal(node('apptModalNoShowBtn').disabled, false);
-  assert.equal(node('apptModalCancelBtn').disabled, true);
 
-  context.window.openApptModal({
-    id: 43,
-    status: 'completed',
-    date,
-    start: '09:00',
-    end: '10:30',
-    duration_minutes: 60,
-    client: 'Jamie Client',
-    service: 'Facial'
-  });
-  assert.equal(node('apptModalNoShowBtn').disabled, true);
+  assert.equal(elements.get('apptModalOverlay').classList.contains('show'), true);
+  assert.equal(elements.get('apptModalName').textContent, 'Test Client');
+  assert.equal(elements.get('apptRescheduleDate').min.length > 0, true);
+});
+
+test('staff appointment header omits the placeholder monthly overview subtitle', () => {
+  const staffPage = fs.readFileSync(path.join(root, 'StaffAppointmentPage.html'), 'utf8');
+  const pageTitle = staffPage.match(/<div class="page-title">([\s\S]*?)<\/div>/)?.[1];
+  assert.ok(pageTitle, 'staff appointment page title should be present');
+  assert.doesNotMatch(pageTitle, /Monthly overview|Month 0000/);
+});
+
+test('cancellation form honors its hidden state and treatment-note removal uses a modal', () => {
+  const styles = fs.readFileSync(path.join(root, 'style.css'), 'utf8');
+  const notesSource = fs.readFileSync(path.join(root, 'treatment-notes.js'), 'utf8');
+  assert.match(styles, /\.appt-cancellation-form\[hidden\]\s*\{\s*display:\s*none;/);
+  assert.match(notesSource, /Remove this treatment note\?/);
+  assert.match(notesSource, /role="dialog" aria-modal="true"/);
+  assert.doesNotMatch(notesSource, /window\.confirm\(/);
+});
+
+test('staff appointment modals do not expose the no-show action', () => {
+  const staffPage = fs.readFileSync(path.join(root, 'StaffAppointmentPage.html'), 'utf8');
+  const aestheticianPage = fs.readFileSync(path.join(root, 'AestheticianAppointmentPage.html'), 'utf8');
+  const modalSource = fs.readFileSync(path.join(root, 'appointment-modal.js'), 'utf8');
+  assert.doesNotMatch(staffPage, /apptModalNoShowBtn/);
+  assert.doesNotMatch(aestheticianPage, /apptModalNoShowBtn/);
+  assert.doesNotMatch(modalSource, /apptModalNoShowBtn|\/no-show/);
 });
 
 test('aesthetician reschedule modal requires the details accepted by its request endpoint', () => {
@@ -103,7 +140,7 @@ test('aesthetician reschedule modal requires the details accepted by its request
   }
 });
 
-test('staff dashboard month keys follow Manila boundaries instead of UTC month boundaries', () => {
+test('staff dashboard month keys follow Manila boundaries and obsolete overview copy is absent', () => {
   const dashboardSource = fs.readFileSync(path.join(root, 'staff-dashboard.js'), 'utf8');
   const helperStart = dashboardSource.indexOf('    function localDateString(');
   const helperEnd = dashboardSource.indexOf('    function formatDate(', helperStart);
@@ -115,6 +152,7 @@ test('staff dashboard month keys follow Manila boundaries instead of UTC month b
   assert.equal(monthKey(new Date('2026-03-31T16:30:00.000Z')), '2026-04');
   assert.equal(monthKey(new Date('2026-04-30T15:59:00.000Z')), '2026-04');
   assert.match(dashboardSource, /const thisMonth = manilaMonthKey\(now\)/);
-  assert.match(dashboardSource, /timeZone: "Asia\/Manila",\s+month: "long",\s+year: "numeric"/);
+  const dashboardHtml = fs.readFileSync(path.join(root, 'StaffDashboard.html'), 'utf8');
+  assert.doesNotMatch(dashboardHtml, /Monthly overview|Month 0000/);
   assert.doesNotMatch(dashboardSource, /new Date\(\)\.toISOString\(\)\.slice\(0, 7\)/);
 });

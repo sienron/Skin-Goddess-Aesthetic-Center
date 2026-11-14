@@ -57,6 +57,40 @@ async function withFrozenDate(isoDate, callback) {
   }
 }
 
+test('aesthetician appointment payload includes the service id required for rescheduling', async () => {
+  const handler = routeHandler('/mine', 'get');
+  const originalQuery = db.query;
+  const queryCalls = [];
+  db.query = async (sql) => {
+    queryCalls.push(sql);
+    if (/SELECT role FROM users/.test(sql)) return { rows: [{ role: 'aesthetician' }] };
+    return {
+      rows: [{
+        appointment_id: 42,
+        service_id: 7,
+        date: '2026-11-18',
+        start: '10:00:00',
+        end: '11:00:00',
+        status: 'confirmed',
+        service: 'Facial',
+        client: 'Client',
+        aesthetician: 'Aesthetician'
+      }]
+    };
+  };
+  const response = responseCapture();
+
+  try {
+    await handler({ session: { userId: 31 } }, response);
+  } finally {
+    db.query = originalQuery;
+  }
+
+  assert.equal(response.statusCode, 200);
+  assert.match(queryCalls[1], /a\.service_id/);
+  assert.equal(response.body[0].service_id, 7);
+});
+
 function setTestPayMongoEnvironment() {
   process.env.NODE_ENV = 'test';
   process.env.PAYMONGO_TEST_SECRET_KEY = 'sk_test_local';
@@ -606,7 +640,7 @@ test('booking summary, terms, and cancellation forms describe the confirmed refu
 
 test('rescheduling uses the original treatment and buffer snapshots without changing the booked appointment', async () => {
   const handler = routeHandler('/:id/reschedule', 'post');
-  async function submit(time) {
+  async function submit(time, assignedAestheticianId = null, hasConflict = false) {
     let updateValues;
     const queries = [];
     db.query = async (sql, values = []) => {
@@ -618,7 +652,7 @@ test('rescheduling uses the original treatment and buffer snapshots without chan
         return { rows: [{
           appointment_id: 42,
           user_id: 7,
-          aesthetician_id: null,
+          aesthetician_id: assignedAestheticianId,
           service_id: 3,
           appointment_status: 'confirmed',
           reschedule_request_status: null,
@@ -627,6 +661,9 @@ test('rescheduling uses the original treatment and buffer snapshots without chan
           booked_buffer_minutes: 30,
           service_name: 'Facial'
         }] };
+      }
+      if (/SELECT 1\s+FROM appointments/.test(sql) && /WHERE aesthetician_id = \$1/.test(sql)) {
+        return { rows: hasConflict ? [{}] : [] };
       }
       if (/SELECT role FROM users/.test(sql)) return { rows: [{ role: 'client' }] };
       if (/UPDATE appointments\s+SET reschedule_request_status/.test(sql)) {
@@ -662,6 +699,10 @@ test('rescheduling uses the original treatment and buffer snapshots without chan
   const lunchOverrun = await submit('11:00');
   assert.equal(lunchOverrun.response.statusCode, 400);
   assert.equal(lunchOverrun.updateValues, undefined);
+
+  const assignedConflict = await submit('09:30', 9, true);
+  assert.equal(assignedConflict.response.statusCode, 409);
+  assert.equal(assignedConflict.updateValues, undefined);
 });
 
 test('reschedule approval uses booked duration and buffer snapshots and rechecks the slot under lock', async () => {

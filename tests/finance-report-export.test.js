@@ -21,7 +21,7 @@ test('Admin and Finance Officer reach the visible shared Reports export from the
   const server = read('index.js');
 
   assert.match(server, /\{\s*path:\s*'\/FinanceReports\.html',\s*roles:\s*\['finance_officer',\s*'admin'\]\s*\}/);
-  assert.match(page, /data-export="income-statement">Export All Reports \(Excel\)<\/button>/);
+  assert.match(page, /data-export="income-statement">EXPORT<\/button>/);
   assert.match(page, /<script src="admin-context-nav\.js"><\/script>/);
   assert.match(page, /Finance navigation/);
   assert.match(adminNavigation, /\["FinanceReports\.html",\s*"Reports"/);
@@ -49,6 +49,17 @@ function financeRows(sql) {
       { expense_id: 4, date: '2026-10-05', category: 'Rent', description: 'Clinic rent', amount: 400, supplier: 'Landlord', reference_no: 'R-4', status: 'active', void_reason: null },
       { expense_id: 5, date: '2026-10-06', category: 'Utilities', description: 'Voided bill', amount: 25, supplier: null, reference_no: null, status: 'voided', void_reason: 'Duplicate' }
     ] };
+  }
+  if (/SELECT\s+a\.appointment_id,\s*a\.appointment_date::text AS appointment_date/.test(sql)) {
+    return { rows: [{
+      appointment_id: 42,
+      appointment_date: '2026-10-10',
+      client: 'Client One',
+      service: 'Facial',
+      service_price: 1000,
+      amount_paid: 300,
+      outstanding: 700,
+    }] };
   }
   if (/SELECT appointment\.appointment_id,\s+appointment\.appointment_date::text AS transaction_date/.test(sql)) {
     return { rows: [
@@ -128,6 +139,51 @@ function financeRows(sql) {
   if (/generate_series/.test(sql)) return { rows: [] };
   throw new Error(`Unexpected finance export query: ${sql}`);
 }
+
+test('outstanding balance XLSX export uses filtered receivables and existing workbook formatting', async () => {
+  const originalQuery = db.query;
+  const calls = [];
+  let file;
+  let disposition;
+  db.query = async (sql, values) => {
+    calls.push({ sql, values });
+    return financeRows(sql);
+  };
+
+  try {
+    await legacyExportRoute({
+      query: {
+        section: 'receivables',
+        from: '2026-10-01',
+        to: '2026-10-31',
+        q: 'Client One',
+      },
+    }, {
+      setHeader(name, value) {
+        if (name === 'Content-Disposition') disposition = value;
+      },
+      send(buffer) { file = buffer; },
+    });
+  } finally {
+    db.query = originalQuery;
+  }
+
+  assert.ok(Buffer.isBuffer(file));
+  assert.match(disposition, /finance-receivables-2026-10-01-to-2026-10-31\.xlsx/);
+  assert.match(calls[0].sql, /appointment_date BETWEEN \$2::date AND \$3::date/);
+  assert.match(calls[0].sql, /ILIKE \$4/);
+  assert.deepEqual(calls[0].values.slice(1), ['2026-10-01', '2026-10-31', '%Client One%']);
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(file);
+  const sheet = workbook.getWorksheet('Outstanding Balances');
+  assert.equal(sheet.getCell('A6').value, 'Appointment date');
+  assert.equal(sheet.getCell('B7').value, 42);
+  assert.equal(sheet.getCell('C7').value, 'Client One');
+  assert.equal(sheet.getCell('G7').value, 700);
+  assert.equal(sheet.getCell('A8').value, 'Total outstanding balance');
+  assert.equal(sheet.getCell('G8').result, 700);
+  assert.match(workbook.getWorksheet('Report Information').getCell('B7').value, /Search: applied/);
+});
 
 test('finance export creates six reports and labels unsupported accounting values', async () => {
   const originalQuery = db.query;

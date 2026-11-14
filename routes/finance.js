@@ -78,6 +78,13 @@ function missingPurchaseSchema(error) {
     && ['inventory_purchase_batches', 'inventory_purchase_records', 'product_sale_details'].includes(error.table)) {
     throw new ApiError(503, 'Finance inventory sales are not installed. Run npm run migrate:finance-sales-purchases against the database configured for this server, then try again.');
   }
+  if (error.code === '42703' && error.column === 'customer_id') {
+    throw new ApiError(503, 'Finance client links are not installed. Run npm run migrate:finance-client-product-sales against the database configured for this server, then try again.');
+  }
+  if (error.code === '42703'
+    && ['review_status', 'rejected_by', 'rejected_at', 'rejection_reason'].includes(error.column)) {
+    throw new ApiError(503, 'Finance inventory purchase review is not installed. Run npm run migrate:finance-inventory-purchase-review against the database configured for this server, then try again.');
+  }
 }
 
 function financeQuery(sql, values) {
@@ -646,7 +653,7 @@ router.get('/deposits', endpoint(async (req, res) => {
 router.get('/payments/:id', endpoint(async (req, res) => {
   dateRange(req.query);
   const paymentId = idValue(req.params.id, 'Payment ID');
-  const result = await financeQuery(`SELECT p.payment_id, p.appointment_id, p.payment_type, p.amount::float8 AS amount, p.method, p.reference_no, p.note, p.status, (p.created_at AT TIME ZONE 'Asia/Manila')::date::text AS payment_date, CONCAT('SG-RCT-', TO_CHAR(p.created_at AT TIME ZONE 'Asia/Manila', 'YYYY'), '-', LPAD(p.payment_id::text, 8, '0')) AS receipt_number, a.appointment_date::text AS appointment_date, a.appointment_status, a.booked_service_price::float8 AS service_price, COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Product sale') AS client, c.email, CASE WHEN p.payment_type = 'product_sale' THEN CASE WHEN sale.payment_id IS NOT NULL THEN CONCAT(sale.product_name, ' × ', sale.quantity) ELSE COALESCE(p.note, p.reference_no, 'Product sale') END ELSE s.service_name END AS service, sale.quantity AS product_quantity, sale.unit_price::float8 AS product_unit_price, reversal.reason AS reversal_reason, reversal.reversed_by, reversal.reversed_at FROM payments p LEFT JOIN appointments a ON a.appointment_id = p.appointment_id LEFT JOIN users c ON c.user_id = a.user_id LEFT JOIN services s ON s.service_id = a.service_id LEFT JOIN product_sale_details sale ON sale.payment_id = p.payment_id LEFT JOIN payment_reversals reversal ON reversal.payment_id = p.payment_id WHERE p.payment_id = $1 AND COALESCE(a.is_demo, FALSE) = FALSE`, [paymentId]);
+  const result = await financeQuery(`SELECT p.payment_id, p.appointment_id, COALESCE(a.user_id, p.customer_id) AS customer_id, p.payment_type, p.amount::float8 AS amount, p.method, p.reference_no, p.note, p.status, (p.created_at AT TIME ZONE 'Asia/Manila')::date::text AS payment_date, CONCAT('SG-RCT-', TO_CHAR(p.created_at AT TIME ZONE 'Asia/Manila', 'YYYY'), '-', LPAD(p.payment_id::text, 8, '0')) AS receipt_number, a.appointment_date::text AS appointment_date, a.appointment_status, a.booked_service_price::float8 AS service_price, COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Product sale') AS client, c.email, CASE WHEN p.payment_type = 'product_sale' THEN CASE WHEN sale.payment_id IS NOT NULL THEN CONCAT(sale.product_name, ' × ', sale.quantity) ELSE COALESCE(p.note, p.reference_no, 'Product sale') END ELSE s.service_name END AS service, sale.quantity AS product_quantity, sale.unit_price::float8 AS product_unit_price, reversal.reason AS reversal_reason, reversal.reversed_by, reversal.reversed_at FROM payments p LEFT JOIN appointments a ON a.appointment_id = p.appointment_id LEFT JOIN users c ON c.user_id = COALESCE(a.user_id, p.customer_id) LEFT JOIN services s ON s.service_id = a.service_id LEFT JOIN product_sale_details sale ON sale.payment_id = p.payment_id LEFT JOIN payment_reversals reversal ON reversal.payment_id = p.payment_id WHERE p.payment_id = $1 AND COALESCE(a.is_demo, FALSE) = FALSE`, [paymentId]);
   if (!result.rows.length) throw new ApiError(404, 'Payment not found.');
   const payment = result.rows[0];
   let history = [];
@@ -655,6 +662,54 @@ router.get('/payments/:id', endpoint(async (req, res) => {
     history = payments.rows;
   }
   res.json({ payment, history });
+}));
+
+router.get('/clients', endpoint(async (_req, res) => {
+  const result = await db.query(`
+    SELECT user_id, CONCAT_WS(' ', NULLIF(BTRIM(first_name), ''),
+      NULLIF(BTRIM(last_name), '')) AS name, email
+    FROM users
+    WHERE role = 'client' AND status = 'active'
+    ORDER BY first_name, last_name, user_id
+    LIMIT 500
+  `);
+  res.json(result.rows);
+}));
+
+router.get('/clients/:id/payment-history', endpoint(async (req, res) => {
+  const clientId = idValue(req.params.id, 'Client ID');
+  const clientResult = await db.query(`
+    SELECT user_id, CONCAT_WS(' ', NULLIF(BTRIM(first_name), ''),
+      NULLIF(BTRIM(last_name), '')) AS name, email
+    FROM users
+    WHERE user_id = $1 AND role = 'client'
+  `, [clientId]);
+  if (!clientResult.rows.length) throw new ApiError(404, 'Client not found.');
+
+  const history = await financeQuery(`
+    SELECT payment.payment_id, payment.appointment_id,
+      (payment.created_at AT TIME ZONE 'Asia/Manila')::date::text AS payment_date,
+      CASE WHEN payment.appointment_id IS NULL THEN NULL
+        ELSE CONCAT('Appointment #', payment.appointment_id) END AS appointment_reference,
+      CASE WHEN payment.payment_type = 'product_sale'
+        THEN CASE WHEN sale.payment_id IS NOT NULL
+          THEN CONCAT(sale.product_name, ' × ', sale.quantity)
+          ELSE COALESCE(payment.note, 'Product sale') END
+        ELSE service.service_name END AS description,
+      payment.payment_type, payment.method, payment.amount::float8 AS amount,
+      payment.status, payment.reference_no,
+      CONCAT('SG-RCT-', TO_CHAR(payment.created_at AT TIME ZONE 'Asia/Manila', 'YYYY'),
+        '-', LPAD(payment.payment_id::text, 8, '0')) AS receipt_number
+    FROM payments payment
+    LEFT JOIN appointments appointment ON appointment.appointment_id = payment.appointment_id
+    LEFT JOIN services service ON service.service_id = appointment.service_id
+    LEFT JOIN product_sale_details sale ON sale.payment_id = payment.payment_id
+    WHERE ((appointment.user_id = $1 AND appointment.is_demo = FALSE)
+      OR payment.customer_id = $1)
+      AND COALESCE(appointment.is_demo, FALSE) = FALSE
+    ORDER BY payment.created_at DESC, payment.payment_id DESC
+  `, [clientId]);
+  res.json({ client: clientResult.rows[0], rows: history.rows });
 }));
 
 function escapeHtml(value) {
@@ -681,7 +736,7 @@ router.get('/payments/:id/receipt', endpoint(async (req, res) => {
       sale.product_name, sale.quantity, sale.unit_price::float8 AS unit_price
     FROM payments payment
     LEFT JOIN appointments appointment ON appointment.appointment_id = payment.appointment_id
-    LEFT JOIN users customer ON customer.user_id = appointment.user_id
+    LEFT JOIN users customer ON customer.user_id = COALESCE(appointment.user_id, payment.customer_id)
     LEFT JOIN services service ON service.service_id = appointment.service_id
     LEFT JOIN product_sale_details sale ON sale.payment_id = payment.payment_id
     LEFT JOIN payment_reversals reversal ON reversal.payment_id = payment.payment_id
@@ -772,13 +827,13 @@ router.get('/payments/:id/receipt', endpoint(async (req, res) => {
 router.get('/appointments/:id', endpoint(async (req, res) => {
   dateRange(req.query);
   const appointmentId = idValue(req.params.id, 'Appointment ID');
-  const result = await db.query(`SELECT a.appointment_id, a.appointment_date::text AS appointment_date, a.appointment_status, a.booked_service_price::float8 AS service_price, COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Client') AS client, c.email, s.service_name AS service FROM appointments a LEFT JOIN users c ON c.user_id = a.user_id JOIN services s ON s.service_id = a.service_id WHERE a.appointment_id = $1 AND a.is_demo = FALSE`, [appointmentId]);
+  const result = await db.query(`SELECT a.appointment_id, a.user_id AS customer_id, a.appointment_date::text AS appointment_date, a.appointment_status, a.booked_service_price::float8 AS service_price, COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Client') AS client, c.email, s.service_name AS service FROM appointments a LEFT JOIN users c ON c.user_id = a.user_id JOIN services s ON s.service_id = a.service_id WHERE a.appointment_id = $1 AND a.is_demo = FALSE`, [appointmentId]);
   if (!result.rows.length) throw new ApiError(404, 'Appointment not found.');
   const appointment = result.rows[0];
   const payments = await db.query(`SELECT payment_id, payment_type, amount::float8 AS amount, method, reference_no, note, status, (created_at AT TIME ZONE 'Asia/Manila')::date::text AS payment_date FROM payments WHERE appointment_id = $1 ORDER BY created_at, payment_id`, [appointmentId]);
   const paid = payments.rows.filter((payment) => payment.status === 'posted').reduce((sum, payment) => sum + Number(payment.amount), 0);
   res.json({
-    payment: { payment_id: null, appointment_id: appointment.appointment_id, payment_type: 'appointment', amount: appointment.service_price, method: '—', reference_no: null, note: `Outstanding balance: ${Math.max(0, appointment.service_price - paid).toFixed(2)}`, status: appointment.appointment_status, payment_date: appointment.appointment_date, appointment_date: appointment.appointment_date, appointment_status: appointment.appointment_status, service_price: appointment.service_price, client: appointment.client, email: appointment.email, service: appointment.service },
+    payment: { payment_id: null, appointment_id: appointment.appointment_id, customer_id: appointment.customer_id, payment_type: 'appointment', amount: appointment.service_price, method: '—', reference_no: null, note: `Outstanding balance: ${Math.max(0, appointment.service_price - paid).toFixed(2)}`, status: appointment.appointment_status, payment_date: appointment.appointment_date, appointment_date: appointment.appointment_date, appointment_status: appointment.appointment_status, service_price: appointment.service_price, client: appointment.client, email: appointment.email, service: appointment.service },
     history: payments.rows,
   });
 }));
@@ -786,6 +841,20 @@ router.get('/appointments/:id', endpoint(async (req, res) => {
 router.get('/transactions', endpoint(async (req, res) => {
   const { from, to } = dateRange(req.query);
   const { page, limit, offset } = pageValues(req.query);
+  const sortColumns = {
+    date: 'p.created_at',
+    receipt: 'p.payment_id',
+    client: "COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Product sale')",
+    type: 'p.payment_type',
+    service: 'COALESCE(s.service_name, sale.product_name, p.reference_no)',
+    method: 'p.method',
+    amount: 'p.amount',
+    status: 'p.status',
+  };
+  const sort = req.query.sort || 'date';
+  const direction = req.query.direction || 'desc';
+  if (!Object.hasOwn(sortColumns, sort)) throw new ApiError(400, 'Invalid payment sort column.');
+  if (!['asc', 'desc'].includes(direction)) throw new ApiError(400, 'Invalid payment sort direction.');
   const values = [from, to];
   const where = ["(p.created_at AT TIME ZONE 'Asia/Manila')::date BETWEEN $1::date AND $2::date", 'COALESCE(a.is_demo, FALSE) = FALSE'];
   for (const [key, column, allowed, message] of [['type', 'p.payment_type', PAYMENT_TYPES, 'Invalid payment type.'], ['method', 'p.method', METHODS, 'Invalid payment method.']]) {
@@ -804,10 +873,10 @@ router.get('/transactions', endpoint(async (req, res) => {
     values.push(`%${String(req.query.q).slice(0, 100)}%`);
     where.push(`(COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, '') ILIKE $${values.length} OR COALESCE(p.reference_no, '') ILIKE $${values.length} OR COALESCE(p.note, '') ILIKE $${values.length} OR COALESCE(s.service_name, '') ILIKE $${values.length} OR COALESCE(sale.product_name, '') ILIKE $${values.length})`);
   }
-  const joins = 'FROM payments p LEFT JOIN appointments a ON a.appointment_id = p.appointment_id LEFT JOIN users c ON c.user_id = a.user_id LEFT JOIN services s ON s.service_id = a.service_id LEFT JOIN product_sale_details sale ON sale.payment_id = p.payment_id';
+  const joins = 'FROM payments p LEFT JOIN appointments a ON a.appointment_id = p.appointment_id LEFT JOIN users c ON c.user_id = COALESCE(a.user_id, p.customer_id) LEFT JOIN services s ON s.service_id = a.service_id LEFT JOIN product_sale_details sale ON sale.payment_id = p.payment_id';
   const count = await financeQuery(`SELECT COUNT(*)::int AS count ${joins} WHERE ${where.join(' AND ')}`, values);
   values.push(limit, offset);
-  const result = await financeQuery(`SELECT p.payment_id, p.appointment_id, p.payment_type, p.amount::float8 AS amount, p.method, p.reference_no, p.note, p.status, p.created_at, (p.created_at AT TIME ZONE 'Asia/Manila')::date::text AS payment_date, CONCAT('SG-RCT-', TO_CHAR(p.created_at AT TIME ZONE 'Asia/Manila', 'YYYY'), '-', LPAD(p.payment_id::text, 8, '0')) AS receipt_number, a.appointment_date::text AS appointment_date, a.appointment_status, COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Product sale') AS client, CASE WHEN p.payment_type = 'product_sale' THEN CASE WHEN sale.payment_id IS NOT NULL THEN CONCAT(sale.product_name, ' × ', sale.quantity) ELSE COALESCE(p.note, p.reference_no, 'Product sale') END ELSE s.service_name END AS service ${joins} WHERE ${where.join(' AND ')} ORDER BY p.created_at DESC LIMIT $${values.length - 1} OFFSET $${values.length}`, values);
+  const result = await financeQuery(`SELECT p.payment_id, p.appointment_id, COALESCE(a.user_id, p.customer_id) AS customer_id, c.email AS customer_email, p.payment_type, p.amount::float8 AS amount, p.method, p.reference_no, p.note, p.status, p.created_at, (p.created_at AT TIME ZONE 'Asia/Manila')::date::text AS payment_date, CONCAT('SG-RCT-', TO_CHAR(p.created_at AT TIME ZONE 'Asia/Manila', 'YYYY'), '-', LPAD(p.payment_id::text, 8, '0')) AS receipt_number, a.appointment_date::text AS appointment_date, a.appointment_status, COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Product sale') AS client, CASE WHEN p.payment_type = 'product_sale' THEN CASE WHEN sale.payment_id IS NOT NULL THEN CONCAT(sale.product_name, ' × ', sale.quantity) ELSE COALESCE(p.note, p.reference_no, 'Product sale') END ELSE s.service_name END AS service ${joins} WHERE ${where.join(' AND ')} ORDER BY ${sortColumns[sort]} ${direction.toUpperCase()}, p.payment_id ${direction.toUpperCase()} LIMIT $${values.length - 1} OFFSET $${values.length}`, values);
   res.json({ rows: result.rows, page, limit, total: Number(count.rows[0].count) });
 }));
 
@@ -815,20 +884,48 @@ router.get('/sale-products', endpoint(async (req, res) => {
   const result = await db.query(`
     SELECT product_id, product_name, stock_quantity
     FROM inventory_products
-    WHERE stock_quantity > 0
     ORDER BY product_name, product_id
   `);
   res.json(result.rows);
 }));
 
+async function receivableRows(from, to, query = {}, hasDateFilter = true) {
+  const values = [DEPOSIT_DEDUCTED_FROM_PRICE];
+  const where = ["a.is_demo = FALSE", "a.appointment_status = 'completed'"];
+  if (hasDateFilter) {
+    values.push(from, to);
+    where.push(`a.appointment_date BETWEEN $${values.length - 1}::date AND $${values.length}::date`);
+  }
+  const search = String(query.q || '').trim().slice(0, 100);
+  if (search) {
+    values.push(`%${search}%`);
+    where.push(`(COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Client') ILIKE $${values.length} OR s.service_name ILIKE $${values.length})`);
+  }
+  return db.query(`
+    SELECT
+      a.appointment_id,
+      a.appointment_date::text AS appointment_date,
+      a.booked_service_price::float8 AS service_price,
+      COALESCE(SUM(p.amount) FILTER (WHERE p.status = 'posted' AND ($1::boolean OR p.payment_type <> 'reservation')), 0)::float8 AS amount_paid,
+      GREATEST(a.booked_service_price - COALESCE(SUM(p.amount) FILTER (WHERE p.status = 'posted' AND ($1::boolean OR p.payment_type <> 'reservation')), 0), 0)::float8 AS outstanding,
+      COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Client') AS client,
+      c.email,
+      s.service_name AS service
+    FROM appointments a
+    LEFT JOIN users c ON c.user_id = a.user_id
+    JOIN services s ON s.service_id = a.service_id
+    LEFT JOIN payments p ON p.appointment_id = a.appointment_id
+    WHERE ${where.join(' AND ')}
+    GROUP BY a.appointment_id, c.user_id, s.service_id
+    HAVING GREATEST(a.booked_service_price - COALESCE(SUM(p.amount) FILTER (WHERE p.status = 'posted' AND ($1::boolean OR p.payment_type <> 'reservation')), 0), 0) > 0
+    ORDER BY a.appointment_date, a.appointment_id
+  `, values);
+}
+
 router.get('/receivables', endpoint(async (req, res) => {
   const { from, to } = dateRange(req.query);
   const hasDateFilter = req.query.from !== undefined || req.query.to !== undefined;
-  const dateClause = hasDateFilter ? 'AND a.appointment_date BETWEEN $2::date AND $3::date' : '';
-  const values = hasDateFilter
-    ? [DEPOSIT_DEDUCTED_FROM_PRICE, from, to]
-    : [DEPOSIT_DEDUCTED_FROM_PRICE];
-  const result = await db.query(`SELECT a.appointment_id, a.appointment_date::text AS appointment_date, a.booked_service_price::float8 AS service_price, GREATEST(a.booked_service_price - COALESCE(SUM(p.amount) FILTER (WHERE p.status = 'posted' AND ($1::boolean OR p.payment_type <> 'reservation')), 0), 0)::float8 AS outstanding, COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Client') AS client, c.email, s.service_name AS service FROM appointments a LEFT JOIN users c ON c.user_id = a.user_id JOIN services s ON s.service_id = a.service_id LEFT JOIN payments p ON p.appointment_id = a.appointment_id   WHERE a.is_demo = FALSE AND a.appointment_status = 'completed' ${dateClause} GROUP BY a.appointment_id, c.user_id, s.service_id HAVING GREATEST(a.booked_service_price - COALESCE(SUM(p.amount) FILTER (WHERE p.status = 'posted' AND ($1::boolean OR p.payment_type <> 'reservation')), 0), 0) > 0 ORDER BY a.appointment_date, a.appointment_id`, values);
+  const result = await receivableRows(from, to, req.query, hasDateFilter);
   res.json(result.rows);
 }));
 
@@ -869,6 +966,9 @@ router.post('/product-sales', endpoint(async (req, res) => {
     throw new ApiError(400, 'A valid sale request key is required.');
   }
   const productId = idValue(body.product_id, 'Product ID');
+  const customerId = body.customer_id == null || body.customer_id === ''
+    ? null
+    : idValue(body.customer_id, 'Client ID');
   const quantity = Number(body.quantity);
   if (!Number.isInteger(quantity) || quantity < 1 || quantity > 100000) {
     throw new ApiError(400, 'Quantity must be a positive whole number.');
@@ -891,6 +991,7 @@ router.post('/product-sales', endpoint(async (req, res) => {
       await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`finance-sale:${requestKey}`]);
       const duplicate = await client.query(`
         SELECT payment.payment_id, payment.amount::float8 AS amount, payment.method,
+          payment.customer_id,
           payment.reference_no, payment.status, detail.product_id, detail.product_name,
           detail.quantity, detail.unit_price::float8 AS unit_price
         FROM product_sale_details detail
@@ -903,10 +1004,20 @@ router.post('/product-sales', endpoint(async (req, res) => {
           || Number(existing.quantity) !== quantity
           || Math.round(Number(existing.unit_price) * 100) !== unitPriceCents
           || existing.method !== body.method
-          || existing.reference_no !== reference) {
+          || existing.reference_no !== reference
+          || (existing.customer_id == null ? null : Number(existing.customer_id)) !== customerId) {
           throw new ApiError(409, 'This sale request key was already used for different sale details.');
         }
         return { ...existing, replayed: true };
+      }
+
+      if (customerId !== null) {
+        const customer = await client.query(`
+          SELECT user_id FROM users
+          WHERE user_id = $1 AND role = 'client' AND status = 'active'
+          FOR SHARE
+        `, [customerId]);
+        if (!customer.rows.length) throw new ApiError(400, 'Select an active client account.');
       }
 
       if (body.method === 'cash') await lockCurrentCashBusinessDateIfOpen(client);
@@ -931,11 +1042,11 @@ router.post('/product-sales', endpoint(async (req, res) => {
       `, [newStock, productId]);
       const payment = await client.query(`
         INSERT INTO payments
-          (appointment_id, payment_type, amount, method, reference_no, note, recorded_by)
-        VALUES (NULL, 'product_sale', $1, $2, $3, $4, $5)
+          (appointment_id, customer_id, payment_type, amount, method, reference_no, note, recorded_by)
+        VALUES (NULL, $1, 'product_sale', $2, $3, $4, $5, $6)
         RETURNING payment_id, appointment_id, payment_type, amount::float8 AS amount,
           method, reference_no, note, status, created_at
-      `, [total, body.method, reference, `Product sale: ${product.product_name}`, req.session.userId || null]);
+      `, [customerId, total, body.method, reference, `Product sale: ${product.product_name}`, req.session.userId || null]);
       await client.query(`
         INSERT INTO product_sale_details
           (payment_id, product_id, product_name, quantity, unit_price, request_key)
@@ -1110,6 +1221,18 @@ function expenseInput(body) {
 router.get('/expenses', endpoint(async (req, res) => {
   const { from, to } = dateRange(req.query);
   const { page, limit, offset } = pageValues(req.query);
+  const sortColumns = {
+    date: 'expense.expense_date',
+    category: 'expense.category',
+    description: 'expense.description',
+    supplier: 'expense.supplier',
+    amount: 'expense.amount',
+    status: 'expense.voided_at',
+  };
+  const sort = req.query.sort || 'date';
+  const direction = req.query.direction || 'desc';
+  if (!Object.hasOwn(sortColumns, sort)) throw new ApiError(400, 'Invalid expense sort column.');
+  if (!['asc', 'desc'].includes(direction)) throw new ApiError(400, 'Invalid expense sort direction.');
   const values = [from, to];
   const where = ['expense_date BETWEEN $1::date AND $2::date'];
   if (req.query.category) {
@@ -1119,7 +1242,26 @@ router.get('/expenses', endpoint(async (req, res) => {
   if (req.query.q) { values.push(`%${String(req.query.q).slice(0, 100)}%`); where.push(`(description ILIKE $${values.length} OR COALESCE(supplier, '') ILIKE $${values.length} OR COALESCE(reference_no, '') ILIKE $${values.length})`); }
   const count = await db.query(`SELECT COUNT(*)::int AS count FROM expenses WHERE ${where.join(' AND ')}`, values);
   values.push(limit, offset);
-  const result = await db.query(`SELECT expense_id, expense_date::text AS expense_date, category, description, amount::float8 AS amount, supplier, reference_no, created_at, voided_at, voided_by, void_reason FROM expenses WHERE ${where.join(' AND ')} ORDER BY expense_date DESC, expense_id DESC LIMIT $${values.length - 1} OFFSET $${values.length}`, values);
+  const result = await db.query(`
+    SELECT expense.expense_id, expense.expense_date::text AS expense_date,
+      expense.category, expense.description, expense.amount::float8 AS amount,
+      expense.supplier, expense.reference_no, expense.recorded_by,
+      COALESCE(
+        NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(recorder.first_name), ''),
+          NULLIF(BTRIM(recorder.last_name), '')), ''),
+        recorder.email,
+        CASE WHEN expense.recorded_by IS NULL THEN 'Unknown'
+          ELSE CONCAT('User #', expense.recorded_by) END
+      ) AS recorded_by_name,
+      recorder.role AS recorded_by_role,
+      expense.created_at, expense.voided_at, expense.voided_by, expense.void_reason
+    FROM expenses expense
+    LEFT JOIN users recorder ON recorder.user_id = expense.recorded_by
+    WHERE ${where.join(' AND ')}
+    ORDER BY ${sortColumns[sort]} ${direction.toUpperCase()},
+      expense.expense_id ${direction.toUpperCase()}
+    LIMIT $${values.length - 1} OFFSET $${values.length}
+  `, values);
   res.json({ rows: result.rows, page, limit, total: Number(count.rows[0].count) });
 }));
 
@@ -1152,15 +1294,27 @@ router.get('/inventory-purchase-suggestions', endpoint(async (req, res) => {
   let result;
   try {
     result = await db.query(`
-      SELECT purchase.purchase_id, purchase.product_name, purchase.quantity,
+      SELECT purchase.purchase_id, purchase.purchase_batch_id,
+        purchase.product_id, purchase.product_name, purchase.quantity,
         purchase.unit_price::float8 AS unit_price,
-        (purchase.quantity * purchase.unit_price)::float8 AS suggested_amount,
+        (purchase.quantity * purchase.unit_price)::float8 AS total_cost,
         purchase.purchase_date::text AS purchase_date,
-        CONCAT('INV-PURCHASE-', purchase.purchase_id) AS reference_no
+        purchase.review_status,
+        COALESCE(
+          NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(recorder.first_name), ''),
+            NULLIF(BTRIM(recorder.last_name), '')), ''),
+          recorder.email,
+          'Unknown'
+        ) AS recorded_by
       FROM inventory_purchase_records purchase
-      WHERE purchase.expense_id IS NULL AND purchase.unit_price > 0
+      JOIN inventory_purchase_batches batch
+        ON batch.purchase_batch_id = purchase.purchase_batch_id
+      LEFT JOIN inventory_transactions inventory_tx
+        ON inventory_tx.transaction_id = purchase.inventory_transaction_id
+      LEFT JOIN users recorder
+        ON recorder.user_id = COALESCE(batch.created_by, inventory_tx.created_by)
+      WHERE purchase.review_status = 'pending' AND purchase.expense_id IS NULL
       ORDER BY purchase.purchase_date, purchase.purchase_id
-      LIMIT 100
     `);
   } catch (error) {
     missingPurchaseSchema(error);
@@ -1169,65 +1323,158 @@ router.get('/inventory-purchase-suggestions', endpoint(async (req, res) => {
   res.json(result.rows);
 }));
 
-router.post('/inventory-purchase-suggestions/:id/expense', endpoint(async (req, res) => {
+router.get('/inventory-purchase-suggestions/:id', endpoint(async (req, res) => {
   const purchaseId = idValue(req.params.id, 'Purchase ID');
-  const body = req.body || {};
-  if (!validDate(body.expense_date)) throw new ApiError(400, 'Expense date must use YYYY-MM-DD.');
-  const description = String(body.description || '').trim();
-  if (!description || description.length > 5000) {
-    throw new ApiError(400, 'Description is required and must be at most 5000 characters.');
+  let result;
+  try {
+    result = await db.query(`
+      SELECT purchase.purchase_id, purchase.purchase_batch_id,
+        purchase.inventory_transaction_id, purchase.product_id,
+        purchase.product_name, purchase.quantity,
+        purchase.unit_price::float8 AS unit_price,
+        ROUND(purchase.quantity * purchase.unit_price, 2)::float8 AS total_cost,
+        purchase.purchase_date::text AS purchase_date,
+        purchase.expense_id, purchase.review_status, purchase.reviewed_by,
+        purchase.reviewed_at, purchase.rejection_reason, purchase.rejected_by,
+        purchase.rejected_at,
+        NULLIF(BTRIM(batch.source_hash), '') AS invoice_source_hash,
+        COALESCE(
+          NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(recorder.first_name), ''),
+            NULLIF(BTRIM(recorder.last_name), '')), ''),
+          recorder.email,
+          'Unknown'
+        ) AS recorded_by,
+        CONCAT_WS(' ', NULLIF(BTRIM(reviewer.first_name), ''),
+          NULLIF(BTRIM(reviewer.last_name), '')) AS reviewer_name,
+        CONCAT_WS(' ', NULLIF(BTRIM(rejector.first_name), ''),
+          NULLIF(BTRIM(rejector.last_name), '')) AS rejector_name
+      FROM inventory_purchase_records purchase
+      JOIN inventory_purchase_batches batch
+        ON batch.purchase_batch_id = purchase.purchase_batch_id
+      LEFT JOIN inventory_transactions inventory_tx
+        ON inventory_tx.transaction_id = purchase.inventory_transaction_id
+      LEFT JOIN users recorder
+        ON recorder.user_id = COALESCE(batch.created_by, inventory_tx.created_by)
+      LEFT JOIN users reviewer ON reviewer.user_id = purchase.reviewed_by
+      LEFT JOIN users rejector ON rejector.user_id = purchase.rejected_by
+      WHERE purchase.purchase_id = $1
+    `, [purchaseId]);
+  } catch (error) {
+    missingPurchaseSchema(error);
+    throw error;
   }
-  const amount = amountValue(body.amount);
-  const supplier = body.supplier == null || body.supplier === ''
-    ? null
-    : String(body.supplier).trim().slice(0, 150);
-  const reference = body.reference_no == null || body.reference_no === ''
-    ? null
-    : String(body.reference_no).trim().slice(0, 100);
+  if (!result.rows.length) throw new ApiError(404, 'Inventory purchase not found.');
+  res.json(result.rows[0]);
+}));
 
+async function approveInventoryPurchase(purchaseId, reviewerId) {
   let result;
   try {
     result = await db.transaction(async (client) => {
-      const purchase = await client.query(`
-        SELECT purchase_id, expense_id
+      const purchaseResult = await client.query(`
+        SELECT purchase_id, product_name, quantity, unit_price,
+          ROUND(quantity * unit_price, 2)::text AS total_cost,
+          purchase_date::text AS purchase_date, expense_id, review_status
         FROM inventory_purchase_records
         WHERE purchase_id = $1
         FOR UPDATE
       `, [purchaseId]);
-      if (!purchase.rows.length) throw new ApiError(404, 'Inventory purchase suggestion not found.');
-      if (purchase.rows[0].expense_id !== null) {
-        const existing = await client.query(`
-          SELECT expense_id, expense_date::text AS expense_date, category, description,
-            amount::float8 AS amount, supplier, reference_no
-          FROM expenses
-          WHERE expense_id = $1
-        `, [purchase.rows[0].expense_id]);
-        if (!existing.rows.length) throw new ApiError(409, 'This purchase was already linked to an expense.');
-        return { expense: existing.rows[0], replayed: true };
+      if (!purchaseResult.rows.length) throw new ApiError(404, 'Inventory purchase not found.');
+      const purchase = purchaseResult.rows[0];
+      if (purchase.review_status !== 'pending' || purchase.expense_id !== null) {
+        throw new ApiError(409, 'This inventory purchase is no longer pending review.');
       }
 
-      await assertBusinessDateOpen(client, body.expense_date, 'Expense entries');
+      const total = amountValue(purchase.total_cost);
+      await assertBusinessDateOpen(client, purchase.purchase_date, 'Inventory purchase expenses');
+      const reference = `INV-PURCHASE-${purchase.purchase_id}`;
+      const description = `Inventory purchase: ${purchase.product_name} (quantity ${purchase.quantity})`;
       const expense = await client.query(`
         INSERT INTO expenses
-          (expense_date, category, description, amount, supplier, reference_no, recorded_by)
-        VALUES ($1, 'Inventory & Supplies', $2, $3, $4, $5, $6)
-        RETURNING expense_id, expense_date::text AS expense_date, category, description,
-          amount::float8 AS amount, supplier, reference_no
-      `, [body.expense_date, description, amount, supplier, reference, req.session.userId || null]);
+          (expense_date, category, description, amount, reference_no, recorded_by)
+        VALUES ($1, 'Inventory & Supplies', $2, $3, $4, $5)
+        RETURNING expense_id, expense_date::text AS expense_date, category,
+          description, amount::float8 AS amount, supplier, reference_no
+      `, [
+        purchase.purchase_date,
+        description,
+        total,
+        reference,
+        reviewerId,
+      ]);
       const linked = await client.query(`
         UPDATE inventory_purchase_records
-        SET expense_id = $1, reviewed_by = $2, reviewed_at = NOW()
-        WHERE purchase_id = $3 AND expense_id IS NULL
-        RETURNING purchase_id
-      `, [expense.rows[0].expense_id, req.session.userId || null, purchaseId]);
-      if (!linked.rows.length) throw new ApiError(409, 'This purchase was already recorded as an expense.');
-      return { expense: expense.rows[0], replayed: false };
+        SET expense_id = $1, reviewed_by = $2, reviewed_at = NOW(),
+          review_status = 'approved'
+        WHERE purchase_id = $3
+          AND review_status = 'pending'
+          AND expense_id IS NULL
+        RETURNING purchase_id, review_status, reviewed_at
+      `, [expense.rows[0].expense_id, reviewerId, purchaseId]);
+      if (!linked.rows.length) throw new ApiError(409, 'This inventory purchase is no longer pending review.');
+      return { expense: expense.rows[0], purchase: linked.rows[0] };
     });
   } catch (error) {
     missingPurchaseSchema(error);
     throw error;
   }
-  res.status(result.replayed ? 200 : 201).json(result);
+  return result;
+}
+
+async function rejectInventoryPurchase(purchaseId, reviewerId, reason) {
+  let result;
+  try {
+    result = await db.transaction(async (client) => {
+      const purchase = await client.query(`
+        SELECT purchase_id, expense_id, review_status
+        FROM inventory_purchase_records
+        WHERE purchase_id = $1
+        FOR UPDATE
+      `, [purchaseId]);
+      if (!purchase.rows.length) throw new ApiError(404, 'Inventory purchase not found.');
+      if (purchase.rows[0].review_status !== 'pending' || purchase.rows[0].expense_id !== null) {
+        throw new ApiError(409, 'This inventory purchase is no longer pending review.');
+      }
+      const rejected = await client.query(`
+        UPDATE inventory_purchase_records
+        SET review_status = 'rejected', rejection_reason = $1,
+          rejected_by = $2, rejected_at = NOW()
+        WHERE purchase_id = $3
+          AND review_status = 'pending'
+          AND expense_id IS NULL
+        RETURNING purchase_id, review_status, rejection_reason,
+          rejected_by, rejected_at
+      `, [reason, reviewerId, purchaseId]);
+      if (!rejected.rows.length) throw new ApiError(409, 'This inventory purchase is no longer pending review.');
+      return rejected.rows[0];
+    });
+  } catch (error) {
+    missingPurchaseSchema(error);
+    throw error;
+  }
+  return result;
+}
+
+router.post('/inventory-purchase-suggestions/:id/approve', endpoint(async (req, res) => {
+  const purchaseId = idValue(req.params.id, 'Purchase ID');
+  const reviewerId = idValue(req.session?.userId, 'Finance user ID');
+  res.status(201).json(await approveInventoryPurchase(purchaseId, reviewerId));
+}));
+
+router.post('/inventory-purchase-suggestions/:id/reject', endpoint(async (req, res) => {
+  const purchaseId = idValue(req.params.id, 'Purchase ID');
+  const reviewerId = idValue(req.session?.userId, 'Finance user ID');
+  const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim() : '';
+  if (!reason || reason.length > 2000) {
+    throw new ApiError(400, 'A rejection reason of 1 to 2000 characters is required.');
+  }
+  res.json(await rejectInventoryPurchase(purchaseId, reviewerId, reason));
+}));
+
+router.post('/inventory-purchase-suggestions/:id/expense', endpoint(async (req, res) => {
+  const purchaseId = idValue(req.params.id, 'Purchase ID');
+  const reviewerId = idValue(req.session?.userId, 'Finance user ID');
+  res.status(201).json(await approveInventoryPurchase(purchaseId, reviewerId));
 }));
 
 router.patch('/expenses/:id', endpoint(async (req, res) => {
@@ -1336,7 +1583,7 @@ function activeFilterSummary(section, query = {}) {
     if (query.method) filters.push(`Payment method: ${paymentMethodLabel(query.method)}`);
   }
   if (section === 'expenses' && query.category) filters.push(`Category: ${query.category}`);
-  if (query.q && ['transactions', 'expenses'].includes(section)) filters.push('Search: applied');
+  if (query.q && ['transactions', 'expenses', 'receivables'].includes(section)) filters.push('Search: applied');
   return filters.length ? filters.join('; ') : 'None beyond selected date range';
 }
 
@@ -1346,6 +1593,9 @@ function exportDateBasis(section) {
   }
   if (section === 'expenses') {
     return 'Expense date (expense_date); active and voided records are included. Expense payment method is not stored.';
+  }
+  if (section === 'receivables') {
+    return 'Completed appointment date; only positive outstanding balances are included. Posted reservation deposits are excluded or included according to the configured deposit deduction rule.';
   }
   if (section === 'daily-cash') {
     return 'Posted payments across all methods by received date in Asia/Manila and non-voided expense_date.';
@@ -1359,6 +1609,9 @@ function exportAccountingBasis(section) {
   }
   if (section === 'expenses') {
     return 'Expense register by expense_date; the current model does not record settlement method.';
+  }
+  if (section === 'receivables') {
+    return 'Outstanding balance is service price less eligible posted payments; this is an operational balance report, not a payment ledger.';
   }
   return 'Mixed operational metrics. Net cash after expenses is posted collections less non-voided recorded expenses; expense payment method is not stored, so this is not a complete cash-flow statement.';
 }
@@ -1645,36 +1898,48 @@ function reportStatusStyle(value, style = EXCEL_STYLE) {
 async function sendFinanceWorkbook(res, section, from, to, records, query = {}) {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'Skin Goddess Aesthetic Center';
-  workbook.subject = `${section === 'transactions' ? 'Payment ledger' : 'Expense register'} ${from} to ${to}`;
-  workbook.title = `Finance ${section} export ${from} to ${to}`;
   const transactions = section === 'transactions';
+  const receivables = section === 'receivables';
+  const reportName = transactions ? 'Payment Ledger' : receivables ? 'Outstanding Balances' : 'Expense Register';
+  workbook.subject = `${reportName} ${from} to ${to}`;
+  workbook.title = `Finance ${section} export ${from} to ${to}`;
   const headers = transactions
     ? ['Date', 'Receipt number', 'Client', 'Type', 'Details', 'Payment method', 'Amount (PHP)', 'Status', 'Reference', 'Note']
-    : ['Date', 'Category', 'Description', 'Amount (PHP)', 'Supplier', 'Reference', 'Status', 'Void reason'];
-  const amounts = records.reduce((total, record) => total + Number(record.amount || 0), 0);
+    : receivables
+      ? ['Appointment date', 'Appointment ID', 'Client', 'Service', 'Service price (PHP)', 'Amount paid (PHP)', 'Outstanding (PHP)']
+      : ['Date', 'Category', 'Description', 'Amount (PHP)', 'Supplier', 'Reference', 'Status', 'Void reason'];
+  const amountField = receivables ? 'outstanding' : 'amount';
+  const amounts = records.reduce((total, record) => total + Number(record[amountField] || 0), 0);
   const worksheet = addReportDetailSheet(workbook, {
-    name: transactions ? 'Payment Ledger' : 'Expense Register',
-    title: transactions ? 'Payment Ledger' : 'Expense Register',
+    name: reportName,
+    title: reportName,
     from,
     to,
     description: transactions
       ? 'Payment records by Manila receipt date. Amounts are original transaction amounts; use the Status column when reconciling posted collections.'
-      : 'Expense records by expense date. Voided entries remain available for audit context and should be excluded from active expense totals.',
+      : receivables
+        ? 'Completed appointments with a positive outstanding balance, filtered by appointment date and the selected client or service search.'
+        : 'Expense records by expense date. Voided entries remain available for audit context and should be excluded from active expense totals.',
     headers,
     widths: transactions
       ? [15, 22, 26, 18, 36, 20, 18, 15, 26, 42]
-      : [15, 24, 42, 18, 26, 24, 15, 42],
+      : receivables
+        ? [18, 16, 28, 30, 21, 21, 21]
+        : [15, 24, 42, 18, 26, 24, 15, 42],
     dateColumns: [1],
-    amountColumns: [transactions ? 7 : 4],
+    amountColumns: transactions ? [7] : receivables ? [5, 6, 7] : [4],
     records: records.map((record) => (transactions
       ? [spreadsheetDate(record.date), record.receipt_number, record.client, record.payment_type,
         record.details, paymentMethodLabel(record.method), Number(record.amount), record.status,
         record.reference_no || '', record.note || '']
-      : [spreadsheetDate(record.date), record.category, record.description, Number(record.amount),
-        record.supplier || '', record.reference_no || '', record.status, record.void_reason || ''])),
+      : receivables
+        ? [spreadsheetDate(record.appointment_date), record.appointment_id, record.client, record.service,
+          Number(record.service_price), Number(record.amount_paid), Number(record.outstanding)]
+        : [spreadsheetDate(record.date), record.category, record.description, Number(record.amount),
+          record.supplier || '', record.reference_no || '', record.status, record.void_reason || ''])),
     total: {
-      label: transactions ? 'Total listed payment amount' : 'Total listed expense amount',
-      column: transactions ? 7 : 4,
+      label: transactions ? 'Total listed payment amount' : receivables ? 'Total outstanding balance' : 'Total listed expense amount',
+      column: transactions ? 7 : receivables ? 7 : 4,
       value: amounts,
     },
   });
@@ -1689,7 +1954,7 @@ async function sendFinanceWorkbook(res, section, from, to, records, query = {}) 
   metadata.getCell('A1').alignment = { vertical: 'middle' };
   metadata.getRow(1).height = 28;
   metadata.mergeCells('A2:B2');
-  metadata.getCell('A2').value = transactions ? 'Payment Ledger Export Information' : 'Expense Register Export Information';
+  metadata.getCell('A2').value = `${reportName} Export Information`;
   metadata.getCell('A2').font = { bold: true, size: 12, color: { argb: EXCEL_STYLE.navy } };
   metadata.getRow(2).height = 24;
   exportMetadataRows(from, to, section, query).forEach(([label, value]) => metadata.addRow([label, value]));
@@ -2713,12 +2978,14 @@ router.get('/export.xlsx', endpoint(async (req, res) => {
     await sendCompleteFinanceWorkbook(res, from, to);
     return;
   }
-  if (!['transactions', 'expenses'].includes(req.query.section)) {
-    throw new ApiError(400, 'Excel export section must be transactions, expenses, or income-statement.');
+  if (!['transactions', 'expenses', 'receivables'].includes(req.query.section)) {
+    throw new ApiError(400, 'Excel export section must be transactions, expenses, receivables, or income-statement.');
   }
   const result = req.query.section === 'transactions'
     ? await transactionExportRows(from, to, req.query)
-    : await expenseExportRows(from, to, req.query);
+    : req.query.section === 'receivables'
+      ? await receivableRows(from, to, req.query)
+      : await expenseExportRows(from, to, req.query);
   await sendFinanceWorkbook(res, req.query.section, from, to, result.rows, req.query);
 }));
 
