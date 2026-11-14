@@ -489,7 +489,7 @@ router.post('/complete-registration', registerLimiter, async (req, res) => {
   }
   if (!isValidPassword(password)) {
     return res.status(400).json({
-      message: 'Password must be 8 to 72 characters and include at least one special character.',
+      message: 'Password must be 9 to 72 characters and include at least one letter, one number, and one special character.',
     });
   }
 
@@ -1394,7 +1394,7 @@ router.put('/change-password', preserveDemoCustomerAccess, async (req, res) => {
 
   if (!isValidPassword(newPassword)) {
     return res.status(400).json({
-      message: 'Password must be 8 to 72 characters and include at least one special character.',
+      message: 'Password must be 9 to 72 characters and include at least one letter, one number, and one special character.',
     });
   }
 
@@ -1512,7 +1512,7 @@ router.post('/reset-password', forgotPasswordLimiter, async (req, res) => {
 
   if (!isValidPassword(newPassword)) {
     return res.status(400).json({
-      message: 'Password must be 8 to 72 characters and include at least one special character.',
+      message: 'Password must be 9 to 72 characters and include at least one letter, one number, and one special character.',
     });
   }
 

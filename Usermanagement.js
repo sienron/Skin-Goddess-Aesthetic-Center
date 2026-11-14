@@ -546,8 +546,16 @@ async function saveEdits() {
 
   if (passwordChangeEnabled) {
     const newPassword = newPasswordInput.value;
-    if (newPassword.length < 8 || newPassword.length > 72) {
-      alert('Password must be between 8 and 72 characters.');
+    if (newPassword.length < 9 || newPassword.length > 72) {
+      alert('Password must be between 9 and 72 characters.');
+      return;
+    }
+    if (!/[A-Za-z]/.test(newPassword)) {
+      alert('Password must include at least one letter.');
+      return;
+    }
+    if (!/\d/.test(newPassword)) {
+      alert('Password must include at least one number.');
       return;
     }
     if (!/[^A-Za-z0-9\s]/.test(newPassword)) {
