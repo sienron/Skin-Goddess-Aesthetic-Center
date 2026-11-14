@@ -65,7 +65,21 @@ function submitInquiry(port) {
 
 test('legitimate inquiry submissions succeed while excess submissions from one IP get 429', async () => {
   let savedInquiries = 0;
+  const rateLimitHits = new Map();
   db.query = async (sql, values) => {
+    if (sql.includes('INSERT INTO rate_limit_counters')) {
+      const key = `${values[0]}:${values[1]}`;
+      const totalHits = (rateLimitHits.get(key) || 0) + 1;
+      rateLimitHits.set(key, totalHits);
+      return {
+        rows: [{ total_hits: totalHits, reset_at: new Date(Date.now() + 15 * 60 * 1000) }],
+      };
+    }
+
+    if (sql.includes('WITH expired AS')) {
+      return { rows: [] };
+    }
+
     assert.match(sql, /INSERT INTO inquiries/);
     assert.deepEqual(values, [
       'Jamie',

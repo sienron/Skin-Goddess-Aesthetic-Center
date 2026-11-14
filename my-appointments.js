@@ -26,7 +26,6 @@
   const historyList = document.getElementById('appointmentHistory');
   const historyCount = document.getElementById('appointmentHistoryCount');
   const profileAppointmentHistoryList = document.getElementById('profileAppointmentHistoryList');
-  const treatmentHistoryList = document.getElementById('treatmentHistoryList');
   const historyToggle = document.getElementById('appointmentHistoryToggle');
   const calendarToggle = document.getElementById('appointmentCalendarToggle');
   const hasAppointmentHistoryNavigation = Boolean(appointmentLists && historyLinkWrap && calendarLinkWrap);
@@ -335,12 +334,6 @@
     renderAppointmentList(historyList, history, 'Past and cancelled appointments will appear here.');
     if (profileAppointmentHistoryList) {
       renderAppointmentList(profileAppointmentHistoryList, history, 'Your past appointments will appear here.');
-    }
-    if (treatmentHistoryList) {
-      const completed = history.filter((appointment) =>
-        String(appointment.status || appointment.appointment_status || '').toLowerCase().replace(/-/g, '_') === 'completed'
-      );
-      renderAppointmentList(treatmentHistoryList, completed, 'Completed treatments will appear here.');
     }
   }
 

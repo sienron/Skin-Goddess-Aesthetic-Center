@@ -398,136 +398,6 @@ body.homepage.client-header[data-page="account"] {
   border-color: #e8ddca;
 }
 
-.profile-ticket-form {
-  display: grid;
-  gap: 18px;
-  max-width: 760px;
-}
-
-.profile-ticket-history {
-  max-width: 760px;
-  margin: 0 0 36px;
-}
-
-.profile-ticket-history .account-section-title {
-  margin-bottom: 14px;
-}
-
-.profile-ticket-list {
-  display: grid;
-}
-
-.profile-ticket {
-  padding: 18px 0;
-  border-top: 1px solid #e6dfd5;
-}
-
-.profile-ticket__header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 14px;
-}
-
-.profile-ticket__header h3,
-.profile-ticket__meta,
-.profile-ticket__message,
-.profile-ticket__reply h4,
-.profile-ticket__reply p {
-  margin: 0;
-}
-
-.profile-ticket__header h3 {
-  color: #302923;
-  font: 500 1.08rem/1.35 "Playfair Display", serif;
-  text-transform: capitalize;
-}
-
-.profile-ticket__status {
-  flex: 0 0 auto;
-  color: #7d6130;
-  font: 600 0.78rem "Inter", sans-serif;
-}
-
-.profile-ticket__status.is-replied {
-  color: #3c6745;
-}
-
-.profile-ticket__meta {
-  margin-top: 5px;
-  color: #82786d;
-  font: 400 0.78rem "Inter", sans-serif;
-}
-
-.profile-ticket__message {
-  margin-top: 12px;
-  color: #51493f;
-  font: 400 0.91rem/1.6 "Inter", sans-serif;
-  white-space: pre-wrap;
-}
-
-.profile-ticket__reply {
-  margin-top: 15px;
-  padding: 14px 16px;
-  border-left: 2px solid #b69045;
-  background: var(--profile-background);
-}
-
-.profile-ticket__reply h4 {
-  color: #51432b;
-  font: 600 0.78rem "Inter", sans-serif;
-}
-
-.profile-ticket__reply p {
-  margin-top: 5px;
-  color: #51493f;
-  font: 400 0.88rem/1.6 "Inter", sans-serif;
-  white-space: pre-wrap;
-}
-
-.profile-ticket-form__row {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
-}
-
-.profile-ticket-form label {
-  display: grid;
-  gap: 7px;
-  color: #62594e;
-  font: 600 0.82rem "Raleway", sans-serif;
-}
-
-.profile-ticket-form input,
-.profile-ticket-form select,
-.profile-ticket-form textarea {
-  width: 100%;
-  min-height: 44px;
-  padding: 10px 12px;
-  border: 1px solid #ded5ca;
-  border-radius: 6px;
-  background: #fff;
-  color: #302923;
-  box-sizing: border-box;
-  font: 400 0.92rem "Raleway", sans-serif;
-}
-
-.profile-ticket-form textarea {
-  min-height: 130px;
-  resize: vertical;
-}
-
-.profile-ticket-form input:focus,
-.profile-ticket-form select:focus,
-.profile-ticket-form textarea:focus {
-  border-color: #b69045;
-  outline: 2px solid rgb(182 144 69 / 18%);
-}
-
-.profile-ticket-form .btn-send {
-  justify-self: start;
-}
-
 @media (max-width: 900px) {
   .profile-layout {
     grid-template-columns: minmax(210px, 30%) minmax(0, 70%);
@@ -644,11 +514,6 @@ body.homepage.client-header[data-page="account"] {
     padding: 18px 16px;
   }
 
-  .profile-ticket-form__row {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 18px;
-  }
-
   .profile-content .cal-toolbar {
     gap: 14px;
     margin-bottom: 17px;
@@ -750,36 +615,6 @@ body.customer-theme-dark .profile-sidebar,
 body.customer-theme-dark .profile-content .account-section {
   border-color: #454038;
   background: #20211e;
-}
-
-body.customer-theme-dark .profile-ticket-form label {
-  color: #d7cebe;
-}
-
-body.customer-theme-dark .profile-ticket {
-  border-color: #454038;
-}
-
-body.customer-theme-dark .profile-ticket__header h3,
-body.customer-theme-dark .profile-ticket__message,
-body.customer-theme-dark .profile-ticket__reply p {
-  color: #f1ede4;
-}
-
-body.customer-theme-dark .profile-ticket__reply {
-  background: var(--profile-background, #181a19);
-}
-
-body.customer-theme-dark .profile-ticket__reply h4 {
-  color: #f3dfa9;
-}
-
-body.customer-theme-dark .profile-ticket-form input,
-body.customer-theme-dark .profile-ticket-form select,
-body.customer-theme-dark .profile-ticket-form textarea {
-  border-color: #514b40;
-  background: #2b2924;
-  color: #f1ede4;
 }
 
 body.homepage.client-header.customer-theme-dark[data-page="account"] {

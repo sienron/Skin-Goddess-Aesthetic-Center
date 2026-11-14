@@ -21,7 +21,10 @@ test('Admin and Finance Officer reach the visible shared Reports export from the
   const server = read('index.js');
 
   assert.match(server, /\{\s*path:\s*'\/FinanceReports\.html',\s*roles:\s*\['finance_officer',\s*'admin'\]\s*\}/);
-  assert.match(page, /data-export="income-statement">Export All Reports \(Excel\)<\/button>/);
+  assert.match(page, /data-export="income-statement">Export<\/button>/);
+  const styles = read('style.css');
+  assert.match(styles, /\.fin-report-controls \.fin-report-toolbar-export\s*\{[^}]*background:\s*#1f7a3d/i);
+  assert.match(styles, /body\.staff-theme-dark \.fin-report-controls \.fin-report-toolbar-export:hover\s*\{[^}]*background:\s*#196533/i);
   assert.match(page, /<script src="admin-context-nav\.js"><\/script>/);
   assert.match(page, /Finance navigation/);
   assert.match(adminNavigation, /\["FinanceReports\.html",\s*"Reports"/);

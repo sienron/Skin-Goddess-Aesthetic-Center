@@ -51,9 +51,9 @@ test('all mailer features use the same branded HTML and plain-text email layout'
   for (const message of messages) {
     assert.match(message.htmlContent, /<!doctype html>/i);
     assert.match(message.htmlContent, /Skin Goddess Aesthetic Center/);
-    assert.match(message.htmlContent, /info@skingoddess\.ph/);
+    assert.match(message.htmlContent, /skingoddess456@gmail\.com/);
     assert.match(message.textContent, /Skin Goddess Aesthetic Center/);
-    assert.match(message.textContent, /info@skingoddess\.ph/);
+    assert.match(message.textContent, /skingoddess456@gmail\.com/);
   }
   assert.match(messages[0].htmlContent, /Your secure email verification code is ready/);
   assert.match(messages[1].htmlContent, /Reset password/);

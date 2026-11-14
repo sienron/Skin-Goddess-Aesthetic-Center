@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { DASHBOARD_PER_ROLE, STAFF_ROLES } = require('../utils/roleRoutes');
 
-test('staff dashboard roles are exempt from login OTP while clients are not', () => {
+test('staff dashboard roles are represented for the role-specific login MFA policy', () => {
   assert.deepEqual(STAFF_ROLES, [
     'admin',
     'aesthetician',

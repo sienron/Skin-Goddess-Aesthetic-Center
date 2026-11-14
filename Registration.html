@@ -138,12 +138,12 @@
           <div class="field-row">
             <div class="field">
               <label for="firstName">First Name</label>
-              <input type="text" id="firstName" name="firstName" placeholder="e.g. Anna" required>
+              <input type="text" id="firstName" name="firstName" placeholder="e.g. Anna" maxlength="100" required>
               <span class="field-error" data-error-for="firstName"></span>
             </div>
             <div class="field">
               <label for="lastName">Last Name</label>
-              <input type="text" id="lastName" name="lastName" placeholder="e.g. Reyes" required>
+              <input type="text" id="lastName" name="lastName" placeholder="e.g. Reyes" maxlength="100" required>
               <span class="field-error" data-error-for="lastName"></span>
             </div>
           </div>
@@ -181,7 +181,7 @@
 
           <div class="field">
             <label for="address">Home Address</label>
-            <input type="text" id="address" name="address" placeholder="Street, Barangay, City, Province">
+            <input type="text" id="address" name="address" placeholder="Street, Barangay, City, Province" maxlength="500">
             <span class="field-error" data-error-for="address"></span>
           </div>
 
@@ -189,13 +189,13 @@
 
           <div class="field">
             <label for="allergies">Known Allergies <span class="hint">— leave blank if none</span></label>
-            <input type="text" id="allergies" name="allergies" placeholder="e.g. Fragrance, Lanolin, Salicylic Acid...">
+            <input type="text" id="allergies" name="allergies" placeholder="e.g. Fragrance, Lanolin, Salicylic Acid..." maxlength="1000">
             <span class="field-error" data-error-for="allergies"></span>
           </div>
 
           <div class="field">
             <label for="conditions">Medical Conditions <span class="hint">— if any</span></label>
-            <input type="text" id="conditions" name="conditions" placeholder="None declared">
+            <input type="text" id="conditions" name="conditions" placeholder="None declared" maxlength="1000">
             <span class="field-error" data-error-for="conditions"></span>
           </div>
 
@@ -258,11 +258,12 @@
         </svg>
       </div>
 
-      <h2 class="modal-title">Check your email</h2>
+      <h2 class="modal-title">Continue with your email</h2>
       <p class="modal-subtitle">
-        We sent a 6-digit verification code to<br>
+        If this email can be registered, next steps will be emailed to<br>
         <span class="otp-email" id="otpEmailDisplay">j****.torres@email.com</span>
       </p>
+      <p class="modal-subtitle">Already have an account? <a href="/LoginPage.html">Sign in</a> or use the password-reset option on the login page.</p>
 
       <div class="otp-inputs">
         <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" aria-label="Digit 1">
@@ -360,7 +361,7 @@
     
     </div>
     <div>
-    <p class="footer-copyright">@2026 Skin Goddess Aesthetic Center. All rights reserved</p>
+    <p class="footer-copyright">© 2026 Skin Goddess Aesthetic Center. All rights reserved</p>
     <p class="footer-col-body-location">Imus - Philippines</p>
   </div>
 </section>

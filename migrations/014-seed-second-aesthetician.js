@@ -1,10 +1,20 @@
-// Seeds a second development/staging aesthetician account. Reuses
+// Seeds a second local development aesthetician account. Reuses
 // SEED_AESTHETICIAN_PASSWORD so no new secret is needed.
+require('dotenv').config();
+
+const LOCAL_DATABASE_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
+const databaseHost = String(process.env.DB_HOST || '').trim().toLowerCase();
+
+if (process.env.NODE_ENV === 'production' || !LOCAL_DATABASE_HOSTS.has(databaseHost)) {
+  console.log('Skipped development aesthetician seed outside a local environment.');
+  process.exit(0);
+}
+
 const bcrypt = require('bcryptjs');
 const db = require('../db');
 
 const AESTHETICIANS = [
-  { email: 'skingoddess.nailtech@gmail.com', firstName: 'Second', lastName: 'Aesthetician' },
+  { email: 'demo.aesthetician2@skingoddess.test', firstName: 'Demo', lastName: 'Aesthetician' },
 ];
 
 async function seedAestheticians() {

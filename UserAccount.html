@@ -48,7 +48,7 @@
                 </div>
             </div>
 
-            <button class="book-now-btn" type="button" onclick="window.location.href='UserAppointment.html'">BOOK NOW</button>
+            <a class="book-now-btn" href="/UserAppointment.html">BOOK NOW</a>
 
             <div class="header-profile-wrap" id="profileWrap">
               <button type="button" class="profile-row" id="profileBtn" aria-haspopup="true" aria-expanded="false" aria-controls="profileDropdown" aria-label="Open profile menu">
@@ -89,7 +89,7 @@
             <li><a href="ContactUsPage.html">Contact</a></li>
         </ul>
 
-        <button class="book-now-btn mobile-nav-book-btn" type="button" onclick="window.location.href='UserAppointment.html'">BOOK NOW</button>
+        <a class="book-now-btn mobile-nav-book-btn" href="/UserAppointment.html">BOOK NOW</a>
 
     </aside>
 
@@ -105,8 +105,6 @@
         <button type="button" class="profile-nav__link is-active" data-profile-section="account" aria-controls="profile-account" aria-current="page">Account Management</button>
         <button type="button" class="profile-nav__link" data-profile-section="appointments" aria-controls="profile-appointments">Appointments</button>
         <button type="button" class="profile-nav__link" data-profile-section="appointment-history" aria-controls="profile-appointment-history">Appointment History</button>
-        <button type="button" class="profile-nav__link" data-profile-section="treatments" aria-controls="profile-treatments">Treatment History</button>
-        <button type="button" class="profile-nav__link" data-profile-section="tickets" aria-controls="profile-tickets">Ticket</button>
         <button type="button" class="profile-nav__link" data-profile-section="security" aria-controls="profile-security">Security</button>
       </nav>
     </aside>
@@ -156,14 +154,44 @@
     <section class="account-section profile-personal-section" aria-labelledby="personalDetailsTitle">
       <div class="account-section-header">
         <h2 class="account-section-title" id="personalDetailsTitle">Personal &amp; Health Details</h2>
+        <button type="button" class="account-edit-btn" id="personalDetailsEditBtn">Edit</button>
       </div>
-      <dl class="profile-personal-details">
+      <dl class="profile-personal-details" id="profilePersonalDetailsView">
         <div><dt>Date of Birth</dt><dd id="profileDateOfBirth">Not provided</dd></div>
         <div><dt>Gender</dt><dd id="profileGender">Not provided</dd></div>
         <div><dt>Home Address</dt><dd id="profileAddress">Not provided</dd></div>
         <div><dt>Known Allergies</dt><dd id="profileAllergies">Not provided</dd></div>
         <div><dt>Medical Conditions</dt><dd id="profileMedicalConditions">Not provided</dd></div>
       </dl>
+      <form id="personal-details-form" novalidate hidden>
+        <div class="account-fields-grid profile-edit-fields">
+          <div class="auth-form-group">
+            <label for="profileDateOfBirthInput">Date of Birth</label>
+            <input type="date" id="profileDateOfBirthInput" name="dateOfBirth" disabled>
+          </div>
+          <div class="auth-form-group">
+            <label for="profileGenderInput">Gender</label>
+            <select id="profileGenderInput" name="gender" disabled>
+              <option value="">Not provided</option>
+              <option value="female">Female</option>
+              <option value="male">Male</option>
+              <option value="prefer-not">Prefer not to say</option>
+            </select>
+          </div>
+          <div class="auth-form-group">
+            <label for="profileAddressInput">Home Address</label>
+            <input type="text" id="profileAddressInput" name="address" maxlength="500" disabled>
+          </div>
+        </div>
+        <span class="field-error" data-error-for="personal-details-form"></span>
+        <div class="account-form-actions" id="personalDetailsFormActions" hidden>
+          <button type="submit" class="btn btn-primary" id="personalDetailsSubmitBtn">
+            <span class="btn-label">SAVE CHANGES</span>
+          </button>
+          <button type="button" class="btn btn-outline" id="personalDetailsCancelBtn">CANCEL</button>
+        </div>
+      </form>
+      <p class="account-success" id="personal-details-success" role="status" hidden>Personal details updated successfully.</p>
     </section>
 
         </div>
@@ -231,51 +259,6 @@
         </div>
       </section>
 
-      <section class="profile-panel" id="profile-treatments" data-profile-panel="treatments" aria-labelledby="treatmentHistoryTitle" hidden>
-        <div class="account-container">
-          <h1 class="account-heading" id="treatmentHistoryTitle">Treatment History</h1>
-          <p class="profile-panel__intro">Completed visits from your appointment history.</p>
-          <div class="client-appointment-list" id="treatmentHistoryList" aria-live="polite">
-            <p class="client-appointment-empty">Loading your treatment history...</p>
-          </div>
-        </div>
-      </section>
-
-      <section class="profile-panel" id="profile-tickets" data-profile-panel="tickets" aria-labelledby="ticketTitle" hidden>
-        <div class="account-container">
-          <h1 class="account-heading" id="ticketTitle">Contact the clinic</h1>
-          <p class="profile-panel__intro">Send a message to the clinic. Your reference number will appear here after submission; replies are sent to your email.</p>
-          <section class="profile-ticket-history" aria-labelledby="ticketHistoryTitle">
-            <h2 class="account-section-title" id="ticketHistoryTitle">Your conversations</h2>
-            <div class="profile-ticket-list" id="customerTicketList" aria-live="polite">
-              <p class="client-appointment-empty">Loading your tickets...</p>
-            </div>
-          </section>
-          <form id="contactForm" class="profile-ticket-form" novalidate>
-            <div class="profile-ticket-form__row">
-              <label>First name<input type="text" id="ticketFirstName" name="firstName" autocomplete="given-name" required></label>
-              <label>Last name<input type="text" id="ticketLastName" name="lastName" autocomplete="family-name" required></label>
-            </div>
-            <div class="profile-ticket-form__row">
-              <label>Email address<input type="email" id="ticketEmail" name="email" autocomplete="email" required></label>
-              <label>Phone number<input type="tel" id="ticketPhone" name="phone" autocomplete="tel"></label>
-            </div>
-            <label>Subject
-              <select id="ticketSubject" name="subject" required>
-                <option value="" disabled selected>Select inquiry type</option>
-                <option value="booking">Booking Inquiry</option>
-                <option value="services">Services Inquiry</option>
-                <option value="feedback">Feedback</option>
-                <option value="other">Other</option>
-              </select>
-            </label>
-            <label>Message<textarea id="ticketMessage" name="message" rows="5" maxlength="5000" required></textarea></label>
-            <button type="submit" class="btn-send">Send message <span aria-hidden="true">&rarr;</span></button>
-            <p id="formStatus" class="form-status" role="status" aria-live="polite"></p>
-          </form>
-        </div>
-      </section>
-
       <section class="profile-panel" id="profile-security" data-profile-panel="security" aria-labelledby="securityTitle" hidden>
         <div class="account-container">
           <h1 class="account-heading" id="securityTitle">Security</h1>
@@ -292,6 +275,11 @@
           <label for="newEmail">New email address</label>
           <input type="email" id="newEmail" name="newEmail" autocomplete="email" required>
           <span class="field-error" data-error-for="newEmail"></span>
+        </div>
+        <div class="auth-form-group" id="emailChangeCurrentPassword-group">
+          <label for="emailChangeCurrentPassword">Current password</label>
+          <input type="password" id="emailChangeCurrentPassword" name="currentPassword" autocomplete="current-password" required>
+          <span class="field-error" data-error-for="emailChangeCurrentPassword"></span>
         </div>
         <span class="field-error" data-error-for="email-change-form"></span>
         <div class="account-form-actions">
@@ -478,7 +466,6 @@
 <script src="account-edit-toggle.js"></script>
 <script src="appointment-modal.js"></script>
 <script src="my-appointments.js"></script>
-<script src="contact-us.js"></script>
 <script src="profile-page.js"></script>
 <script src="faq-chatbot.js"></script>
 </body>

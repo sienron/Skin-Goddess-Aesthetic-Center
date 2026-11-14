@@ -145,7 +145,7 @@ function buildBrandedEmail({ preheader, title, intro, paragraphs = [], details =
             <p style="margin:0;color:#6b6459;font-size:12px;line-height:19px;">2nd floor, KW Plaza Building, Pasong Buaya 2, Imus, Cavite 4103<br>
               <a href="tel:+639456119436" style="color:#73551b;text-decoration:none;">+63 945 611 9436</a>
               &nbsp;·&nbsp;
-              <a href="mailto:info@skingoddess.ph" style="color:#73551b;text-decoration:none;">info@skingoddess.ph</a>
+              <a href="mailto:skingoddess456@gmail.com" style="color:#73551b;text-decoration:none;">skingoddess456@gmail.com</a>
             </p>
             <p style="margin:12px 0 0;color:#8a8378;font-size:11px;line-height:17px;">This is an automated email. Please contact the clinic if you need assistance.</p>
           </td></tr>
@@ -163,7 +163,7 @@ function buildBrandedEmail({ preheader, title, intro, paragraphs = [], details =
     'Skin Goddess Aesthetic Center',
     '2nd floor, KW Plaza Building, Pasong Buaya 2, Imus, Cavite 4103',
     '+63 945 611 9436',
-    'info@skingoddess.ph',
+    'skingoddess456@gmail.com',
   );
   return { html, text: textParts.filter(Boolean).join('\n\n') };
 }

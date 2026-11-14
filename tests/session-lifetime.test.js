@@ -4,6 +4,10 @@ const http = require('node:http');
 const express = require('express');
 const session = require('express-session');
 const { enforceSessionLifetime } = require('../middleware/sessionLifetime');
+const {
+  CLIENT_IDLE_TIMEOUT_MS,
+  STAFF_IDLE_TIMEOUT_MS,
+} = require('../utils/sessionSecurity');
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -33,7 +37,7 @@ function requestFor(values = {}) {
   };
 }
 
-test('all roles expire at 30 days even after activity just before the deadline', async (t) => {
+test('all roles retain their absolute 30-day cap when active, with role-specific cookie idle windows', async (t) => {
   const signedInAt = Date.now();
   let now = signedInAt;
   t.mock.method(Date, 'now', () => now);
@@ -43,14 +47,19 @@ test('all roles expire at 30 days even after activity just before the deadline',
     const req = requestFor({ role, sessionExpiresAt: deadline });
     for (const elapsed of [0, 12 * 60 * 60 * 1000, 29 * DAY, 30 * DAY - 1]) {
       now = signedInAt + elapsed;
+      req.session.lastActivityAt = now - 1;
       let allowed = false;
       await enforceSessionLifetime(req, responseCapture(), () => { allowed = true; });
       assert.equal(allowed, true, role);
       assert.equal(req.session.sessionExpiresAt, deadline);
-      assert.equal(req.session.cookie.maxAge, deadline - now);
+      assert.equal(req.session.cookie.maxAge, Math.min(
+        deadline - now,
+        role === 'client' ? CLIENT_IDLE_TIMEOUT_MS : STAFF_IDLE_TIMEOUT_MS
+      ));
     }
 
     now = deadline;
+    req.session.lastActivityAt = now - 1;
     const res = responseCapture();
     let allowed = false;
     await enforceSessionLifetime(req, res, () => { allowed = true; });
@@ -70,9 +79,10 @@ test('legacy 400-day cookies receive a fixed 30-day cap that later requests cann
   assert.equal(req.session.sessionExpiresAt, startedAt + 30 * DAY);
 
   now += 20 * DAY;
+  req.session.lastActivityAt = now - 1;
   await enforceSessionLifetime(req, responseCapture(), () => {});
   assert.equal(req.session.sessionExpiresAt, startedAt + 30 * DAY);
-  assert.equal(req.session.cookie.maxAge, 10 * DAY);
+  assert.equal(req.session.cookie.maxAge, CLIENT_IDLE_TIMEOUT_MS);
 });
 
 test('legacy sessions with an earlier cookie expiry keep the earlier deadline', async (t) => {
@@ -81,10 +91,10 @@ test('legacy sessions with an earlier cookie expiry keep the earlier deadline', 
   const req = requestFor({ cookie: { expires: new Date(now + DAY) } });
   await enforceSessionLifetime(req, responseCapture(), () => {});
   assert.equal(req.session.sessionExpiresAt, now + DAY);
-  assert.equal(req.session.cookie.maxAge, DAY);
+  assert.equal(req.session.cookie.maxAge, CLIENT_IDLE_TIMEOUT_MS);
 });
 
-test('unchecked sign-ins expire after 24 hours for every role', async (t) => {
+test('unchecked sign-ins retain their 24-hour absolute cap and use role-specific idle windows', async (t) => {
   const signedInAt = Date.now();
   let now = signedInAt;
   t.mock.method(Date, 'now', () => now);
@@ -94,7 +104,7 @@ test('unchecked sign-ins expire after 24 hours for every role', async (t) => {
     let allowed = false;
     await enforceSessionLifetime(req, responseCapture(), () => { allowed = true; });
     assert.equal(allowed, true);
-    assert.equal(req.session.cookie.maxAge, DAY);
+    assert.equal(req.session.cookie.maxAge, role === 'client' ? CLIENT_IDLE_TIMEOUT_MS : STAFF_IDLE_TIMEOUT_MS);
     assert.equal(req.session.sessionExpiresAt, signedInAt + DAY);
 
     now += DAY;
@@ -102,6 +112,37 @@ test('unchecked sign-ins expire after 24 hours for every role', async (t) => {
     await enforceSessionLifetime(req, res, () => assert.fail('Expired session reached its route'));
     assert.equal(res.statusCode, 401);
     assert.equal(req.session.destroyed, true);
+  }
+});
+
+test('inactive client and staff sessions expire at their idle deadlines', async (t) => {
+  const startedAt = Date.now();
+  let now = startedAt;
+  t.mock.method(Date, 'now', () => now);
+  for (const [role, timeout] of [
+    ['client', CLIENT_IDLE_TIMEOUT_MS],
+    ['aesthetician', STAFF_IDLE_TIMEOUT_MS],
+  ]) {
+    const req = requestFor({
+      role,
+      sessionExpiresAt: startedAt + DAY,
+      lastActivityAt: startedAt,
+    });
+    now = startedAt + timeout - 1;
+    let allowed = false;
+    await enforceSessionLifetime(req, responseCapture(), () => { allowed = true; });
+    assert.equal(allowed, true, role);
+    assert.equal(req.session.cookie.maxAge, Math.min(
+      startedAt + DAY - now,
+      timeout
+    ));
+
+    req.session.lastActivityAt = startedAt;
+    now += 1;
+    const response = responseCapture();
+    await enforceSessionLifetime(req, response, () => assert.fail('Idle session reached its route'));
+    assert.equal(response.statusCode, 401, role);
+    assert.equal(req.session.destroyed, true, role);
   }
 });
 
@@ -137,12 +178,14 @@ test('real session cookies and stored sessions retain the fixed deadline and rej
     secret: 'session-lifetime-integration-test-secret',
     resave: false,
     saveUninitialized: false,
+    rolling: true,
     cookie: { maxAge: DAY, httpOnly: true, sameSite: 'lax' },
   }));
   app.use(enforceSessionLifetime);
   let sessionId;
   app.post('/sign-in', (req, res) => {
     req.session.userId = 17;
+    req.session.role = 'client';
     req.session.staySignedIn = true;
     req.session.sessionExpiresAt = Date.now() + 30 * DAY;
     req.session.cookie.maxAge = 30 * DAY;

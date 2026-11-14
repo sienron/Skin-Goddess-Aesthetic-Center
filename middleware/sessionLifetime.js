@@ -1,4 +1,8 @@
-const { destroySession, getSessionMaxAge } = require('../utils/sessionSecurity');
+const {
+  destroySession,
+  getSessionIdleTimeout,
+  getSessionMaxAge,
+} = require('../utils/sessionSecurity');
 
 async function enforceSessionLifetime(req, res, next) {
   if (!req.session?.userId) return next();
@@ -17,7 +21,10 @@ async function enforceSessionLifetime(req, res, next) {
   }
 
   const remaining = Number(req.session.sessionExpiresAt) - now;
-  if (!Number.isFinite(remaining) || remaining <= 0) {
+  const idleTimeout = getSessionIdleTimeout(req.session);
+  const lastActivityAt = Number(req.session.lastActivityAt);
+  const idleExpired = Number.isFinite(lastActivityAt) && now - lastActivityAt >= idleTimeout;
+  if (!Number.isFinite(remaining) || remaining <= 0 || idleExpired) {
     if (req.path === '/api/auth/login') return next();
     await destroySession(req, res);
     if (req.accepts('html') && !req.originalUrl.startsWith('/api/')) {
@@ -26,7 +33,8 @@ async function enforceSessionLifetime(req, res, next) {
     return res.status(401).json({ message: 'Your session expired. Sign in again.' });
   }
 
-  req.session.cookie.maxAge = Math.min(remaining, maxAge);
+  req.session.lastActivityAt = now;
+  req.session.cookie.maxAge = Math.min(remaining, maxAge, idleTimeout);
   return next();
 }
 
