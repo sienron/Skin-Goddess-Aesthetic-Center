@@ -94,6 +94,7 @@
     let rows = [];
     let confirmationRequestKey = null;
     let sourceHash = null;
+    let isConfirming = false;
 
     function createRequestKey() {
         if (window.crypto.randomUUID) return window.crypto.randomUUID();
@@ -535,10 +536,12 @@
     });
 
     confirmButton.addEventListener("click", async () => {
+        if (isConfirming) return;
         if (!rows.length || rows.some(row => !validRow(row))) {
             setStatus("Complete or remove every highlighted row before confirming.", true);
             return;
         }
+        isConfirming = true;
         confirmButton.disabled = true;
         setStatus("Saving reviewed inventory...");
         if (!confirmationRequestKey) confirmationRequestKey = createRequestKey();
@@ -566,6 +569,7 @@
             sourceHash = null;
             closeModal();
             showToast(`${savedCount} inventory row${savedCount === 1 ? "" : "s"} saved successfully.`);
+            window.dispatchEvent(new CustomEvent("inventory:batch-upload-confirmed"));
             const refreshFunctions = [
                 "loadInventory",
                 "loadRestockedToday",
@@ -581,11 +585,12 @@
             await Promise.all(refreshFunctions
                 .filter(name => typeof window[name] === "function")
                 .map(name => window[name]()));
-            window.dispatchEvent(new CustomEvent("inventory:batch-upload-confirmed"));
         } catch (error) {
             confirmButton.disabled = false;
             setStatus(error.message, true);
             showToast(error.message, true);
+        } finally {
+            isConfirming = false;
         }
     });
 })();
