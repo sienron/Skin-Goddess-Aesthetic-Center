@@ -200,19 +200,12 @@ router.post('/batch-upload/confirm', async (req, res) => {
     try {
         const result = await db.transaction(async client => {
             await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`batch-request:${requestKey}`]);
-            if (sourceHash) {
-                await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`batch-image:${sourceHash}`]);
-            }
             const existingBatches = await client.query(`
                 SELECT purchase_batch_id, request_key, source_hash, payload_hash
                 FROM inventory_purchase_batches
-                WHERE request_key = $1 OR ($2::char(64) IS NOT NULL AND source_hash = $2)
+                WHERE request_key = $1
                 FOR UPDATE
-            `, [requestKey, sourceHash]);
-            const batchIds = new Set(existingBatches.rows.map(batch => batch.purchase_batch_id));
-            if (batchIds.size > 1) {
-                return { conflict: 'This request key and invoice image refer to different confirmed batches.' };
-            }
+            `, [requestKey]);
             if (existingBatches.rows.length) {
                 const existingBatch = existingBatches.rows[0];
                 if (existingBatch.payload_hash.trim() !== payloadHash

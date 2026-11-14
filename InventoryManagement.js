@@ -671,6 +671,10 @@ async function refreshLowStockAlerts() {
     }
 }
 
+window.addEventListener("inventory:batch-upload-confirmed", () => {
+    inventoryMutationVersion += 1;
+});
+
 /* =========================================================
    SEARCH + FILTER
    ========================================================= */
