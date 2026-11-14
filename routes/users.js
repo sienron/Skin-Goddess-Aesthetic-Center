@@ -10,6 +10,7 @@ const router = express.Router();
 const db = require('../db');
 const { requireRole } = require('../middleware/auth');
 const isValidPassword = require('../utils/password');
+const BCRYPT_SALT_ROUNDS = isValidPassword.BCRYPT_SALT_ROUNDS;
 const { isValidName, isValidEmail } = require('../utils/userValidation');
 
 // Every route below is admin-only.
@@ -199,7 +200,7 @@ router.post('/', async (req, res) => {
     }
 
     const tempPassword = `${crypto.randomBytes(6).toString('hex')}A1!`;
-    const passwordHash = await bcrypt.hash(tempPassword, 10);
+    const passwordHash = await bcrypt.hash(tempPassword, BCRYPT_SALT_ROUNDS);
 
     const insertResult = await db.query(
       `INSERT INTO users (email, password_hash, first_name, last_name, role, status, email_verified)
@@ -263,7 +264,7 @@ router.put('/:id', async (req, res) => {
   }
 
   try {
-    const passwordHash = password === undefined ? null : await bcrypt.hash(password, 10);
+    const passwordHash = password === undefined ? null : await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
     const result = await db.transaction(async (client) => {
       const current = await client.query(
         'SELECT role FROM users WHERE user_id = $1 FOR UPDATE',

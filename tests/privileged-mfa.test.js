@@ -347,7 +347,10 @@ test('email OTP cannot authenticate a privileged account via a stale or alternat
   db.query = async () => ({ rows: [user] });
   const req = {
     body: { code: '123456', rememberDevice: true },
-    session: sessionWith({ pendingLoginUserId: 17 }),
+    session: sessionWith({
+      pendingLoginUserId: 17,
+      pendingLoginExpiresAt: Date.now() + 10 * 60 * 1000,
+    }),
   };
   const response = responseCapture();
 
@@ -368,7 +371,11 @@ test('client email OTP flow remains available without a privileged MFA marker', 
   });
   const req = {
     body: { code: '123456' },
-    session: sessionWith({ pendingLoginUserId: 17, pendingLoginStaySignedIn: true }),
+    session: sessionWith({
+      pendingLoginUserId: 17,
+      pendingLoginStaySignedIn: true,
+      pendingLoginExpiresAt: Date.now() + 10 * 60 * 1000,
+    }),
   };
   const response = responseCapture();
 

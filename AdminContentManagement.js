@@ -426,12 +426,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     TESTIMONIALS_STATE.items.forEach((r) => {
       const tr = el('tr');
-      tr.appendChild(el('td', '', r.client_name || 'Client'));
-      tr.appendChild(el('td', '', r.service_name));
-      tr.appendChild(el('td', '', '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating)));
+      tr.appendChild(el('td', '', r.is_manual ? r.reviewer_name : r.client_name || 'Client'));
+      tr.appendChild(el('td', '', r.is_manual ? 'Facebook' : `Website · ${r.service_name}`));
+      tr.appendChild(el('td', '', r.rating
+        ? '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating)
+        : r.is_manual ? '—' : 'Not rated'));
       tr.appendChild(el('td', 'cm-feedback', r.comment || '—'));
       const statusTd = el('td');
-      statusTd.appendChild(statusBadge(r.is_public ? 'published' : 'pending'));
+      statusTd.appendChild(statusBadge(r.is_manual
+        ? r.is_public ? 'published' : 'draft'
+        : r.is_public ? 'published' : 'pending'));
       tr.appendChild(statusTd);
       tr.appendChild(testimonialActionCell(r));
       tbody.appendChild(tr);
@@ -505,18 +509,37 @@ document.addEventListener('DOMContentLoaded', () => {
   function testimonialActionCell(rating) {
     const td = el('td');
     const wrap = el('div', 'cm-actions');
-    const toggleBtn = el('button', 'apt-action', rating.is_public ? 'Hide' : 'Approve');
+    if (rating.is_manual) {
+      const editBtn = el('button', 'apt-action apt-action--view', 'Edit');
+      editBtn.type = 'button';
+      editBtn.dataset.section = 'testimonials';
+      editBtn.dataset.action = 'edit';
+      editBtn.dataset.id = rating.manual_testimonial_id;
+      wrap.appendChild(editBtn);
+      wrap.appendChild(actionButton('Delete', 'testimonials', 'delete', rating.manual_testimonial_id));
+    }
+    const toggleBtn = el('button', 'apt-action', rating.is_manual
+      ? rating.is_public ? 'Unpublish' : 'Publish'
+      : rating.is_public ? 'Hide' : 'Approve');
     toggleBtn.type = 'button';
     toggleBtn.dataset.section = 'testimonials';
     toggleBtn.dataset.action = 'toggle';
-    toggleBtn.dataset.id = rating.rating_id;
+    toggleBtn.dataset.testimonialType = rating.is_manual ? 'manual' : 'appointment';
+    toggleBtn.dataset.id = rating.is_manual ? rating.manual_testimonial_id : rating.rating_id;
     wrap.appendChild(toggleBtn);
     td.appendChild(wrap);
     return td;
   }
 
   async function loadTestimonials() {
-    TESTIMONIALS_STATE.items = await apiRequest('/api/ratings/admin');
+    const [ratings, manualTestimonials] = await Promise.all([
+      apiRequest('/api/ratings/admin'),
+      apiRequest('/api/ratings/admin/manual'),
+    ]);
+    TESTIMONIALS_STATE.items = [
+      ...ratings.map((rating) => ({ ...rating, is_manual: false })),
+      ...manualTestimonials.map((testimonial) => ({ ...testimonial, is_manual: true })),
+    ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     renderTestimonials();
   }
 
@@ -622,12 +645,13 @@ document.addEventListener('DOMContentLoaded', () => {
     editorFields.appendChild(fieldLabel);
   }
 
-  function addEditorCheckbox(name, label, checked) {
+  function addEditorCheckbox(name, label, checked, required = false) {
     const fieldLabel = el('label', 'cm-editor__checkbox');
     const field = el('input');
     field.type = 'checkbox';
     field.name = name;
     field.checked = Boolean(checked);
+    field.required = required;
     fieldLabel.append(field, document.createTextNode(label));
     editorFields.appendChild(fieldLabel);
   }
@@ -677,7 +701,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function openEditor(section, item) {
     editing = {
       section,
-      id: item?.service_id || item?.announcement_id || item?.id || item?.key || null,
+      id: item?.service_id || item?.announcement_id || item?.manual_testimonial_id || item?.id || item?.key || null,
       pageKey: selectedContentPage,
       imageUrl: item?.imageUrl || item?.image_url || '',
       payload: item?.payload || {},
@@ -746,6 +770,16 @@ document.addEventListener('DOMContentLoaded', () => {
       startsAtField.addEventListener('input', updateEndMinimum);
       updateEndMinimum();
       addEditorCheckbox('isPublished', 'Publish to customer pages', item?.is_expired ? true : item?.is_published ?? true);
+    } else if (section === 'testimonials') {
+      editorFields.appendChild(el('p', 'cm-editor__section-title', 'Facebook review · name masked · publishes automatically'));
+      addEditorField('reviewerName', 'Reviewer display name', item?.reviewer_name, { required: true, maxLength: 120 });
+      addEditorField('comment', 'Review text', item?.comment, { required: true, multiline: true, maxLength: 2000 });
+      addEditorField('rating', 'Rating shown on Facebook (optional)', item?.rating ?? '', {
+        type: 'number',
+        min: 1,
+        max: 5,
+        step: '1',
+      });
     } else if (section === 'homepage') {
       addEditorField('title', 'Title', item.title, { required: true, maxLength: 500, multiline: item.key === 'hero' });
       addEditorField('body', 'Supporting text', item.body, { multiline: true, maxLength: 2000 });
@@ -789,7 +823,17 @@ document.addEventListener('DOMContentLoaded', () => {
     let url;
     let method;
     let payload;
-    if (editing.section === 'services') {
+    if (editing.section === 'testimonials') {
+      url = editing.id
+        ? `/api/ratings/manual/${editing.id}`
+        : '/api/ratings/manual';
+      method = editing.id ? 'PUT' : 'POST';
+      payload = {
+        reviewerName: values.reviewerName,
+        comment: values.comment,
+        rating: values.rating ? number('rating') : null,
+      };
+    } else if (editing.section === 'services') {
       url = editing.id ? `/api/services/${editing.id}` : '/api/services';
       method = editing.id ? 'PUT' : 'POST';
       payload = {
@@ -877,7 +921,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  async function toggleItem(section, id) {
+  async function toggleItem(section, id, testimonialType) {
     if (section === 'services') {
       const item = SERVICES.find((service) => String(service.service_id) === String(id));
       await apiRequest(`/api/services/${id}/status`, { method: 'PATCH', body: JSON.stringify({ isActive: !item.is_active }) });
@@ -901,8 +945,22 @@ document.addEventListener('DOMContentLoaded', () => {
         body: JSON.stringify({ title: item.title, body: item.body, imageUrl: item.imageUrl, payload: item.payload, isPublished: !item.isPublished }),
       });
     } else {
-      const item = TESTIMONIALS_STATE.items.find((rating) => String(rating.rating_id) === String(id));
-      await apiRequest(`/api/ratings/${id}/public`, { method: 'PATCH', body: JSON.stringify({ isPublic: !item.is_public }) });
+      const isManual = testimonialType === 'manual';
+      const selectedItem = TESTIMONIALS_STATE.items.find((rating) => String(
+        isManual ? rating.manual_testimonial_id : rating.rating_id,
+      ) === String(id));
+      if (!selectedItem) throw new Error('Could not find this testimonial. Refresh the page and try again.');
+      const isPublic = !selectedItem.is_public;
+      await apiRequest(
+        isManual ? `/api/ratings/manual/${id}/public` : `/api/ratings/${id}/public`,
+        { method: 'PATCH', body: JSON.stringify({ isPublic }) },
+      );
+      if (isManual) {
+        selectedItem.is_public = isPublic;
+        renderTestimonials();
+        setNotice(isPublic ? 'Testimonial published.' : 'Testimonial unpublished.');
+        return;
+      }
     }
     await refreshSection(section);
     setNotice('Publication status updated.');
@@ -910,7 +968,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function setActiveSection(section) {
     activeSection = section;
-    addBtn.hidden = section === 'homepage' || section === 'testimonials';
+    addBtn.hidden = section === 'homepage';
     if (!addBtn.hidden) addBtn.textContent = '+ Add ' + SECTION_LABELS[section];
     await refreshSection(section);
   }
@@ -963,7 +1021,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const action = event.target.closest('[data-action]');
     if (!action) return;
-    const { section, id, action: actionName } = action.dataset;
+    const { section, id, action: actionName, testimonialType } = action.dataset;
     if (section === 'services') {
       const service = SERVICES.find((item) => String(item.service_id) === String(id));
       if (service?.category) {
@@ -980,19 +1038,27 @@ document.addEventListener('DOMContentLoaded', () => {
             ? TEAM
             : section === 'announcements'
               ? ANNOUNCEMENTS
-              : HOMEPAGE_BLOCKS;
+              : section === 'testimonials'
+                ? TESTIMONIALS_STATE.items.filter((item) => item.is_manual)
+                : HOMEPAGE_BLOCKS;
         const key = section === 'services'
           ? 'service_id'
           : section === 'team'
             ? 'id'
             : section === 'announcements'
               ? 'announcement_id'
-              : 'key';
+              : section === 'testimonials'
+                ? 'manual_testimonial_id'
+                : 'key';
         const item = items.find((entry) => String(entry[key]) === String(id));
         if (item) openEditor(section, item);
       } else if (actionName === 'toggle') {
         action.disabled = true;
-        await toggleItem(section, id);
+        try {
+          await toggleItem(section, id, testimonialType);
+        } finally {
+          if (action.isConnected) action.disabled = false;
+        }
       } else if (actionName === 'republish' && section === 'announcements') {
         const item = ANNOUNCEMENTS.find((announcement) => String(announcement.announcement_id) === String(id));
         if (item) openEditor('announcements', item);
@@ -1003,6 +1069,11 @@ document.addEventListener('DOMContentLoaded', () => {
         await apiRequest(`/api/announcements/admin/${id}`, { method: 'DELETE' });
         await refreshSection('announcements');
         setNotice('Announcement deleted.');
+      } else if (actionName === 'delete' && section === 'testimonials') {
+        if (!window.confirm('Delete this Facebook testimonial?')) return;
+        await apiRequest(`/api/ratings/manual/${id}`, { method: 'DELETE' });
+        await refreshSection('testimonials');
+        setNotice('Facebook testimonial deleted.');
       }
     } catch (error) {
       setNotice(error.message, true);

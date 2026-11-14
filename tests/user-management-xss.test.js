@@ -300,6 +300,28 @@ test('registration rejects malformed names and email before touching storage', a
     body: { firstName: 'Jane', lastName: 'Smith', email: 'invalid-email', password: 'Password!1' },
   }, response);
   assert.equal(response.statusCode, 400);
+
+  for (const invalidProfile of [
+    { address: 'a'.repeat(501) },
+    { allergies: 'a'.repeat(1001) },
+    { conditions: 'a'.repeat(1001) },
+    { contactNumber: '<script>' },
+    { dob: '2024-99-99' },
+  ]) {
+    let queried = false;
+    db.query = async () => { queried = true; return { rows: [] }; };
+    const invalidResponse = responseCapture();
+    await handler({
+      body: {
+        firstName: 'Jane',
+        lastName: 'Smith',
+        email: 'person@example.com',
+        ...invalidProfile,
+      },
+    }, invalidResponse);
+    assert.equal(invalidResponse.statusCode, 400);
+    assert.equal(queried, false);
+  }
 });
 
 test('admin create and update routes reject malformed names and email before storage', async () => {
@@ -439,6 +461,65 @@ test('account profile includes the personal details collected during registratio
       allergies: 'Fragrance',
       medicalConditions: 'None',
     });
+  } finally {
+    db.query = originalQuery;
+  }
+});
+
+test('account personal-details endpoint updates only the signed-in user and validates the date', async () => {
+  const personalDetailsHandler = routeHandler(authRouter, '/update-personal-details', 'put');
+  let updateValues;
+  db.query = async (_sql, values) => {
+    updateValues = values;
+    return {
+      rows: [{
+        date_of_birth: '2005-07-14',
+        gender: 'prefer-not',
+        home_address: '84 Talaba VII, Bacoor City, Cavite',
+      }],
+    };
+  };
+  const response = responseCapture();
+
+  try {
+    await personalDetailsHandler({
+      body: {
+        dateOfBirth: '2005-07-14',
+        gender: 'prefer-not',
+        address: '84 Talaba VII, Bacoor City, Cavite',
+      },
+      session: { userId: 7 },
+    }, response);
+    assert.equal(response.statusCode, 200);
+    assert.deepEqual(updateValues, [
+      '2005-07-14',
+      'prefer-not',
+      '84 Talaba VII, Bacoor City, Cavite',
+      7,
+    ]);
+    assert.deepEqual(response.body, {
+      message: 'Personal details updated successfully.',
+      dateOfBirth: '2005-07-14',
+      gender: 'prefer-not',
+      address: '84 Talaba VII, Bacoor City, Cavite',
+    });
+
+    let queried = false;
+    db.query = async () => {
+      queried = true;
+      return { rows: [] };
+    };
+    const invalidResponse = responseCapture();
+    await personalDetailsHandler({
+      body: {
+        dateOfBirth: '2026-02-31',
+        gender: 'female',
+        address: 'Imus, Cavite',
+      },
+      session: { userId: 7 },
+    }, invalidResponse);
+    assert.equal(invalidResponse.statusCode, 400);
+    assert.equal(queried, false);
   } finally {
     db.query = originalQuery;
   }

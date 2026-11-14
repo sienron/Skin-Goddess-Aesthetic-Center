@@ -34,17 +34,19 @@ function responseCapture() {
 }
 
 function sessionWith(values = {}) {
-  const session = { ...values };
+  const session = { cookie: {}, ...values };
   session.regenerate = (callback) => {
+    const cookie = session.cookie || {};
     for (const key of Object.keys(session)) {
       if (key !== 'regenerate') delete session[key];
     }
+    session.cookie = cookie;
     callback(null);
   };
   return session;
 }
 
-test('re-registering an unverified email does not save the submitted password', async () => {
+test('re-registering an unverified email does not persist submitted profile data', async () => {
   sentCodes.length = 0;
   const queries = [];
   db.query = async (sql) => {
@@ -52,12 +54,17 @@ test('re-registering an unverified email does not save the submitted password', 
     if (sql.includes('SELECT user_id, email_verified FROM users')) {
       return { rows: [{ user_id: 17, email_verified: false }] };
     }
-    if (sql.includes('SELECT COUNT(*)::integer AS count')) return { rows: [{ count: 0 }] };
     throw new Error(`Unexpected query: ${sql}`);
   };
   db.transaction = async (callback) => callback({
-    query: async (sql) => {
+    query: async (sql, values) => {
       queries.push(sql);
+      if (sql.includes('SELECT registration_id, sent_count')) return { rows: [] };
+      if (sql.includes('INSERT INTO pending_registrations')) {
+        assert.match(values[0], /^[0-9a-f-]{36}$/i);
+        assert.equal(values[1], 'client@example.com');
+        assert.match(values[2], /^[a-f0-9]{64}$/);
+      }
       return { rows: [] };
     },
   });
@@ -73,32 +80,37 @@ test('re-registering an unverified email does not save the submitted password', 
         password: 'attacker-chosen-password!',
       },
       session,
+      headers: {},
     }, response);
   } finally {
     db.transaction = originalTransaction;
   }
 
   assert.equal(response.statusCode, 200);
-  assert.equal(session.pendingVerificationUserId, 17);
+  assert.equal(response.body.message, 'If this email can be registered, check your inbox for next steps.');
+  assert.ok(session.pendingRegistrationId);
+  assert.equal(session.pendingRegistrationProfile.firstName, 'Client');
+  assert.equal(session.pendingRegistrationProfile.lastName, 'Example');
   assert.equal(sentCodes.length, 1);
-  assert.equal(queries.some((sql) => /UPDATE users SET password_hash/.test(sql)), false);
+  assert.equal(queries.some((sql) => /users/.test(sql) && /INSERT|UPDATE/.test(sql)), false);
 });
 
-test('new registration does not store a submitted password before email verification', async () => {
-  let insertedValues;
-  db.query = async (sql, values) => {
+test('new registration keeps profile details out of persistent accounts until email verification', async () => {
+  const queries = [];
+  db.query = async (sql) => {
+    queries.push(sql);
     if (sql.includes('SELECT user_id, email_verified FROM users')) return { rows: [] };
-    if (sql.includes('INSERT INTO users')) {
-      insertedValues = values;
-      return { rows: [{ user_id: 18, email: 'new-client@example.com' }] };
-    }
-    if (sql.includes('SELECT COUNT(*)::integer AS count')) return { rows: [{ count: 0 }] };
     throw new Error(`Unexpected query: ${sql}`);
   };
   db.transaction = async (callback) => callback({
-    query: async () => ({ rows: [] }),
+    query: async (sql) => {
+      queries.push(sql);
+      if (sql.includes('SELECT registration_id, sent_count')) return { rows: [] };
+      return { rows: [] };
+    },
   });
   const response = responseCapture();
+  const session = sessionWith();
 
   try {
     await routeHandler('/register', 'post')({
@@ -108,35 +120,80 @@ test('new registration does not store a submitted password before email verifica
         email: 'new-client@example.com',
         password: 'attacker-chosen-password!',
       },
-      session: sessionWith(),
+      session,
+      headers: {},
     }, response);
   } finally {
     db.transaction = originalTransaction;
   }
 
-  assert.equal(response.statusCode, 201);
-  assert.ok(insertedValues);
-  assert.equal(typeof insertedValues[1], 'string');
-  assert.equal(await bcrypt.compare('attacker-chosen-password!', insertedValues[1]), false);
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.message, 'If this email can be registered, check your inbox for next steps.');
+  assert.equal(queries.some((sql) => /INSERT INTO users/.test(sql)), false);
+  assert.equal(session.pendingRegistrationProfile.firstName, 'New');
+  assert.equal(session.pendingRegistrationProfile.lastName, 'Client');
+  assert.equal(session.pendingRegistrationProfile.password, undefined);
+  assert.ok(session.pendingRegistrationId);
   assert.equal(sentCodes.some(({ email }) => email === 'new-client@example.com'), true);
 });
 
-test('verifying email invalidates every pre-verification password and requires password setup', async () => {
-  const savedPasswordHashes = [];
-  const codeHash = hashOtpCode('123456', 17, 'email_verification');
+test('verified accounts receive the same generic registration response', async () => {
+  db.query = async (sql) => {
+    assert.match(sql, /SELECT user_id, email_verified FROM users/);
+    return { rows: [{ user_id: 19, email_verified: true }] };
+  };
+  const response = responseCapture();
+
+  await routeHandler('/register', 'post')({
+    body: { firstName: 'Existing', lastName: 'Client', email: 'existing@example.com' },
+    session: sessionWith(),
+  }, response);
+
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(response.body, {
+    message: 'If this email can be registered, check your inbox for next steps.',
+  });
+});
+
+test('verifying email creates an account only after email ownership is proven', async () => {
+  const registrationId = 'c0a80123-4567-489a-bcde-123456789abc';
+  const insertedUsers = [];
+  const codeHash = hashOtpCode('123456', registrationId, 'email_verification');
   db.transaction = async (callback) => callback({
     query: async (sql, values) => {
-      if (sql.includes('SELECT otp_id, code_hash, attempts')) {
-        return { rows: [{ otp_id: 1, code_hash: codeHash, attempts: 0 }] };
+      if (sql.includes('SELECT registration_id, email, code_hash, attempts')) {
+        return {
+          rows: [{
+            registration_id: registrationId,
+            email: 'client@example.com',
+            code_hash: codeHash,
+            attempts: 0,
+          }],
+        };
       }
-      if (sql.includes('UPDATE users SET email_verified = TRUE, password_hash')) {
-        savedPasswordHashes.push(values[1]);
+      if (sql.includes('SELECT user_id, email_verified FROM users')) return { rows: [] };
+      if (sql.includes('INSERT INTO users')) {
+        insertedUsers.push({ sql, values });
+        return { rows: [{ user_id: 17 }] };
       }
       return { rows: [] };
     },
   });
   const response = responseCapture();
-  const session = sessionWith({ pendingVerificationUserId: 17 });
+  const session = sessionWith({
+    pendingRegistrationId: registrationId,
+    pendingRegistrationProfile: {
+      firstName: 'Client',
+      lastName: 'Example',
+      dob: null,
+      gender: null,
+      civilStatus: null,
+      contactNumber: null,
+      address: null,
+      allergies: null,
+      conditions: null,
+    },
+  });
 
   try {
     await routeHandler('/verify-otp', 'post')({
@@ -149,10 +206,12 @@ test('verifying email invalidates every pre-verification password and requires p
 
   assert.equal(response.statusCode, 200);
   assert.equal(response.body.requiresPasswordSetup, true);
-  assert.equal(session.pendingVerificationUserId, undefined);
+  assert.equal(session.pendingRegistrationId, undefined);
+  assert.equal(session.pendingRegistrationProfile, undefined);
   assert.equal(session.pendingPasswordSetupUserId, 17);
-  assert.equal(savedPasswordHashes.length, 1);
-  assert.equal(await bcrypt.compare('attacker-chosen-password!', savedPasswordHashes[0]), false);
+  assert.equal(insertedUsers.length, 1);
+  assert.match(insertedUsers[0].sql, /email_verified\)/);
+  assert.equal(await bcrypt.compare('attacker-chosen-password!', insertedUsers[0].values[1]), false);
 });
 
 test('verified email owner can finish registration with a new password', async () => {

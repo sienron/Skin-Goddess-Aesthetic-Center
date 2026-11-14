@@ -40,6 +40,7 @@ app.use(session({
   secret: sessionSecret || crypto.randomBytes(32).toString('hex'),
   resave: false,
   saveUninitialized: false,
+  rolling: true,
   cookie: {
     maxAge: DEFAULT_SESSION_MAX_AGE_MS,
     secure: process.env.NODE_ENV === 'production',

@@ -2800,3 +2800,119 @@ body.InventoryManagement > .inv-sidebar .inv-nav-link:not(.inv-nav-link--active)
 body.staff-theme-dark.InventoryManagement > .inv-sidebar .inv-nav-link:not(.inv-nav-link--active)::before {
     display: none;
 }
+
+@media (max-width: 640px) {
+    body.inventory-officer-page::before {
+        position: fixed;
+        inset: 0 0 auto;
+        z-index: 100;
+        height: calc(64px + env(safe-area-inset-top, 0px));
+        border-bottom: 1px solid rgba(212, 169, 55, 0.28);
+        background: rgba(255, 255, 255, 0.97);
+        box-shadow: 0 6px 20px rgba(48, 38, 22, 0.1);
+        content: "";
+        pointer-events: none;
+        backdrop-filter: blur(14px);
+    }
+
+    body.inventory-officer-page .inventory-header {
+        position: relative;
+        z-index: 101;
+        display: block;
+        min-height: 0;
+        margin: 0 0 16px;
+        padding: calc(76px + env(safe-area-inset-top, 0px)) 16px 14px;
+        border: 0;
+        background: transparent;
+    }
+
+    body.inventory-officer-page .header-left {
+        display: block;
+        min-width: 0;
+    }
+
+    body.inventory-officer-page .inventory-header .sidebar-toggle {
+        position: fixed;
+        top: calc(env(safe-area-inset-top, 0px) + 11px);
+        left: 14px;
+        z-index: 111;
+        width: 42px;
+        height: 42px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--white);
+        box-shadow: 0 3px 10px rgba(48, 38, 22, 0.08);
+    }
+
+    body.inventory-officer-page .inventory-header .sidebar-toggle span {
+        width: 19px;
+        border-radius: 2px;
+    }
+
+    body.inventory-officer-page .header-title h1 {
+        position: fixed;
+        top: calc(env(safe-area-inset-top, 0px) + 20px);
+        right: 104px;
+        left: 68px;
+        z-index: 101;
+        overflow: hidden;
+        margin: 0;
+        font-size: 17px !important;
+        font-weight: 600;
+        line-height: 1.4;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        pointer-events: none;
+    }
+
+    body.inventory-officer-page .header-title p {
+        margin: 0 0 12px;
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+    body.inventory-officer-page .header-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 100%;
+        gap: 10px;
+    }
+
+    body.inventory-officer-page .header-actions > .btn {
+        width: 100%;
+        min-width: 0;
+    }
+
+    body.inventory-officer-page .admin-notification-wrap {
+        position: fixed;
+        top: calc(env(safe-area-inset-top, 0px) + 11px);
+        right: 14px;
+        z-index: 112;
+    }
+
+    body.inventory-officer-page .admin-notification-btn {
+        width: 42px;
+        height: 42px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--white);
+        box-shadow: 0 3px 10px rgba(48, 38, 22, 0.08);
+    }
+
+    body.inventory-officer-page .admin-notification-dropdown {
+        position: fixed;
+        top: calc(env(safe-area-inset-top, 0px) + 62px);
+        right: 12px;
+        z-index: 113;
+    }
+
+    body.staff-theme-dark.inventory-officer-page::before {
+        border-bottom-color: #45453f;
+        background: rgba(34, 35, 33, 0.97);
+    }
+
+    body.staff-theme-dark.inventory-officer-page .inventory-header {
+        border-color: transparent;
+        background: transparent;
+    }
+}

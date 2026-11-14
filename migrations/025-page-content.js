@@ -1,20 +1,20 @@
 const db = require('../db');
 
 const pageContent = [
-  { key: 'experience', page: 'home', label: 'Experience Feature', title: 'Experience\nSkin\nGoddess\nGlow', body: 'Work Hours: 09:00 AM – 06:00 PM from Monday to Saturday', image: 'images/CenterOutsideImg.webp' },
+  { key: 'experience', page: 'home', label: 'Experience Feature', title: 'Experience\nSkin\nGoddess\nGlow', body: 'Work Hours: 09:00 AM – 06:00 PM from Monday to Sunday', image: 'images/CenterOutsideImg.webp' },
   { key: 'services_intro', page: 'services', label: 'Services Page Intro', title: 'OUR SERVICES', body: 'All prices are in Philippine Peso (₱). Book for an appointment for a personalized consultation.' },
   { key: 'about_hero', page: 'about', label: 'About Page Heading', title: 'About Skin Goddess', body: 'HOME · ABOUT US' },
   {
     key: 'about_story', page: 'about', label: 'Our Story', title: 'Born from a Passion for Radiant Skin',
-    body: 'Skin Goddess Aesthetic Center was founded in 2018 in Las Piñas, Metro Manila, with a simple but powerful belief: every person deserves to feel confident and beautiful in their own skin. What began as a small clinic has grown into a trusted aesthetic center serving hundreds of clients across Metro Manila. Our team of certified specialists combines the latest in aesthetic technology with a deeply personal approach to skin health. We believe that great skin is not a luxury; it is an investment in your confidence. From your very first visit, we tailor every treatment to your unique skin story.',
+    body: 'Skin Goddess Aesthetic Center is located in Imus, Cavite, and offers non-surgical aesthetic treatments tailored to individual needs.',
     image: 'images/SkinGoddessReceptionImg.jpg',
   },
   { key: 'about_team_intro', page: 'about', label: 'Specialists Intro', title: 'Meet the Team Behind Your Glow', body: 'Our certified specialists bring expertise, warmth, and precision to every session dedicated to helping you look and feel your absolute best.' },
   { key: 'contact_hero', page: 'contact', label: 'Contact Page Heading', title: 'Get in Touch', body: 'HOME · CONTACT US' },
   { key: 'contact_message', page: 'contact', label: 'Contact Form Intro', title: "We'd love to hear from you.", body: 'Fill out the form below and our team will get back to you within 24 hours.' },
   { key: 'contact_address', page: 'contact', label: 'Clinic Address', title: 'Skin Goddess Aesthetic Center', body: '2nd Floor KW Plaza Building, Pasong Buaya 2\nImus, Cavite, Philippines, 4103' },
-  { key: 'contact_phone', page: 'contact', label: 'Phone & Hours', title: '+63 945 611 9436', body: 'Mon – Sat · 9:00 AM – 6:00 PM' },
-  { key: 'contact_email', page: 'contact', label: 'Email Address', title: 'info@skingoddess.ph', body: '' },
+  { key: 'contact_phone', page: 'contact', label: 'Phone & Hours', title: '+63 945 611 9436', body: 'Mon – Sun · 9:00 AM – 6:00 PM' },
+  { key: 'contact_email', page: 'contact', label: 'Email Address', title: 'skingoddess456@gmail.com', body: '' },
 ];
 
 const categoryImages = {

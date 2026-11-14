@@ -5,9 +5,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const contactNumberInput = document.getElementById('contactNumber');
   const profileSubmitBtn = document.getElementById('profileSubmitBtn');
   const profileSuccess = document.getElementById('profile-success');
+  const personalDetailsForm = document.getElementById('personal-details-form');
+  const personalDetailsSubmitBtn = document.getElementById('personalDetailsSubmitBtn');
+  const personalDetailsSuccess = document.getElementById('personal-details-success');
+  const dateOfBirthInput = document.getElementById('profileDateOfBirthInput');
+  const genderInput = document.getElementById('profileGenderInput');
+  const addressInput = document.getElementById('profileAddressInput');
 
   const emailForm = document.getElementById('email-change-form');
   const newEmailInput = document.getElementById('newEmail');
+  const emailChangeCurrentPasswordInput = document.getElementById('emailChangeCurrentPassword');
   const emailChangeSubmitBtn = document.getElementById('emailChangeSubmitBtn');
   const emailChangeSuccess = document.getElementById('email-change-success');
   const currentEmailDisplay = document.getElementById('currentEmail');
@@ -53,6 +60,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }).format(new Date(year, month - 1, day));
   }
 
+  function renderPersonalDetails(data) {
+    const gender = data.gender || '';
+    if (dateOfBirthInput) dateOfBirthInput.value = String(data.dateOfBirth || '').slice(0, 10);
+    if (genderInput) {
+      if (gender && !Array.from(genderInput.options).some((option) => option.value === gender)) {
+        const option = document.createElement('option');
+        option.value = gender;
+        option.textContent = gender;
+        genderInput.appendChild(option);
+      }
+      genderInput.value = gender;
+    }
+    if (addressInput) addressInput.value = data.address || '';
+    setProfileDetail('profileDateOfBirth', formatDate(data.dateOfBirth));
+    setProfileDetail('profileGender', ({
+      female: 'Female',
+      male: 'Male',
+      'prefer-not': 'Prefer not to say',
+    })[gender] || gender);
+    setProfileDetail('profileAddress', data.address);
+  }
+
   function syncProfileIdentity(emailOverride) {
     const fullName = `${firstNameInput.value} ${lastNameInput.value}`.trim();
     const initials = `${firstNameInput.value[0] || ''}${lastNameInput.value[0] || ''}`.toUpperCase();
@@ -63,15 +92,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (profileName) profileName.textContent = fullName;
     if (profileInitials) profileInitials.textContent = initials;
     if (profileEmail) profileEmail.textContent = profileEmailValue;
-
-    const ticketFirstName = document.getElementById('ticketFirstName');
-    const ticketLastName = document.getElementById('ticketLastName');
-    const ticketEmail = document.getElementById('ticketEmail');
-    const ticketPhone = document.getElementById('ticketPhone');
-    if (ticketFirstName) ticketFirstName.value = firstNameInput.value;
-    if (ticketLastName) ticketLastName.value = lastNameInput.value;
-    if (ticketEmail) ticketEmail.value = profileEmailValue;
-    if (ticketPhone) ticketPhone.value = contactNumberInput.value;
   }
 
   if (contactNumberInput) {
@@ -89,13 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
       contactNumberInput.value = data.contactNumber || '';
       originalEmail = data.email || '';
       if (currentEmailDisplay) currentEmailDisplay.textContent = originalEmail || 'Not provided';
-      setProfileDetail('profileDateOfBirth', formatDate(data.dateOfBirth));
-      setProfileDetail('profileGender', ({
-        female: 'Female',
-        male: 'Male',
-        'prefer-not': 'Prefer not to say',
-      })[data.gender] || data.gender);
-      setProfileDetail('profileAddress', data.address);
+      renderPersonalDetails(data);
       setProfileDetail('profileAllergies', data.allergies);
       setProfileDetail('profileMedicalConditions', data.medicalConditions);
       syncProfileIdentity();
@@ -288,6 +302,41 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  personalDetailsForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearErrors(personalDetailsForm);
+    personalDetailsSuccess.hidden = true;
+    personalDetailsSubmitBtn.disabled = true;
+    personalDetailsSubmitBtn.querySelector('.btn-label').textContent = 'SAVING...';
+
+    try {
+      const response = await fetch('/api/auth/update-personal-details', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dateOfBirth: dateOfBirthInput.value,
+          gender: genderInput.value,
+          address: addressInput.value.trim(),
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setFieldError(personalDetailsForm, 'personal-details-form', data.message || 'Could not update your details.');
+        return;
+      }
+
+      renderPersonalDetails(data);
+      personalDetailsSuccess.hidden = false;
+    } catch (error) {
+      setFieldError(personalDetailsForm, 'personal-details-form', 'Something went wrong. Please try again.');
+      console.error('Update personal details failed:', error);
+    } finally {
+      personalDetailsSubmitBtn.disabled = false;
+      personalDetailsSubmitBtn.querySelector('.btn-label').textContent = 'SAVE CHANGES';
+    }
+  });
+
   emailForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     clearErrors(emailForm);
@@ -306,6 +355,11 @@ document.addEventListener('DOMContentLoaded', () => {
       setFieldError(emailForm, 'newEmail', 'That is already your current email address.');
       return;
     }
+    const currentPassword = emailChangeCurrentPasswordInput.value;
+    if (!currentPassword) {
+      setFieldError(emailForm, 'emailChangeCurrentPassword', 'Current password is required.');
+      return;
+    }
 
     emailChangeSubmitBtn.disabled = true;
     emailChangeSubmitBtn.querySelector('.btn-label').textContent = 'SENDING...';
@@ -313,13 +367,14 @@ document.addEventListener('DOMContentLoaded', () => {
       const response = await fetch('/api/auth/request-email-change', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ newEmail }),
+        body: JSON.stringify({ newEmail, currentPassword }),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
         setFieldError(emailForm, 'email-change-form', data.message || 'Could not send the verification code.');
         return;
       }
+      emailChangeCurrentPasswordInput.value = '';
       openEmailOtpModal(newEmail);
     } catch (err) {
       console.error('Request email change failed:', err);

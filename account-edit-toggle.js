@@ -129,6 +129,86 @@
     });
   }
 
+  const personalDetailsForm = document.getElementById('personal-details-form');
+  const personalDetailsView = document.getElementById('profilePersonalDetailsView');
+  const personalDetailsEditBtn = document.getElementById('personalDetailsEditBtn');
+  const personalDetailsCancelBtn = document.getElementById('personalDetailsCancelBtn');
+  const personalDetailsSubmitBtn = document.getElementById('personalDetailsSubmitBtn');
+  const personalDetailsActions = document.getElementById('personalDetailsFormActions');
+  const personalDetailsSuccess = document.getElementById('personal-details-success');
+  const personalDetailsFields = [
+    'profileDateOfBirthInput',
+    'profileGenderInput',
+    'profileAddressInput',
+  ];
+  let personalDetailsOriginalValues = {};
+
+  function enterPersonalDetailsViewMode() {
+    personalDetailsFields.forEach((id) => {
+      const input = document.getElementById(id);
+      if (input) input.disabled = true;
+    });
+    if (personalDetailsView) personalDetailsView.hidden = false;
+    if (personalDetailsForm) personalDetailsForm.hidden = true;
+    if (personalDetailsActions) personalDetailsActions.hidden = true;
+    if (personalDetailsSubmitBtn) personalDetailsSubmitBtn.disabled = true;
+    if (personalDetailsEditBtn) personalDetailsEditBtn.hidden = false;
+  }
+
+  function enterPersonalDetailsEditMode() {
+    personalDetailsOriginalValues = {};
+    personalDetailsFields.forEach((id) => {
+      const input = document.getElementById(id);
+      if (input) {
+        personalDetailsOriginalValues[id] = input.value;
+        input.disabled = false;
+      }
+    });
+    if (personalDetailsView) personalDetailsView.hidden = true;
+    if (personalDetailsForm) personalDetailsForm.hidden = false;
+    if (personalDetailsActions) personalDetailsActions.hidden = false;
+    if (personalDetailsSubmitBtn) personalDetailsSubmitBtn.disabled = true;
+    if (personalDetailsEditBtn) personalDetailsEditBtn.hidden = true;
+    if (personalDetailsSuccess) personalDetailsSuccess.hidden = true;
+    document.getElementById('profileDateOfBirthInput')?.focus();
+  }
+
+  function checkPersonalDetailsChanged() {
+    const changed = personalDetailsFields.some((id) => {
+      const input = document.getElementById(id);
+      return input && input.value !== personalDetailsOriginalValues[id];
+    });
+    if (personalDetailsSubmitBtn) personalDetailsSubmitBtn.disabled = !changed;
+  }
+
+  function cancelPersonalDetailsEdit() {
+    personalDetailsFields.forEach((id) => {
+      const input = document.getElementById(id);
+      if (input && personalDetailsOriginalValues[id] !== undefined) {
+        input.value = personalDetailsOriginalValues[id];
+      }
+    });
+    enterPersonalDetailsViewMode();
+  }
+
+  personalDetailsEditBtn?.addEventListener('click', enterPersonalDetailsEditMode);
+  personalDetailsCancelBtn?.addEventListener('click', cancelPersonalDetailsEdit);
+  personalDetailsFields.forEach((id) => {
+    const input = document.getElementById(id);
+    input?.addEventListener('input', checkPersonalDetailsChanged);
+    input?.addEventListener('change', checkPersonalDetailsChanged);
+  });
+  enterPersonalDetailsViewMode();
+
+  if (personalDetailsSuccess) {
+    new MutationObserver(() => {
+      if (!personalDetailsSuccess.hidden) enterPersonalDetailsViewMode();
+    }).observe(personalDetailsSuccess, {
+      attributes: true,
+      attributeFilter: ['hidden'],
+    });
+  }
+
   // Change password
   const passwordForm = document.getElementById('password-form');
   const passwordEditBtn = document.getElementById('passwordEditBtn');

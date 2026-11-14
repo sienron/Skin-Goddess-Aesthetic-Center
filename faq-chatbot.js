@@ -32,13 +32,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     sessionStorage.removeItem('sg_faq_chat_history');
     const response = await fetch('/api/auth/me');
     if (response.status === 401) {
-      chatHistoryKey = 'sg_faq_chat_history:guest';
+      chatHistoryKey = 'sg_faq_chat_history:v2:guest';
     } else if (response.ok) {
       const account = await response.json();
       if (typeof account.email !== 'string' || !account.email.trim()) {
         throw new Error('The current account did not include an email address.');
       }
-      chatHistoryKey = `sg_faq_chat_history:${encodeURIComponent(account.email.trim().toLowerCase())}`;
+      chatHistoryKey = `sg_faq_chat_history:v2:${encodeURIComponent(account.email.trim().toLowerCase())}`;
     } else {
       throw new Error(`Could not identify the current account (HTTP ${response.status}).`);
     }

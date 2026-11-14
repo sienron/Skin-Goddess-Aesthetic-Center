@@ -1,5 +1,15 @@
+require('dotenv').config();
+
+const LOCAL_DATABASE_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
+const databaseHost = String(process.env.DB_HOST || '').trim().toLowerCase();
+
 if (process.env.NODE_ENV === 'production') {
   console.error('Local development users cannot be created in production.');
+  process.exit(1);
+}
+
+if (!LOCAL_DATABASE_HOSTS.has(databaseHost)) {
+  console.error('Local development users require a local database host (localhost, 127.0.0.1, or ::1).');
   process.exit(1);
 }
 
