@@ -2,6 +2,7 @@ const {
   destroySession,
   getSessionIdleTimeout,
   getSessionMaxAge,
+  setSessionCookieLifetime,
 } = require('../utils/sessionSecurity');
 
 async function enforceSessionLifetime(req, res, next) {
@@ -13,7 +14,9 @@ async function enforceSessionLifetime(req, res, next) {
     // Give older sessions a fixed deadline without extending their existing cookie.
     const authenticatedAt = Number(req.session.privilegedMfaAuthenticatedAt);
     const deadline = Number.isFinite(authenticatedAt) ? authenticatedAt + maxAge : now + maxAge;
-    const cookieExpiry = new Date(req.session.cookie.expires).getTime();
+    const cookieExpiry = req.session.cookie.expires == null
+      ? NaN
+      : new Date(req.session.cookie.expires).getTime();
     req.session.sessionExpiresAt = Math.min(
       deadline,
       Number.isFinite(cookieExpiry) ? cookieExpiry : deadline,
@@ -34,7 +37,7 @@ async function enforceSessionLifetime(req, res, next) {
   }
 
   req.session.lastActivityAt = now;
-  req.session.cookie.maxAge = Math.min(remaining, maxAge, idleTimeout);
+  setSessionCookieLifetime(req.session, Math.min(remaining, maxAge, idleTimeout));
   return next();
 }
 

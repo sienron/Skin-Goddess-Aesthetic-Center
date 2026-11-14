@@ -17,7 +17,7 @@ const {
 } = require('./utils/privilegedMfa');
 const { requirePrivilegedMfa } = require('./middleware/privilegedMfa');
 const { createSecurityHeaders } = require('./middleware/securityHeaders');
-const { destroySession, DEFAULT_SESSION_MAX_AGE_MS } = require('./utils/sessionSecurity');
+const { destroySession } = require('./utils/sessionSecurity');
 const { enforceSessionLifetime } = require('./middleware/sessionLifetime');
 const PgSession = require('connect-pg-simple')(session);
 
@@ -45,7 +45,7 @@ app.use(session({
   saveUninitialized: false,
   rolling: true,
   cookie: {
-    maxAge: DEFAULT_SESSION_MAX_AGE_MS,
+    maxAge: null,
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
     sameSite: 'lax'

@@ -15,6 +15,11 @@ function getSessionMaxAge(session) {
     : DEFAULT_SESSION_MAX_AGE_MS;
 }
 
+function setSessionCookieLifetime(session, maxAge = getSessionMaxAge(session)) {
+  // Server-side deadlines still apply when the browser cookie has no expiry.
+  session.cookie.maxAge = session.staySignedIn === true ? maxAge : null;
+}
+
 function destroySession(req, res) {
   return new Promise((resolve) => {
     if (!req.session) {
@@ -48,5 +53,6 @@ module.exports = {
   STAFF_IDLE_TIMEOUT_MS,
   getSessionMaxAge,
   getSessionIdleTimeout,
+  setSessionCookieLifetime,
   destroySession,
 };
