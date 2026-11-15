@@ -13,7 +13,7 @@ const { DASHBOARD_PER_ROLE } = require('./utils/roleRoutes');
 const { hasRoleAccess } = require('./utils/roleAccess');
 const {
   hasCurrentMfaAssurance,
-  isPrivilegedRole,
+  requiresStaffMfa,
 } = require('./utils/privilegedMfa');
 const { requirePrivilegedMfa } = require('./middleware/privilegedMfa');
 const { createSecurityHeaders } = require('./middleware/securityHeaders');
@@ -115,8 +115,8 @@ function requireRole(...allowedRoles) {
 
       const currentRole = result.rows[0].role;
       req.session.role = currentRole;
-      if (isPrivilegedRole(currentRole) && !hasCurrentMfaAssurance(req.session, result.rows[0])) {
-        return res.status(403).send('Complete privileged MFA before accessing this page.');
+      if (requiresStaffMfa(currentRole) && !hasCurrentMfaAssurance(req.session, result.rows[0])) {
+        return res.status(403).send('Complete staff MFA before accessing this page.');
       }
       const localDevAccess = process.env.NODE_ENV === 'development'
         && result.rows[0].dev_access_all === true;
@@ -167,7 +167,7 @@ app.use(async (req, res, next) => {
     }
 
     if (requestedPage !== '/LoginPage.html'
-      && isPrivilegedRole(user.role)
+      && requiresStaffMfa(user.role)
       && !hasCurrentMfaAssurance(req.session, user)) {
       return destroySession(req, res)
         .then(() => res.redirect('/LoginPage.html?mfa=required'));

@@ -5,7 +5,8 @@ const db = require('../db');
 const authRouter = require('../routes/auth');
 const { requireRole } = require('../middleware/auth');
 const { requirePrivilegedMfa } = require('../middleware/privilegedMfa');
-const { isPrivilegedRole } = require('../utils/privilegedMfa');
+const { requiresStaffMfa } = require('../utils/privilegedMfa');
+const { STAFF_ROLES } = require('../utils/roleRoutes');
 const { DEFAULT_SESSION_MAX_AGE_MS, STAY_SIGNED_IN_MAX_AGE_MS } = require('../utils/sessionSecurity');
 const { migrate } = require('../migrations/050-privileged-totp-mfa');
 const { issueEnrollmentCode } = require('../scripts/issue-privileged-mfa-enrollment');
@@ -120,6 +121,28 @@ test('password login for admin requires TOTP even when local-development MFA byp
   assert.equal(req.session.pendingPrivilegedMfaUserId, 17);
   assert.equal(req.session.regenerationCount, 1);
   assert.equal(queries.some((sql) => sql.includes('trusted_login_devices')), false);
+});
+
+test('password login sends every staff role through MFA enrollment or verification', async () => {
+  const passwordHash = await bcrypt.hash('CorrectHorse!1', 4);
+  for (const role of STAFF_ROLES) {
+    const user = authUser({ role, password_hash: passwordHash, totp_enabled: false });
+    db.query = async () => ({ rows: [user] });
+    const req = {
+      body: { email: user.email, password: 'CorrectHorse!1' },
+      headers: {},
+      session: sessionWith(),
+    };
+    const response = responseCapture();
+
+    await routeHandler('/login', 'post')(req, response);
+
+    assert.equal(response.statusCode, 200, role);
+    assert.equal(response.body.requiresMfa, true, role);
+    assert.equal(response.body.mfaMethod, 'enrollment', role);
+    assert.equal(req.session.userId, undefined, role);
+    assert.equal(req.session.pendingPrivilegedMfaUserId, user.user_id, role);
+  }
 });
 
 test('production privileged login does not let the survey account bypass TOTP', async () => {
@@ -244,12 +267,12 @@ test('TOTP login succeeds, consumes the step once, and regenerates an MFA-assure
   assert.deepEqual(audited, ['login_succeeded']);
 });
 
-test('admin and finance password-to-TOTP logins honor the stay-signed-in selection', async () => {
+test('all staff password-to-TOTP logins honor the stay-signed-in selection', async () => {
   const passwordHash = await bcrypt.hash('CorrectHorse!1', 4);
-  for (const [role, staySignedIn] of [
-    ['admin', true], ['admin', false],
-    ['finance_officer', true], ['finance_officer', false],
-  ]) {
+  for (const [role, staySignedIn] of STAFF_ROLES.flatMap((role) => [
+    [role, true],
+    [role, false],
+  ])) {
     const secret = createTotpSecret();
     const encrypted = encryptTotpSecret(secret);
     const enrolledAt = new Date();
@@ -499,12 +522,12 @@ test('protected API and role middleware deny privileged sessions without current
   assert.equal(apiAllowed, true);
 });
 
-test('privileged MFA stays valid beyond 12 hours and expires at 30 days when selected', (t) => {
+test('staff MFA stays valid beyond 12 hours and expires at 30 days when selected', (t) => {
   const { hasCurrentMfaAssurance } = require('../utils/privilegedMfa');
   const signedInAt = Date.now();
   let now = signedInAt;
   t.mock.method(Date, 'now', () => now);
-  for (const role of ['admin', 'finance_officer']) {
+  for (const role of STAFF_ROLES) {
     const user = authUser({ role });
     const session = {
       mfaVerifiedAt: user.totp_enrolled_at.getTime(),
@@ -527,13 +550,9 @@ test('privileged MFA stays valid beyond 12 hours and expires at 30 days when sel
   }
 });
 
-test('only administrator and finance roles require privileged TOTP', () => {
-  assert.equal(isPrivilegedRole('admin'), true);
-  assert.equal(isPrivilegedRole('finance_officer'), true);
-  assert.equal(isPrivilegedRole('client'), false);
-  assert.equal(isPrivilegedRole('staff'), false);
-  assert.equal(isPrivilegedRole('aesthetician'), false);
-  assert.equal(isPrivilegedRole('inventory_officer'), false);
+test('all staff roles require TOTP while clients do not', () => {
+  for (const role of STAFF_ROLES) assert.equal(requiresStaffMfa(role), true, role);
+  assert.equal(requiresStaffMfa('client'), false);
 });
 
 test('operator-issued enrollment code is required before setup and enrollment activates TOTP', async () => {
@@ -646,7 +665,7 @@ test('operator enrollment issuance stores only a hashed, expiring, account-bound
   db.transaction = async (callback) => callback({
     query: async (sql, values) => {
       if (sql.includes('SELECT user_id, role, status')) {
-        return { rows: [{ user_id: 17, role: 'finance_officer', status: 'active' }] };
+        return { rows: [{ user_id: 17, role: 'aesthetician', status: 'active' }] };
       }
       if (sql.includes('UPDATE privileged_mfa_enrollment_codes') && sql.includes('expired_at')) return { rows: [] };
       if (sql.includes('UPDATE privileged_mfa_enrollment_codes') && sql.includes('revoked_at')) return { rows: [] };

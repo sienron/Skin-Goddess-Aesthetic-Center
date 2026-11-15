@@ -1,6 +1,6 @@
-# Privileged account MFA
+# Staff account MFA
 
-Admin and finance-officer accounts require an authenticator-app TOTP after password verification. Email login OTP and remembered devices remain available only to clients; they do not satisfy privileged MFA.
+All staff roles (admin, aesthetician, inventory officer, finance officer, and staff) require an authenticator-app TOTP after password verification. Email login OTP and remembered devices remain available only to clients; they do not satisfy staff MFA.
 
 ## Deployment
 
@@ -9,11 +9,11 @@ Admin and finance-officer accounts require an authenticator-app TOTP after passw
 3. Run `node migrations/050-privileged-totp-mfa.js` against the application database before deploying the MFA-enabled server.
 4. Keep both secrets stable across application instances and deployments. Secure session cookies are enabled in production.
 
-## Enrolling an existing privileged account
+## Enrolling an existing staff account
 
 Existing accounts are not automatically enrolled. An authorized system operator must verify the user's identity in person or through a trusted channel, then issue a one-time code:
 
-1. Run `node scripts/issue-privileged-mfa-enrollment.js <user_id>` from a trusted operator environment connected to the correct database.
+1. Run `node scripts/issue-privileged-mfa-enrollment.js <user_id>` from a trusted operator environment connected to the correct database. The target must be an active staff account.
 2. Deliver the printed code privately to the verified user. It expires in 10 minutes, can be used once, and only its SHA-256 hash is stored. Do not paste it into application logs, tickets, or chat.
 3. The user signs in with their password, submits that code, scans the locally generated QR code in an authenticator app, and enters a current six-digit code to activate MFA.
 4. The user must save the displayed recovery codes securely. They are shown only once.
@@ -26,4 +26,4 @@ Each recovery code is single-use. A successful recovery login rotates the entire
 
 The `privileged_mfa_audit` table records enrollment issuance, redemption, success, failures, recovery, and detected expiration events. TOTP secrets and enrollment codes are not written to application logs. Enrollment and verification endpoints are rate-limited; enrollment codes and TOTP verification attempts also have database-backed attempt limits.
 
-All roles, including admin and finance, can select “stay signed in” for a maximum of 30 days after completing sign-in verification. Without that selection, the login uses a browser-session cookie with no expiry, normally removed when the entire browser closes. Browser session-restore features can restore these cookies; see [MDN's cookie documentation](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie#expiresdate). The server also enforces a fixed 24-hour deadline for unchecked sign-ins and a fixed 30-day deadline for checked sign-ins; activity does not extend these deadlines. Both choices retain the existing idle limits of two hours for clients and 15 minutes for staff. Admin and finance still require authenticator verification when signing in, and client email OTP and remembered-device behavior remain unchanged. Existing sessions without a fixed deadline are capped on their next request without extending their current cookie expiry. Existing unchecked sessions switch to browser-session cookies on their next authenticated request. Suspending an account revokes its stored sessions and protected page/API requests recheck that the account is active.
+All roles, including staff, can select “stay signed in” for a maximum of 30 days after completing sign-in verification. Without that selection, the login uses a browser-session cookie with no expiry, normally removed when the entire browser closes. Browser session-restore features can restore these cookies; see [MDN's cookie documentation](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie#expiresdate). The server also enforces a fixed 24-hour deadline for unchecked sign-ins and a fixed 30-day deadline for checked sign-ins; activity does not extend these deadlines. Both choices retain the existing idle limits of two hours for clients and 15 minutes for staff. All staff roles require authenticator verification when signing in, and client email OTP and remembered-device behavior remain unchanged. Existing sessions without a fixed deadline are capped on their next request without extending their current cookie expiry. Existing unchecked sessions switch to browser-session cookies on their next authenticated request. Suspending an account revokes its stored sessions and protected page/API requests recheck that the account is active.

@@ -1,13 +1,14 @@
 const { getSessionMaxAge } = require('./sessionSecurity');
+const { STAFF_ROLES } = require('./roleRoutes');
 
-const PRIVILEGED_ROLES = new Set(['admin', 'finance_officer']);
+const STAFF_MFA_ROLES = new Set(STAFF_ROLES);
 
-function isPrivilegedRole(role) {
-  return PRIVILEGED_ROLES.has(role);
+function requiresStaffMfa(role) {
+  return STAFF_MFA_ROLES.has(role);
 }
 
 function hasCurrentMfaAssurance(session, user) {
-  if (!isPrivilegedRole(user.role) || user.totp_enabled !== true || !user.totp_enrolled_at) {
+  if (!requiresStaffMfa(user.role) || user.totp_enabled !== true || !user.totp_enrolled_at) {
     return false;
   }
   const authenticatedAt = Number(session.privilegedMfaAuthenticatedAt);
@@ -20,7 +21,8 @@ function hasCurrentMfaAssurance(session, user) {
 }
 
 module.exports = {
-  PRIVILEGED_ROLES,
-  isPrivilegedRole,
+  STAFF_MFA_ROLES,
+  requiresStaffMfa,
+  isPrivilegedRole: requiresStaffMfa,
   hasCurrentMfaAssurance,
 };

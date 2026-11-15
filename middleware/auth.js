@@ -6,7 +6,7 @@
 const db = require('../db');
 const { hasRoleAccess } = require('../utils/roleAccess');
 const { createBlockDemoCustomerPayments } = require('../utils/demoCustomerAccess');
-const { hasCurrentMfaAssurance, isPrivilegedRole } = require('../utils/privilegedMfa');
+const { hasCurrentMfaAssurance, requiresStaffMfa } = require('../utils/privilegedMfa');
 
 function requireLogin(req, res, next) {
   if (!req.session.userId) {
@@ -63,8 +63,8 @@ function requireRole(...allowedRoles) {
 
       const currentRole = result.rows[0].role;
       req.session.role = currentRole;
-      if (isPrivilegedRole(currentRole) && !hasCurrentMfaAssurance(req.session, result.rows[0])) {
-        return res.status(403).json({ message: 'Complete privileged MFA before accessing this resource.' });
+      if (requiresStaffMfa(currentRole) && !hasCurrentMfaAssurance(req.session, result.rows[0])) {
+        return res.status(403).json({ message: 'Complete staff MFA before accessing this resource.' });
       }
       const localDevAccess = process.env.NODE_ENV === 'development' && result.rows[0].dev_access_all === true;
 

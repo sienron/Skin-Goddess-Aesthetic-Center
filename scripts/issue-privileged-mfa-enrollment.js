@@ -1,5 +1,5 @@
 const db = require('../db');
-const { isPrivilegedRole } = require('../utils/privilegedMfa');
+const { requiresStaffMfa } = require('../utils/privilegedMfa');
 const {
   createEnrollmentCode,
   hashEnrollmentCode,
@@ -15,8 +15,8 @@ async function issueEnrollmentCode(userId) {
       [userId]
     );
     const user = result.rows[0];
-    if (!user || !isPrivilegedRole(user.role) || user.status !== 'active') {
-      throw new Error('Target must be an active admin or finance account.');
+    if (!user || !requiresStaffMfa(user.role) || user.status !== 'active') {
+      throw new Error('Target must be an active staff account.');
     }
 
     const expired = await client.query(`

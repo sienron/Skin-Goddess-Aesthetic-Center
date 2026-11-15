@@ -219,7 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loginReenrollWrap.hidden = method !== 'totp';
     loginMfaTitle.textContent = method === 'email_otp'
       ? 'Verify your sign-in'
-      : method === 'enrollment' ? 'Set up privileged MFA' : 'Two-step verification';
+      : method === 'enrollment' ? 'Set up staff MFA' : 'Two-step verification';
     loginTotpInstruction.hidden = method !== 'totp';
     loginTotpInstruction.textContent = 'Enter the current six-digit code from your authenticator app.';
     loginUsingRecoveryCode = false;

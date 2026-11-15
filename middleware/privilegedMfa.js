@@ -1,5 +1,5 @@
 const db = require('../db');
-const { hasCurrentMfaAssurance, isPrivilegedRole } = require('../utils/privilegedMfa');
+const { hasCurrentMfaAssurance, requiresStaffMfa } = require('../utils/privilegedMfa');
 const { destroySession } = require('../utils/sessionSecurity');
 
 const MFA_SETUP_PATHS = new Set([
@@ -33,15 +33,15 @@ async function requirePrivilegedMfa(req, res, next) {
       await destroySession(req, res);
       return res.status(403).json({ message: 'Your account is not active.' });
     }
-    if (isPrivilegedRole(user.role) && !hasCurrentMfaAssurance(req.session, user)) {
+    if (requiresStaffMfa(user.role) && !hasCurrentMfaAssurance(req.session, user)) {
       await destroySession(req, res);
-      return res.status(401).json({ message: 'Your privileged session expired. Sign in again.' });
+      return res.status(401).json({ message: 'Your staff session expired. Sign in again.' });
     }
     req.session.role = user.role;
     return next();
   } catch (error) {
     console.error('Privileged MFA authorization error:', error);
-    return res.status(500).json({ message: 'Could not verify privileged MFA.' });
+    return res.status(500).json({ message: 'Could not verify staff MFA.' });
   }
 }
 

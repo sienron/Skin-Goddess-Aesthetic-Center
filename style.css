@@ -6581,6 +6581,80 @@ main.page {
   max-width: 400px;
 }
 
+#loginMfaOverlay:has(#loginTotpInstruction:not([hidden])) {
+  padding: 0;
+}
+
+.otp-modal:has(#loginTotpInstruction:not([hidden])) {
+  box-sizing: border-box;
+  width: 400px;
+  max-width: 100%;
+  height: 520px;
+  max-height: 100vh;
+  max-height: 100dvh;
+  padding: 0 20px 20px;
+  overflow-y: auto;
+  scrollbar-width: none;
+  border-radius: 4px;
+}
+
+.otp-modal:has(#loginTotpInstruction:not([hidden]))::-webkit-scrollbar {
+  display: none;
+}
+
+.otp-modal:has(#loginTotpInstruction:not([hidden])) .modal-icon {
+  box-sizing: border-box;
+  width: 24px;
+  height: 24px;
+  margin: 77px auto 48px;
+  background: transparent;
+  border-radius: 0;
+}
+
+.otp-modal:has(#loginTotpInstruction:not([hidden])) .modal-icon svg {
+  stroke: var(--text-dark);
+}
+
+body.customer-theme-dark .otp-modal:has(#loginTotpInstruction:not([hidden])) .modal-icon svg {
+  stroke: #EEE8DD;
+}
+
+.otp-modal:has(#loginTotpInstruction:not([hidden])) .modal-title {
+  margin: 0 0 16px;
+  font-size: 20px;
+  line-height: 24px;
+}
+
+#loginTotpInstruction {
+  max-width: 36ch;
+  margin: 0 auto 3px;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.otp-modal:has(#loginTotpInstruction:not([hidden])) #loginReenrollWrap {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.35;
+}
+
+.otp-modal:has(#loginTotpInstruction:not([hidden])) .otp-inputs {
+  width: 100%;
+  gap: 10px;
+  margin: 4px 0 20px;
+}
+
+.otp-modal:has(#loginTotpInstruction:not([hidden])) .otp-digit {
+  box-sizing: border-box;
+  flex: 1 1 48px;
+  min-width: 0;
+  max-width: 48px;
+}
+
+.otp-modal:has(#loginTotpInstruction:not([hidden])) .otp-divider-line {
+  margin: 20px 0;
+}
+
 .otp-modal:has(#loginEnrollmentCodePanel:not([hidden])) {
   box-sizing: border-box;
   width: 100%;

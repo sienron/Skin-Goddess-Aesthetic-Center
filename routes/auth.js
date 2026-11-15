@@ -30,7 +30,7 @@ const { isDemoCustomer, isDemoCustomerAccount } = require('../utils/demoMode');
 const { createPreserveDemoCustomerAccess } = require('../utils/demoCustomerAccess');
 const { isValidName, isValidEmail } = require('../utils/userValidation');
 const { hashOtpCode, verifyOtpCode } = require('../utils/otpSecurity');
-const { isPrivilegedRole } = require('../utils/privilegedMfa');
+const { requiresStaffMfa } = require('../utils/privilegedMfa');
 const { getSessionMaxAge, setSessionCookieLifetime } = require('../utils/sessionSecurity');
 const {
   createTotpSecret,
@@ -67,7 +67,7 @@ const REGISTRATION_SESSION_MS = 15 * 60 * 1000;
 const LOGIN_FAILURE_THRESHOLD = 10;
 const preserveDemoCustomerAccess = createPreserveDemoCustomerAccess(db);
 const EMAIL_OTP_ROLES = Object.freeze(
-  ['client', ...STAFF_ROLES.filter((role) => !isPrivilegedRole(role))]
+  ['client', ...STAFF_ROLES.filter((role) => !requiresStaffMfa(role))]
 );
 
 function regenerateSession(req) {
@@ -774,11 +774,11 @@ router.post('/login', loginLimiter, async (req, res) => {
       return res.status(403).json({ message: 'Your account role does not have an assigned destination.' });
     }
 
-    if (isPrivilegedRole(user.role)) {
+    if (requiresStaffMfa(user.role)) {
       const stage = user.totp_enabled === true ? 'totp' : 'enrollment';
       await beginPrivilegedMfa(req, user, stage, staysignedin === true);
       return res.status(200).json({
-        message: stage === 'totp' ? 'Enter your authenticator code.' : 'Privileged account enrollment is required.',
+        message: stage === 'totp' ? 'Enter your authenticator code.' : 'Staff account enrollment is required.',
         requiresMfa: true,
         mfaMethod: stage,
       });
@@ -786,7 +786,7 @@ router.post('/login', loginLimiter, async (req, res) => {
 
     const demoCustomerMfaExempt = user.role === 'client' && isDemoCustomer(user);
     const localDevMfaBypass = process.env.NODE_ENV === 'development'
-      && !isPrivilegedRole(user.role)
+      && !requiresStaffMfa(user.role)
       && user.mfa_enabled === false;
     if (demoCustomerMfaExempt || localDevMfaBypass) {
       await establishAuthenticatedSession(req, user, Boolean(staysignedin));
@@ -878,7 +878,7 @@ router.post('/login', loginLimiter, async (req, res) => {
 router.post('/mfa/enrollment/start', privilegedMfaEnrollmentLimiter, async (req, res) => {
   if (!hasPendingPrivilegedMfa(req)) {
     clearPendingPrivilegedMfa(req);
-    return res.status(401).json({ message: 'Your privileged sign-in session expired. Sign in again.' });
+    return res.status(401).json({ message: 'Your staff sign-in session expired. Sign in again.' });
   }
 
   const userId = req.session.pendingPrivilegedMfaUserId;
@@ -894,7 +894,7 @@ router.post('/mfa/enrollment/start', privilegedMfaEnrollmentLimiter, async (req,
         [userId]
       );
       const user = userResult.rows[0];
-      if (!user || !isPrivilegedRole(user.role) || user.status !== 'active' || !user.email_verified) {
+      if (!user || !requiresStaffMfa(user.role) || user.status !== 'active' || !user.email_verified) {
         return { status: 'account_unavailable' };
       }
 
@@ -1003,7 +1003,7 @@ router.post('/mfa/enrollment/verify', privilegedMfaVerifyLimiter, async (req, re
         [userId]
       );
       const user = userResult.rows[0];
-      if (!user || !isPrivilegedRole(user.role) || user.status !== 'active' || !user.email_verified) {
+      if (!user || !requiresStaffMfa(user.role) || user.status !== 'active' || !user.email_verified) {
         return { status: 'account_unavailable' };
       }
 
@@ -1090,7 +1090,7 @@ router.post('/login/verify-totp', privilegedMfaVerifyLimiter, async (req, res) =
   if (!hasPendingPrivilegedMfa(req)
     || req.session.pendingPrivilegedMfaStage !== 'totp') {
     clearPendingPrivilegedMfa(req);
-    return res.status(401).json({ message: 'Your privileged sign-in session expired. Sign in again.' });
+    return res.status(401).json({ message: 'Your staff sign-in session expired. Sign in again.' });
   }
 
   const userId = req.session.pendingPrivilegedMfaUserId;
@@ -1103,7 +1103,7 @@ router.post('/login/verify-totp', privilegedMfaVerifyLimiter, async (req, res) =
       FROM users WHERE user_id = $1
     `, [userId]);
     const user = userResult.rows[0];
-    if (!user || !isPrivilegedRole(user.role) || user.status !== 'active'
+    if (!user || !requiresStaffMfa(user.role) || user.status !== 'active'
       || !user.email_verified || user.totp_enabled !== true || !user.totp_enrolled_at) {
       clearPendingPrivilegedMfa(req);
       return res.status(403).json({ message: 'This account cannot sign in. Contact the system operator.' });
@@ -1133,7 +1133,7 @@ router.post('/login/verify-totp', privilegedMfaVerifyLimiter, async (req, res) =
         [userId]
       );
       const currentUser = currentUserResult.rows[0];
-      if (!currentUser || !isPrivilegedRole(currentUser.role) || currentUser.status !== 'active'
+      if (!currentUser || !requiresStaffMfa(currentUser.role) || currentUser.status !== 'active'
         || !currentUser.email_verified
         || currentUser.totp_enabled !== true || !currentUser.totp_enrolled_at) {
         return { status: 'account_unavailable' };
