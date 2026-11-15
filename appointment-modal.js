@@ -48,6 +48,10 @@ const apptModalClientInfoBtn = document.getElementById("apptModalClientInfoBtn")
 const apptRescheduleForm = document.getElementById("apptRescheduleForm");
 const apptCancellationForm = document.getElementById("apptCancellationForm");
 const apptActionMessage = document.getElementById("apptActionMessage");
+const apptRequestStatus = document.getElementById("apptRequestStatus") || apptActionMessage;
+const apptRequestDialog = document.getElementById("apptRequestDialog");
+const apptRequestTitle = document.getElementById("apptRequestTitle");
+const apptRequestClose = document.getElementById("apptRequestClose");
 const apptRescheduleMonth = document.getElementById("apptRescheduleMonth");
 const apptRescheduleDate = document.getElementById("apptRescheduleDate");
 const apptRescheduleTime = apptRescheduleForm?.elements.time;
@@ -339,8 +343,10 @@ function openApptModal(appt) {
     if (apptCancellationForm) {
         apptCancellationForm.hidden = true;
         apptCancellationForm.reset();
+        const submitButton = apptCancellationForm.querySelector("[type=submit]");
+        if (submitButton) submitButton.disabled = false;
     }
-    if (apptActionMessage) {
+    if (apptRequestStatus) {
         const requestStatusMessage = (type, status) => {
             if (status === "pending") return `A ${type} request is pending admin review.`;
             if (status === "rejected") return `The ${type} request was rejected by an administrator.`;
@@ -354,7 +360,7 @@ function openApptModal(appt) {
             requestStatusMessage("cancellation", normalizedAppt.cancellationRequestStatus),
             requestStatusMessage("reschedule", normalizedAppt.rescheduleRequestStatus)
         ].filter(Boolean);
-        apptActionMessage.textContent = messages.join(" ");
+        apptRequestStatus.textContent = messages.join(" ");
     }
 
     apptModalOverlay.classList.add("show");
@@ -363,6 +369,8 @@ function openApptModal(appt) {
 
 function closeApptModal() {
     if (!apptModalOverlay) return;
+    if (apptRequestDialog?.open) apptRequestDialog.close();
+    availabilityRequestSequence += 1;
     apptModalOverlay.classList.remove("show");
     document.body.style.overflow = "";
 }
@@ -372,13 +380,17 @@ window.closeApptModal = closeApptModal;
 
 if (apptModalOverlay) {
     apptModalClose?.addEventListener("click", closeApptModal);
+    apptRequestClose?.addEventListener("click", () => apptRequestDialog.close());
+    apptRequestDialog?.addEventListener("close", () => {
+        if (!apptRequestDialog.open) availabilityRequestSequence += 1;
+    });
 
     apptModalOverlay.addEventListener("click", (e) => {
         if (e.target === apptModalOverlay) closeApptModal();
     });
 
     document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape" && apptModalOverlay.classList.contains("show")) {
+        if (e.key === "Escape" && !apptRequestDialog?.open && apptModalOverlay.classList.contains("show")) {
             closeApptModal();
         }
     });
@@ -389,9 +401,14 @@ if (apptModalOverlay) {
             return;
         }
         if (!apptCancellationForm) return;
-        apptCancellationForm.hidden = !apptCancellationForm.hidden;
+        apptCancellationForm.hidden = apptRequestDialog ? false : !apptCancellationForm.hidden;
         if (apptRescheduleForm) apptRescheduleForm.hidden = true;
         if (apptActionMessage) apptActionMessage.textContent = "";
+        if (apptRequestDialog) {
+            apptRequestTitle.textContent = "Request cancellation";
+            apptRequestDialog.showModal();
+            apptCancellationForm.elements.reason?.focus();
+        }
     });
 
     async function cancelClientAppointment() {
@@ -423,7 +440,7 @@ if (apptModalOverlay) {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     reason: apptCancellationForm.elements.reason.value,
-                    description: apptCancellationForm.elements.description.value,
+                    description: apptCancellationForm.elements.description?.value || "",
                 }),
             });
             const data = await readApiResponse(response);
@@ -457,9 +474,14 @@ if (apptModalOverlay) {
 
     apptModalRescheduleBtn?.addEventListener("click", () => {
         if (!apptRescheduleForm) return;
-        apptRescheduleForm.hidden = !apptRescheduleForm.hidden;
+        apptRescheduleForm.hidden = apptRequestDialog ? false : !apptRescheduleForm.hidden;
         if (apptCancellationForm) apptCancellationForm.hidden = true;
         if (apptActionMessage) apptActionMessage.textContent = "";
+        if (apptRequestDialog) {
+            apptRequestTitle.textContent = "Request reschedule";
+            apptRequestDialog.showModal();
+            apptRescheduleMonth?.focus();
+        }
         if (apptRescheduleForm.hidden) {
             availabilityRequestSequence += 1;
             resetRescheduleAvailability();

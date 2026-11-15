@@ -264,6 +264,10 @@
                     </div>
                 </div>
 
+                <p class="appt-action-message" id="apptRequestStatus" role="status" aria-live="polite"></p>
+                <dialog class="appt-request-dialog" id="apptRequestDialog" aria-labelledby="apptRequestTitle">
+                <button type="button" class="modal-close" id="apptRequestClose" aria-label="Close request">&times;</button>
+                <h3 id="apptRequestTitle"></h3>
                 <p class="appt-action-message" id="apptActionMessage" role="status" aria-live="polite"></p>
                 <form class="appt-reschedule-form" id="apptRescheduleForm" hidden>
                     <label for="apptRescheduleMonth">Availability month</label>
@@ -291,23 +295,18 @@
                         <option value="17:00">5:00 PM</option>
                         <option value="17:30">5:30 PM</option>
                     </select>
-                    <label for="apptRescheduleReason">Reason</label>
-                    <input type="text" name="reason" id="apptRescheduleReason" maxlength="255" required>
-                    <label for="apptRescheduleDescription">Description</label>
-                    <textarea name="description" id="apptRescheduleDescription" maxlength="2000" rows="4" required></textarea>
-                    <button class="modal-btn modal-btn-reschedule" type="submit">Save new time</button>
+                    <button class="modal-btn modal-btn-reschedule" type="submit">Send reschedule request</button>
                 </form>
                 <form class="appt-cancellation-form" id="apptCancellationForm" hidden>
-                    <p class="appt-action-message">Cancellation requests must be submitted more than 24 hours before the appointment to be eligible for a deposit refund. Requests submitted 24 hours or less before the appointment are not refundable.</p>
+                    <p class="appt-action-message">Cancellation requests must be submitted more than 24 hours before the appointment. Only eligible cancellations can receive a deposit refund.</p>
                     <label for="apptCancellationReason">Reason</label>
                     <input type="text" name="reason" id="apptCancellationReason" maxlength="255" required>
-                    <label for="apptCancellationDescription">Description</label>
-                    <textarea name="description" id="apptCancellationDescription" maxlength="2000" rows="4" required></textarea>
                     <button class="modal-btn modal-btn-cancel" type="submit">Send cancellation request</button>
                 </form>
+                </dialog>
 
                 <div class="appt-modal-actions">
-                    <button class="modal-btn modal-btn-cancel" id="apptModalCancelBtn">Cancel</button>
+                    <button class="modal-btn modal-btn-cancel" type="button" id="apptModalCancelBtn">Cancel</button>
                     <button class="modal-btn modal-btn-reschedule" type="button" id="apptModalRescheduleBtn">Reschedule</button>
                 </div>
             </div>

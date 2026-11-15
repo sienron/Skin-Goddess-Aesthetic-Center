@@ -2272,7 +2272,7 @@ router.get('/mine', requireActiveAccount, async (req, res) => {
     const isAesthetician = userResult.rows[0].role === 'aesthetician';
 
     const appointmentsQuery = `
-        SELECT a.appointment_id,
+        SELECT a.appointment_id, a.service_id,
          a.is_demo,
          a.appointment_date::text AS date,
                a.appointment_time::text AS start,
@@ -2505,7 +2505,7 @@ router.post('/:id/cancellation-request', requireActiveAccount, async (req, res) 
   const body = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
   const reason = validRequestText(body.reason, 255);
   const description = validRequestText(body.description, 2000);
-  if (!reason || !description) return res.status(400).json({ message: 'Reason and description are required.' });
+  if (!reason) return res.status(400).json({ message: 'A reason is required.' });
 
   try {
     const result = await db.query(`
@@ -2519,6 +2519,7 @@ router.post('/:id/cancellation-request', requireActiveAccount, async (req, res) 
     const isAssignedAesthetician = appointment.aesthetician_id === req.session.userId;
     const isClient = appointment.user_id === req.session.userId;
     if (!isAssignedAesthetician && !isClient) return res.status(403).json({ message: 'Only the assigned aesthetician or client can request cancellation.' });
+    if (isClient && !description) return res.status(400).json({ message: 'Reason and description are required.' });
     if (appointment.is_demo) {
       return res.status(403).json({ message: 'Synthetic survey appointments cannot be changed.' });
     }
@@ -2535,12 +2536,12 @@ router.post('/:id/cancellation-request', requireActiveAccount, async (req, res) 
           cancellation_requested_at = NOW(), cancellation_reviewed_by = NULL,
           cancellation_reviewed_at = NULL
       WHERE appointment_id = $4
-    `, [reason, description, req.session.userId, appointmentId]);
+    `, [reason, description || '', req.session.userId, appointmentId]);
     const requestorRole = isClient ? 'Client' : 'Aesthetician';
     await notifyRoles(
       ['admin'],
       'cancellation_request',
-      `${requestorRole} requested cancellation for appointment ${appointmentId}: ${reason}. ${description}`,
+      `${requestorRole} requested cancellation for appointment ${appointmentId}: ${reason}.${description ? ` ${description}` : ''}`,
     );
     if (isClient && appointment.aesthetician_id) {
       await notifyUsers(
@@ -2916,13 +2917,8 @@ router.post('/:id/reschedule', requireActiveAccount, async (req, res) => {
     if (!isAdmin && (isAssignedAesthetician || isClient) && appointment.reschedule_request_status) {
       return res.status(409).json({ message: 'A reschedule request has already been submitted for this appointment.' });
     }
-    if (!isAdmin && (isAssignedAesthetician || isClient)
-      && (!reason || (isAssignedAesthetician && !description))) {
-      return res.status(400).json({
-        message: isClient
-          ? 'A reason is required for a reschedule request.'
-          : 'Reason and description are required for a reschedule request.'
-      });
+    if (!isAdmin && isClient && !reason) {
+      return res.status(400).json({ message: 'A reason is required for a reschedule request.' });
     }
 
     const now = manilaNow();
@@ -2966,12 +2962,12 @@ router.post('/:id/reschedule', requireActiveAccount, async (req, res) => {
             reschedule_requested_by = $6, reschedule_requested_at = NOW(),
             reschedule_reviewed_by = NULL, reschedule_reviewed_at = NULL
         WHERE appointment_id = $7
-      `, [appointmentDate, appointmentTime, appointmentEndTime, reason, description || '', req.session.userId, appointmentId]);
+      `, [appointmentDate, appointmentTime, appointmentEndTime, reason || '', description || '', req.session.userId, appointmentId]);
       const requestorRole = isClient ? 'Client' : 'Aesthetician';
       await notifyRoles(
         ['admin'],
         'reschedule_request',
-        `${requestorRole} requested reschedule for appointment ${appointmentId} to ${appointmentDate} at ${slotLabel}: ${reason}.`,
+        `${requestorRole} requested reschedule for appointment ${appointmentId} to ${appointmentDate} at ${slotLabel}.${reason ? ` Reason: ${reason}.` : ''}`,
       );
       if (isClient && appointment.aesthetician_id) {
         await notifyUsers(

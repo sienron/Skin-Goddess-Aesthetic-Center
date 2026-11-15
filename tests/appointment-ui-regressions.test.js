@@ -158,14 +158,111 @@ test('staff appointment modals do not expose the no-show action', () => {
   assert.doesNotMatch(modalSource, /apptModalNoShowBtn|\/no-show/);
 });
 
-test('aesthetician reschedule modal requires the details accepted by its request endpoint', () => {
+test('aesthetician request dialogs ask for the appropriate details', () => {
   for (const filename of ['AestheticianAppointmentPage.html', 'StaffAppointmentPage.html']) {
     const pageSource = fs.readFileSync(path.join(root, filename), 'utf8');
     assert.match(pageSource, /<button[^>]*type="button"[^>]*id="apptModalRescheduleBtn"/);
-    assert.match(pageSource, /id="apptRescheduleReason"[^>]*required/);
-    assert.match(pageSource, /id="apptRescheduleDescription"[^>]*required/);
+    assert.match(pageSource, /<dialog[^>]*id="apptRequestDialog"/);
+    assert.match(pageSource, /id="apptCancellationReason"[^>]*required/);
+    assert.match(pageSource, /<select name="date" id="apptRescheduleDate" required/);
+    assert.match(pageSource, /<select name="time" id="apptRescheduleTime" required/);
     assert.doesNotMatch(pageSource, /Start Service/);
   }
+});
+
+test('aesthetician request dialogs submit to admin and can be reopened for another appointment', async () => {
+  const modalSource = fs.readFileSync(path.join(root, 'appointment-modal.js'), 'utf8');
+  const elements = new Map();
+  function createElement() {
+    const listeners = {};
+    const classes = new Set();
+    return {
+      listeners, dataset: {}, style: {}, value: '', hidden: false, disabled: false,
+      classList: {
+        add: (name) => classes.add(name), remove: (name) => classes.delete(name),
+        contains: (name) => classes.has(name)
+      },
+      addEventListener(type, handler) { listeners[type] = handler; },
+      replaceChildren(...children) { this.children = children; },
+      add(child) { this.children.push(child); },
+      reset() {},
+      focus() {},
+      querySelector() { return this.submitButton; },
+      showModal() { this.open = true; },
+      close() { this.open = false; this.listeners.close?.(); }
+    };
+  }
+  const ids = [
+    'apptModalOverlay', 'apptModalTopbar', 'apptModalClose', 'apptModalCancelBtn',
+    'apptModalRescheduleBtn', 'apptRescheduleForm', 'apptCancellationForm',
+    'apptActionMessage', 'apptRequestStatus', 'apptRequestDialog', 'apptRequestTitle',
+    'apptRequestClose', 'apptRescheduleMonth', 'apptRescheduleDate', 'apptRescheduleTime',
+    'apptModalStatus', 'apptModalAvatar', 'apptModalName', 'apptModalSubtitle',
+    'apptModalDate', 'apptModalTime', 'apptModalAesthetician', 'apptModalDuration',
+    'apptModalService', 'apptModalFee', 'apptModalDeposit', 'apptModalContact'
+  ];
+  ids.forEach((id) => elements.set(id, createElement()));
+  const reschedule = elements.get('apptRescheduleForm');
+  const cancellation = elements.get('apptCancellationForm');
+  reschedule.submitButton = createElement();
+  cancellation.submitButton = createElement();
+  reschedule.elements = {
+    date: elements.get('apptRescheduleDate'), time: elements.get('apptRescheduleTime')
+  };
+  cancellation.elements = { reason: createElement() };
+  const calls = [];
+  const fetch = async (url, options) => {
+    calls.push({ url, options });
+    const data = url.startsWith('/api/availability')
+      ? { '2026-10-18': ['10:00 AM'] }
+      : { message: 'Request sent to the admin.' };
+    return { ok: true, text: async () => JSON.stringify(data) };
+  };
+  const document = {
+    body: { style: {}, dataset: {} },
+    getElementById: (id) => elements.get(id) || null,
+    createElement, addEventListener() {}
+  };
+  const window = { dispatchEvent() {} };
+  class TestDate extends Date {
+    constructor(...args) { super(...(args.length ? args : ['2026-11-15T00:00:00Z'])); }
+  }
+  vm.runInNewContext(modalSource, {
+    document, window, fetch, URLSearchParams, Date: TestDate, CustomEvent: class {}
+  });
+  const appointment = {
+    id: 42, status: 'confirmed', date: '2026-11-18', start: '10:00',
+    end: '11:00', client: 'Test Client', service: 'Facial', service_id: 7
+  };
+  window.openApptModal(appointment);
+  elements.get('apptModalCancelBtn').listeners.click();
+  assert.equal(elements.get('apptRequestDialog').open, true);
+  assert.equal(cancellation.hidden, false);
+  assert.equal(reschedule.hidden, true);
+  cancellation.elements.reason.value = 'Schedule conflict';
+  await cancellation.listeners.submit({ preventDefault() {} });
+  assert.equal(calls[0].url, '/api/appointments/42/cancellation-request');
+  assert.equal(JSON.parse(calls[0].options.body).reason, 'Schedule conflict');
+  assert.equal(elements.get('apptRequestDialog').open, false);
+
+  window.openApptModal({ ...appointment, id: 43 });
+  assert.equal(cancellation.submitButton.disabled, false);
+  elements.get('apptModalRescheduleBtn').listeners.click();
+  assert.equal(elements.get('apptRequestDialog').open, true);
+  assert.equal(reschedule.hidden, false);
+  assert.equal(cancellation.hidden, true);
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.match(calls[1].url, /serviceId=7&appointmentId=43/);
+  assert.equal(reschedule.elements.date.disabled, false);
+  reschedule.elements.date.value = '2026-11-18';
+  elements.get('apptRescheduleDate').listeners.change();
+  assert.equal(reschedule.elements.time.disabled, false);
+  reschedule.elements.time.value = '10:00';
+  await reschedule.listeners.submit({ preventDefault() {} });
+  assert.equal(calls[2].url, '/api/appointments/43/reschedule');
+  assert.equal(JSON.parse(calls[2].options.body).date, '2026-11-18');
+  assert.equal(JSON.parse(calls[2].options.body).time, '10:00');
+  assert.equal(elements.get('apptRequestDialog').open, false);
 });
 
 test('client account reschedule form uses availability controls and immediate cancellation endpoint', () => {

@@ -497,6 +497,55 @@ test('all cancellation requests require strictly more than 24 hours, including a
   assert.equal(staffUnder24.queries.some((sql) => /UPDATE appointments/.test(sql)), false);
 });
 
+test('assigned aesthetician sends cancellation and reschedule requests to admin without extra details', async () => {
+  const calls = [];
+  db.query = async (sql, values = []) => {
+    calls.push({ sql, values });
+    if (/SELECT appointment_id, aesthetician_id, user_id, appointment_status/.test(sql)) {
+      return { rows: [{
+        appointment_id: 42, aesthetician_id: 31, user_id: 7,
+        appointment_status: 'confirmed', cancellation_request_status: null,
+        appointment_date: '2026-01-07', appointment_time: '10:00:00'
+      }] };
+    }
+    if (/SELECT a\.appointment_id, a\.user_id, a\.aesthetician_id/.test(sql)) {
+      return { rows: [{
+        appointment_id: 42, aesthetician_id: 31, user_id: 7, service_id: 3,
+        appointment_status: 'confirmed', reschedule_request_status: null,
+        booked_duration_minutes: 60, booked_buffer_minutes: 15
+      }] };
+    }
+    if (/SELECT role FROM users/.test(sql)) return { rows: [{ role: 'aesthetician' }] };
+    if (/FROM clinic_operating_hours/.test(sql)) return { rows: require('../utils/clinicSchedule').DEFAULT_HOURS };
+    if (/WHERE role::text = ANY/.test(sql)) return { rows: [{ user_id: 1 }] };
+    if (/INSERT INTO notifications/.test(sql)) return { rows: [{ notification_id: 1 }] };
+    return { rows: [] };
+  };
+  const cancellation = responseCapture();
+  const reschedule = responseCapture();
+  try {
+    await withFrozenDate('2026-01-05T00:00:00.000Z', async () => {
+      await routeHandler('/:id/cancellation-request', 'post')({
+        params: { id: '42' }, body: { reason: 'Schedule conflict' }, session: { userId: 31 }
+      }, cancellation);
+      await routeHandler('/:id/reschedule', 'post')({
+        params: { id: '42' }, body: { date: '2026-01-06', time: '09:30' }, session: { userId: 31 }
+      }, reschedule);
+    });
+  } finally {
+    db.query = originalQuery;
+  }
+  assert.equal(cancellation.statusCode, 200);
+  assert.equal(reschedule.statusCode, 200);
+  const cancellationUpdate = calls.find(({ sql }) => /SET cancellation_request_status = 'pending'/.test(sql));
+  const rescheduleUpdate = calls.find(({ sql }) => /SET reschedule_request_status = 'pending'/.test(sql));
+  assert.deepEqual(cancellationUpdate.values, ['Schedule conflict', '', 31, 42]);
+  assert.deepEqual(rescheduleUpdate.values, ['2026-01-06', '09:30', '10:45', '', '', 31, 42]);
+  assert.deepEqual(calls.filter(({ sql }) => /INSERT INTO notifications/.test(sql)).map(({ values }) => values.slice(0, 2)), [
+    [1, 'cancellation_request'], [1, 'reschedule_request']
+  ]);
+});
+
 test('approved cancellation refunds only requests submitted more than 24 hours ahead', async () => {
   const handler = routeHandler('/:id/cancellation-request/review', 'post');
   async function review(refundEligible) {
