@@ -525,6 +525,66 @@ test('account personal-details endpoint updates only the signed-in user and vali
   }
 });
 
+test('profile updates date of birth, gender and address atomically while preserving omitted fields', async () => {
+  const handler = routeHandler(authRouter, '/update-profile', 'put');
+  const calls = [];
+  db.query = async (sql, values) => {
+    calls.push({ sql, values });
+    return { rows: [] };
+  };
+  try {
+    const updated = responseCapture();
+    await handler({
+      body: { firstName: 'Anna', lastName: 'Reyes', contactNumber: '9123456789', dateOfBirth: '2005-07-14', gender: 'female', address: ' New address ' },
+      session: { userId: 7 },
+    }, updated);
+    assert.equal(updated.statusCode, 200);
+    assert.deepEqual(calls[0].values, ['Anna', 'Reyes', '9123456789', 7, true, '2005-07-14', true, 'female', true, 'New address']);
+
+    const omitted = responseCapture();
+    await handler({ body: { firstName: 'Anna', lastName: 'Reyes' }, session: { userId: 7 } }, omitted);
+    assert.equal(omitted.statusCode, 200);
+    assert.deepEqual(calls[1].values.slice(4), [false, null, false, null, false, null]);
+
+    const cleared = responseCapture();
+    await handler({
+      body: { firstName: 'Anna', lastName: 'Reyes', dateOfBirth: '', gender: '', address: '' },
+      session: { userId: 7 },
+    }, cleared);
+    assert.equal(cleared.statusCode, 200);
+    assert.deepEqual(calls[2].values.slice(4), [true, null, true, null, true, null]);
+
+    for (const invalid of [{ dateOfBirth: '2026-02-31' }, { gender: { value: 'female' } }, { address: 'a'.repeat(501) }, { address: {} }]) {
+      const response = responseCapture();
+      await handler({ body: { firstName: 'Anna', lastName: 'Reyes', ...invalid }, session: { userId: 7 } }, response);
+      assert.equal(response.statusCode, 400);
+    }
+    assert.equal(calls.length, 3);
+  } finally {
+    db.query = originalQuery;
+  }
+});
+
+test('address-only updates do not overwrite profile date of birth or gender', async () => {
+  const handler = routeHandler(authRouter, '/update-personal-details', 'put');
+  let update;
+  db.query = async (sql, values) => {
+    update = { sql, values };
+    return { rows: [{ date_of_birth: '2005-07-14', gender: 'female', home_address: 'New address' }] };
+  };
+  try {
+    const response = responseCapture();
+    await handler({ body: { address: ' New address ' }, session: { userId: 7 } }, response);
+    assert.equal(response.statusCode, 200);
+    assert.deepEqual(update.values, ['New address', 7]);
+    assert.match(update.sql, /SET home_address = \$1/);
+    assert.doesNotMatch(update.sql, /SET date_of_birth/);
+    assert.equal(response.body.address, 'New address');
+  } finally {
+    db.query = originalQuery;
+  }
+});
+
 test.after(() => {
   db.query = originalQuery;
   db.transaction = originalTransaction;

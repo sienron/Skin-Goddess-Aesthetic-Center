@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600&family=Playfair+Display:ital,wght@1,500;1,600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css?v=client-appointment-actions-20261115">
-<link rel="stylesheet" href="profile-page.css">
+<link rel="stylesheet" href="profile-page.css?v=profile-address-20261115">
 </head>
 <body class="homepage client-header" data-page="account">
 
@@ -139,34 +139,6 @@
             <input type="text" id="contactNumber" name="contactNumber" inputmode="numeric" maxlength="10" disabled>
             <span class="field-error" data-error-for="contactNumber"></span>
           </div>
-        </div>
-
-        <span class="field-error" data-error-for="profile-form"></span>
-
-        <div class="account-form-actions" id="profileFormActions" hidden>
-          <button type="submit" class="btn btn-primary" id="profileSubmitBtn">
-            <span class="btn-label">SAVE CHANGES</span>
-          </button>
-          <button type="button" class="btn btn-outline" id="profileCancelBtn">CANCEL</button>
-        </div>
-        <p class="account-success" id="profile-success" hidden>Profile updated successfully.</p>
-      </form>
-    </section>
-
-    <section class="account-section profile-personal-section" aria-labelledby="personalDetailsTitle">
-      <div class="account-section-header">
-        <h2 class="account-section-title" id="personalDetailsTitle">Personal &amp; Health Details</h2>
-        <button type="button" class="account-edit-btn" id="personalDetailsEditBtn">Edit</button>
-      </div>
-      <dl class="profile-personal-details" id="profilePersonalDetailsView">
-        <div><dt>Date of Birth</dt><dd id="profileDateOfBirth">Not provided</dd></div>
-        <div><dt>Gender</dt><dd id="profileGender">Not provided</dd></div>
-        <div><dt>Home Address</dt><dd id="profileAddress">Not provided</dd></div>
-        <div><dt>Known Allergies</dt><dd id="profileAllergies">Not provided</dd></div>
-        <div><dt>Medical Conditions</dt><dd id="profileMedicalConditions">Not provided</dd></div>
-      </dl>
-      <form id="personal-details-form" novalidate hidden>
-        <div class="account-fields-grid profile-edit-fields">
           <div class="auth-form-group">
             <label for="profileDateOfBirthInput">Date of Birth</label>
             <input type="date" id="profileDateOfBirthInput" name="dateOfBirth" disabled>
@@ -185,15 +157,27 @@
             <input type="text" id="profileAddressInput" name="address" maxlength="500" disabled>
           </div>
         </div>
-        <span class="field-error" data-error-for="personal-details-form"></span>
-        <div class="account-form-actions" id="personalDetailsFormActions" hidden>
-          <button type="submit" class="btn btn-primary" id="personalDetailsSubmitBtn">
+
+        <span class="field-error" data-error-for="profile-form"></span>
+
+        <div class="account-form-actions" id="profileFormActions" hidden>
+          <button type="submit" class="btn btn-primary" id="profileSubmitBtn">
             <span class="btn-label">SAVE CHANGES</span>
           </button>
-          <button type="button" class="btn btn-outline" id="personalDetailsCancelBtn">CANCEL</button>
+          <button type="button" class="btn btn-outline" id="profileCancelBtn">CANCEL</button>
         </div>
+        <p class="account-success" id="profile-success" hidden>Profile updated successfully.</p>
       </form>
-      <p class="account-success" id="personal-details-success" role="status" hidden>Personal details updated successfully.</p>
+    </section>
+
+    <section class="account-section profile-personal-section" aria-labelledby="personalDetailsTitle">
+      <div class="account-section-header">
+        <h2 class="account-section-title" id="personalDetailsTitle">Personal &amp; Health Details</h2>
+      </div>
+      <dl class="profile-personal-details" id="profilePersonalDetailsView">
+        <div><dt>Known Allergies</dt><dd id="profileAllergies">Not provided</dd></div>
+        <div><dt>Medical Conditions</dt><dd id="profileMedicalConditions">Not provided</dd></div>
+      </dl>
     </section>
 
         </div>
@@ -459,8 +443,8 @@
 
 <div data-faq-chatbot-mount></div>
 <script src="header.js?v=signed-in-appointments-20261114"></script>
-<script src="account.js"></script>
-<script src="account-edit-toggle.js"></script>
+<script src="account.js?v=profile-address-20261115"></script>
+<script src="account-edit-toggle.js?v=profile-address-20261115"></script>
 <script src="appointment-modal.js?v=client-appointment-actions-20261115"></script>
 <script src="my-appointments.js"></script>
 <script src="contact-us.js"></script>

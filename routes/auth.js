@@ -121,6 +121,12 @@ function isValidOptionalRegistrationField(value, maxLength) {
     || (typeof value === 'string' && value.length <= maxLength);
 }
 
+function normalizeOptionalText(value) {
+  if (value === null) return null;
+  if (typeof value !== 'string') return undefined;
+  return value.trim() || null;
+}
+
 function isValidRegistrationProfile({ dob, gender, civilStatus, contactNumber, address, allergies, conditions }) {
   if (!isValidOptionalRegistrationField(dob, 10)
     || !isValidOptionalRegistrationField(gender, 50)
@@ -1385,7 +1391,7 @@ router.get('/profile', async (req, res) => {
   try {
     const result = await db.query(
       `SELECT first_name, last_name, email, contact_number,
-              date_of_birth, gender, home_address, allergies, medical_conditions
+              date_of_birth::text AS date_of_birth, gender, home_address, allergies, medical_conditions
        FROM users WHERE user_id = $1`,
       [req.session.userId]
     );
@@ -1413,17 +1419,24 @@ router.get('/profile', async (req, res) => {
 });
 
 // ============================================
-// ROUTE: UPDATE PROFILE (name, contact number only — email has its own flow)
+// ROUTE: UPDATE PROFILE (email has its own flow)
 // ============================================
 router.put('/update-profile', preserveDemoCustomerAccess, async (req, res) => {
   if (!req.session.userId) {
     return res.status(401).json({ message: 'Not logged in.' });
   }
 
-  const { firstName, lastName, contactNumber } = req.body;
+  const body = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
+  const { firstName, lastName, contactNumber } = body;
   const normalizedFirstName = typeof firstName === 'string' ? firstName.trim() : '';
   const normalizedLastName = typeof lastName === 'string' ? lastName.trim() : '';
   const normalizedContactNumber = typeof contactNumber === 'string' ? contactNumber.trim() : '';
+  const hasDateOfBirth = Object.prototype.hasOwnProperty.call(body, 'dateOfBirth');
+  const hasGender = Object.prototype.hasOwnProperty.call(body, 'gender');
+  const hasAddress = Object.prototype.hasOwnProperty.call(body, 'address');
+  const dateOfBirth = hasDateOfBirth ? normalizeOptionalText(body.dateOfBirth) : null;
+  const gender = hasGender ? normalizeOptionalText(body.gender) : null;
+  const address = hasAddress ? normalizeOptionalText(body.address) : null;
 
   if (!isValidName(normalizedFirstName) || !isValidName(normalizedLastName)) {
     return res.status(400).json({ message: 'Enter valid first and last names.' });
@@ -1433,13 +1446,21 @@ router.put('/update-profile', preserveDemoCustomerAccess, async (req, res) => {
     || (normalizedContactNumber && !/^[+0-9().\-\s]+$/.test(normalizedContactNumber)))) {
     return res.status(400).json({ message: 'Enter a valid contact number.' });
   }
+  if (dateOfBirth === undefined || gender === undefined || address === undefined
+    || !isValidRegistrationProfile({ dob: dateOfBirth, gender, address })) {
+    return res.status(400).json({ message: 'Enter valid profile details.' });
+  }
 
   try {
     await db.query(
       `UPDATE users
-       SET first_name = $1, last_name = $2, contact_number = $3
+       SET first_name = $1, last_name = $2, contact_number = $3,
+           date_of_birth = CASE WHEN $5 THEN $6::date ELSE date_of_birth END,
+           gender = CASE WHEN $7 THEN $8::text ELSE gender END,
+           home_address = CASE WHEN $9 THEN $10::text ELSE home_address END
        WHERE user_id = $4`,
-      [normalizedFirstName, normalizedLastName, normalizedContactNumber || null, req.session.userId]
+      [normalizedFirstName, normalizedLastName, normalizedContactNumber || null, req.session.userId,
+        hasDateOfBirth, dateOfBirth, hasGender, gender, hasAddress, address]
     );
 
     res.status(200).json({ message: 'Profile updated successfully.' });
@@ -1455,18 +1476,14 @@ router.put('/update-personal-details', preserveDemoCustomerAccess, async (req, r
   }
 
   const body = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
-  const fieldNames = ['dateOfBirth', 'gender', 'address'];
-  if (!fieldNames.every((field) => Object.prototype.hasOwnProperty.call(body, field))) {
-    return res.status(400).json({ message: 'Submit your date of birth, gender, and home address.' });
+  const hasDateOfBirth = Object.prototype.hasOwnProperty.call(body, 'dateOfBirth');
+  const hasGender = Object.prototype.hasOwnProperty.call(body, 'gender');
+  if (!Object.prototype.hasOwnProperty.call(body, 'address') || hasDateOfBirth !== hasGender) {
+    return res.status(400).json({ message: 'Submit your home address and any complete personal details.' });
   }
 
-  const normalizeOptionalText = (value) => {
-    if (value === null) return null;
-    if (typeof value !== 'string') return undefined;
-    return value.trim() || null;
-  };
-  const dateOfBirth = normalizeOptionalText(body.dateOfBirth);
-  const gender = normalizeOptionalText(body.gender);
+  const dateOfBirth = hasDateOfBirth ? normalizeOptionalText(body.dateOfBirth) : null;
+  const gender = hasGender ? normalizeOptionalText(body.gender) : null;
   const address = normalizeOptionalText(body.address);
 
   if ([dateOfBirth, gender, address].some((value) => value === undefined)
@@ -1483,13 +1500,17 @@ router.put('/update-personal-details', preserveDemoCustomerAccess, async (req, r
   }
 
   try {
-    const result = await db.query(
-      `UPDATE users
+    const result = hasDateOfBirth
+      ? await db.query(`UPDATE users
        SET date_of_birth = $1, gender = $2, home_address = $3
        WHERE user_id = $4
        RETURNING date_of_birth::text AS date_of_birth, gender, home_address`,
-      [dateOfBirth, gender, address, req.session.userId]
-    );
+      [dateOfBirth, gender, address, req.session.userId])
+      : await db.query(`UPDATE users
+       SET home_address = $1
+       WHERE user_id = $2
+       RETURNING date_of_birth::text AS date_of_birth, gender, home_address`,
+      [address, req.session.userId]);
     if (result.rows.length === 0) {
       return res.status(404).json({ message: 'Account not found.' });
     }

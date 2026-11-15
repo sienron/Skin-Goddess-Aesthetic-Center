@@ -5,9 +5,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const contactNumberInput = document.getElementById('contactNumber');
   const profileSubmitBtn = document.getElementById('profileSubmitBtn');
   const profileSuccess = document.getElementById('profile-success');
-  const personalDetailsForm = document.getElementById('personal-details-form');
-  const personalDetailsSubmitBtn = document.getElementById('personalDetailsSubmitBtn');
-  const personalDetailsSuccess = document.getElementById('personal-details-success');
   const dateOfBirthInput = document.getElementById('profileDateOfBirthInput');
   const genderInput = document.getElementById('profileGenderInput');
   const addressInput = document.getElementById('profileAddressInput');
@@ -49,17 +46,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (element) element.textContent = value || 'Not provided';
   }
 
-  function formatDate(value) {
-    if (!value) return '';
-    const [year, month, day] = String(value).slice(0, 10).split('-').map(Number);
-    if (!year || !month || !day) return String(value);
-    return new Intl.DateTimeFormat(undefined, {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    }).format(new Date(year, month - 1, day));
-  }
-
   function renderPersonalDetails(data) {
     const gender = data.gender || '';
     if (dateOfBirthInput) dateOfBirthInput.value = String(data.dateOfBirth || '').slice(0, 10);
@@ -73,13 +59,6 @@ document.addEventListener('DOMContentLoaded', () => {
       genderInput.value = gender;
     }
     if (addressInput) addressInput.value = data.address || '';
-    setProfileDetail('profileDateOfBirth', formatDate(data.dateOfBirth));
-    setProfileDetail('profileGender', ({
-      female: 'Female',
-      male: 'Male',
-      'prefer-not': 'Prefer not to say',
-    })[gender] || gender);
-    setProfileDetail('profileAddress', data.address);
   }
 
   function syncProfileIdentity(emailOverride) {
@@ -280,7 +259,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const response = await fetch('/api/auth/update-profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ firstName, lastName, contactNumber }),
+        body: JSON.stringify({
+          firstName, lastName, contactNumber,
+          dateOfBirth: dateOfBirthInput.value,
+          gender: genderInput.value,
+          address: addressInput.value.trim(),
+        }),
       });
 
       const data = await response.json().catch(() => ({}));
@@ -290,6 +274,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
+      addressInput.value = addressInput.value.trim();
       syncProfileIdentity();
       profileSuccess.hidden = false;
     } catch (err) {
@@ -299,41 +284,6 @@ document.addEventListener('DOMContentLoaded', () => {
       profileSubmitBtn.disabled = false;
       profileSubmitBtn.querySelector('.btn-label').textContent = 'SAVE CHANGES';
       profileForm.dispatchEvent(new Event('profile:statechange'));
-    }
-  });
-
-  personalDetailsForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    clearErrors(personalDetailsForm);
-    personalDetailsSuccess.hidden = true;
-    personalDetailsSubmitBtn.disabled = true;
-    personalDetailsSubmitBtn.querySelector('.btn-label').textContent = 'SAVING...';
-
-    try {
-      const response = await fetch('/api/auth/update-personal-details', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          dateOfBirth: dateOfBirthInput.value,
-          gender: genderInput.value,
-          address: addressInput.value.trim(),
-        }),
-      });
-      const data = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        setFieldError(personalDetailsForm, 'personal-details-form', data.message || 'Could not update your details.');
-        return;
-      }
-
-      renderPersonalDetails(data);
-      personalDetailsSuccess.hidden = false;
-    } catch (error) {
-      setFieldError(personalDetailsForm, 'personal-details-form', 'Something went wrong. Please try again.');
-      console.error('Update personal details failed:', error);
-    } finally {
-      personalDetailsSubmitBtn.disabled = false;
-      personalDetailsSubmitBtn.querySelector('.btn-label').textContent = 'SAVE CHANGES';
     }
   });
 
