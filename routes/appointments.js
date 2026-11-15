@@ -1757,7 +1757,7 @@ router.get('/admin/:id/notes', requireRole('admin'), async (req, res) => {
   }
 });
 
-router.get('/:id/notes', requireActiveAccount, async (req, res) => {
+router.get('/:id/notes', requireRole('aesthetician', 'staff'), async (req, res) => {
   const appointmentId = validAppointmentId(req.params.id);
   if (!appointmentId) return res.status(400).json({ message: 'Choose a valid appointment.' });
 
@@ -1779,7 +1779,7 @@ router.get('/:id/notes', requireActiveAccount, async (req, res) => {
   }
 });
 
-router.get('/client/:clientId/notes', requireActiveAccount, async (req, res) => {
+router.get('/client/:clientId/notes', requireRole('aesthetician', 'staff'), async (req, res) => {
   const clientId = validAppointmentId(req.params.clientId);
   if (!clientId) return res.status(400).json({ message: 'Choose a valid client.' });
 
@@ -1808,7 +1808,7 @@ router.get('/client/:clientId/notes', requireActiveAccount, async (req, res) => 
   }
 });
 
-router.post('/:id/notes', requireActiveAccount, async (req, res) => {
+router.post('/:id/notes', requireRole('aesthetician', 'staff'), async (req, res) => {
   const appointmentId = validAppointmentId(req.params.id);
   if (!appointmentId) return res.status(400).json({ message: 'Choose a valid appointment.' });
 
@@ -1836,7 +1836,7 @@ router.post('/:id/notes', requireActiveAccount, async (req, res) => {
   }
 });
 
-router.patch('/:id/notes/:noteId', requireActiveAccount, async (req, res) => {
+router.patch('/:id/notes/:noteId', requireRole('aesthetician', 'staff'), async (req, res) => {
   const appointmentId = validAppointmentId(req.params.id);
   const noteId = validNoteId(req.params.noteId);
   if (!appointmentId || !noteId) return res.status(400).json({ message: 'Choose a valid note.' });
@@ -1872,7 +1872,7 @@ router.patch('/:id/notes/:noteId', requireActiveAccount, async (req, res) => {
   }
 });
 
-router.delete('/:id/notes/:noteId', requireActiveAccount, async (req, res) => {
+router.delete('/:id/notes/:noteId', requireRole('aesthetician', 'staff'), async (req, res) => {
   const appointmentId = validAppointmentId(req.params.id);
   const noteId = validNoteId(req.params.noteId);
   if (!appointmentId || !noteId) return res.status(400).json({ message: 'Choose a valid note.' });
@@ -2730,7 +2730,7 @@ router.post('/:id/cancellation-request/review', requireRole('admin'), async (req
   }
 });
 
-router.post('/:id/start', requireActiveAccount, async (req, res) => {
+router.post('/:id/start', requireRole('aesthetician', 'staff'), async (req, res) => {
   const appointmentId = validAppointmentId(req.params.id);
   if (!appointmentId) return res.status(400).json({ message: 'Choose a valid appointment.' });
   try {
@@ -2841,7 +2841,7 @@ router.post('/:id/rating', ratingLimiter, requireActiveAccount, async (req, res)
   }
 });
 
-router.post('/:id/no-show', requireActiveAccount, async (req, res) => {
+router.post('/:id/no-show', requireRole('aesthetician', 'staff'), async (req, res) => {
   const appointmentId = validAppointmentId(req.params.id);
   if (!appointmentId) return res.status(400).json({ message: 'Choose a valid appointment.' });
   try {
