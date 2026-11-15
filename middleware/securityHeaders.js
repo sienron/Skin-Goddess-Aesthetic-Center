@@ -48,4 +48,17 @@ function createSecurityHeaders({ production = process.env.NODE_ENV === 'producti
   };
 }
 
-module.exports = { createSecurityHeaders };
+function createSameOriginFrameHeaders({ production = process.env.NODE_ENV === 'production' } = {}) {
+  return [
+    helmet.contentSecurityPolicy({
+      directives: {
+        ...CONTENT_SECURITY_POLICY,
+        frameAncestors: ["'self'"],
+        upgradeInsecureRequests: production ? [] : null,
+      },
+    }),
+    helmet.frameguard({ action: 'sameorigin' }),
+  ];
+}
+
+module.exports = { createSecurityHeaders, createSameOriginFrameHeaders };

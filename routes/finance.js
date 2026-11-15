@@ -6,6 +6,7 @@ const { DEPOSIT_DEDUCTED_FROM_PRICE, NO_SHOW_DEPOSIT_IS_INCOME } = require('../u
 const { notifyRoles } = require('../utils/notifications');
 const { LOW_STOCK_THRESHOLD } = require('../utils/inventoryThresholds');
 const { escapeCsvCell } = require('../utils/csv');
+const { createSameOriginFrameHeaders } = require('../middleware/securityHeaders');
 
 const router = express.Router();
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -729,7 +730,7 @@ function escapeHtml(value) {
   })[character]);
 }
 
-router.get('/payments/:id/receipt', endpoint(async (req, res) => {
+router.get('/payments/:id/receipt', createSameOriginFrameHeaders(), endpoint(async (req, res) => {
   const paymentId = idValue(req.params.id, 'Payment ID');
   const result = await financeQuery(`
     SELECT payment.payment_id, payment.payment_type, payment.amount::float8 AS amount,
