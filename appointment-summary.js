@@ -181,7 +181,7 @@
             checkoutState = 'complete';
             showMessage('Payment verified and appointment created. Redirecting...', 'success');
             setTimeout(() => {
-              window.location.href = 'MyAppointments.html';
+              window.location.href = '/UserAccount.html#appointments';
             }, 1000);
             return;
           }

@@ -6,6 +6,15 @@ const vm = require('node:vm');
 
 const root = path.join(__dirname, '..');
 
+test('confirmed booking redirects to the appointments section of the account page', () => {
+  const checkoutSource = fs.readFileSync(path.join(root, 'appointment-summary.js'), 'utf8');
+  const accountPage = fs.readFileSync(path.join(root, 'UserAccount.html'), 'utf8');
+
+  assert.match(checkoutSource, /window\.location\.href = ['"]\/UserAccount\.html#appointments['"]/);
+  assert.match(accountPage, /data-profile-section="appointments"/);
+  assert.match(accountPage, /data-profile-panel="appointments"/);
+});
+
 test('appointment modal keeps shared helpers private while retaining its public API', () => {
   const modalSource = fs.readFileSync(path.join(root, 'appointment-modal.js'), 'utf8');
   const staffSource = fs.readFileSync(path.join(root, 'appointments-staff.js'), 'utf8');
