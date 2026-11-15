@@ -15,6 +15,15 @@ test('confirmed booking redirects to the appointments section of the account pag
   assert.match(accountPage, /data-profile-panel="appointments"/);
 });
 
+test('admin appointment status refresh is time-bounded and reports that saved rows remain available', () => {
+  const adminSource = fs.readFileSync(path.join(root, 'AdminAppointment.js'), 'utf8');
+
+  assert.match(adminSource, /statusRefreshController\.abort\(\)[\s\S]*?10000/);
+  assert.match(adminSource, /signal: statusRefreshController\.signal/);
+  assert.match(adminSource, /Showing the latest saved data; it will retry automatically\./);
+  assert.doesNotMatch(adminSource, /The appointment list is still being loaded\./);
+});
+
 test('appointment modal keeps shared helpers private while retaining its public API', () => {
   const modalSource = fs.readFileSync(path.join(root, 'appointment-modal.js'), 'utf8');
   const staffSource = fs.readFileSync(path.join(root, 'appointments-staff.js'), 'utf8');

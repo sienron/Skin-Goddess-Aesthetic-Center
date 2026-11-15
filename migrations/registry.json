@@ -65,7 +65,8 @@
     "050-privileged-totp-mfa.js",
     "051-hashed-email-otps.js",
     "056-finance-payment-idempotency.js",
-    "056-allow-repeated-inventory-purchase-batches.js"
+    "056-allow-repeated-inventory-purchase-batches.js",
+    "057-appointment-in-progress-status.js"
   ],
   "optional": [
     "043-demo-customer-appointments.js"

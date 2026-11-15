@@ -1452,18 +1452,30 @@ document.addEventListener('DOMContentLoaded', () => {
     const pendingLoad = (async () => {
       try {
         try {
-          const advanceResponse = await fetch('/api/appointments/admin/advance-started', {
-            method: 'POST',
-            headers: { Accept: 'application/json' },
-            cache: 'no-store'
-          });
-          const advanceResult = await readApiResponse(advanceResponse);
-          if (!advanceResponse.ok) {
-            throw new Error(advanceResult.message || `Could not update started appointments (HTTP ${advanceResponse.status}).`);
+          const statusRefreshController = new AbortController();
+          const statusRefreshTimeout = window.setTimeout(
+            () => statusRefreshController.abort(),
+            10000
+          );
+          try {
+            const advanceResponse = await fetch('/api/appointments/admin/advance-started', {
+              method: 'POST',
+              headers: { Accept: 'application/json' },
+              cache: 'no-store',
+              signal: statusRefreshController.signal
+            });
+            const advanceResult = await readApiResponse(advanceResponse);
+            if (!advanceResponse.ok) {
+              throw new Error(advanceResult.message || `Could not update started appointments (HTTP ${advanceResponse.status}).`);
+            }
+            statusAdvanceWarning = '';
+          } finally {
+            window.clearTimeout(statusRefreshTimeout);
           }
-          statusAdvanceWarning = '';
         } catch (error) {
-          statusAdvanceWarning = 'Appointment statuses could not be refreshed. The appointment list is still being loaded.';
+          statusAdvanceWarning = error.name === 'AbortError'
+            ? 'Appointment status update timed out. Showing the latest saved data; it will retry automatically.'
+            : 'Appointment statuses could not be updated. Showing the latest saved data; it will retry automatically.';
           console.error('Could not refresh started appointment statuses:', error);
         }
 

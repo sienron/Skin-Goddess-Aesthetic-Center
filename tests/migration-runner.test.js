@@ -23,6 +23,29 @@ test('migration registry covers every migration file with unique full-filename I
     registry.required.length + registry.optional.length);
 });
 
+test('appointment status migration preserves supported statuses and allows in-progress transitions', async () => {
+  const { migrate } = require('../migrations/057-appointment-in-progress-status');
+  const originalTransaction = db.transaction;
+  let migrationSql = '';
+  db.transaction = async (callback) => callback({
+    async query(sql) {
+      migrationSql = sql;
+      return { rows: [] };
+    }
+  });
+
+  try {
+    await migrate();
+  } finally {
+    db.transaction = originalTransaction;
+  }
+
+  assert.match(migrationSql, /DROP CONSTRAINT IF EXISTS appointments_appointment_status_check/);
+  for (const status of ['pending', 'confirmed', 'in_progress', 'completed', 'cancelled', 'no_show']) {
+    assert.match(migrationSql, new RegExp(`'${status}'`));
+  }
+});
+
 test('migration targets preserve registry order and stop at the requested filename', () => {
   const target = '033-finance-expense-edit-history.js';
   const selected = requestedMigrations([`--target=${target}`]);
