@@ -5,6 +5,9 @@
   const BOOKING_STORAGE_KEY = 'sg_pending_booking';
   const summaryContainer = document.getElementById('checkoutSummary');
   const paymentContainer = document.getElementById('paymongoCheckout');
+  const query = new URLSearchParams(window.location.search);
+  const returnedReference = query.get('reference');
+  const isPaymentReturn = query.get('payment') === 'success' && Boolean(returnedReference);
 
   if (!summaryContainer || !paymentContainer) {
     return;
@@ -19,11 +22,16 @@
     booking = null;
   }
 
-  if (!booking || !Number.isSafeInteger(Number(booking.serviceId)) || Number(booking.serviceId) <= 0
-    || !/^\d{4}-\d{2}-\d{2}$/.test(booking.date || '')
-    || !/^\d{1,2}:\d{2} (AM|PM)$/.test(booking.time || '')) {
+  const hasBooking = booking && Number.isSafeInteger(Number(booking.serviceId)) && Number(booking.serviceId) > 0
+    && /^\d{4}-\d{2}-\d{2}$/.test(booking.date || '')
+    && /^\d{1,2}:\d{2} (AM|PM)$/.test(booking.time || '');
+  if (!hasBooking && !isPaymentReturn) {
     window.location.href = 'UserAppointment.html';
     return;
+  }
+  if (!hasBooking) {
+    booking = null;
+    summaryContainer.hidden = true;
   }
 
   function setText(id, value) {
@@ -91,6 +99,10 @@
     let checkoutState = 'ready';
 
     async function createCheckoutSession() {
+      if (!booking) {
+        window.location.href = 'UserAppointment.html';
+        return;
+      }
       confirmButton.disabled = true;
       confirmButton.textContent = 'STARTING SECURE CHECKOUT...';
       showMessage('', '');
@@ -147,9 +159,11 @@
           if (statusData.status === 'failed' || statusData.status === 'expired') {
             checkoutReference = null;
             checkoutState = 'ready';
-            showMessage('PayMongo did not complete this payment. You can try checkout again.', 'error');
+            showMessage(booking
+              ? 'PayMongo did not complete this payment. You can try checkout again.'
+              : 'PayMongo did not complete this payment. Return to booking to try again.', 'error');
             confirmButton.disabled = false;
-            confirmButton.textContent = 'PAY RESERVATION FEE WITH PAYMONGO';
+            confirmButton.textContent = booking ? 'PAY RESERVATION FEE WITH PAYMONGO' : 'RETURN TO BOOKING';
             return;
           }
 
@@ -176,8 +190,15 @@
               }
               throw new Error(confirmData.message || 'Payment was received, but the appointment could not be confirmed.');
             }
+            if (!confirmData.appointment?.appointment_id) {
+              throw new Error('The server did not confirm the appointment. Check payment status again.');
+            }
 
-            localStorage.removeItem(BOOKING_STORAGE_KEY);
+            try {
+              localStorage.removeItem(BOOKING_STORAGE_KEY);
+            } catch (error) {
+              console.warn('Could not clear the completed booking:', error);
+            }
             checkoutState = 'complete';
             showMessage('Payment verified and appointment created. Redirecting...', 'success');
             setTimeout(() => {
@@ -212,15 +233,13 @@
 
     paymentContainer.append(heading, depositWarning, confirmButton);
 
-    const query = new URLSearchParams(window.location.search);
-    const returnedReference = query.get('reference');
-    if (query.get('payment') === 'success' && returnedReference) {
+    if (isPaymentReturn) {
       verifyAndConfirmPayment(returnedReference);
     } else if (query.get('payment') === 'cancelled') {
       showMessage('Checkout was cancelled. No appointment has been created.', 'info');
     }
   }
 
-  renderSummary();
+  if (booking) renderSummary();
   renderConfirmButton();
 })();

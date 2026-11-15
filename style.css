@@ -2430,8 +2430,12 @@ body.staff-theme-dark .appt-client-info-btn {
 }
 
 .appt-request-dialog {
-  width: min(420px, calc(100% - 40px));
-  max-height: 90vh;
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(420px, calc(100vw - 40px));
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
   box-sizing: border-box;
   border: 0;
   border-radius: 12px;

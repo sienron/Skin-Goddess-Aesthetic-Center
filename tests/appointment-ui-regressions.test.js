@@ -15,6 +15,67 @@ test('confirmed booking redirects to the appointments section of the account pag
   assert.match(accountPage, /data-profile-panel="appointments"/);
 });
 
+test('checkout return verifies payment and redirects even when booking storage is unavailable', async () => {
+  const source = fs.readFileSync(path.join(root, 'appointment-summary.js'), 'utf8');
+  async function runReturn({ status = 'consumed', confirmation = { appointment: { appointment_id: 42 } }, storageUnavailable = false } = {}) {
+    const elements = new Map();
+    const timers = [];
+    const requests = [];
+    function element() {
+      return {
+        hidden: false, textContent: '', children: [],
+        setAttribute() {},
+        addEventListener(type, handler) { this[type] = handler; },
+        append(...children) { this.children.push(...children); },
+        after(child) { elements.set(child.id, child); }
+      };
+    }
+    const summary = element();
+    const payment = element();
+    elements.set('checkoutSummary', summary);
+    elements.set('paymongoCheckout', payment);
+    const document = { getElementById: (id) => elements.get(id) || null, createElement: element };
+    const window = { location: { search: '?payment=success&reference=SG123', href: '' } };
+    const localStorage = {
+      getItem() { if (storageUnavailable) throw new Error('Storage unavailable'); return null; },
+      removeItem() { if (storageUnavailable) throw new Error('Storage unavailable'); }
+    };
+    const fetch = async (url) => {
+      requests.push(url);
+      return { ok: true, json: async () => url.includes('/status/') ? { status } : confirmation };
+    };
+    vm.runInNewContext(source, {
+      document, window, localStorage, fetch, URLSearchParams,
+      setTimeout: (callback) => timers.push(callback),
+      console: { warn() {} }
+    });
+    await new Promise((resolve) => setImmediate(resolve));
+    return { window, summary, payment, elements, requests, timers };
+  }
+
+  const success = await runReturn({ storageUnavailable: true });
+  assert.equal(success.summary.hidden, true);
+  assert.deepEqual(success.requests, [
+    '/api/appointments/paymongo/status/SG123', '/api/appointments/paymongo/confirm'
+  ]);
+  assert.equal(success.window.location.href, '');
+  assert.equal(success.timers.length, 1);
+  success.timers[0]();
+  assert.equal(new URL(success.window.location.href, 'https://skingoddess.online').href,
+    'https://skingoddess.online/UserAccount.html#appointments');
+
+  const invalidConfirmation = await runReturn({ confirmation: {} });
+  assert.equal(invalidConfirmation.window.location.href, '');
+  assert.equal(invalidConfirmation.timers.length, 0);
+  assert.match(invalidConfirmation.elements.get('checkoutMessage').textContent, /did not confirm/i);
+
+  const failed = await runReturn({ status: 'failed' });
+  assert.equal(failed.window.location.href, '');
+  assert.equal(failed.payment.children[2].textContent, 'RETURN TO BOOKING');
+  await failed.payment.children[2].click();
+  assert.equal(failed.window.location.href, 'UserAppointment.html');
+});
+
 test('admin appointment status refresh is time-bounded and reports that saved rows remain available', () => {
   const adminSource = fs.readFileSync(path.join(root, 'AdminAppointment.js'), 'utf8');
 
