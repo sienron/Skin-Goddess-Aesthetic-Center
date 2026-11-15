@@ -249,7 +249,7 @@ app.get('/InventoryDashboard.html', requireRole('inventory_officer'), (req, res)
 });
 
 app.get('/', (req, res) => {
-  res.sendFile(path.join(publicDir, 'LoginPage.html'));
+  res.sendFile(path.join(publicDir, 'index.html'));
 });
 
 app.get('/LoginPage.html', (req, res) => {

@@ -24,6 +24,16 @@ test('admin appointment status refresh is time-bounded and reports that saved ro
   assert.doesNotMatch(adminSource, /The appointment list is still being loaded\./);
 });
 
+test('admin treatment history uses its admin appointments endpoint while staff keeps its own endpoint', () => {
+  const historyScript = fs.readFileSync(path.join(root, 'staff-treatment-history.js'), 'utf8');
+  const adminPage = fs.readFileSync(path.join(root, 'AdminTreatmentHistory.html'), 'utf8');
+
+  assert.match(adminPage, /data-appointments-endpoint="\/api\/appointments\/admin"/);
+  assert.match(historyScript, /document\.body\.dataset\.appointmentsEndpoint/);
+  assert.match(historyScript, /fetch\(appointmentsEndpoint\)/);
+  assert.match(historyScript, /\/api\/appointments\/treatment-history\/mine/);
+});
+
 test('appointment modal keeps shared helpers private while retaining its public API', () => {
   const modalSource = fs.readFileSync(path.join(root, 'appointment-modal.js'), 'utf8');
   const staffSource = fs.readFileSync(path.join(root, 'appointments-staff.js'), 'utf8');

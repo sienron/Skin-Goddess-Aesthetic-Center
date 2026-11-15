@@ -32790,3 +32790,125 @@ body.staff-theme-dark section.staff-sidebar .profile-card:hover {
     padding: 20px;
   }
 }
+
+/* Keep admin workspaces aligned with the Finance typography and surfaces. */
+body.sg-admin-typography:not(.staff-theme-dark) .um-shell,
+body.sg-admin-typography:not(.staff-theme-dark) .um-shell .um-main {
+  color: #201c18;
+}
+
+body.sg-admin-typography .um-shell :not(i) {
+  font-family: "Raleway", sans-serif !important;
+}
+
+body.sg-admin-typography .um-shell .um-header__title,
+body.sg-admin-typography .um-shell .um-main h1,
+body.sg-admin-typography .um-shell .um-main h2 {
+  font-family: "Playfair Display", Georgia, serif !important;
+  font-weight: 600;
+}
+
+body.sg-admin-typography .um-shell .inventory-header h1 {
+  font-size: 26px !important;
+  letter-spacing: 0;
+  line-height: 1.2;
+}
+
+body.sg-admin-typography:not(.staff-theme-dark) .um-shell .um-header__title,
+body.sg-admin-typography:not(.staff-theme-dark) .um-shell .um-main h1,
+body.sg-admin-typography:not(.staff-theme-dark) .um-shell .um-main h2 {
+  color: #201c18;
+}
+
+body.sg-admin-typography .um-shell .um-header__title {
+  font-size: 26px !important;
+  letter-spacing: 0;
+  line-height: 1.2;
+}
+
+body.sg-admin-typography:not(.staff-theme-dark) .um-shell .um-header__subtitle {
+  color: #756c62;
+  font-size: 13px !important;
+}
+
+body.sg-admin-typography:not(.staff-theme-dark) .um-shell {
+  background-color: #fff;
+}
+
+body.sg-admin-typography:not(.staff-theme-dark) .um-shell .um-main,
+body.sg-admin-typography:not(.staff-theme-dark) .um-shell .inventory-page {
+  background-color: #fff !important;
+}
+
+body.sg-admin-typography:not(.staff-theme-dark) .um-shell .um-header,
+body.sg-admin-typography:not(.staff-theme-dark) .um-shell .inventory-header {
+  border-bottom-color: #e7ddc9;
+  background: #fff;
+  box-shadow: none;
+}
+
+body.sg-admin-typography:not(.staff-theme-dark) .um-shell .um-btn--primary {
+  border-color: #8a6e2f !important;
+  background: #8a6e2f !important;
+}
+
+body.sg-admin-typography:not(.staff-theme-dark) .um-shell .um-btn--primary:hover:not(:disabled) {
+  border-color: #705725 !important;
+  background: #705725 !important;
+}
+
+body.sg-admin-typography:not(.staff-theme-dark) .um-shell .btn-add-product {
+  border-color: #8a6e2f;
+  background: #8a6e2f;
+}
+
+body.sg-admin-typography:not(.staff-theme-dark) .um-shell .btn-add-product:hover:not(:disabled) {
+  border-color: #705725;
+  background: #705725;
+}
+
+body.sg-admin-typography:not(.staff-theme-dark) .um-shell .um-btn--ghost {
+  border-color: #d8d1c4;
+  border-radius: 6px;
+  background: #fff;
+  color: #332f29;
+}
+
+body.sg-admin-typography:not(.staff-theme-dark) .um-shell .um-btn--ghost:hover:not(:disabled) {
+  border-color: #8a6e2f;
+  background: #f8f6f1;
+}
+
+body.sg-admin-typography:not(.staff-theme-dark) .um-shell .um-tab--active {
+  border-color: #8a6e2f;
+  color: #705725;
+}
+
+body.sg-admin-typography:not(.staff-theme-dark) .um-shell input:not([type="checkbox"]):not([type="radio"]):focus,
+body.sg-admin-typography:not(.staff-theme-dark) .um-shell select:focus,
+body.sg-admin-typography:not(.staff-theme-dark) .um-shell textarea:focus {
+  border-color: #9b7a35;
+  box-shadow: 0 0 0 3px rgba(155, 122, 53, .13);
+  outline: 0;
+}
+
+@media (min-width: 1025px) {
+  body.sg-admin-typography .um-shell > .um-main > .um-header {
+    box-sizing: border-box;
+    height: 78px;
+    min-height: 78px;
+    flex-shrink: 0;
+  }
+
+  body.sg-admin-typography .um-shell > .um-main > .inventory-header {
+    box-sizing: border-box;
+    min-height: 78px;
+    align-items: center;
+  }
+}
+
+@media (max-width: 640px) {
+  body.sg-admin-typography .um-shell .um-header__title {
+    font-size: 22px !important;
+  }
+}

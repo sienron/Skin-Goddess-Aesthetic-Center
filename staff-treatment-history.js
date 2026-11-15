@@ -8,6 +8,9 @@
     const notesList = document.getElementById("treatmentNotesList");
     if (!tableBody || !searchInput || !tableSummary || !notesModal || !notesModalClose || !notesModalTitle || !notesList) return;
 
+    const appointmentsEndpoint = document.body.dataset.appointmentsEndpoint
+        || "/api/appointments/treatment-history/mine";
+
     const statusLabels = {
         confirmed: "CONFIRMED",
         "in-progress": "IN PROGRESS",
@@ -305,7 +308,7 @@
 
     async function loadAppointments() {
         try {
-            const response = await fetch("/api/appointments/treatment-history/mine");
+            const response = await fetch(appointmentsEndpoint);
             if (!response.ok) throw new Error("Could not load appointments.");
             const data = await response.json();
             appointments = Array.isArray(data) ? data.map((appointment) => ({
