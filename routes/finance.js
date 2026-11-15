@@ -777,6 +777,53 @@ router.get('/payments/:id/receipt', createSameOriginFrameHeaders(), endpoint(asy
   const refundAuditNote = String(payment.note || '').split(/\r?\n/)
     .filter((line) => /^(Manual cash refund recorded|PayMongo refund completed)/.test(line.trim()))
     .join('\n') || 'Not recorded';
+  res.setHeader('Cache-Control', 'private, no-store');
+  if (req.query.format === 'xlsx') {
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'Skin Goddess Aesthetic Center';
+    workbook.title = `${documentTitle} ${number}`;
+    const sheet = workbook.addWorksheet('Receipt');
+    sheet.columns = [{ width: 30 }, { width: 60 }];
+    sheet.mergeCells('A1:B1');
+    sheet.getCell('A1').value = 'Skin Goddess Aesthetic Center';
+    sheet.getCell('A1').font = { bold: true, size: 16 };
+    sheet.addRow([documentTitle]);
+    sheet.addRow([isPosted ? 'Receipt number' : 'Original transaction reference', number]);
+    sheet.addRow(['Payment date', payment.payment_date]);
+    sheet.addRow(['Received from', payment.client]);
+    sheet.addRow(['Payment method', paymentMethodLabel(payment.method)]);
+    sheet.addRow(['Status', payment.status]);
+    sheet.addRow(['Reference', payment.reference_no || '—']);
+    sheet.addRow(['Transaction details', detail]);
+    if (payment.product_name) {
+      sheet.addRow(['Quantity', Number(payment.quantity)]);
+      const priceRow = sheet.addRow(['Unit price (PHP)', Number(payment.unit_price)]);
+      priceRow.getCell(2).numFmt = '#,##0.00';
+    }
+    if (!isPosted) {
+      sheet.addRow(['Notice', 'This is an adjustment notice, not proof of a current valid payment.']);
+      if (payment.status === 'reversed') {
+        sheet.addRow(['Reversal reason', payment.reversal_reason || 'Not recorded']);
+        sheet.addRow(['Reversed at', payment.reversed_at ? String(payment.reversed_at) : 'Not recorded']);
+        sheet.addRow(['Reversed by user ID', payment.reversed_by || 'Not recorded']);
+      } else {
+        sheet.addRow(['Refund audit note', refundAuditNote]);
+      }
+    }
+    const totalRow = sheet.addRow([isPosted ? 'Total received (PHP)' : 'Original payment amount (PHP)', Number(payment.amount)]);
+    totalRow.font = { bold: true };
+    totalRow.getCell(2).numFmt = '#,##0.00';
+    sheet.eachRow((row, rowNumber) => {
+      row.getCell(1).font = { ...row.getCell(1).font, bold: true };
+      row.getCell(2).alignment = { vertical: 'top', wrapText: true };
+      if (rowNumber > 2) row.height = 24;
+    });
+    sheet.pageSetup = { fitToPage: true, fitToWidth: 1, fitToHeight: 1 };
+    const buffer = await workbook.xlsx.writeBuffer();
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${number}.xlsx"`);
+    return res.send(Buffer.from(buffer));
+  }
   let adjustmentDetails = '';
   if (!isPosted) {
     const adjustmentReason = payment.status === 'reversed'
@@ -801,9 +848,7 @@ router.get('/payments/:id/receipt', createSameOriginFrameHeaders(), endpoint(asy
           dl{display:grid;grid-template-columns:1fr auto;gap:8px 16px;margin:24px 0}
           dt{color:#555}dd{margin:0;text-align:right}
           .total{border-top:1px solid #ddd;padding-top:16px;font-size:20px;font-weight:700}
-          .actions{margin:24px auto 0;max-width:680px;display:flex;justify-content:flex-end}
-          button{padding:10px 18px;background:#B5892A;border:0;border-radius:6px;color:white;font:inherit;cursor:pointer}
-          @media print{body{padding:0}main{border:0;padding:0}.actions{display:none}}
+          @media print{body{padding:0}main{border:0;padding:0}}
         </style>
       </head>
       <body>
@@ -825,10 +870,8 @@ router.get('/payments/:id/receipt', createSameOriginFrameHeaders(), endpoint(asy
           ${adjustmentDetails}
           <p class="total">${isPosted ? 'Total received' : 'Original payment amount'}: ${safe(money(payment.amount))}</p>
         </main>
-        <div class="actions"><button type="button" onclick="window.print()">${isPosted ? 'Print receipt' : 'Print adjustment notice'}</button></div>
       </body>
     </html>`;
-  res.setHeader('Cache-Control', 'private, no-store');
   res.type('html').send(receipt);
 }));
 

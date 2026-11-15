@@ -9,7 +9,9 @@ test('Sales & Transactions loads the client selection and payment-history handle
   const page = fs.readFileSync(path.join(__dirname, '..', 'FinancesTransactions.html'), 'utf8');
   const client = fs.readFileSync(path.join(__dirname, '..', 'finance-transactions.js'), 'utf8');
 
-  assert.match(page, /finance-transactions\.js\?v=20261115-4/);
+  assert.match(page, /finance-transactions\.js\?v=20261115-5/);
+  assert.match(page, /id="exportReceiptXlsx"/);
+  assert.match(client, /byId\('exportReceiptXlsx'\)\.href = `\$\{receiptUrl\}\?format=xlsx`/);
   assert.match(page, /id="saleClient"/);
   assert.match(page, /id="clientPaymentHistoryModal"/);
   assert.match(page, /<option value="outstanding">Outstanding<\/option>/);

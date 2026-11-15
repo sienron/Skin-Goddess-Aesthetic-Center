@@ -687,7 +687,9 @@
     const receiptButton = event.target.closest('button[data-receipt-id]');
     if (receiptButton) {
       refs.receiptModalTitle.textContent = receiptButton.dataset.receiptTitle;
-      refs.receiptFrame.src = `/api/finance/payments/${encodeURIComponent(receiptButton.dataset.receiptId)}/receipt`;
+      const receiptUrl = `/api/finance/payments/${encodeURIComponent(receiptButton.dataset.receiptId)}/receipt`;
+      refs.receiptFrame.src = receiptUrl;
+      byId('exportReceiptXlsx').href = `${receiptUrl}?format=xlsx`;
       modalOpen(refs.receiptModal);
       return;
     }

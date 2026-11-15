@@ -32,6 +32,10 @@ const sessionSecret = process.env.SESSION_SECRET;
 app.set('trust proxy', 1);
 app.use(createSecurityHeaders());
 
+app.get('/favicon.ico', (req, res) => {
+  res.sendFile(path.join(publicDir, 'images', 'SGLogoNoText-removebg.png'));
+});
+
 // Public readiness check, before session/auth middleware; never exposes DB details.
 app.get('/api/health', require('./utils/health').createHealthHandler(db));
 
