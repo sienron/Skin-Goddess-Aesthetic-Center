@@ -98,7 +98,7 @@ test('public page API queries only published blocks and excludes unpublished pay
   assert.doesNotMatch(JSON.stringify(response.body), /Secret draft|Unpublished private payload|Draft metadata|5f3d9d2a/);
 });
 
-test('content image API serves only images referenced by published content or team members', async () => {
+test('content image API restricts website images to published references and promo images to active customer deals', async () => {
   let query;
   db.query = async (sql, values) => {
     query = { sql, values };
@@ -112,7 +112,15 @@ test('content image API serves only images referenced by published content or te
 
   assert.match(query.sql, /content\.is_published = TRUE/i);
   assert.match(query.sql, /member\.is_published = TRUE/i);
+  assert.match(query.sql, /\$2::text = 'client'\s+AND EXISTS/i);
+  assert.match(query.sql, /FROM promotional_announcements announcement/i);
+  assert.match(query.sql, /announcement\.is_published = TRUE/i);
+  assert.match(query.sql, /announcement\.image_url = '\/api\/content\/images\/' \|\| image\.image_id::text/i);
+  assert.match(query.sql, /announcement\.starts_at IS NULL OR announcement\.starts_at <= NOW\(\)/i);
+  assert.match(query.sql, /announcement\.ends_at IS NULL OR announcement\.ends_at > NOW\(\)/i);
+  assert.deepEqual(query.values, ['5f3d9d2a-8211-4b67-8fcf-2ae9b468a012', null]);
   assert.equal(response.statusCode, 404);
+  assert.equal(response.headers['Cache-Control'], 'no-store');
 });
 
 test('published CMS images remain publicly retrievable', async () => {
@@ -134,4 +142,63 @@ test('published CMS images remain publicly retrievable', async () => {
   assert.equal(response.headers['Cache-Control'], 'no-store');
   assert.match(query, /content\.is_published = TRUE/i);
   assert.match(query, /member\.is_published = TRUE/i);
+});
+
+test('CMS administrators can preview uploaded images before publication or outside a deal schedule', async () => {
+  const image = Buffer.from('draft promo image');
+  let query;
+  db.query = async (sql, values) => {
+    query = { sql, values };
+    return { rows: [{ mime_type: 'image/webp', image_data: image }] };
+  };
+  const response = responseCapture();
+
+  await routeHandler('/images/:imageId', 'get')({
+    params: { imageId: '5f3d9d2a-8211-4b67-8fcf-2ae9b468a012' },
+    session: { userId: 1, role: 'admin' },
+  }, response);
+
+  assert.match(query.sql, /AND \(\s*\$2::text = 'admin'\s+OR EXISTS/i);
+  assert.deepEqual(query.values, ['5f3d9d2a-8211-4b67-8fcf-2ae9b468a012', 'admin']);
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.contentType, 'image/webp');
+  assert.equal(response.sent, image);
+  assert.equal(response.headers['Cache-Control'], 'no-store');
+});
+
+test('customer image requests pass the authenticated role and ignore roles without a signed-in user', async () => {
+  const imageId = '5f3d9d2a-8211-4b67-8fcf-2ae9b468a012';
+  const sessions = [
+    { session: { userId: 2, role: 'client' }, expectedRole: 'client' },
+    { session: { userId: 3, role: 'staff' }, expectedRole: 'staff' },
+    { session: { role: 'admin' }, expectedRole: null },
+    { session: {}, expectedRole: null },
+  ];
+
+  for (const { session, expectedRole } of sessions) {
+    let query;
+    db.query = async (sql, values) => {
+      query = { sql, values };
+      return { rows: [] };
+    };
+    const response = responseCapture();
+    await routeHandler('/images/:imageId', 'get')({ params: { imageId }, session }, response);
+
+    assert.deepEqual(query.values, [imageId, expectedRole]);
+    assert.equal(response.statusCode, 404);
+  }
+});
+
+test('invalid content image IDs are rejected before querying the database', async () => {
+  db.query = async () => {
+    assert.fail('Invalid image IDs must not query the database.');
+  };
+  const response = responseCapture();
+
+  await routeHandler('/images/:imageId', 'get')({
+    params: { imageId: '../../private' },
+    session: { userId: 1, role: 'admin' },
+  }, response);
+
+  assert.equal(response.statusCode, 404);
 });

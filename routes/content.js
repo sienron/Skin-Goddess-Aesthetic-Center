@@ -195,12 +195,16 @@ router.get('/images/:imageId', async (req, res) => {
   if (!/^[0-9a-f-]{36}$/i.test(imageId)) return res.sendStatus(404);
 
   try {
+    // The global requirePrivilegedMfa middleware refreshes the role and verifies
+    // account status and staff MFA before requests reach this router.
+    const viewerRole = req.session?.userId ? req.session.role || null : null;
     const result = await db.query(
       `SELECT image.mime_type, image.image_data
        FROM website_content_images image
        WHERE image.image_id = $1
          AND (
-           EXISTS (
+           $2::text = 'admin'
+           OR EXISTS (
              SELECT 1 FROM homepage_content content
              WHERE content.is_published = TRUE
                AND (
@@ -213,11 +217,21 @@ router.get('/images/:imageId', async (req, res) => {
              WHERE member.is_published = TRUE
                AND member.photo_url = '/api/content/images/' || image.image_id::text
            )
+           OR (
+             $2::text = 'client'
+             AND EXISTS (
+               SELECT 1 FROM promotional_announcements announcement
+               WHERE announcement.is_published = TRUE
+                 AND announcement.image_url = '/api/content/images/' || image.image_id::text
+                 AND (announcement.starts_at IS NULL OR announcement.starts_at <= NOW())
+                 AND (announcement.ends_at IS NULL OR announcement.ends_at > NOW())
+             )
+           )
          )`,
-      [imageId],
+      [imageId, viewerRole],
     );
-    if (!result.rows.length) return res.sendStatus(404);
     res.set('Cache-Control', 'no-store');
+    if (!result.rows.length) return res.sendStatus(404);
     res.type(result.rows[0].mime_type).send(result.rows[0].image_data);
   } catch (error) {
     console.error('Could not load page image:', error.message);

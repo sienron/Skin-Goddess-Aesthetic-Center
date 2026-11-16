@@ -19183,6 +19183,26 @@ body.client-header .announcement-popup__message {
   overflow-wrap: anywhere;
 }
 
+.announcement-popup__end-time {
+  display: block;
+  margin: 4px 0 0;
+  color: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.notification-item__end-time {
+  display: block;
+  margin-top: 4px;
+  color: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
 body.homepage .notification-dropdown,
 body.client-header .notification-dropdown {
   z-index: 5001;

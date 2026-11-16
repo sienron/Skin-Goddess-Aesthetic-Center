@@ -311,6 +311,23 @@
         item.append(status);
     }
 
+    function appendAnnouncementEndTime(container, announcement, className) {
+        if (!announcement.ends_at) return;
+        const endsAt = new Date(announcement.ends_at);
+        if (Number.isNaN(endsAt.getTime())) return;
+
+        const endTime = document.createElement('time');
+        endTime.className = className;
+        endTime.dateTime = endsAt.toISOString();
+        endTime.textContent = `Ends: ${endsAt.toLocaleString('en-PH', {
+            dateStyle: 'medium',
+            timeStyle: 'short',
+            timeZone: 'Asia/Manila',
+            hour12: true
+        })} (PHT)`;
+        container.append(endTime);
+    }
+
     function renderNotificationList() {
         if (!notificationList) return;
         notificationList.replaceChildren();
@@ -330,6 +347,7 @@
             message.textContent = announcement.message;
             item.append(type, title, message);
             appendTimestamp(item, announcement.starts_at);
+            appendAnnouncementEndTime(item, announcement, 'notification-item__end-time');
             if (!isRead) appendUnreadLabel(item);
             notificationList.append(item);
         });
@@ -402,6 +420,7 @@
         message.textContent = announcement.message;
 
         content.append(close, type, title, message);
+        appendAnnouncementEndTime(content, announcement, 'announcement-popup__end-time');
         popup.appendChild(content);
         popup.hidden = false;
         popupBackdrop.hidden = false;
