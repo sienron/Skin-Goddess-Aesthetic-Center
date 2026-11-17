@@ -49,6 +49,11 @@ const expiringSoonCount = document.getElementById("expiringSoonCount");
 const expiredItemsCard = document.getElementById("expiredItemsCard");
 const expiredItemsCount = document.getElementById("expiredItemsCount");
 
+function updateSummaryCardVisibility(card, count) {
+    const numericCount = Number(count);
+    card.hidden = !Number.isFinite(numericCount) || numericCount <= 0;
+}
+
 const deleteModal = document.getElementById("deleteModal");
 const deleteProductName = document.getElementById("deleteProductName");
 const cancelDelete = document.getElementById("cancelDelete");
@@ -273,6 +278,7 @@ async function loadInventory(){
         console.log("TOTAL STOCK:", totalStock);
 
         totalProducts.textContent = totalStock;
+        updateSummaryCardVisibility(totalProductsCard, totalStock);
         
         renderInventory();
 
@@ -297,6 +303,7 @@ function updateExpiredItemsCount(){
     });
 
     expiredItemsCount.textContent = String(expiredProducts.length);
+    updateSummaryCardVisibility(expiredItemsCard, expiredProducts.length);
 }
 
 async function loadRestockedToday(){
@@ -394,6 +401,7 @@ async function loadLowStockCount() {
         });
 
         lowStockCount.textContent = lowStockProducts.length;
+        updateSummaryCardVisibility(lowStockCard, lowStockProducts.length);
 
     } catch (error) {
         console.error("Error loading low-stock count:", error);
@@ -420,6 +428,7 @@ async function loadCriticalStockCount() {
         });
 
         criticalStockCount.textContent = criticalStockProducts.length;
+        updateSummaryCardVisibility(criticalStockCard, criticalStockProducts.length);
 
     } catch (error) {
         console.error("Error loading critical-stock count:", error);
@@ -464,6 +473,7 @@ async function loadOutOfStockCount() {
         });
 
         outOfStockCount.textContent = outOfStockProducts.length;
+        updateSummaryCardVisibility(outOfStockCard, outOfStockProducts.length);
 
     } catch (error) {
         console.error("Error loading out-of-stock count:", error);
@@ -511,6 +521,7 @@ async function loadExpiringSoonCount() {
 
         expiringSoonCount.textContent =
             expiringProducts.length;
+        updateSummaryCardVisibility(expiringSoonCard, expiringProducts.length);
 
     } catch (error) {
 
@@ -790,9 +801,13 @@ function updateStockSummaryFromInventory() {
     );
 
     totalProducts.textContent = totalStock;
+    updateSummaryCardVisibility(totalProductsCard, totalStock);
     lowStockCount.textContent = lowStockProducts.length;
+    updateSummaryCardVisibility(lowStockCard, lowStockProducts.length);
     criticalStockCount.textContent = criticalStockProducts.length;
+    updateSummaryCardVisibility(criticalStockCard, criticalStockProducts.length);
     outOfStockCount.textContent = outOfStockProducts.length;
+    updateSummaryCardVisibility(outOfStockCard, outOfStockProducts.length);
     renderInventorySidebar();
     filterInventory();
 }
@@ -1560,6 +1575,7 @@ confirmDelete.addEventListener("click", async () => {
         await loadLowStockCount();
         await loadCriticalStockToday();
         await loadCriticalStockCount();
+        await loadOutOfStockCount();
         await loadExpiringSoonCount();
 
     } catch(error){
