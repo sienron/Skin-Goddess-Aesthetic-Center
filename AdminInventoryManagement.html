@@ -150,7 +150,12 @@
         <section class="summary-cards">
 
             <div class="summary-card clickable-summary" id="totalProductsCard">
-                <span class="admin-metric-icon" aria-hidden="true"><img src="icons/staff-inventory.svg" alt=""></span>
+                <span class="admin-metric-icon" aria-hidden="true">
+                    <svg class="metric-icon-svg" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 3.25 4.5 7.5v9L12 20.75l7.5-4.25v-9L12 3.25Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M12 3.25v17.5M4.5 7.5l7.5 4.25 7.5-4.25" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </span>
                 <div class="summary-label">TOTAL PRODUCTS</div>
                 <div class="summary-value" id="totalProducts"></div>
                 <div class="summary-info positive" id="restockedToday">
@@ -162,7 +167,13 @@
             </div>
 
             <div class="summary-card clickable-summary" id="lowStockCard">
-                <span class="admin-metric-icon" aria-hidden="true"><img src="icons/staff-inventory.svg" alt=""></span>
+                <span class="admin-metric-icon" aria-hidden="true">
+                    <svg class="metric-icon-svg" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 3.25 4.5 7.5v9L12 20.75l7.5-4.25v-9L12 3.25Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M12 8.5v4.2M12 16.2h.01" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                        <path d="M9.8 13.2 12 15.4l2.2-2.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </span>
                 <div class="summary-label">LOW STOCK ITEMS</div>
                 <div class="summary-value" id="lowStockCount"></div>
                 <div class="summary-info warning" id="lowStockToday" >
@@ -171,7 +182,12 @@
             </div>
 
             <div class="summary-card clickable-summary" id="criticalStockCard">
-                <span class="admin-metric-icon" aria-hidden="true"><img src="icons/staff-inventory.svg" alt=""></span>
+                <span class="admin-metric-icon" aria-hidden="true">
+                    <svg class="metric-icon-svg" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 3.5 3.5 18h17L12 3.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M12 9.2v3.2M12 16.3h.01" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round"/>
+                    </svg>
+                </span>
                 <div class="summary-label">CRITICAL STOCK ITEMS</div>
                 <div class="summary-value" id="criticalStockCount"></div>
                 <div class="summary-info positive" id="criticalStockToday">
@@ -180,7 +196,12 @@
             </div>
 
             <div class="summary-card clickable-summary" id="outOfStockCard">
-                <span class="admin-metric-icon" aria-hidden="true"><img src="icons/staff-inventory.svg" alt=""></span>
+                <span class="admin-metric-icon" aria-hidden="true">
+                    <svg class="metric-icon-svg" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 3.25 4.5 7.5v9L12 20.75l7.5-4.25v-9L12 3.25Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M9 9.5 15 15.5M15 9.5 9 15.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                    </svg>
+                </span>
                 <div class="summary-label">OUT OF STOCK ITEMS</div>
                 <div class="summary-value" id="outOfStockCount"></div>
                 <div class="summary-info positive" id="outOfStockToday">
@@ -189,7 +210,13 @@
             </div>
 
             <div class="summary-card clickable-summary" id="expiringSoonCard">
-                <span class="admin-metric-icon" aria-hidden="true"><img src="icons/staff-inventory.svg" alt=""></span>
+                <span class="admin-metric-icon" aria-hidden="true">
+                    <svg class="metric-icon-svg" viewBox="0 0 24 24" aria-hidden="true">
+                        <rect x="3.5" y="5" width="17" height="15.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.7"/>
+                        <path d="M7.5 3.5v3M16.5 3.5v3M3.5 9.5h17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                        <path d="M12 12.5v3.5l2.5 1.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </span>
                 <div class="summary-label">EXPIRING SOON</div>
                 <div class="summary-value" id="expiringSoonCount"></div>
                 <div class="summary-info danger">
@@ -198,7 +225,13 @@
             </div>
 
             <div class="summary-card clickable-summary" id="expiredItemsCard">
-                <span class="admin-metric-icon" aria-hidden="true"><img src="icons/staff-inventory.svg" alt=""></span>
+                <span class="admin-metric-icon" aria-hidden="true">
+                    <svg class="metric-icon-svg" viewBox="0 0 24 24" aria-hidden="true">
+                        <rect x="3.5" y="5" width="17" height="15.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.7"/>
+                        <path d="M7.5 3.5v3M16.5 3.5v3M3.5 9.5h17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                        <path d="M9 16l6-8M15 16l-6-8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                    </svg>
+                </span>
                 <div class="summary-label">EXPIRED ITEMS</div>
                 <div class="summary-value" id="expiredItemsCount"></div>
                 <div class="summary-info danger">

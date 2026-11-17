@@ -30297,6 +30297,19 @@ body.InventoryManagement .admin-inventory-main #expiringSoonCard {
   height: 19px;
 }
 
+.admin-metric-icon {
+  color: var(--admin-metric-accent, #80621f);
+}
+
+.metric-icon-svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+  color: currentColor;
+  stroke: currentColor;
+  fill: none;
+}
+
 body.InventoryManagement .admin-inventory-main .summary-card {
   min-height: 116px;
   padding: 16px 18px;
