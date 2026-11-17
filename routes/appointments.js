@@ -903,12 +903,12 @@ router.get('/inventory-officer/reviews', requireRole('inventory_officer'), async
         ON review.appointment_id = a.appointment_id
       LEFT JOIN users reviewer ON reviewer.user_id = review.reviewed_by
       WHERE a.appointment_status = 'in_progress'
+        AND (review.reviewed_at IS NULL OR review.reviewed_by IS NULL)
         AND NOT EXISTS (
           SELECT 1 FROM appointment_inventory_deductions deduction
           WHERE deduction.appointment_id = a.appointment_id
         )
-      ORDER BY (review.reviewed_at IS NOT NULL AND review.reviewed_by IS NOT NULL),
-               a.appointment_date, a.appointment_time, a.appointment_id
+      ORDER BY a.appointment_date, a.appointment_time, a.appointment_id
     `);
     return res.json(result.rows.map((appointment) => ({
       ...appointment,
@@ -918,6 +918,39 @@ router.get('/inventory-officer/reviews', requireRole('inventory_officer'), async
   } catch (error) {
     console.error('Error fetching appointments for inventory review:', error);
     return res.status(500).json({ message: 'Could not load appointments awaiting product review.' });
+  }
+});
+
+router.get('/inventory-officer/reviews/reviewed', requireRole('inventory_officer'), async (_req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT a.appointment_id, a.appointment_date::text AS date,
+             a.appointment_time::text AS start, a.appointment_status AS status,
+             s.service_name AS service,
+             COALESCE(NULLIF(BTRIM(CONCAT_WS(' ', a.customer_first_name, a.customer_last_name)), ''), NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), '')), ''), a.walk_in_name, 'Client') AS client,
+             COALESCE(NULLIF(BTRIM(CONCAT_WS(' ', NULLIF(BTRIM(staff.first_name), ''), NULLIF(BTRIM(staff.last_name), ''))), ''), 'Unassigned') AS assigned_to,
+             review.reviewed_at,
+             review.reviewed_by AS reviewer_id,
+             NULLIF(BTRIM(CONCAT_WS(' ', reviewer.first_name, reviewer.last_name)), '') AS reviewer_name
+      FROM appointments a
+      JOIN services s ON s.service_id = a.service_id
+      LEFT JOIN users c ON c.user_id = a.user_id
+      LEFT JOIN users staff ON staff.user_id = a.aesthetician_id
+      JOIN appointment_inventory_review_drafts review
+        ON review.appointment_id = a.appointment_id
+      LEFT JOIN users reviewer ON reviewer.user_id = review.reviewed_by
+      WHERE review.reviewed_at IS NOT NULL
+        AND review.reviewed_by IS NOT NULL
+      ORDER BY review.reviewed_at DESC, a.appointment_date DESC, a.appointment_time DESC, a.appointment_id DESC
+    `);
+    return res.json(result.rows.map((appointment) => ({
+      ...appointment,
+      reviewed_by: appointment.reviewer_name,
+      review_status: 'confirmed'
+    })));
+  } catch (error) {
+    console.error('Error fetching reviewed inventory appointments:', error);
+    return res.status(500).json({ message: 'Could not load reviewed appointments.' });
   }
 });
 

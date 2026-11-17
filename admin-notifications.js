@@ -135,6 +135,46 @@
             return container;
         })()
         : null;
+    let notificationAudioContext = null;
+    function unlockNotificationSound() {
+        if (!inventoryToastContainer || notificationAudioContext) return;
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) {
+            console.warn('Inventory notification sounds are not supported by this browser.');
+            return;
+        }
+        try {
+            notificationAudioContext = new AudioContext();
+            notificationAudioContext.resume().catch((error) => {
+                console.warn('Could not enable inventory notification sounds.', error);
+            });
+        } catch (error) {
+            console.warn('Could not enable inventory notification sounds.', error);
+        }
+    }
+
+    function playInventoryNotificationSound() {
+        if (!notificationAudioContext || notificationAudioContext.state !== 'running') return;
+        const oscillator = notificationAudioContext.createOscillator();
+        const gain = notificationAudioContext.createGain();
+        const startedAt = notificationAudioContext.currentTime;
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(880, startedAt);
+        oscillator.frequency.setValueAtTime(1175, startedAt + 0.09);
+        gain.gain.setValueAtTime(0.0001, startedAt);
+        gain.gain.exponentialRampToValueAtTime(0.16, startedAt + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.0001, startedAt + 0.28);
+        oscillator.connect(gain);
+        gain.connect(notificationAudioContext.destination);
+        oscillator.start(startedAt);
+        oscillator.stop(startedAt + 0.3);
+    }
+
+    if (inventoryToastContainer) {
+        ['pointerdown', 'keydown', 'touchstart'].forEach((eventName) => {
+            document.addEventListener(eventName, unlockNotificationSound, { once: true });
+        });
+    }
     const inventoryPageTitle = document.title;
     let unreadNotificationCount = 0;
     let unreadNotificationTitle = 'New Notification';
@@ -183,6 +223,7 @@
 
     function showInventoryNotificationToast(notification) {
         if (!inventoryToastContainer || notification.notification_id == null) return;
+        playInventoryNotificationSound();
         const toast = document.createElement('article');
         toast.className = 'inventory-notification-toast';
         toast.setAttribute('role', 'status');

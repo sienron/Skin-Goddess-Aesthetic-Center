@@ -19,6 +19,9 @@ const reviewRoute = appointmentsRouter.stack
 const reviewQueueRoute = appointmentsRouter.stack
   .find((layer) => layer.route?.path === '/inventory-officer/reviews' && layer.route.methods.get)
   .route.stack.at(-1).handle;
+const reviewedAppointmentsRoute = appointmentsRouter.stack
+  .find((layer) => layer.route?.path === '/inventory-officer/reviews/reviewed' && layer.route.methods.get)
+  .route.stack.at(-1).handle;
 const adminAppointmentsRoute = appointmentsRouter.stack
   .find((layer) => layer.route?.path === '/admin' && layer.route.methods.get)
   .route.stack.at(-1).handle;
@@ -416,15 +419,14 @@ test('inventory review preselects enabled service suggestions and leaves other p
   assert.deepEqual(mappingQuery.values, [3, '2026-10-17']);
 });
 
-test('Inventory Officer queue includes in-progress appointments and review status', async () => {
+test('Inventory Officer queue includes only in-progress appointments awaiting product review', async () => {
   const originalQuery = db.query;
   let queryText = '';
   db.query = async (sql) => {
     queryText = sql;
     return {
       rows: [
-        { appointment_id: 42, service: 'Test service', reviewed_at: null, reviewer_id: null, reviewer_name: null },
-        { appointment_id: 43, service: 'Other service', reviewed_at: '2026-10-16T00:00:00Z', reviewer_id: 19, reviewer_name: 'Officer' }
+        { appointment_id: 42, service: 'Test service', reviewed_at: null, reviewer_id: null, reviewer_name: null }
       ]
     };
   };
@@ -445,8 +447,47 @@ test('Inventory Officer queue includes in-progress appointments and review statu
   }
 
   assert.match(queryText, /appointment_status = 'in_progress'/);
+  assert.match(queryText, /review\.reviewed_at IS NULL OR review\.reviewed_by IS NULL/);
   assert.match(queryText, /appointment_inventory_deductions/);
-  assert.deepEqual(responseBody.map((item) => item.review_status), ['pending', 'confirmed']);
+  assert.deepEqual(responseBody.map((item) => item.review_status), ['pending']);
+});
+
+test('Inventory Officer reviewed appointments include confirmed records regardless of appointment status', async () => {
+  const originalQuery = db.query;
+  let queryText = '';
+  db.query = async (sql) => {
+    queryText = sql;
+    return {
+      rows: [{
+        appointment_id: 43,
+        status: 'completed',
+        reviewed_at: '2026-10-16T00:00:00Z',
+        reviewer_id: 19,
+        reviewer_name: 'Officer'
+      }]
+    };
+  };
+  let responseBody;
+
+  try {
+    await reviewedAppointmentsRoute({}, {
+      status() {
+        return this;
+      },
+      json(body) {
+        responseBody = body;
+        return this;
+      }
+    });
+  } finally {
+    db.query = originalQuery;
+  }
+
+  assert.match(queryText, /review\.reviewed_at IS NOT NULL/);
+  assert.match(queryText, /review\.reviewed_by IS NOT NULL/);
+  assert.doesNotMatch(queryText, /appointment_status = 'in_progress'/);
+  assert.equal(responseBody[0].review_status, 'confirmed');
+  assert.equal(responseBody[0].reviewed_by, 'Officer');
 });
 
 test('admin status advancement selects only confirmed appointments scheduled to start today', async () => {

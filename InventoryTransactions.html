@@ -22,6 +22,7 @@
         <nav class="inv-sidebar__nav">
             <a href="InventoryManagement.html" class="inv-nav-link"><img src="icons/staff-inventory.svg" alt=""><span>Inventory</span></a>
             <a href="InventoryTransactions.html" class="inv-nav-link inv-nav-link--active" aria-current="page"><img src="icons/finance-transactions.svg" alt=""><span>Stock Transaction Log</span></a>
+            <a href="InventoryReviewedAppointments.html" class="inv-nav-link"><img src="icons/staff-appointments.svg" alt=""><span>Reviewed Appointments</span></a>
         </nav>
 
         <div class="inv-sidebar__account um-sidebar__account">
@@ -57,6 +58,7 @@
             <div class="admin-notification-wrap">
                 <button class="admin-notification-btn" id="adminNotificationBtn" type="button" aria-label="View notifications" aria-haspopup="true" aria-expanded="false" aria-controls="adminNotificationDropdown">
                     <img src="icons/notification-bell.svg" alt="">
+                    <span class="admin-notification-badge" id="inventoryUnreadNotificationCount" aria-live="polite" aria-atomic="true" hidden></span>
                 </button>
                 <div class="admin-notification-dropdown" id="adminNotificationDropdown">
                     <strong>Notifications</strong>

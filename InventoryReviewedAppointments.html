@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reviewed Appointments</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="InventoryManagement.css">
+    <link rel="stylesheet" href="AppointmentInventoryReview.css">
+</head>
+<body class="InventoryManagement inventory-officer-page inventory-transactions-page sg-admin-typography">
+    <aside class="inv-sidebar" id="invSidebar">
+        <a href="InventoryManagement.html" class="inv-sidebar__logo">
+            <div class="logo-container">
+                <img src="images/logo_horizontal.jpg" alt="Skin Goddess Aesthetic Center logo">
+            </div>
+        </a>
+
+        <p class="inv-sidebar__label">My Links</p>
+
+        <nav class="inv-sidebar__nav">
+            <a href="InventoryManagement.html" class="inv-nav-link"><img src="icons/staff-inventory.svg" alt=""><span>Inventory</span></a>
+            <a href="InventoryTransactions.html" class="inv-nav-link"><img src="icons/finance-transactions.svg" alt=""><span>Stock Transaction Log</span></a>
+            <a href="InventoryReviewedAppointments.html" class="inv-nav-link inv-nav-link--active" aria-current="page"><img src="icons/staff-appointments.svg" alt=""><span>Reviewed Appointments</span></a>
+        </nav>
+
+        <div class="inv-sidebar__account um-sidebar__account">
+            <button class="um-sidebar__profile" id="adminProfileBtn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="adminProfileMenu">
+                <span class="inv-avatar um-avatar">A</span>
+                <span class="um-sidebar__account-details">
+                    <span class="inv-sidebar__account-name um-sidebar__account-name">Admin User</span>
+                    <span class="um-sidebar__account-role um-sidebar__account-role">Owner</span>
+                </span>
+            </button>
+            <div class="um-sidebar__account-menu" id="adminProfileMenu" role="menu">
+                <button class="um-sidebar__logout" id="adminLogoutBtn" type="button" role="menuitem">Log out</button>
+            </div>
+        </div>
+    </aside>
+
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+    <header class="inventory-header">
+        <div class="header-left">
+            <button class="sidebar-toggle" id="sidebarToggle" type="button" aria-label="Open inventory menu" aria-controls="invSidebar" aria-expanded="false">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <div class="header-title">
+                <h1>Reviewed Appointments</h1>
+                <p>Appointments with confirmed product reviews</p>
+            </div>
+        </div>
+
+        <div class="header-actions">
+            <div class="admin-notification-wrap">
+                <button class="admin-notification-btn" id="adminNotificationBtn" type="button" aria-label="View notifications" aria-haspopup="true" aria-expanded="false" aria-controls="adminNotificationDropdown">
+                    <img src="icons/notification-bell.svg" alt="">
+                    <span class="admin-notification-badge" id="inventoryUnreadNotificationCount" aria-live="polite" aria-atomic="true" hidden></span>
+                </button>
+                <div class="admin-notification-dropdown" id="adminNotificationDropdown">
+                    <strong>Notifications</strong>
+                    <div class="admin-notification-list">No notifications yet</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="inventory-page">
+        <section class="appointment-review-queue" aria-labelledby="reviewedAppointmentsTitle">
+            <div class="appointment-review-queue__heading">
+                <div>
+                    <h2 id="reviewedAppointmentsTitle">Appointments with Reviewed Products</h2>
+                    <p>Confirmed product reviews remain listed here after the appointment is completed.</p>
+                </div>
+                <button class="btn" id="refreshReviewedAppointments" type="button">Refresh</button>
+            </div>
+            <p class="appointment-review-queue__message" id="reviewedAppointmentsMessage" role="status" aria-live="polite"></p>
+            <div id="reviewedAppointmentsList" class="appointment-review-queue__list"></div>
+        </section>
+    </main>
+
+    <script src="reviewed-appointments.js"></script>
+    <script src="admin-dashboard.js"></script>
+    <script src="admin-notifications.js"></script>
+    <script src="admin-context-nav.js"></script>
+</body>
+</html>

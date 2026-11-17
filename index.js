@@ -144,6 +144,7 @@ function requireRole(...allowedRoles) {
 const INVENTORY_OFFICER_PAGES = new Set([
   '/InventoryManagement.html',
   '/InventoryTransactions.html',
+  '/InventoryReviewedAppointments.html',
 ]);
 
 app.use(async (req, res, next) => {
@@ -228,6 +229,7 @@ const protectedPages = [
 
   { path: '/InventoryManagement.html', roles: ['inventory_officer'] },
   { path: '/InventoryTransactions.html', roles: ['inventory_officer', 'admin'] },
+  { path: '/InventoryReviewedAppointments.html', roles: ['inventory_officer'] },
   { path: '/FinanceDashboard.html', roles: ['finance_officer', 'admin'] },
   { path: '/FinanceExpenses.html', roles: ['finance_officer', 'admin'] },
   { path: '/FinanceReports.html', roles: ['finance_officer', 'admin'] },

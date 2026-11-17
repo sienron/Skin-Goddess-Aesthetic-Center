@@ -96,7 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderQueue(items = []) {
         queueList.replaceChildren();
         if (!items.length) {
-            queueList.appendChild(el('p', 'appointment-review-queue__empty', 'No appointments are currently In Progress.'));
+            queueList.appendChild(el('p', 'appointment-review-queue__empty', 'No appointments are awaiting product review.'));
             return;
         }
         const table = el('div', 'appointment-review-queue__table');
@@ -128,7 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const items = await requestJson('/api/appointments/inventory-officer/reviews');
             renderQueue(items);
-            queueMessage.textContent = `${items.filter((item) => item.review_status === 'pending').length} pending review · ${items.filter((item) => item.review_status === 'confirmed').length} confirmed`;
+            queueMessage.textContent = `${items.length} appointment${items.length === 1 ? '' : 's'} awaiting product review`;
         } catch (error) {
             queueMessage.textContent = error.message || 'Could not load appointments awaiting review.';
             queueMessage.classList.add('is-error');
@@ -314,8 +314,29 @@ document.addEventListener('DOMContentLoaded', () => {
             showEditor();
             renderProducts();
             dialog.showModal();
+            return true;
         } catch (error) {
             queueMessage.textContent = error.message || 'Could not load the product review.';
+            queueMessage.classList.add('is-error');
+            return false;
+        }
+    }
+
+    async function openRequestedReview(appointmentId) {
+        await loadQueue();
+        try {
+            const reviewedAppointments = await requestJson('/api/appointments/inventory-officer/reviews/reviewed');
+            const appointmentToReview = reviewedAppointments.find(
+                (item) => String(item.appointment_id) === appointmentId
+            );
+            if (!appointmentToReview || appointmentToReview.status !== 'in_progress') {
+                throw new Error('This appointment is no longer available for editing.');
+            }
+            if (await openReview(appointmentToReview)) {
+                window.history.replaceState(null, '', window.location.pathname);
+            }
+        } catch (error) {
+            queueMessage.textContent = error.message || 'Could not load the reviewed appointment.';
             queueMessage.classList.add('is-error');
         }
     }
@@ -394,5 +415,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    loadQueue();
+    const requestedReviewId = new URLSearchParams(window.location.search).get('reviewAppointmentId');
+    if (requestedReviewId) {
+        openRequestedReview(requestedReviewId);
+    } else {
+        loadQueue();
+    }
 });
