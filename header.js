@@ -311,21 +311,46 @@
         item.append(status);
     }
 
-    function appendAnnouncementEndTime(container, announcement, className) {
-        if (!announcement.ends_at) return;
-        const endsAt = new Date(announcement.ends_at);
-        if (Number.isNaN(endsAt.getTime())) return;
+    function appendAnnouncementSchedule(container, announcement, className) {
+        const schedule = document.createElement('span');
+        schedule.className = `announcement-schedule ${className}`;
 
-        const endTime = document.createElement('time');
-        endTime.className = className;
-        endTime.dateTime = endsAt.toISOString();
-        endTime.textContent = `Ends: ${endsAt.toLocaleString('en-PH', {
-            dateStyle: 'medium',
-            timeStyle: 'short',
-            timeZone: 'Asia/Manila',
-            hour12: true
-        })} (PHT)`;
-        container.append(endTime);
+        [['Start', announcement.starts_at], ['End', announcement.ends_at]].forEach(([label, value]) => {
+            if (!value) return;
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return;
+
+            const field = document.createElement('span');
+            field.className = 'announcement-schedule__field';
+            const caption = document.createElement('span');
+            caption.className = 'announcement-schedule__label';
+            caption.textContent = `${label} (PHT)`;
+            const time = document.createElement('time');
+            time.className = 'announcement-schedule__time';
+            time.dateTime = date.toISOString();
+            const dateText = document.createElement('span');
+            dateText.className = 'announcement-schedule__date';
+            dateText.textContent = date.toLocaleDateString('en-PH', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                timeZone: 'Asia/Manila'
+            });
+            const clock = document.createElement('span');
+            clock.className = 'announcement-schedule__clock';
+            clock.textContent = date.toLocaleTimeString('en-PH', {
+                hour: 'numeric',
+                minute: '2-digit',
+                timeZone: 'Asia/Manila',
+                hour12: true
+            });
+            time.setAttribute('aria-label', `${dateText.textContent}, ${clock.textContent} PHT`);
+            time.append(dateText, clock);
+            field.append(caption, time);
+            schedule.append(field);
+        });
+
+        if (schedule.children.length) container.append(schedule);
     }
 
     function renderNotificationList() {
@@ -340,14 +365,17 @@
             const type = document.createElement('span');
             type.className = 'notification-item__type';
             type.textContent = announcement.type;
+            const heading = document.createElement('span');
+            heading.className = 'notification-item__heading';
+            heading.append(type);
+            appendAnnouncementSchedule(heading, announcement, 'notification-item__schedule');
             const title = document.createElement('strong');
+            title.className = 'notification-item__title';
             title.textContent = announcement.title;
             const message = document.createElement('span');
             message.className = 'notification-item__message';
             message.textContent = announcement.message;
-            item.append(type, title, message);
-            appendTimestamp(item, announcement.starts_at);
-            appendAnnouncementEndTime(item, announcement, 'notification-item__end-time');
+            item.append(heading, title, message);
             if (!isRead) appendUnreadLabel(item);
             notificationList.append(item);
         });
@@ -420,7 +448,7 @@
         message.textContent = announcement.message;
 
         content.append(close, type, title, message);
-        appendAnnouncementEndTime(content, announcement, 'announcement-popup__end-time');
+        appendAnnouncementSchedule(content, announcement, 'announcement-popup__schedule');
         popup.appendChild(content);
         popup.hidden = false;
         popupBackdrop.hidden = false;
