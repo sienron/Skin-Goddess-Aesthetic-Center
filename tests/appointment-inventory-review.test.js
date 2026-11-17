@@ -969,7 +969,7 @@ test('provisional catalog candidates use exact supplied products and do not assu
   assert.equal(new Set(keys).size, keys.length);
 });
 
-test('Anti-Aging Drip preselects all six configured product suggestions', async () => {
+test('Anti-Aging Drip preselects all six configured product suggestions with quantity one', async () => {
   const suggestedNames = [
     'Macroset (IV Set)',
     '10cc Syringe',
@@ -992,7 +992,7 @@ test('Anti-Aging Drip preselects all six configured product suggestions', async 
 
   assert.equal(result.responseBody.products.length, 6);
   assert.ok(result.responseBody.products.every((product) => product.is_selected));
-  assert.ok(result.responseBody.products.every((product) => product.selected_quantity === null));
+  assert.ok(result.responseBody.products.every((product) => product.selected_quantity === 1));
 });
 
 test('inventory review keeps out-of-stock and insufficient-stock draft selections and quantities', async () => {
@@ -1058,7 +1058,7 @@ test('inventory review leaves products unselected when a service has no configur
   assert.deepEqual(JSON.parse(persistedSelection.values[1]), []);
 });
 
-test('inventory review preselects enabled suggestions without inventing a quantity', async () => {
+test('inventory review defaults enabled suggestions without a configured quantity to one', async () => {
   const result = await loadReview({
     products: [
       { product_id: 12, product_name: 'Unconfirmed quantity', category: 'Treatment', stock_quantity: 5, default_quantity: null, review_note: 'Confirm use', is_suggested: true }
@@ -1067,11 +1067,33 @@ test('inventory review preselects enabled suggestions without inventing a quanti
 
   assert.equal(result.statusCode, 200);
   assert.equal(result.responseBody.products[0].is_selected, true);
-  assert.equal(result.responseBody.products[0].selected_quantity, null);
+  assert.equal(result.responseBody.products[0].default_quantity, 1);
+  assert.equal(result.responseBody.products[0].selected_quantity, 1);
   const persistedSelection = result.queryCalls.find(({ sql }) => /INSERT INTO appointment_inventory_review_drafts/.test(sql));
   assert.deepEqual(JSON.parse(persistedSelection.values[1]), [
-    { productId: 12, quantity: null, isSuggested: true, suggestionDefaultQuantity: null }
+    { productId: 12, quantity: 1, isSuggested: true, suggestionDefaultQuantity: 1 }
   ]);
+});
+
+test('inventory review fills a saved suggested selection with one when its quantity is blank', async () => {
+  const result = await loadReview({
+    products: [{
+      product_id: 12,
+      product_name: 'Suggested product',
+      category: 'Treatment',
+      stock_quantity: 5,
+      default_quantity: null,
+      review_note: 'Confirm use',
+      is_suggested: true
+    }],
+    savedSelection: [
+      { productId: 12, quantity: null, isSuggested: true, suggestionDefaultQuantity: null }
+    ]
+  });
+
+  assert.equal(result.statusCode, 200);
+  assert.equal(result.responseBody.products[0].selected_quantity, 1);
+  assert.equal(result.responseBody.products[0].selected_suggestion_default_quantity, 1);
 });
 
 test('inventory review preserves saved products and quantities without silently changing a confirmed review', async () => {

@@ -257,10 +257,11 @@ document.addEventListener('DOMContentLoaded', () => {
       enabled.addEventListener('change', () => {
         const current = serviceDefaultsState.get(productId) || {
           productId,
-          quantity: '',
+          quantity: enabled.checked ? '1' : '',
           reviewNote: '',
           wasMapped: false
         };
+        if (enabled.checked && !current.quantity) current.quantity = '1';
         current.isEnabled = enabled.checked;
         serviceDefaultsState.set(productId, current);
         renderServiceDefaults();
@@ -299,7 +300,9 @@ document.addEventListener('DOMContentLoaded', () => {
       serviceDefaultsInventory = inventory;
       serviceDefaultsState = new Map(mappings.map((mapping) => [Number(mapping.product_id), {
         productId: Number(mapping.product_id),
-        quantity: mapping.default_quantity == null ? '' : String(mapping.default_quantity),
+        quantity: mapping.default_quantity == null
+          ? (mapping.is_enabled ? '1' : '')
+          : String(mapping.default_quantity),
         isEnabled: Boolean(mapping.is_enabled),
         reviewNote: mapping.review_note || '',
         wasMapped: true

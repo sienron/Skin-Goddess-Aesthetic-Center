@@ -976,10 +976,18 @@ const loadInventoryReview = async (req, res) => {
          AND mapping.is_enabled = TRUE
         ORDER BY product.category, product.product_name, product.product_id
       `, [appointment.service_id, appointment.date]);
-      const productsById = new Map(productsResult.rows.map((product) => [
-        Number(product.product_id),
-        product
-      ]));
+      const productsById = new Map(productsResult.rows.map((product) => {
+        const isSuggested = Boolean(product.is_suggested);
+        return [
+          Number(product.product_id),
+          {
+            ...product,
+            default_quantity: isSuggested
+              ? Number(product.default_quantity ?? 1)
+              : product.default_quantity
+          }
+        ];
+      }));
 
       const draftResult = await client.query(`
         SELECT review.selected_items, review.reviewed_by, review.reviewed_at,
@@ -994,23 +1002,27 @@ const loadInventoryReview = async (req, res) => {
         ? storedSelection
           .filter((item) => productsById.has(Number(item.productId)))
           .filter((item) => !productsById.get(Number(item.productId)).is_expired_for_appointment)
-          .map((item) => ({
-            productId: Number(item.productId),
-            quantity: item.quantity === null ? null : Number(item.quantity),
-            isSuggested: Boolean(item.isSuggested),
-            suggestionDefaultQuantity: item.suggestionDefaultQuantity == null
-              ? null
-              : Number(item.suggestionDefaultQuantity)
-          }))
-        : productsResult.rows
+          .map((item) => {
+            const product = productsById.get(Number(item.productId));
+            const isSuggested = Boolean(item.isSuggested);
+            return {
+              productId: Number(item.productId),
+              quantity: item.quantity === null
+                ? (isSuggested ? Number(product.default_quantity) : null)
+                : Number(item.quantity),
+              isSuggested,
+              suggestionDefaultQuantity: item.suggestionDefaultQuantity == null
+                ? (isSuggested ? Number(product.default_quantity) : null)
+                : Number(item.suggestionDefaultQuantity)
+            };
+          })
+        : [...productsById.values()]
           .filter((product) => product.is_suggested && !product.is_expired_for_appointment)
           .map((product) => ({
             productId: Number(product.product_id),
-            quantity: product.default_quantity == null ? null : Number(product.default_quantity),
+            quantity: Number(product.default_quantity),
             isSuggested: true,
-            suggestionDefaultQuantity: product.default_quantity == null
-              ? null
-              : Number(product.default_quantity)
+            suggestionDefaultQuantity: Number(product.default_quantity)
           }));
       selectedItems.sort((left, right) => left.productId - right.productId);
       const removedMissingSelection = storedSelection.some((item) => (
@@ -1034,7 +1046,7 @@ const loadInventoryReview = async (req, res) => {
         `, [JSON.stringify(selectedItems), req.session.userId, appointmentId]);
       }
       const selectedById = new Map(selectedItems.map((item) => [Number(item.productId), item]));
-      const products = productsResult.rows.map((product) => {
+      const products = [...productsById.values()].map((product) => {
         const selected = selectedById.get(Number(product.product_id));
         return {
           ...product,
@@ -1047,9 +1059,7 @@ const loadInventoryReview = async (req, res) => {
             : null
         };
       });
-      const mappingConfigured = productsResult.rows.some(
-        (product) => product.is_suggested && product.default_quantity != null
-      );
+      const mappingConfigured = [...productsById.values()].some((product) => product.is_suggested);
       return {
         appointment,
         products,
