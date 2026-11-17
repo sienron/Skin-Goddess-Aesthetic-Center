@@ -123,6 +123,89 @@
     }
     let notifications = [];
     let isLoadingNotifications = false;
+    let knownNotificationIds = null;
+    const inventoryToastContainer = document.body.classList.contains('inventory-officer-page')
+        ? (() => {
+            const container = document.createElement('div');
+            container.className = 'inventory-notification-toasts';
+            container.setAttribute('aria-live', 'polite');
+            container.setAttribute('aria-relevant', 'additions');
+            container.setAttribute('aria-label', 'New inventory notifications');
+            document.body.append(container);
+            return container;
+        })()
+        : null;
+    const inventoryPageTitle = document.title;
+    let unreadNotificationCount = 0;
+    let unreadNotificationTitle = 'New Notification';
+    let isNotificationTitleVisible = false;
+    let notificationTitleTimer = null;
+
+    function getNotificationTitle(notification) {
+        const titles = {
+            inventory_low_stock: 'Low Stock Alert',
+            inventory_critical_stock: 'Critical Stock Alert',
+            inventory_expiring_30d: 'Expiring Soon Alert',
+            inventory_expiring_60d: 'Expiring Soon Alert',
+            inventory_expired: 'Expired Item Alert'
+        };
+        if (titles[notification.type]) return titles[notification.type];
+
+        const readableType = String(notification.type || '')
+            .replace(/[_-]+/g, ' ')
+            .replace(/\b\w/g, (letter) => letter.toUpperCase());
+        return readableType || 'New Notification';
+    }
+
+    function updateNotificationTabTitle() {
+        if (!inventoryToastContainer) return;
+        if (unreadNotificationCount === 0) {
+            if (notificationTitleTimer !== null) {
+                window.clearInterval(notificationTitleTimer);
+                notificationTitleTimer = null;
+            }
+            isNotificationTitleVisible = false;
+            document.title = inventoryPageTitle;
+            return;
+        }
+
+        const pageTitle = `${inventoryPageTitle} (${unreadNotificationCount})`;
+        document.title = isNotificationTitleVisible ? unreadNotificationTitle : pageTitle;
+        if (notificationTitleTimer === null) {
+            notificationTitleTimer = window.setInterval(() => {
+                isNotificationTitleVisible = !isNotificationTitleVisible;
+                document.title = isNotificationTitleVisible
+                    ? unreadNotificationTitle
+                    : `${inventoryPageTitle} (${unreadNotificationCount})`;
+            }, 1800);
+        }
+    }
+
+    function showInventoryNotificationToast(notification) {
+        if (!inventoryToastContainer || notification.notification_id == null) return;
+        const toast = document.createElement('article');
+        toast.className = 'inventory-notification-toast';
+        toast.setAttribute('role', 'status');
+
+        const message = document.createElement('p');
+        message.className = 'inventory-notification-toast__message';
+        message.textContent = notification.message || 'You have a new notification.';
+
+        const close = document.createElement('button');
+        close.type = 'button';
+        close.className = 'inventory-notification-toast__close';
+        close.setAttribute('aria-label', 'Close notification');
+        close.textContent = '×';
+
+        const dismissTimer = window.setTimeout(() => toast.remove(), 7000);
+        close.addEventListener('click', () => {
+            window.clearTimeout(dismissTimer);
+            toast.remove();
+        });
+
+        toast.append(message, close);
+        inventoryToastContainer.append(toast);
+    }
 
     function notificationAgeClass(value) {
         const createdAt = new Date(value);
@@ -162,6 +245,27 @@
             if (!response.ok) throw new Error(`Could not load notifications (HTTP ${response.status}).`);
             const data = await response.json();
             notifications = Array.isArray(data.notifications) ? data.notifications : [];
+            unreadNotificationCount = Math.max(0, Number(data.unreadCount) || 0);
+            const latestUnreadNotification = notifications.find((notification) => !notification.is_read);
+            unreadNotificationTitle = latestUnreadNotification
+                ? getNotificationTitle(latestUnreadNotification)
+                : 'New Notification';
+            updateNotificationTabTitle();
+            if (inventoryToastContainer) {
+                if (knownNotificationIds === null) {
+                    knownNotificationIds = new Set(
+                        notifications.map((notification) => String(notification.notification_id))
+                    );
+                } else {
+                    notifications.forEach((notification) => {
+                        const notificationId = String(notification.notification_id);
+                        if (!knownNotificationIds.has(notificationId)) {
+                            showInventoryNotificationToast(notification);
+                            knownNotificationIds.add(notificationId);
+                        }
+                    });
+                }
+            }
             renderUnreadCount(data.unreadCount);
             if (!list) return;
 
@@ -242,6 +346,8 @@
             });
             if (!response.ok) throw new Error(`Could not mark notifications as read (HTTP ${response.status}).`);
             notifications = notifications.map((notification) => ({ ...notification, is_read: true }));
+            unreadNotificationCount = 0;
+            updateNotificationTabTitle();
             list?.querySelectorAll('.admin-notification-item.unread').forEach((item) => {
                 item.classList.remove('unread');
                 item.querySelector('.admin-notification-unread-label')?.remove();
