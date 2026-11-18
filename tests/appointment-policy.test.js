@@ -471,7 +471,7 @@ test('all cancellation requests require strictly more than 24 hours, including a
     try {
       await withFrozenDate('2026-01-05T00:00:00.000Z', () => handler({
         params: { id: '42' },
-        body: { reason: 'Schedule change', description: 'Please cancel this visit.' },
+        body: { reason: 'Schedule change' },
         session: { userId }
       }, response));
     } finally {

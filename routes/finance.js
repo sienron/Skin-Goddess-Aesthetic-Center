@@ -4,7 +4,6 @@ const db = require('../db');
 const { requireRole } = require('../middleware/auth');
 const { DEPOSIT_DEDUCTED_FROM_PRICE, NO_SHOW_DEPOSIT_IS_INCOME } = require('../utils/financeRules');
 const { notifyRoles } = require('../utils/notifications');
-const { LOW_STOCK_THRESHOLD } = require('../utils/inventoryThresholds');
 const { escapeCsvCell } = require('../utils/csv');
 const { createSameOriginFrameHeaders } = require('../middleware/securityHeaders');
 
@@ -890,6 +889,208 @@ router.get('/appointments/:id', endpoint(async (req, res) => {
     payment: { payment_id: null, appointment_id: appointment.appointment_id, customer_id: appointment.customer_id, payment_type: 'appointment', amount: appointment.service_price, method: '—', reference_no: null, note: balanceNote, status: appointment.appointment_status, payment_date: appointment.appointment_date, appointment_date: appointment.appointment_date, appointment_status: appointment.appointment_status, service_price: appointment.service_price, client: appointment.client, email: appointment.email, service: appointment.service },
     history: payments.rows,
   });
+}));
+
+const FINANCE_LEDGER_CTE = `
+  WITH ledger_records AS (
+    SELECT
+      'PAY-' || p.payment_id::text AS transaction_id,
+      'payment'::text AS source_type,
+      p.payment_id::text AS source_id,
+      TO_CHAR(p.created_at AT TIME ZONE 'Asia/Manila', 'YYYY-MM-DD HH24:MI:SS.US') AS transaction_at,
+      (p.created_at AT TIME ZONE 'Asia/Manila')::date AS transaction_date,
+      'money_in'::text AS direction,
+      CASE WHEN p.payment_type = 'product_sale' THEN 'Product Sales' ELSE 'Service Income' END::text AS classification,
+      CASE p.payment_type
+        WHEN 'reservation' THEN 'Reservation Payment'
+        WHEN 'balance' THEN 'Service Balance Payment'
+        WHEN 'product_sale' THEN 'Product Sale'
+        ELSE p.payment_type::text
+      END AS purpose,
+      COALESCE(
+        NULLIF(BTRIM(CONCAT_WS(' ', NULLIF(BTRIM(c.first_name), ''), NULLIF(BTRIM(c.last_name), ''))), ''),
+        a.walk_in_name,
+        CASE WHEN p.payment_type = 'product_sale' THEN 'Product sale' ELSE 'Client' END
+      )::text AS counterparty,
+      p.amount::numeric AS amount,
+      'Payments'::text AS source,
+      'Clinic'::text AS destination,
+      p.method::text AS payment_method,
+      p.reference_no::text AS reference_number,
+      p.status::text AS status,
+      COALESCE(reversal.reversed_by, p.recorded_by)::text AS recorded_by,
+      COALESCE(
+        NULLIF(BTRIM(CONCAT_WS(' ', NULLIF(BTRIM(reversal_recorder.first_name), ''), NULLIF(BTRIM(reversal_recorder.last_name), ''))), ''),
+        NULLIF(BTRIM(CONCAT_WS(' ', NULLIF(BTRIM(recorder.first_name), ''), NULLIF(BTRIM(recorder.last_name), ''))), ''),
+        'Not recorded'
+      )::text AS recorded_by_name,
+      CONCAT_WS(' | ', NULLIF(BTRIM(p.note), ''), CASE WHEN reversal.reason IS NOT NULL THEN 'Reversal: ' || reversal.reason END)::text AS details
+    FROM payments p
+    LEFT JOIN appointments a ON a.appointment_id = p.appointment_id
+    LEFT JOIN users c ON c.user_id = COALESCE(a.user_id, p.customer_id)
+    LEFT JOIN users recorder ON recorder.user_id = p.recorded_by
+    LEFT JOIN payment_reversals reversal ON reversal.payment_id = p.payment_id
+    LEFT JOIN users reversal_recorder ON reversal_recorder.user_id = reversal.reversed_by
+
+    UNION ALL
+
+    SELECT
+      'EXP-' || e.expense_id::text AS transaction_id,
+      'expense'::text AS source_type,
+      e.expense_id::text AS source_id,
+      NULL::text AS transaction_at,
+      e.expense_date::date AS transaction_date,
+      'money_out'::text AS direction,
+      e.category::text AS classification,
+      e.description::text AS purpose,
+      COALESCE(NULLIF(BTRIM(e.supplier), ''), 'Not recorded')::text AS counterparty,
+      e.amount::numeric AS amount,
+      'Expenses'::text AS source,
+      COALESCE(NULLIF(BTRIM(e.supplier), ''), 'Not recorded')::text AS destination,
+      NULL::text AS payment_method,
+      e.reference_no::text AS reference_number,
+      CASE WHEN e.voided_at IS NULL THEN 'recorded' ELSE 'voided' END::text AS status,
+      e.recorded_by::text AS recorded_by,
+      COALESCE(NULLIF(BTRIM(CONCAT_WS(' ', NULLIF(BTRIM(recorder.first_name), ''), NULLIF(BTRIM(recorder.last_name), ''))), ''), 'Not recorded')::text AS recorded_by_name,
+      CONCAT_WS(' | ', NULLIF(BTRIM(e.description), ''), NULLIF(BTRIM(e.void_reason), ''))::text AS details
+    FROM expenses e
+    LEFT JOIN users recorder ON recorder.user_id = e.recorded_by
+  )
+`;
+
+function buildFinanceLedgerFilters(query) {
+  const { from, to } = dateRange(query);
+  const direction = String(query.direction || 'all').toLowerCase();
+  const source = String(query.source || 'all').toLowerCase();
+  const status = String(query.status || 'all').toLowerCase();
+  if (!['all', 'money_in', 'money_out'].includes(direction)) {
+    throw new ApiError(400, 'Choose a valid transaction direction.');
+  }
+  if (!['all', 'payments', 'expenses'].includes(source)) {
+    throw new ApiError(400, 'Choose a valid transaction source.');
+  }
+
+  const clauses = ['transaction_date >= $1::date', 'transaction_date <= $2::date'];
+  const values = [from, to];
+  const addFilter = (sql, value) => {
+    values.push(value);
+    clauses.push(sql.replace('?', `$${values.length}`));
+  };
+  if (direction !== 'all') addFilter('direction = ?', direction);
+  if (source !== 'all') addFilter('LOWER(source_type) = ?', source === 'payments' ? 'payment' : 'expense');
+  if (status !== 'all') addFilter('LOWER(status) = ?', status);
+
+  const classification = String(query.classification || '').trim().slice(0, 100);
+  const method = String(query.method || 'all').toLowerCase();
+  const search = String(query.q || '').trim().slice(0, 100);
+  if (classification && classification !== 'all') addFilter('LOWER(classification) ILIKE ?', `%${classification.toLowerCase()}%`);
+  if (method === 'not-recorded' || method === 'not recorded') clauses.push('payment_method IS NULL');
+  else if (method && method !== 'all') addFilter('LOWER(payment_method) ILIKE ?', `%${method}%`);
+  if (search) addFilter(
+    `CONCAT_WS(' ', transaction_id, counterparty, purpose, classification, source, destination, payment_method, reference_number, status, recorded_by_name, details) ILIKE ?`,
+    `%${search}%`
+  );
+  return { clauses, values, from, to };
+}
+
+router.get('/ledger', endpoint(async (req, res) => {
+  const filters = buildFinanceLedgerFilters(req.query);
+  const { page, limit, offset } = pageValues(req.query, 50);
+  const where = filters.clauses.join(' AND ');
+  const countResult = await db.query(
+    `${FINANCE_LEDGER_CTE} SELECT COUNT(*)::int AS total FROM ledger_records WHERE ${where}`,
+    filters.values
+  );
+  const rowsResult = await db.query(
+    `${FINANCE_LEDGER_CTE}
+     SELECT * FROM ledger_records
+     WHERE ${where}
+     ORDER BY transaction_at DESC NULLS LAST, source_type ASC, source_id DESC
+     LIMIT $${filters.values.length + 1} OFFSET $${filters.values.length + 2}`,
+    [...filters.values, limit, offset]
+  );
+  return res.json({
+    rows: rowsResult.rows,
+    page,
+    limit,
+    total: Number(countResult.rows[0]?.total || 0),
+    from: filters.from,
+    to: filters.to
+  });
+}));
+
+router.get('/ledger/export.xlsx', endpoint(async (req, res) => {
+  const filters = buildFinanceLedgerFilters(req.query);
+  const result = await db.query(
+    `${FINANCE_LEDGER_CTE}
+     SELECT * FROM ledger_records
+     WHERE ${filters.clauses.join(' AND ')}
+     ORDER BY transaction_at DESC NULLS LAST, source_type ASC, source_id DESC`,
+    filters.values
+  );
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet('Transaction Ledger');
+  const exportRows = result.rows.map((record) => ({
+    ...record,
+    transaction_display: record.source_type === 'expense'
+      ? record.transaction_date ? `${record.transaction_date} (time not recorded)` : 'Not recorded'
+      : record.transaction_at || (record.transaction_date ? `${record.transaction_date} (time not recorded)` : 'Not recorded'),
+    payment_method: record.payment_method || 'Not recorded',
+  }));
+  sheet.columns = [
+    { header: 'Transaction ID', key: 'transaction_id', width: 18 },
+    { header: 'Transaction Date / Time', key: 'transaction_display', width: 30 },
+    { header: 'Direction', key: 'direction', width: 14 },
+    { header: 'Sender / Recipient', key: 'counterparty', width: 28 },
+    { header: 'Purpose', key: 'purpose', width: 28 },
+    { header: 'Amount (PHP)', key: 'amount', width: 16 },
+    { header: 'Source', key: 'source', width: 16 },
+    { header: 'Destination', key: 'destination', width: 24 },
+    { header: 'Classification', key: 'classification', width: 24 },
+    { header: 'Payment Method', key: 'payment_method', width: 18 },
+    { header: 'Reference Number', key: 'reference_number', width: 22 },
+    { header: 'Status', key: 'status', width: 14 },
+    { header: 'Recorded By', key: 'recorded_by_name', width: 24 },
+    { header: 'Details', key: 'details', width: 40 }
+  ];
+  sheet.addRows(exportRows);
+  sheet.getRow(1).font = { bold: true };
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition', 'attachment; filename="finance-transaction-ledger.xlsx"');
+  await workbook.xlsx.write(res);
+  return res.end();
+}));
+
+router.get('/cash-closing/export.xlsx', endpoint(async (req, res) => {
+  const { from, to } = dateRange(req.query);
+  const result = await db.query(`
+    SELECT cc.cash_closing_id, cc.business_date::text AS business_date,
+           cc.expected_amount::float8 AS expected_amount,
+           cc.actual_amount::float8 AS actual_amount,
+           cc.variance::float8 AS variance, cc.closed_at,
+           COALESCE(NULLIF(BTRIM(CONCAT_WS(' ', NULLIF(BTRIM(u.first_name), ''), NULLIF(BTRIM(u.last_name), ''))), ''), 'Not recorded') AS closed_by_name
+    FROM cash_closings cc
+    LEFT JOIN users u ON u.user_id = cc.closed_by
+    WHERE cc.business_date BETWEEN $1::date AND $2::date
+    ORDER BY cc.business_date DESC, cc.cash_closing_id DESC
+  `, [from, to]);
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet('Cash Closings');
+  sheet.columns = [
+    { header: 'Closing ID', key: 'cash_closing_id', width: 14 },
+    { header: 'Business Date', key: 'business_date', width: 16 },
+    { header: 'Expected Cash (PHP)', key: 'expected_amount', width: 22 },
+    { header: 'Counted Cash (PHP)', key: 'actual_amount', width: 22 },
+    { header: 'Variance (PHP)', key: 'variance', width: 18 },
+    { header: 'Closed At', key: 'closed_at', width: 24 },
+    { header: 'Closed By', key: 'closed_by_name', width: 24 }
+  ];
+  sheet.addRows(result.rows);
+  sheet.getRow(1).font = { bold: true };
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition', 'attachment; filename="finance-cash-closings.xlsx"');
+  await workbook.xlsx.write(res);
+  return res.end();
 }));
 
 router.get('/transactions', endpoint(async (req, res) => {
@@ -1880,104 +2081,6 @@ async function transactionExportRows(from, to, query) {
   `, values);
 }
 
-async function salesEarnedExportRows(from, to) {
-  return financeQuery(`
-    SELECT sale_date::text AS date, source, record_id, receipt_number, appointment_id,
-      client, details, payment_status, appointment_status, amount::float8 AS amount,
-      recognition_rule
-    FROM (
-      SELECT appointment.appointment_date AS sale_date,
-        'Completed appointment'::text AS source,
-        CONCAT('APT-', appointment.appointment_id)::text AS record_id,
-        NULL::text AS receipt_number,
-        appointment.appointment_id::text AS appointment_id,
-        COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(customer.first_name), ''),
-          NULLIF(BTRIM(customer.last_name), '')), ''), appointment.walk_in_name, 'Client') AS client,
-        service.service_name::text AS details,
-        'not applicable'::text AS payment_status,
-        appointment.appointment_status::text AS appointment_status,
-        appointment.booked_service_price::numeric AS amount,
-        'Booked service price on completed appointment date'::text AS recognition_rule
-      FROM appointments appointment
-      LEFT JOIN users customer ON customer.user_id = appointment.user_id
-      JOIN services service ON service.service_id = appointment.service_id
-      WHERE appointment.is_demo = FALSE
-        AND appointment.appointment_status = 'completed'
-        AND appointment.appointment_date BETWEEN $1::date AND $2::date
-
-      UNION ALL
-
-      SELECT (payment.created_at AT TIME ZONE 'Asia/Manila')::date,
-        'Posted product sale'::text,
-        CONCAT('PAY-', payment.payment_id)::text,
-        CONCAT('SG-RCT-', TO_CHAR(payment.created_at AT TIME ZONE 'Asia/Manila', 'YYYY'),
-          '-', LPAD(payment.payment_id::text, 8, '0')),
-        appointment.appointment_id::text,
-        COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(customer.first_name), ''),
-          NULLIF(BTRIM(customer.last_name), '')), ''), appointment.walk_in_name, 'Product sale'),
-        CASE WHEN sale.payment_id IS NOT NULL
-          THEN CONCAT(sale.product_name, ' × ', sale.quantity)
-          ELSE COALESCE(payment.note, payment.reference_no, 'Product sale')
-        END,
-        payment.status::text,
-        COALESCE(appointment.appointment_status::text, 'not applicable'),
-        payment.amount::numeric,
-        'Posted product-sale amount on payment receipt date'
-      FROM payments payment
-      LEFT JOIN appointments appointment ON appointment.appointment_id = payment.appointment_id
-      LEFT JOIN users customer ON customer.user_id = appointment.user_id
-      LEFT JOIN product_sale_details sale ON sale.payment_id = payment.payment_id
-      WHERE payment.payment_type = 'product_sale' AND payment.status = 'posted'
-        AND COALESCE(appointment.is_demo, FALSE) = FALSE
-        AND (payment.created_at AT TIME ZONE 'Asia/Manila')::date BETWEEN $1::date AND $2::date
-
-      UNION ALL
-
-      SELECT appointment.appointment_date,
-        CASE WHEN appointment.appointment_status = 'no_show'
-          THEN 'Retained no-show deposit'
-          ELSE 'Forfeited cancellation deposit'
-        END,
-        CONCAT('PAY-', payment.payment_id)::text,
-        CONCAT('SG-RCT-', TO_CHAR(payment.created_at AT TIME ZONE 'Asia/Manila', 'YYYY'),
-          '-', LPAD(payment.payment_id::text, 8, '0')),
-        appointment.appointment_id::text,
-        COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(customer.first_name), ''),
-          NULLIF(BTRIM(customer.last_name), '')), ''), appointment.walk_in_name, 'Client'),
-        service.service_name::text,
-        payment.status::text,
-        appointment.appointment_status::text,
-        payment.amount::numeric,
-        CASE WHEN appointment.appointment_status = 'no_show'
-          THEN 'Retained under the configured no-show deposit rule'
-          ELSE 'Cancellation deposit explicitly marked forfeited'
-        END
-      FROM appointments appointment
-      JOIN payments payment ON payment.appointment_id = appointment.appointment_id
-      LEFT JOIN users customer ON customer.user_id = appointment.user_id
-      JOIN services service ON service.service_id = appointment.service_id
-      WHERE payment.payment_type = 'reservation' AND payment.status = 'posted'
-        AND appointment.is_demo = FALSE
-        AND (
-          (appointment.appointment_status = 'no_show' AND $3::boolean)
-          OR (appointment.appointment_status = 'cancelled'
-            AND POSITION('[DEPOSIT_FORFEITED]' IN COALESCE(payment.note, '')) > 0)
-        )
-        AND appointment.appointment_date BETWEEN $1::date AND $2::date
-    ) earned
-    ORDER BY sale_date, record_id
-  `, [from, to, NO_SHOW_DEPOSIT_IS_INCOME]);
-}
-
-async function incomeStatementDetailRows(from, to) {
-  const [sales, payments, expenses] = await Promise.all([
-    salesEarnedExportRows(from, to),
-    transactionExportRows(from, to, { status: 'all' }),
-    expenseExportRows(from, to, {}),
-  ]);
-  return { sales: sales.rows, payments: payments.rows, expenses: expenses.rows };
-}
-
 async function expenseExportRows(from, to, query) {
   const values = [from, to];
   const where = ['expense_date BETWEEN $1::date AND $2::date'];
@@ -2005,28 +2108,6 @@ function spreadsheetDate(value) {
   return new Date(`${value}T00:00:00.000Z`);
 }
 
-function statementPeriod(from, to) {
-  const dateLabel = statementDateLabel;
-  const start = new Date(`${from}T00:00:00.000Z`);
-  const end = new Date(`${to}T00:00:00.000Z`);
-  const nextMonth = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth() + 1, 1));
-  const lastDay = new Date(nextMonth.getTime() - 86400000).getUTCDate();
-  if (start.getUTCDate() === 1 && end.getUTCDate() === lastDay
-    && start.getUTCMonth() === end.getUTCMonth() && start.getUTCFullYear() === end.getUTCFullYear()) {
-    return `For the month ended ${dateLabel(to)}`;
-  }
-  return `For the period ${dateLabel(from)} to ${dateLabel(to)}`;
-}
-
-function statementDateLabel(value) {
-  return spreadsheetDate(value).toLocaleDateString('en-US', {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-    timeZone: 'UTC',
-  });
-}
-
 // Use a restrained navy and teal palette for readable management reports.
 const EXCEL_STYLE = {
   navy: 'FF17324D',
@@ -2043,27 +2124,6 @@ const EXCEL_STYLE = {
   red: 'FFA33131',
   redFill: 'FFFBEAEA',
 };
-
-const FINANCIAL_STATEMENT_STYLE = {
-  navy: 'FF333333',
-  blue: 'FFB99A55',
-  slate: 'FF777777',
-  band: 'FFF7F7F7',
-  total: 'FFFFFFFF',
-  border: 'FFD9D9D9',
-  section: 'FFFFFFFF',
-  green: 'FFB99A55',
-  greenFill: 'FFFFFFFF',
-  amber: 'FF777777',
-  amberFill: 'FFFFFFFF',
-  red: 'FF333333',
-  redFill: 'FFFFFFFF',
-  cashIn: 'FFFFFFFF',
-  cashOut: 'FFFFFFFF',
-  finalTotal: 'FFFFFFFF',
-};
-
-const PESO_NUMBER_FORMAT = '₱#,##0.00;(₱#,##0.00)';
 
 function reportStatusStyle(value, style = EXCEL_STYLE) {
   const status = String(value ?? '').trim().toLowerCase();
@@ -2290,866 +2350,14 @@ function addReportDetailSheet(workbook, options) {
   return worksheet;
 }
 
-function addProfessionalReportSheet(workbook, options) {
-  const {
-    name, title, periodLabel, generatedAt, description, headers, widths, records,
-    dateColumns = [], amountColumns = [], quantityColumns = [], filter = true, totals = [],
-    style = EXCEL_STYLE, currencyFormat = '"PHP" #,##0.00;[Red]-"PHP" #,##0.00',
-    orientation = 'landscape', sectionColumns = [1], sectionLabels = [],
-    inflowColumns = [], outflowColumns = [],
-    inflowLabels = [], outflowLabels = [], highlightColumns = [], emphasisLabels = [],
-    finalTotalLabels = [], singleUnderlineLabels = [], doubleUnderlineLabels = [],
-    indentColumns = [], freezeHeader = true, bandedRows = true,
-    autoRowHeight = false, filterEmpty = false,
-  } = options;
-  const isBranded = style === FINANCIAL_STATEMENT_STYLE;
-  const worksheet = workbook.addWorksheet(name);
-  worksheet.columns = widths.map((width) => ({ width }));
-  const columnCount = headers.length;
-  [
-    [1, 'Skin Goddess Aesthetic Center'],
-    [2, title],
-    [3, periodLabel],
-    [4, `Generated: ${generatedAt}`],
-    [5, description],
-  ].forEach(([rowNumber, value]) => {
-    worksheet.mergeCells(rowNumber, 1, rowNumber, columnCount);
-    const cell = worksheet.getCell(rowNumber, 1);
-    cell.value = value;
-    cell.font = { name: 'Aptos', size: rowNumber === 1 ? 15 : 10 };
-    cell.alignment = { vertical: 'middle', wrapText: true };
-  });
-  worksheet.getCell(1, 1).font = { name: 'Aptos', bold: true, size: 15, color: { argb: 'FFFFFFFF' } };
-  worksheet.getCell(1, 1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: style.navy } };
-  if (isBranded) {
-    worksheet.getCell(1, 1).font = { name: 'Aptos', bold: true, size: 15, color: { argb: style.navy } };
-    worksheet.getCell(1, 1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } };
-  }
-  worksheet.getCell(2, 1).font = { name: 'Aptos', bold: true, size: isBranded ? 16 : 13, color: { argb: style.navy } };
-  if (isBranded) worksheet.getCell(2, 1).border = { bottom: { style: 'thin', color: { argb: style.blue } } };
-  worksheet.getCell(3, 1).font = { name: 'Aptos', bold: true, size: 10, color: { argb: style.slate } };
-  worksheet.getCell(4, 1).font = { name: 'Aptos', size: 9, color: { argb: style.slate } };
-  worksheet.getCell(5, 1).font = { name: 'Aptos', italic: true, size: 9, color: { argb: style.slate } };
-  worksheet.getRow(1).height = isBranded ? 30 : 28;
-  worksheet.getRow(2).height = isBranded ? 28 : 24;
-  worksheet.getRow(3).height = 20;
-  worksheet.getRow(4).height = 18;
-  worksheet.getRow(5).height = 42;
-  if (style !== EXCEL_STYLE) worksheet.properties.tabColor = { argb: style.blue };
-
-  const headerRow = 7;
-  headers.forEach((header, index) => { worksheet.getCell(headerRow, index + 1).value = header; });
-  records.forEach((record) => worksheet.addRow(record));
-  const dataEndRow = records.length ? worksheet.lastRow.number : headerRow;
-  dateColumns.forEach((column) => { worksheet.getColumn(column).numFmt = 'dd mmm yyyy'; });
-  amountColumns.forEach((column) => {
-    worksheet.getColumn(column).numFmt = currencyFormat;
-  });
-  quantityColumns.forEach((column) => { worksheet.getColumn(column).numFmt = '#,##0'; });
-
-  const header = worksheet.getRow(headerRow);
-  header.height = 38;
-  header.eachCell({ includeEmpty: true }, (cell) => {
-    cell.font = {
-      name: 'Aptos',
-      bold: true,
-      size: 10,
-      color: { argb: isBranded ? style.navy : 'FFFFFFFF' },
-    };
-    cell.fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: isBranded ? 'FFFFFFFF' : style.navy },
-    };
-    cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
-    cell.border = { bottom: { style: isBranded ? 'thin' : 'medium', color: { argb: style.blue } } };
-  });
-  for (let rowNumber = headerRow + 1; rowNumber <= dataEndRow; rowNumber += 1) {
-    const row = worksheet.getRow(rowNumber);
-    const record = records[rowNumber - headerRow - 1];
-    const sectionColumn = record && sectionColumns.find((column) => (
-      Boolean(record[column - 1]) && record.every((value, index) => (
-        index === column - 1 || value === '' || value == null
-      ))
-    ));
-    const label = String(record?.find((value) => typeof value === 'string' && value.trim()) || '').trim();
-    const isSection = Boolean(sectionColumn) || sectionLabels.includes(label);
-    const isFinalTotal = finalTotalLabels.includes(label);
-    const isSubtotal = isFinalTotal || emphasisLabels.includes(label)
-      || /^Total\b|^Net income\b|^Balance check\b/i.test(label)
-      || (isBranded && /\bsubtotal\b/i.test(label));
-    let lineCount = 1;
-    row.eachCell({ includeEmpty: true }, (cell, columnNumber) => {
-      const font = { name: 'Aptos', size: 10, bold: Boolean(isSection || isSubtotal) };
-      if (isSection || isSubtotal) font.color = { argb: style.navy };
-      cell.font = font;
-      cell.alignment = {
-        vertical: 'middle',
-        horizontal: amountColumns.includes(columnNumber) || quantityColumns.includes(columnNumber)
-          ? 'right'
-          : dateColumns.includes(columnNumber) ? 'center' : 'left',
-        wrapText: true,
-      };
-      cell.border = { bottom: { style: 'hair', color: { argb: style.border } } };
-      if (indentColumns.includes(columnNumber) && !isSection && !isSubtotal && cell.value) {
-        cell.alignment = { ...cell.alignment, indent: 1 };
-      }
-      if (isSubtotal) {
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: isFinalTotal ? style.finalTotal || style.total : style.total } };
-        cell.border = {
-          top: { style: isBranded ? 'thin' : 'medium', color: { argb: style.border } },
-          bottom: doubleUnderlineLabels.includes(label)
-            ? { style: 'double', color: { argb: style.navy } }
-            : singleUnderlineLabels.includes(label)
-              ? { style: 'thin', color: { argb: style.navy } }
-              : { style: 'hair', color: { argb: style.border } },
-        };
-      } else if (isSection) {
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: style.section } };
-        cell.border = { bottom: { style: 'thin', color: { argb: style.border } } };
-      } else if (bandedRows && (rowNumber - headerRow) % 2 === 0) {
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: style.band } };
-      }
-      const unavailableValue = /^(not recorded|not tracked|not available|not determinable|incomplete)\b/i
-        .test(String(cell.value ?? '').trim());
-      const status = reportStatusStyle(cell.value, style);
-      if (status && !isSection && (!isSubtotal || (isBranded && unavailableValue))) {
-        cell.font = { ...cell.font, color: { argb: status.color }, bold: true };
-        if (isBranded && unavailableValue) {
-          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: status.fill } };
-        } else if (/(status|condition)/i.test(headers[columnNumber - 1] || '')) {
-          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: status.fill } };
-        }
-      }
-      if (typeof cell.value === 'number' && cell.value < 0) {
-        cell.font = { ...cell.font, color: { argb: style.red }, bold: true };
-      }
-      if (typeof cell.value === 'number' && inflowColumns.includes(columnNumber)) {
-        cell.font = { ...cell.font, color: { argb: style.green }, bold: true };
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: style.cashIn || style.greenFill } };
-      }
-      if (typeof cell.value === 'number' && outflowColumns.includes(columnNumber)) {
-        cell.font = { ...cell.font, color: { argb: style.slate }, bold: true };
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: style.cashOut || style.band } };
-      }
-      if (typeof cell.value === 'number' && highlightColumns.includes(columnNumber)) {
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: style.cashIn || style.total } };
-        cell.font = { ...cell.font, color: { argb: style.navy }, bold: true };
-      }
-      if (autoRowHeight) {
-        const value = cell.value instanceof Date ? cell.value.toISOString().slice(0, 10) : String(cell.value ?? '');
-        const width = Math.max(10, worksheet.getColumn(columnNumber).width || 12);
-        lineCount = Math.max(lineCount, value.split(/\r?\n/).reduce(
-          (count, line) => count + Math.max(1, Math.ceil(line.length / width)),
-          0
-        ));
-      }
-    });
-    row.height = autoRowHeight
-      ? Math.min(120, Math.max(isSection ? 24 : 30, lineCount * 14 + 8))
-      : 30;
-    if (inflowLabels.includes(label) || outflowLabels.includes(label)) {
-      const fill = inflowLabels.includes(label) ? style.cashIn || style.greenFill : style.cashOut || style.band;
-      row.eachCell({ includeEmpty: true }, (cell) => {
-        if (cell.value !== '' && cell.value != null) {
-          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fill } };
-        }
-      });
-    }
-    if (isFinalTotal) {
-      row.height = Math.max(row.height, 32);
-      row.eachCell({ includeEmpty: true }, (cell) => {
-        cell.font = { ...cell.font, name: 'Aptos', bold: true, size: 11, color: { argb: style.navy } };
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: style.finalTotal || style.total } };
-        if (doubleUnderlineLabels.includes(label)) {
-          cell.border = {
-            ...cell.border,
-            top: { style: 'thin', color: { argb: style.navy } },
-            bottom: { style: 'double', color: { argb: style.navy } },
-          };
-        }
-      });
-    }
-  }
-  totals.forEach((total) => {
-    const row = worksheet.addRow([]);
-    row.getCell(1).value = total.label;
-    row.getCell(total.column).value = total.value;
-    row.getCell(total.column).numFmt = currencyFormat;
-    row.eachCell({ includeEmpty: true }, (cell) => {
-      cell.font = { name: 'Aptos', bold: true, size: 10, color: { argb: style.navy } };
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: style.total } };
-      cell.border = { top: { style: isBranded ? 'thin' : 'medium', color: { argb: isBranded ? style.border : style.blue } } };
-    });
-    row.getCell(total.column).alignment = { horizontal: 'right', vertical: 'middle' };
-    if (isBranded) {
-      row.getCell(total.column).border = {
-        ...row.getCell(total.column).border,
-        bottom: { style: 'double', color: { argb: style.navy } },
-      };
-    }
-    if (autoRowHeight) row.height = 30;
-  });
-
-  const lastRow = worksheet.lastRow.number;
-  worksheet.views = isBranded
-    ? [{ showGridLines: false, ...(freezeHeader ? { state: 'frozen', ySplit: headerRow } : {}) }]
-    : [{ state: 'frozen', ySplit: headerRow }];
-  worksheet.pageSetup = {
-    paperSize: 9,
-    orientation,
-    fitToPage: true,
-    fitToWidth: 1,
-    fitToHeight: 0,
-    printTitlesRow: `${headerRow}:${headerRow}`,
-    printArea: `A1:${worksheet.getColumn(columnCount).letter}${lastRow}`,
-    margins: { left: 0.25, right: 0.25, top: 0.5, bottom: 0.5, header: 0.2, footer: 0.25 },
-  };
-  if (isBranded) worksheet.headerFooter.oddHeader = `&C&"Aptos,Bold"Skin Goddess Aesthetic Center | ${title}`;
-  worksheet.headerFooter.oddFooter = '&LSkin Goddess Aesthetic Center&CFinance report&RPage &P of &N';
-  if (filter && (records.length || filterEmpty)) {
-    worksheet.autoFilter = {
-      from: { row: headerRow, column: 1 },
-      to: { row: dataEndRow, column: columnCount },
-    };
-  }
-  return worksheet;
-}
-
-async function detailedReceivables() {
-  const result = await receivableRows(null, null, {}, false);
-  return {
-    ...result,
-    rows: result.rows.map((row) => ({
-      ...row,
-      transaction_date: row.appointment_date,
-      original_amount: row.service_price,
-      service_name: row.service,
-    })),
-  };
-}
-
-async function refundableDepositLiabilities() {
-  return financeQuery(`
-    SELECT appointment.appointment_id,
-      (payment.created_at AT TIME ZONE 'Asia/Manila')::date::text AS payment_date,
-      CONCAT('SG-RCT-', TO_CHAR(payment.created_at AT TIME ZONE 'Asia/Manila', 'YYYY'),
-        '-', LPAD(payment.payment_id::text, 8, '0')) AS receipt_number,
-      COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(customer.first_name), ''),
-        NULLIF(BTRIM(customer.last_name), '')), ''), appointment.walk_in_name, 'Client') AS client,
-      payment.amount::float8 AS amount,
-      appointment.appointment_status
-    FROM payments payment
-    JOIN appointments appointment ON appointment.appointment_id = payment.appointment_id
-    LEFT JOIN users customer ON customer.user_id = appointment.user_id
-    WHERE payment.payment_type = 'reservation'
-      AND payment.status = 'posted'
-      AND appointment.is_demo = FALSE
-      AND (
-        appointment.appointment_status IN ('pending', 'confirmed', 'in_progress')
-        OR (appointment.appointment_status = 'cancelled'
-          AND POSITION('[DEPOSIT_FORFEITED]' IN COALESCE(payment.note, '')) = 0)
-        OR (appointment.appointment_status = 'no_show' AND NOT $1::boolean)
-      )
-    ORDER BY payment.created_at, payment.payment_id
-  `, [NO_SHOW_DEPOSIT_IS_INCOME]);
-}
-
-async function paymentReversalExportRows(from, to) {
-  return financeQuery(`
-    SELECT reversal.reversal_id,
-      reversal.reversed_at AT TIME ZONE 'Asia/Manila' AS reversed_at,
-      (reversal.reversed_at AT TIME ZONE 'Asia/Manila')::date::text AS date,
-      payment.payment_id,
-      CONCAT('SG-RCT-', TO_CHAR(payment.created_at AT TIME ZONE 'Asia/Manila', 'YYYY'),
-        '-', LPAD(payment.payment_id::text, 8, '0')) AS receipt_number,
-      payment.appointment_id,
-      payment.payment_type,
-      payment.amount::float8 AS amount,
-      payment.method,
-      reversal.reason,
-      COALESCE(NULLIF(CONCAT_WS(' ', NULLIF(BTRIM(customer.first_name), ''),
-        NULLIF(BTRIM(customer.last_name), '')), ''), appointment.walk_in_name, 'Client') AS client
-    FROM payment_reversals reversal
-    JOIN payments payment ON payment.payment_id = reversal.payment_id
-    LEFT JOIN appointments appointment ON appointment.appointment_id = payment.appointment_id
-    LEFT JOIN users customer ON customer.user_id = appointment.user_id
-    WHERE COALESCE(appointment.is_demo, FALSE) = FALSE
-      AND (reversal.reversed_at AT TIME ZONE 'Asia/Manila')::date BETWEEN $1::date AND $2::date
-    ORDER BY reversal.reversed_at, reversal.reversal_id
-  `, [from, to]);
-}
-
-async function inventoryValuationRows() {
-  return financeQuery(`
-    SELECT product_id, product_name, category, stock_quantity,
-      unit_price::float8 AS unit_cost,
-      CASE WHEN unit_price IS NULL THEN NULL
-        ELSE (stock_quantity * unit_price)::float8 END AS inventory_value
-    FROM inventory_products
-    ORDER BY category, product_name, product_id
-  `);
-}
-
-async function sendCompleteFinanceWorkbook(res, from, to) {
-  const [report, details, receivablesResult, liabilitiesResult, inventoryResult, reversalsResult] = await Promise.all([
-    reportData(from, to),
-    incomeStatementDetailRows(from, to),
-    detailedReceivables(),
-    refundableDepositLiabilities(),
-    inventoryValuationRows(),
-    paymentReversalExportRows(from, to),
-  ]);
-  const generatedAt = report.generated_at;
-  const period = statementPeriod(from, to);
-  const snapshotDate = `As of ${statementDateLabel(manilaDate())}`;
-  const workbook = new ExcelJS.Workbook();
-  workbook.creator = 'Skin Goddess Aesthetic Center';
-  workbook.subject = `Financial reports ${from} to ${to}`;
-  workbook.title = `Financial reports ${from} to ${to}`;
-  workbook.company = 'Skin Goddess Aesthetic Center';
-  workbook.created = new Date();
-  workbook.modified = new Date();
-
-  const revenueBySource = new Map();
-  details.sales.forEach((row) => {
-    revenueBySource.set(row.source, (revenueBySource.get(row.source) || 0) + Number(row.amount));
-  });
-  const revenueRows = [
-    ['Revenue', '', ''],
-    ['Treatment Service Revenue', revenueBySource.get('Completed appointment') || 0,
-      'Booked service prices for completed appointments, recognized on appointment date.'],
-    ['Other Revenue', '', ''],
-    ['Product / sales revenue', revenueBySource.get('Posted product sale') || 0,
-      'Posted product-sale payments, recognized on Manila receipt date.'],
-    ['Retained deposit revenue', (revenueBySource.get('Retained no-show deposit') || 0)
-      + (revenueBySource.get('Forfeited cancellation deposit') || 0),
-    'Only retained deposits recognized under the existing finance rules.'],
-    ['Total Revenue', Number(report.income_statement.sales),
-      'Uses the existing sales-earned calculation; excludes ordinary reservation deposits.'],
-    ['Recorded Expenses', '', 'Active recorded expenses by expense date; voided records are excluded.'],
-  ];
-  const expensesByCategory = new Map();
-  details.expenses.filter((row) => row.status === 'active').forEach((row) => {
-    expensesByCategory.set(row.category, (expensesByCategory.get(row.category) || 0) + Number(row.amount));
-  });
-  [...expensesByCategory.entries()].sort(([left], [right]) => left.localeCompare(right))
-    .forEach(([category, amount]) => {
-      revenueRows.push([category, amount, 'Recorded operating expense; expense payment method is not tracked.']);
-    });
-  revenueRows.push(
-    ['Total Expenses', Number(report.income_statement.expenses), 'Non-voided recorded expenses for the selected period.'],
-    ['NET INCOME (LOSS) BEFORE TAX', Number(report.income_statement.sales) - Number(report.income_statement.expenses),
-      'Total recognized revenue less recorded expenses. Cost of services and income tax are not separately recorded; this is not cash collected less expenses.']
-  );
-  addProfessionalReportSheet(workbook, {
-    name: 'Income Statement',
-    title: 'Income Statement',
-    periodLabel: period,
-    generatedAt,
-    description: 'Revenue follows the existing sales-earned rules. Cash collections and refundable deposits are not treated as earned revenue. Cost-of-services detail and income tax are not separately recorded.',
-    headers: ['Line item', 'Amount (PHP)', 'Basis / notes'],
-    widths: [32, 20, 58],
-    records: revenueRows,
-    amountColumns: [2],
-    filter: false,
-    style: FINANCIAL_STATEMENT_STYLE,
-    currencyFormat: PESO_NUMBER_FORMAT,
-    orientation: 'portrait',
-    singleUnderlineLabels: ['Total Revenue', 'Total Expenses'],
-    doubleUnderlineLabels: ['NET INCOME (LOSS) BEFORE TAX'],
-    finalTotalLabels: ['NET INCOME (LOSS) BEFORE TAX'],
-    sectionLabels: ['Recorded Expenses'],
-    indentColumns: [1],
-    freezeHeader: false,
-    bandedRows: false,
-    autoRowHeight: true,
-  });
-
-  const reversalRows = reversalsResult.rows;
-  const paymentRows = details.payments;
-  const activeExpenses = details.expenses.filter((row) => row.status === 'active');
-  const trackedInflows = paymentRows.reduce((sum, row) => sum + Number(row.amount), 0);
-  const datedReversalOutflows = reversalRows.reduce((sum, row) => sum + Number(row.amount), 0);
-  const refundedPaymentCount = paymentRows.filter((row) => row.status === 'refunded').length;
-  const cashFlowRows = [
-    ['', 'Cash Flows from Operating Activities', '', '', '', '', '', '', ''],
-    ['', 'Recorded payment inflows', '', 'Original payment receipts in selected period', '', '', '', trackedInflows, 'All payment records; current payment status appears in detail below.'],
-    ['', 'Dated payment reversals', '', 'Reversals recorded in selected period', '', '', '', datedReversalOutflows, 'Based on the recorded reversal timestamp.'],
-    ['', 'Cash Flows from Investing Activities', '', '', '', '', '', '', ''],
-    ['', 'Investing activity records', '', '', '', '', '', 'Not tracked', 'Investing activity records are not maintained in the finance data.'],
-    ['', 'Cash Flows from Financing Activities', '', '', '', '', '', '', ''],
-    ['', 'Financing activity records', '', '', '', '', '', 'Not tracked', 'Financing activity records are not maintained in the finance data.'],
-    ['', 'Net Increase (Decrease) in Cash — known dated movements', '', 'Recorded inflows less dated reversals', '', '', '', trackedInflows - datedReversalOutflows, 'Incomplete: refund dates and expense settlement dates are not recorded.'],
-    ['', 'Cash and Cash Equivalents at Beginning of Period', '', '', '', '', '', 'Not Available', 'No reliable opening cash or bank balance is recorded.'],
-    ['', 'Cash and Cash Equivalents at End of Period', '', '', '', '', '', 'Not Available', 'Cannot be calculated without a reliable opening balance and complete dated cash movements.'],
-    ['', 'Detailed movements', '', '', '', '', '', '', ''],
-    ...paymentRows.map((row) => [
-      spreadsheetDate(row.date), 'Payment receipt', row.receipt_number,
-      `${row.payment_type}: ${row.details}`, paymentMethodLabel(row.method),
-      Number(row.amount), '', '', `Original receipt; current status: ${row.status}.`,
-    ]),
-    ...reversalRows.map((row) => [
-      spreadsheetDate(row.date), 'Payment reversal', `REV-${row.reversal_id}`,
-      `${row.payment_type}: ${row.reason}`, paymentMethodLabel(row.method),
-      '', Number(row.amount), '', `Reversal of ${row.receipt_number}.`,
-    ]),
-    ...activeExpenses.map((row) => [
-      spreadsheetDate(row.date), 'Recorded expense', row.reference_no || `EXP-${row.expense_id}`,
-      `${row.category}: ${row.description}`, '', '', '', '',
-      `PHP ${Number(row.amount).toFixed(2)} recorded; settlement/payment date and method are not tracked, so it is not included as a cash outflow.`,
-    ]),
-    ...(refundedPaymentCount ? [[
-      '', 'Refund timing unavailable', '', `${refundedPaymentCount} refunded payment record(s) appear in this period by original receipt date.`,
-      '', '', '', '', 'Refund event dates are not stored; refund outflows cannot be attributed to the selected period.',
-    ]] : []),
-  ];
-  addProfessionalReportSheet(workbook, {
-    name: 'Cash Flow',
-    title: 'Statement of Cash Flows',
-    periodLabel: period,
-    generatedAt,
-    description: 'Only dated payment receipts and recorded reversals are treated as cash movements. Expenses have no settlement record; refund event dates are unavailable. Opening Balance Not Available; ending cash balance is not authoritative or calculable.',
-    headers: ['Date', 'Event', 'Reference', 'Description', 'Payment method', 'Cash In (PHP)', 'Cash Out (PHP)', 'Summary amount / balance (PHP)', 'Status / basis'],
-    widths: [13, 28, 20, 32, 15, 16, 16, 22, 38],
-    records: cashFlowRows,
-    dateColumns: [1],
-    amountColumns: [6, 7, 8],
-    style: FINANCIAL_STATEMENT_STYLE,
-    currencyFormat: PESO_NUMBER_FORMAT,
-    orientation: 'landscape',
-    sectionColumns: [2],
-    inflowColumns: [6],
-    outflowColumns: [7],
-    inflowLabels: ['Recorded payment inflows'],
-    outflowLabels: ['Dated payment reversals'],
-    emphasisLabels: ['Net Increase (Decrease) in Cash — known dated movements'],
-    freezeHeader: true,
-    bandedRows: false,
-    autoRowHeight: true,
-  });
-
-  const receivables = receivablesResult.rows;
-  const receivablesTotal = receivables.reduce((sum, row) => sum + Number(row.outstanding), 0);
-  const knownInventoryValue = inventoryResult.rows.reduce((sum, row) => (
-    row.inventory_value === null ? sum : sum + Number(row.inventory_value)
-  ), 0);
-  const missingInventoryCosts = inventoryResult.rows.filter((row) => row.unit_cost === null).length;
-  const knownDepositLiabilities = liabilitiesResult.rows.reduce((sum, row) => sum + Number(row.amount), 0);
-  const knownAssetsSubtotal = receivablesTotal + knownInventoryValue;
-  const balanceRows = [
-    ['ASSETS', '', ''],
-    ['Current Assets', '', ''],
-    ['Cash on hand / digital balances', 'Not recorded', 'No complete opening balance or current cash/bank balance is maintained.'],
-    ['Accounts receivable', receivablesTotal, 'Outstanding balances for non-cancelled appointments, using booked service prices and eligible posted payments.'],
-    ['Inventory (known recorded-cost valuation)', knownInventoryValue,
-      `Quantity × latest recorded procurement unit cost. ${missingInventoryCosts} product(s) have no unit cost and are excluded from this subtotal.`],
-    ['Non-Current Assets', '', ''],
-    ['Equipment / other assets', 'Not tracked', 'No reliable asset register or equipment valuation is maintained.'],
-    ['Known assets subtotal', knownAssetsSubtotal, 'Includes accounts receivable and inventory with recorded unit cost only; excludes unavailable assets.'],
-    ['Total assets', 'Not determinable', 'Cash, equipment, and any inventory missing recorded unit cost are unavailable.'],
-    ['LIABILITIES', '', ''],
-    ['Current Liabilities', '', ''],
-    ['Recorded refundable customer deposits', knownDepositLiabilities, 'Posted reservation payments on pending, confirmed, and in-progress appointments.'],
-    ['Accounts payable / other current liabilities', 'Not tracked', 'No supported accounts-payable or other current-liability register was found.'],
-    ['Non-Current Liabilities', '', ''],
-    ['Long-term loans and other liabilities', 'Not tracked', 'No supported long-term liability register was found.'],
-    ['Total liabilities', 'Incomplete', 'Only recorded refundable customer deposits are available.'],
-    ['EQUITY', '', ''],
-    ["Owner's capital / retained earnings", 'Not recorded', 'Owner capital, withdrawals, investments, and retained earnings balances are not maintained.'],
-    ['Total liabilities and equity', 'Not determinable', 'Liabilities are incomplete and equity balances are not recorded.'],
-    ['Balance check: Assets − Liabilities − Equity', 'Not determinable',
-      'The accounting equation cannot be evaluated honestly until the unavailable opening balances, liabilities, and equity records are supplied through an approved accounting workflow.'],
-  ];
-  addProfessionalReportSheet(workbook, {
-    name: 'Balance Sheet',
-    title: 'Balance Sheet',
-    periodLabel: snapshotDate,
-    generatedAt,
-    description: 'Point-in-time view of values supported by application records. Missing assets, liabilities, and equity are labeled unavailable; no balancing figures are fabricated.',
-    headers: ['Account / measure', 'Amount (PHP) / status', 'Basis / notes'],
-    widths: [38, 28, 58],
-    records: balanceRows,
-    amountColumns: [2],
-    filter: false,
-    style: FINANCIAL_STATEMENT_STYLE,
-    currencyFormat: PESO_NUMBER_FORMAT,
-    orientation: 'portrait',
-    emphasisLabels: ["Owner's capital / retained earnings"],
-    indentColumns: [1],
-    freezeHeader: false,
-    bandedRows: false,
-    autoRowHeight: true,
-  });
-
-  addProfessionalReportSheet(workbook, {
-    name: 'Accounts Receivable',
-    title: 'Accounts Receivable Subsidiary Ledger',
-    periodLabel: snapshotDate,
-    generatedAt,
-    description: 'Point-in-time outstanding balances for non-cancelled appointments, using booked service prices and eligible posted payments. Due dates are not recorded, so aging / overdue classification is unavailable.',
-    headers: ['Customer / client name', 'Appointment reference', 'Transaction date', 'Due date', 'Service', 'Original amount (PHP)', 'Payments received (PHP)', 'Outstanding balance (PHP)', 'Payment status'],
-    widths: [25, 23, 16, 16, 26, 20, 20, 21, 17],
-    records: receivables.map((row) => [
-      row.client,
-      `APT-${String(row.appointment_id).padStart(4, '0')}`,
-      spreadsheetDate(row.transaction_date),
-      'Not recorded',
-      row.service_name,
-      Number(row.original_amount),
-      Number(row.amount_paid),
-      Number(row.outstanding),
-      row.status,
-    ]),
-    dateColumns: [3],
-    amountColumns: [6, 7, 8],
-    totals: [{ label: 'Total outstanding receivables', column: 8, value: receivablesTotal }],
-    style: FINANCIAL_STATEMENT_STYLE,
-    currencyFormat: PESO_NUMBER_FORMAT,
-    orientation: 'landscape',
-    highlightColumns: [8],
-    freezeHeader: true,
-    autoRowHeight: true,
-    filterEmpty: true,
-  });
-
-  const paymentLedgerRows = [
-    ...paymentRows.map((row) => [
-      spreadsheetDate(row.date),
-      `PAY-${row.payment_id}`,
-      row.receipt_number,
-      'Payment receipt',
-      `${row.payment_type}: ${row.details}`,
-      row.client,
-      paymentMethodLabel(row.method),
-      Number(row.amount),
-      '',
-      Number(row.amount),
-      row.status,
-      row.appointment_id ? `APT-${String(row.appointment_id).padStart(4, '0')}` : '',
-    ]),
-    ...reversalRows.map((row) => [
-      spreadsheetDate(row.date),
-      `REV-${row.reversal_id}`,
-      row.receipt_number,
-      'Payment reversal',
-      row.reason,
-      row.client,
-      paymentMethodLabel(row.method),
-      '',
-      Number(row.amount),
-      Number(row.amount),
-      'reversed',
-      row.appointment_id ? `APT-${String(row.appointment_id).padStart(4, '0')}` : '',
-    ]),
-    ...details.expenses.map((row) => [
-      spreadsheetDate(row.date),
-      `EXP-${row.expense_id}`,
-      row.reference_no || '',
-      'Recorded expense',
-      `${row.category}: ${row.description}`,
-      row.supplier || '',
-      'Not recorded',
-      '',
-      '',
-      Number(row.amount),
-      row.status,
-      '',
-    ]),
-  ].sort((left, right) => left[0] - right[0] || String(left[1]).localeCompare(String(right[1])));
-  addProfessionalReportSheet(workbook, {
-    name: 'Transaction Ledger',
-    title: 'Transaction Ledger',
-    period,
-    generatedAt,
-    description: 'Payments are listed once by original receipt date; dated reversals appear as separate events. Expense records are included but their settlement is not tracked. Refunded payment records have no separate refund event date.',
-    headers: ['Date', 'Transaction ID', 'Reference', 'Type', 'Description', 'Client / supplier', 'Payment method', 'Debit (PHP)', 'Credit (PHP)', 'Amount (PHP)', 'Status', 'Related appointment'],
-    widths: [16, 18, 23, 23, 40, 27, 22, 19, 19, 19, 16, 24],
-    records: paymentLedgerRows,
-    dateColumns: [1],
-    amountColumns: [8, 9, 10],
-    totals: [
-      { label: 'Recorded payment receipts (debit)', column: 8, value: trackedInflows },
-      { label: 'Dated payment reversals (credit)', column: 9, value: datedReversalOutflows },
-    ],
-  });
-
-  addProfessionalReportSheet(workbook, {
-    name: 'Inventory',
-    title: 'Inventory Report',
-    periodLabel: snapshotDate,
-    generatedAt,
-    description: `Current inventory snapshot. Valuation uses quantity × recorded procurement unit cost, not retail selling price. ${missingInventoryCosts} product(s) lack a recorded unit cost. SKU/code and product-specific reorder levels are not maintained; the stock status uses the current global low-stock threshold of 20 units.`,
-    headers: ['Product', 'SKU / code', 'Category', 'Quantity on hand', 'Unit cost (PHP)', 'Inventory value (PHP)', 'Reorder level', 'Stock status'],
-    widths: [38, 20, 42, 20, 22, 24, 18, 20],
-    records: inventoryResult.rows.map((row) => [
-      row.product_name,
-      'Not recorded',
-      row.category,
-      Number(row.stock_quantity),
-      row.unit_cost === null ? 'Not recorded' : Number(row.unit_cost),
-      row.inventory_value === null ? 'Not recorded' : Number(row.inventory_value),
-      LOW_STOCK_THRESHOLD,
-      Number(row.stock_quantity) <= 0 ? 'Out of stock'
-        : Number(row.stock_quantity) <= 5 ? 'Critical'
-          : Number(row.stock_quantity) <= LOW_STOCK_THRESHOLD ? 'Low stock' : 'In stock',
-    ]),
-    amountColumns: [5, 6],
-    quantityColumns: [4, 7],
-    totals: [{ label: 'Known inventory valuation subtotal', column: 6, value: knownInventoryValue }],
-  });
-
-  const buffer = await workbook.xlsx.writeBuffer();
-  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-  res.setHeader('Content-Disposition', `attachment; filename="finance-reports-${from}-to-${to}.xlsx"`);
-  res.send(Buffer.from(buffer));
-}
-
-async function sendIncomeStatementWorkbook(res, from, to, report, chartImages = {}, details) {
-  const workbook = new ExcelJS.Workbook();
-  workbook.creator = 'Skin Goddess Aesthetic Center';
-  workbook.subject = `Financial summary ${from} to ${to}`;
-  workbook.title = `Finance report ${from} to ${to}`;
-  const summary = workbook.addWorksheet('Financial Summary', {
-    pageSetup: {
-      paperSize: 9,
-      orientation: 'landscape',
-      fitToPage: true,
-      fitToWidth: 1,
-      fitToHeight: 1,
-      margins: { left: 0.35, right: 0.35, top: 0.5, bottom: 0.5, header: 0.2, footer: 0.25 },
-    },
-  });
-  summary.columns = [{ width: 25 }, { width: 20 }, { width: 82 }];
-  summary.mergeCells('A1:C1');
-  summary.getCell('A1').value = 'Skin Goddess Aesthetic Center';
-  summary.getCell('A1').font = { bold: true, size: 16, color: { argb: 'FFFFFFFF' } };
-  summary.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: EXCEL_STYLE.navy } };
-  summary.getCell('A1').alignment = { vertical: 'middle' };
-  summary.getRow(1).height = 30;
-  summary.mergeCells('A2:C2');
-  summary.getCell('A2').value = 'Financial Summary';
-  summary.getCell('A2').font = { bold: true, size: 13, color: { argb: EXCEL_STYLE.navy } };
-  summary.getRow(2).height = 24;
-  summary.addRow(['Reporting period', `${from} to ${to}`]);
-  summary.addRow(['Generated (Asia/Manila)', report.generated_at]);
-  [3, 4].forEach((rowNumber) => {
-    summary.getRow(rowNumber).getCell(1).font = { bold: true, color: { argb: EXCEL_STYLE.slate } };
-  });
-  summary.mergeCells('A6:C6');
-  summary.getCell('A6').value = 'Key financial measures';
-  summary.getCell('A6').font = { bold: true, color: { argb: 'FFFFFFFF' } };
-  summary.getCell('A6').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: EXCEL_STYLE.navy } };
-  ['Metric', 'Amount (PHP)', 'Interpretation'].forEach((header, index) => {
-    summary.getCell(7, index + 1).value = header;
-  });
-  summary.getRow(7).height = 25;
-  summary.getRow(7).eachCell({ includeEmpty: true }, (cell) => {
-    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: EXCEL_STYLE.blue } };
-    cell.alignment = { vertical: 'middle', wrapText: true };
-  });
-  const income = report.income_statement;
-  [
-    ['Sales earned', Number(income.sales), 'Recognized revenue shown item-by-item on Sales Earned Detail. It is not the same as cash received.'],
-    ['Cash collected', Number(income.collected), 'Posted payments by Manila receipt date. Refunded and reversed payments are excluded.'],
-    ['Recorded expenses', Number(income.expenses), 'Non-voided expenses by expense date. Voided records remain visible on Expense Register but are excluded.'],
-    ['Net cash after expenses', Number(income.net_income), 'Cash collected less recorded expenses; this is not a complete cash-flow statement.'],
-  ].forEach((values, index) => {
-    const row = summary.addRow(values);
-    row.height = 38;
-    row.getCell(2).numFmt = '"PHP" #,##0.00;[Red]-"PHP" #,##0.00';
-    row.getCell(2).alignment = { horizontal: 'right', vertical: 'middle' };
-    row.getCell(3).alignment = { vertical: 'top', wrapText: true };
-    if (index % 2 === 1) row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: EXCEL_STYLE.band } };
-  });
-  summary.getRow(11).font = { bold: true, color: { argb: EXCEL_STYLE.navy } };
-  summary.getRow(11).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: EXCEL_STYLE.total } };
-  summary.getRow(11).border = { top: { style: 'thin', color: { argb: EXCEL_STYLE.border } } };
-  summary.addRow([]);
-  summary.mergeCells('A13:C13');
-  summary.getCell('A13').value = 'Calculation and date basis';
-  summary.getCell('A13').font = { bold: true, color: { argb: 'FFFFFFFF' } };
-  summary.getCell('A13').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: EXCEL_STYLE.navy } };
-  [
-    ['Sales earned', 'Completed services use booked service price on appointment date; posted product sales use receipt date; retained no-show and explicitly forfeited cancellation deposits follow the configured deposit rules.'],
-    ['Cash collected', 'All payment methods are included when posted. Reservation deposits and balances are counted on payment receipt date; refunds and reversals are excluded.'],
-    ['Expenses', 'Active expense records are counted by expense date. The application does not record an expense settlement method.'],
-    ['Reconciliation', 'See Payment Ledger, Payment References, Expense Register, and Daily Reconciliation for source records and status treatment.'],
-  ].forEach((values, index) => {
-    const row = summary.addRow([values[0], '', values[1]]);
-    row.height = 38;
-    row.getCell(1).font = { bold: true, color: { argb: EXCEL_STYLE.slate } };
-    row.getCell(3).alignment = { vertical: 'top', wrapText: true };
-    if (index % 2 === 1) row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: EXCEL_STYLE.band } };
-  });
-  summary.mergeCells('A18:C18');
-  summary.getCell('A18').value = report.accounting_basis;
-  summary.getCell('A18').font = { italic: true, size: 9, color: { argb: EXCEL_STYLE.slate } };
-  summary.getCell('A18').alignment = { vertical: 'top', wrapText: true };
-  summary.getRow(18).height = 42;
-  summary.views = [{ state: 'frozen', ySplit: 7 }];
-  summary.headerFooter.oddFooter = '&LSkin Goddess Aesthetic Center&CFinance report&RPage &P of &N';
-  summary.pageSetup.printArea = 'A1:C18';
-
-  const salesColumns = [
-    'Date', 'Revenue source', 'Record ID', 'Receipt number',
-    'Client', 'Service / product details', 'Payment / appointment status', 'Sales earned (PHP)',
-  ];
-  addReportDetailSheet(workbook, {
-    name: 'Sales Earned Detail',
-    title: 'Sales Earned Detail',
-    from, to,
-    description: 'Recognized revenue rows that reconcile to Financial Summary. Completed services use booked price; product sales use receipt date; retained deposits follow the configured forfeiture rules.',
-    headers: salesColumns,
-    widths: [15, 25, 16, 22, 26, 38, 25, 20],
-    dateColumns: [1],
-    amountColumns: [8],
-    records: details.sales.map((row) => [
-      spreadsheetDate(row.date), row.source, row.record_id, row.receipt_number || '',
-      row.client, row.details,
-      [row.payment_status !== 'not applicable' ? row.payment_status : '',
-        row.appointment_status !== 'not applicable' ? row.appointment_status : ''].filter(Boolean).join(' / '),
-      Number(row.amount),
-    ]),
-    total: { label: 'Total sales earned', column: 8, value: income.sales },
-  });
-
-  addReportDetailSheet(workbook, {
-    name: 'Payment Ledger',
-    title: 'Payment Ledger — All Statuses',
-    from, to,
-    description: 'All payment records by Manila receipt date. Amounts are original gross transaction amounts; only posted rows count as cash collected.',
-    headers: ['Payment ID', 'Payment date', 'Receipt number', 'Client', 'Payment type',
-      'Service / product details', 'Payment method', 'Original amount (PHP)', 'Status'],
-    widths: [12, 15, 23, 25, 18, 34, 19, 20, 16],
-    dateColumns: [2],
-    amountColumns: [8],
-    records: details.payments.map((row) => [
-      row.payment_id, spreadsheetDate(row.date), row.receipt_number, row.client,
-      row.payment_type, row.details, paymentMethodLabel(row.method), Number(row.amount), row.status,
-    ]),
-    total: {
-      label: 'Posted cash collected (ties to summary)',
-      column: 8,
-      value: income.collected,
-      formula: (first, last) => `SUMIF(I${first}:I${last},"posted",H${first}:H${last})`,
-    },
-  });
-
-  addReportDetailSheet(workbook, {
-    name: 'Payment References',
-    title: 'Payment Reference and Notes',
-    from, to,
-    description: 'Cross-reference by Payment ID or receipt number to review appointment dates, external references, and recorded notes.',
-    headers: ['Payment ID', 'Receipt number', 'Appointment date', 'External reference', 'Recorded note'],
-    widths: [14, 24, 18, 30, 66],
-    dateColumns: [3],
-    records: details.payments.map((row) => [
-      row.payment_id, row.receipt_number,
-      row.appointment_date ? spreadsheetDate(row.appointment_date) : '',
-      row.reference_no || '', row.note || '',
-    ]),
-  });
-
-  addReportDetailSheet(workbook, {
-    name: 'Expense Register',
-    title: 'Expense Register — Active and Voided',
-    from, to,
-    description: 'All expenses by expense date. Voided records are retained for audit context and excluded from recorded expenses.',
-    headers: ['Expense ID', 'Expense date', 'Category', 'Description', 'Amount (PHP)', 'Supplier',
-      'Reference', 'Status', 'Void reason'],
-    widths: [14, 14, 27, 42, 18, 25, 24, 14, 42],
-    dateColumns: [2],
-    amountColumns: [5],
-    records: details.expenses.map((row) => [
-      row.expense_id, spreadsheetDate(row.date), row.category, row.description,
-      Number(row.amount), row.supplier || '', row.reference_no || '', row.status, row.void_reason || '',
-    ]),
-    total: {
-      label: 'Active recorded expenses (ties to summary)',
-      column: 5,
-      value: income.expenses,
-      formula: (first, last, worksheet) => `SUMIF(H${first}:H${last},"active",E${first}:E${last})`,
-    },
-  });
-
-  addReportDetailSheet(workbook, {
-    name: 'Daily Reconciliation',
-    title: 'Daily Collection and Expense Reconciliation',
-    from, to,
-    description: 'Daily totals use posted payments by Manila receipt date and non-voided expenses by expense date.',
-    headers: ['Date', 'Posted collections (PHP)', 'Recorded expenses (PHP)', 'Net after expenses (PHP)'],
-    widths: [18, 28, 28, 28],
-    dateColumns: [1],
-    amountColumns: [2, 3, 4],
-    records: report.daily_cash.map((row) => [
-      spreadsheetDate(row.date), Number(row.collected), Number(row.expenses),
-      Number(row.collected) - Number(row.expenses),
-    ]),
-    total: {
-      label: 'Period total',
-      column: 2,
-      value: income.collected,
-    },
-  });
-  const dailySheet = workbook.getWorksheet('Daily Reconciliation');
-  const dailyTotalRow = dailySheet.lastRow;
-  const dailyFirstDataRow = 7;
-  const dailyLastDataRow = dailyTotalRow.number - 1;
-  [3, 4].forEach((column) => {
-    const letter = dailySheet.getColumn(column).letter;
-    const sourceColumn = letter;
-    const totalCell = dailyTotalRow.getCell(column);
-    totalCell.value = report.daily_cash.length
-      ? { formula: `SUM(${sourceColumn}${dailyFirstDataRow}:${sourceColumn}${dailyLastDataRow})`,
-        result: column === 3 ? Number(income.expenses) : Number(income.net_income) }
-      : 0;
-    totalCell.numFmt = '"PHP" #,##0.00;[Red]-"PHP" #,##0.00';
-  });
-
-  const chartEntries = Object.entries(chartImages);
-  if (chartEntries.length) {
-    const chartSheet = workbook.addWorksheet('Charts', {
-      pageSetup: {
-        paperSize: 9,
-        orientation: 'landscape',
-        fitToPage: true,
-        fitToWidth: 1,
-        fitToHeight: 0,
-        margins: { left: 0.25, right: 0.25, top: 0.5, bottom: 0.5, header: 0.2, footer: 0.25 },
-      },
-    });
-    chartSheet.columns = Array.from({ length: 16 }, () => ({ width: 12 }));
-    chartSheet.headerFooter.oddFooter = '&LSkin Goddess Aesthetic Center&CFinance report&RPage &P of &N';
-    chartEntries.forEach(([title, base64], index) => {
-      const column = (index % 2) * 8;
-      const row = Math.floor(index / 2) * 20;
-      const heading = chartSheet.getCell(row + 1, column + 1);
-      heading.value = title;
-      heading.font = { bold: true, size: 12, color: { argb: EXCEL_STYLE.navy } };
-      const imageId = workbook.addImage({ base64, extension: 'png' });
-      chartSheet.addImage(imageId, {
-        tl: { col: column, row: row + 1 },
-        ext: { width: 560, height: 310 },
-      });
-    });
-  }
-
-  const buffer = await workbook.xlsx.writeBuffer();
-  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-  res.setHeader('Content-Disposition', `attachment; filename="finance-income-statement-${from}-to-${to}.xlsx"`);
-  res.send(Buffer.from(buffer));
-}
-
 router.get('/export.xlsx', endpoint(async (req, res) => {
-  const { from, to } = dateRange(req.query);
   if (req.query.section === 'income-statement') {
-    await sendCompleteFinanceWorkbook(res, from, to);
+    res.status(410).json({ message: 'Accounting statement exports have been retired.' });
     return;
   }
+  const { from, to } = dateRange(req.query);
   if (!['transactions', 'expenses', 'receivables'].includes(req.query.section)) {
-    throw new ApiError(400, 'Excel export section must be transactions, expenses, receivables, or income-statement.');
+    throw new ApiError(400, 'Excel export section must be transactions, expenses, or receivables.');
   }
   const result = req.query.section === 'transactions'
     ? await transactionExportRows(from, to, req.query)
@@ -3160,14 +2368,17 @@ router.get('/export.xlsx', endpoint(async (req, res) => {
 }));
 
 router.post('/export-report.xlsx', endpoint(async (req, res) => {
-  const { from, to } = dateRange(req.body || {});
-  await sendCompleteFinanceWorkbook(res, from, to);
+  res.status(410).json({ message: 'Accounting statement exports have been retired.' });
 }));
 
 router.get('/export.csv', endpoint(async (req, res) => {
-  const { from, to } = dateRange(req.query);
   const section = req.query.section;
-  if (!['transactions', 'expenses', 'income-statement', 'daily-cash'].includes(section)) throw new ApiError(400, 'Invalid export section.');
+  if (section === 'income-statement') {
+    res.status(410).json({ message: 'Accounting statement exports have been retired.' });
+    return;
+  }
+  const { from, to } = dateRange(req.query);
+  if (!['transactions', 'expenses', 'daily-cash'].includes(section)) throw new ApiError(400, 'Invalid export section.');
   if (section === 'transactions') {
     const result = await transactionExportRows(from, to, req.query);
     sendCsvWithMetadata(res, ['Date', 'Type', 'Method', 'Amount (PHP)', 'Status', 'Reference', 'Note', 'Client'], result.rows.map((row) => [row.date, row.payment_type, paymentMethodLabel(row.method), peso(row.amount), row.status, row.reference_no, row.note, row.client]), 'finance-transactions.csv', from, to, section, req.query); return;
@@ -3177,10 +2388,6 @@ router.get('/export.csv', endpoint(async (req, res) => {
     sendCsvWithMetadata(res, ['Date', 'Category', 'Description', 'Amount (PHP)', 'Supplier', 'Reference', 'Status', 'Void reason'], result.rows.map((row) => [row.date, row.category, row.description, peso(row.amount), row.supplier, row.reference_no, row.status, row.void_reason]), 'finance-expenses.csv', from, to, section, req.query); return;
   }
   const report = await reportData(from, to);
-  if (section === 'income-statement') {
-    const income = report.income_statement;
-    sendCsvWithMetadata(res, ['Item', 'Amount (PHP)'], [['Sales earned', peso(income.sales)], ['Cash collected', peso(income.collected)], ['Expenses', peso(income.expenses)], ['Net cash after expenses', peso(income.net_income)]], 'finance-income-statement.csv', from, to, section, req.query); return;
-  }
   sendCsvWithMetadata(res, ['Date', 'Cash collected (PHP)', 'Recorded expenses (PHP)'], report.daily_cash.map((row) => [row.date, peso(row.collected), peso(row.expenses)]), 'finance-daily-cash.csv', from, to, section, req.query);
 }));
 

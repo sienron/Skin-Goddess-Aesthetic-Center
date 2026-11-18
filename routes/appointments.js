@@ -2519,7 +2519,6 @@ router.post('/:id/cancellation-request', requireActiveAccount, async (req, res) 
     const isAssignedAesthetician = appointment.aesthetician_id === req.session.userId;
     const isClient = appointment.user_id === req.session.userId;
     if (!isAssignedAesthetician && !isClient) return res.status(403).json({ message: 'Only the assigned aesthetician or client can request cancellation.' });
-    if (isClient && !description) return res.status(400).json({ message: 'Reason and description are required.' });
     if (appointment.is_demo) {
       return res.status(403).json({ message: 'Synthetic survey appointments cannot be changed.' });
     }

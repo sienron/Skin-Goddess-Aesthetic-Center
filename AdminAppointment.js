@@ -1635,9 +1635,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const sumForfeited = document.getElementById('aptSumForfeited');
   const cancellationRequestsModal = document.getElementById('cancellationRequestsModal');
   const cancellationRequestsBtn = document.getElementById('cancellationRequestsBtn');
+  const reschedulingRequestsBtn = document.getElementById('reschedulingRequestsBtn');
   const cancellationRequestsClose = document.getElementById('cancellationRequestsClose');
+  const cancellationRequestsTitle = document.getElementById('cancellationRequestsTitle');
   const cancellationRequestsList = document.getElementById('cancellationRequestsList');
   const cancellationRequestsSubtitle = document.getElementById('cancellationRequestsSubtitle');
+  let activeRequestType = 'cancellation';
 
   if (!cancelledModal || !cancelledViewBtn || !cancelledBody || !cancelledPills || !reasonList) return;
 
@@ -1756,14 +1759,16 @@ document.addEventListener('DOMContentLoaded', () => {
     return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
   }
 
-  function renderCancellationRequests(requests) {
+  function renderCancellationRequests(requests, requestType = activeRequestType) {
+    const filteredRequests = requests.filter((request) => (request.request_type || 'cancellation') === requestType);
     cancellationRequestsList.textContent = '';
-    cancellationRequestsSubtitle.textContent = requests.length + (requests.length === 1 ? ' pending request' : ' pending requests');
-    if (!requests.length) {
-      cancellationRequestsList.appendChild(el('p', 'apt-sub cancellation-requests-empty', 'No pending cancellation requests.'));
+    cancellationRequestsSubtitle.textContent = filteredRequests.length + (filteredRequests.length === 1 ? ' pending request' : ' pending requests');
+    if (!filteredRequests.length) {
+      const requestLabel = requestType === 'reschedule' ? 'rescheduling' : 'cancellation';
+      cancellationRequestsList.appendChild(el('p', 'apt-sub cancellation-requests-empty', `No pending ${requestLabel} requests.`));
       return;
     }
-    requests.forEach((request) => {
+    filteredRequests.forEach((request) => {
       const card = el('article', 'cancellation-request-card');
       const requestType = request.request_type || 'cancellation';
       const title = el('div', 'cancellation-request-card__title');
@@ -1808,19 +1813,22 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  async function loadCancellationRequests() {
+  async function loadCancellationRequests(requestType = activeRequestType) {
     const response = await fetch('/api/appointments/admin/cancellation-requests', { headers: { Accept: 'application/json' }, cache: 'no-store' });
     const data = await readApiResponse(response);
     if (!response.ok) throw new Error(data.message || 'Could not load cancellation requests.');
-    renderCancellationRequests(Array.isArray(data) ? data : []);
+    renderCancellationRequests(Array.isArray(data) ? data : [], requestType);
   }
 
-  async function openCancellationRequests() {
+  async function openCancellationRequests(requestType = 'cancellation') {
+    activeRequestType = requestType;
+    cancellationRequestsTitle.textContent = requestType === 'reschedule' ? 'Rescheduling Requests' : 'Requests for Cancellation';
+    cancellationRequestsClose.setAttribute('aria-label', requestType === 'reschedule' ? 'Close rescheduling requests' : 'Close cancellation requests');
     cancellationRequestsModal.classList.add('apt-modal-overlay--open');
     document.body.classList.add('modal-open');
     cancellationRequestsList.textContent = '';
     cancellationRequestsList.appendChild(el('p', 'apt-sub cancellation-requests-empty', 'Loading requests…'));
-    try { await loadCancellationRequests(); } catch (error) { cancellationRequestsList.textContent = ''; cancellationRequestsList.appendChild(el('p', 'apt-sub cancellation-requests-empty', error.message)); }
+    try { await loadCancellationRequests(requestType); } catch (error) { cancellationRequestsList.textContent = ''; cancellationRequestsList.appendChild(el('p', 'apt-sub cancellation-requests-empty', error.message)); }
     cancellationRequestsClose.focus();
   }
 
@@ -1842,7 +1850,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  cancellationRequestsBtn.addEventListener('click', openCancellationRequests);
+  cancellationRequestsBtn.addEventListener('click', () => openCancellationRequests('cancellation'));
+  reschedulingRequestsBtn.addEventListener('click', () => openCancellationRequests('reschedule'));
   cancellationRequestsClose.addEventListener('click', closeCancellationRequests);
   cancellationRequestsModal.addEventListener('click', (event) => {
     if (event.target === cancellationRequestsModal) closeCancellationRequests();

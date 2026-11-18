@@ -6,41 +6,19 @@ const ExcelJS = require('exceljs');
 const db = require('../db');
 const financeRouter = require('../routes/finance');
 
-const exportRoute = financeRouter.stack
-  .find((layer) => layer.route?.path === '/export-report.xlsx' && layer.route.methods.post)
-  .route.stack.at(-1).handle;
-const legacyExportRoute = financeRouter.stack
-  .find((layer) => layer.route?.path === '/export.xlsx' && layer.route.methods.get)
-  .route.stack.at(-1).handle;
+function routeHandler(method, routePath) {
+  const layer = financeRouter.stack.find((item) =>
+    item.route?.path === routePath && item.route.methods[method]
+  );
+  assert.ok(layer, `${method.toUpperCase()} ${routePath} route should be registered`);
+  return layer.route.stack.at(-1).handle;
+}
 
-test('Admin and Finance Officer reach the visible shared Reports export from their own navigation', () => {
-  const read = (name) => fs.readFileSync(path.join(__dirname, '..', name), 'utf8');
-  const page = read('FinanceReports.html');
-  const client = read('finance-reports.js');
-  const adminNavigation = read('admin-context-nav.js');
-  const server = read('index.js');
-
-  assert.match(server, /\{\s*path:\s*'\/FinanceReports\.html',\s*roles:\s*\['finance_officer',\s*'admin'\]\s*\}/);
-  assert.match(page, /data-export="income-statement">EXPORT<\/button>/);
-  const styles = read('style.css');
-  assert.match(styles, /\.fin-report-controls \.fin-report-toolbar-export\s*\{[^}]*background:\s*#228b46/i);
-  assert.match(styles, /\.fin-report-controls \.fin-report-toolbar-export:hover\s*\{[^}]*background:\s*#176d36/i);
-  assert.match(page, /<script src="admin-context-nav\.js"><\/script>/);
-  assert.match(page, /Finance navigation/);
-  assert.match(adminNavigation, /\["FinanceReports\.html",\s*"Reports"/);
-  assert.match(adminNavigation, /if \(account\.role !== "admin"\) return/);
-  assert.match(client, /exportButtons\.forEach\(\(button\) => button\.addEventListener\('click'/);
-  assert.match(client, /fetch\('\/api\/finance\/export-report\.xlsx'/);
-  assert.match(client, /method:\s*'POST'/);
-});
+const retiredXlsxRoute = routeHandler('post', '/export-report.xlsx');
+const legacyXlsxRoute = routeHandler('get', '/export.xlsx');
+const legacyCsvRoute = routeHandler('get', '/export.csv');
 
 function financeRows(sql) {
-  if (/SELECT sale_date::text AS date, source/.test(sql)) {
-    return { rows: [
-      { date: '2026-10-02', source: 'Completed appointment', record_id: 'APT-1', receipt_number: null, appointment_id: '1', client: 'Client One', details: 'Facial', payment_status: 'not applicable', appointment_status: 'completed', amount: 1000, recognition_rule: 'Completed service' },
-      { date: '2026-10-03', source: 'Posted product sale', record_id: 'PAY-2', receipt_number: 'SG-RCT-2026-00000002', appointment_id: null, client: 'Client Two', details: 'Cleanser × 1', payment_status: 'posted', appointment_status: 'not applicable', amount: 200, recognition_rule: 'Posted product sale' }
-    ] };
-  }
   if (/SELECT payment\.payment_id/.test(sql)) {
     return { rows: [
       { payment_id: 2, appointment_date: null, date: '2026-10-03', receipt_number: 'SG-RCT-2026-00000002', payment_type: 'product_sale', method: 'cash', amount: 200, status: 'posted', reference_no: 'POS-2', note: null, client: 'Client Two', details: 'Cleanser × 1' },
@@ -53,8 +31,7 @@ function financeRows(sql) {
       { expense_id: 5, date: '2026-10-06', category: 'Utilities', description: 'Voided bill', amount: 25, supplier: null, reference_no: null, status: 'voided', void_reason: 'Duplicate' }
     ] };
   }
-  if (/SELECT\s+a\.appointment_id,\s*(?:a\.user_id AS customer_id,\s*)?a\.appointment_date::text AS appointment_date/.test(sql)
-    && (/ILIKE/.test(sql) || /appointment_date BETWEEN/.test(sql))) {
+  if (/SELECT\s+a\.appointment_id,/.test(sql) && /appointment_date BETWEEN/.test(sql)) {
     return { rows: [{
       appointment_id: 42,
       appointment_date: '2026-10-10',
@@ -65,229 +42,149 @@ function financeRows(sql) {
       outstanding: 700,
     }] };
   }
-  if (/SELECT\s+a\.appointment_id,\s*(?:a\.user_id AS customer_id,\s*)?a\.appointment_date::text AS appointment_date/.test(sql)
-    && !/appointment_date BETWEEN/.test(sql)) {
-    return { rows: [
-      {
-        appointment_id: 1,
-        appointment_date: '2026-10-02',
-        client: 'Client One',
-        service: 'Facial',
-        service_price: 1000,
-        amount_paid: 300,
-        outstanding: 700,
-        status: 'Partially paid',
-      },
-      {
-        appointment_id: 3,
-        appointment_date: '2026-10-11',
-        client: 'Client Three',
-        service: 'Laser',
-        service_price: 500,
-        amount_paid: 0,
-        outstanding: 500,
-        status: 'Unpaid',
-      },
-    ] };
-  }
-  if (/payment_date/.test(sql) && /appointment_status IN/.test(sql)) {
-    return { rows: [{
-      appointment_id: 6,
-      payment_date: '2026-10-08',
-      receipt_number: 'SG-RCT-2026-00000006',
-      client: 'Client Six',
-      amount: 250,
-      appointment_status: 'confirmed'
-    }] };
-  }
-  if (/SELECT reversal\.reversal_id/.test(sql)) {
-    return { rows: [{
-      reversal_id: 1,
-      reversed_at: new Date('2026-10-09T04:00:00.000Z'),
-      date: '2026-10-09',
-      payment_id: 2,
-      receipt_number: 'SG-RCT-2026-00000002',
-      appointment_id: null,
-      payment_type: 'product_sale',
-      amount: 20,
-      method: 'cash',
-      reason: 'Correction',
-      client: 'Client Two'
-    }] };
-  }
-  if (/SELECT product_id, product_name, category, stock_quantity/.test(sql)) {
-    return { rows: [
-      { product_id: 1, product_name: 'Cleanser', category: 'Retail', stock_quantity: 5, unit_cost: 10, inventory_value: 50 },
-      { product_id: 2, product_name: 'Serum', category: 'Retail', stock_quantity: 2, unit_cost: null, inventory_value: null }
-    ] };
-  }
-  if (/SUM\(GREATEST\(a\.booked_service_price/.test(sql)) {
-    return { rows: [{ amount: 700 }] };
-  }
-  if (/FROM \(\s*SELECT a\.appointment_date AS sale_date/.test(sql)) {
-    return { rows: [{ amount: 1200 }] };
-  }
-  if (/SELECT COALESCE\(SUM\(p\.amount\), 0\)::float8 AS amount FROM payments p LEFT JOIN appointments a/.test(sql)) {
-    return { rows: [{ amount: 500 }] };
-  }
-  if (/FROM expenses WHERE voided_at IS NULL AND expense_date BETWEEN/.test(sql)) {
-    return { rows: [{ amount: 400 }] };
-  }
-  if (/generate_series\(\$1::date, \$2::date, '1 day'\) day/.test(sql) && /collected/.test(sql)) {
-    return { rows: [{ date: '2026-10-03', collected: 200, expenses: 0 }] };
-  }
-  if (/COUNT\(p\.payment_id\)::int AS count/.test(sql)) return { rows: [] };
-  if (/SELECT category, SUM\(amount\)::float8 AS amount FROM \(/.test(sql)) return { rows: [] };
-  if (/SELECT CASE WHEN p\.status = 'refunded'/.test(sql)) return { rows: [] };
-  if (/SELECT service, SUM\(amount\)::float8 AS amount/.test(sql)) return { rows: [] };
-  if (/SELECT category, SUM\(amount\)::float8 AS amount FROM expenses/.test(sql)) return { rows: [] };
-  if (/generate_series/.test(sql)) return { rows: [] };
   throw new Error(`Unexpected finance export query: ${sql}`);
 }
 
-test('outstanding balance XLSX export uses filtered receivables and existing workbook formatting', async () => {
+function responseCapture() {
+  return {
+    statusCode: 200,
+    headers: {},
+    body: undefined,
+    status(code) {
+      this.statusCode = code;
+      return this;
+    },
+    setHeader(name, value) {
+      this.headers[name] = value;
+    },
+    json(value) {
+      this.body = value;
+      return this;
+    },
+    send(value) {
+      this.body = value;
+      return this;
+    },
+  };
+}
+
+test('Admin and Finance Officer reach shared Reports record exports from their own navigation', () => {
+  const read = (name) => fs.readFileSync(path.join(__dirname, '..', name), 'utf8');
+  const page = read('FinanceReports.html');
+  const client = read('finance-record-exports.js');
+  const adminNavigation = read('admin-context-nav.js');
+  const server = read('index.js');
+  const styles = read('style.css');
+
+  assert.match(server, /\{\s*path:\s*'\/FinanceReports\.html',\s*roles:\s*\['finance_officer',\s*'admin'\]\s*\}/);
+  assert.match(page, /data-finance-record-export="income"/);
+  assert.match(page, /data-finance-record-export="expenses"/);
+  assert.match(page, /data-finance-record-export="payments"/);
+  assert.match(page, /data-finance-record-export="ledger"/);
+  assert.match(page, /data-finance-record-export="cash-closings"/);
+  assert.match(page, /id="reportFrom"/);
+  assert.match(page, /id="reportTo"/);
+  assert.match(page, /<script src="admin-context-nav\.js"><\/script>/);
+  assert.match(page, /Finance navigation/);
+  assert.match(adminNavigation, /\["FinanceReports\.html",\s*"Reports"/);
+  assert.match(adminNavigation, /if \(account\.role !== "admin"\) return/);
+  assert.match(client, /document\.querySelectorAll\('\[data-finance-record-export\]'\)/);
+  assert.match(client, /common\.bindPeriodControls/);
+  assert.doesNotMatch(client, /export-report\.xlsx|income-statement/);
+  assert.doesNotMatch(styles, /fin-report-toolbar-export/);
+});
+
+test('ordinary payment, expense, and receivable XLSX exports remain available', async () => {
   const originalQuery = db.query;
-  const calls = [];
-  let file;
-  let disposition;
+  const queries = [];
   db.query = async (sql, values) => {
-    calls.push({ sql, values });
+    queries.push({ sql, values });
     return financeRows(sql);
   };
 
   try {
-    await legacyExportRoute({
-      query: {
-        section: 'receivables',
-        from: '2026-10-01',
-        to: '2026-10-31',
-        q: 'Client One',
-      },
-    }, {
-      setHeader(name, value) {
-        if (name === 'Content-Disposition') disposition = value;
-      },
-      send(buffer) { file = buffer; },
-    });
+    for (const [section, sheetName] of [
+      ['transactions', 'Payment Ledger'],
+      ['expenses', 'Expense Register'],
+      ['receivables', 'Outstanding Balances'],
+    ]) {
+      const response = responseCapture();
+      await legacyXlsxRoute({
+        query: {
+          section,
+          from: '2026-10-01',
+          to: '2026-10-31',
+          ...(section === 'receivables' ? { q: 'Client One' } : {}),
+        },
+      }, response);
+
+      assert.equal(response.statusCode, 200);
+      assert.ok(Buffer.isBuffer(response.body));
+      assert.match(response.headers['Content-Disposition'], /\.xlsx"$/);
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(response.body);
+      const sheet = workbook.getWorksheet(sheetName);
+      assert.ok(sheet, `${section} export should retain its record workbook`);
+      assert.ok(sheet.rowCount > 6, `${section} workbook should contain record rows`);
+    }
+
+    for (const [section, expectedContent] of [
+      ['transactions', 'POS-2'],
+      ['expenses', 'Clinic rent'],
+    ]) {
+      const response = responseCapture();
+      await legacyCsvRoute({
+        query: { section, from: '2026-10-01', to: '2026-10-31' },
+      }, response);
+      assert.equal(response.statusCode, 200);
+      assert.equal(typeof response.body, 'string');
+      assert.match(response.body, new RegExp(expectedContent));
+    }
   } finally {
     db.query = originalQuery;
   }
 
-  assert.ok(Buffer.isBuffer(file));
-  assert.match(disposition, /finance-receivables-2026-10-01-to-2026-10-31\.xlsx/);
-  assert.match(calls[0].sql, /appointment_date BETWEEN \$2::date AND \$3::date/);
-  assert.match(calls[0].sql, /ILIKE \$4/);
-  assert.deepEqual(calls[0].values.slice(1), ['2026-10-01', '2026-10-31', '%Client One%']);
-  const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(file);
-  const sheet = workbook.getWorksheet('Outstanding Balances');
-  assert.equal(sheet.getCell('A6').value, 'Appointment date');
-  assert.equal(sheet.getCell('B7').value, 42);
-  assert.equal(sheet.getCell('C7').value, 'Client One');
-  assert.equal(sheet.getCell('G7').value, 700);
-  assert.equal(sheet.getCell('A8').value, 'Total outstanding balance');
-  assert.equal(sheet.getCell('G8').result, 700);
-  assert.match(workbook.getWorksheet('Report Information').getCell('B7').value, /Search: applied/);
+  assert.equal(queries.length, 5);
+  assert.match(queries[0].sql, /SELECT payment\.payment_id/);
+  assert.match(queries[1].sql, /SELECT expense_id,/);
+  assert.match(queries[2].sql, /appointment_date BETWEEN/);
 });
 
-test('finance export creates six reports and labels unsupported accounting values', async () => {
+test('obsolete accounting statement export routes return 410 without querying data', async () => {
   const originalQuery = db.query;
-  const files = [];
-  db.query = async (sql) => financeRows(sql);
+  let queryCount = 0;
+  db.query = async () => {
+    queryCount += 1;
+    throw new Error('Retired statement exports must not query finance data.');
+  };
 
   try {
-    for (const [route, request] of [
-      [exportRoute, { body: { from: '2026-10-01', to: '2026-10-31' } }],
-      [legacyExportRoute, { query: { section: 'income-statement', from: '2026-10-01', to: '2026-10-31' } }],
+    for (const [handler, request] of [
+      [retiredXlsxRoute, { body: { from: '2026-10-01', to: '2026-10-31' } }],
+      [legacyXlsxRoute, { query: { section: 'income-statement' } }],
+      [legacyCsvRoute, { query: { section: 'income-statement' } }],
     ]) {
-      let file;
-      await route(request, {
-        setHeader() {},
-        send(buffer) { file = buffer; }
-      });
-      files.push(file);
+      const response = responseCapture();
+      await handler(request, response);
+      assert.equal(response.statusCode, 410);
+      assert.deepEqual(response.body, { message: 'Accounting statement exports have been retired.' });
     }
   } finally {
     db.query = originalQuery;
   }
 
-  for (const file of files) {
-    assert.ok(Buffer.isBuffer(file));
-    const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(file);
-    assert.deepEqual(workbook.worksheets.map((sheet) => sheet.name), [
-      'Income Statement',
-      'Cash Flow',
-      'Balance Sheet',
-      'Accounts Receivable',
-      'Transaction Ledger',
-      'Inventory'
-    ]);
-    const income = workbook.getWorksheet('Income Statement');
-    const cashFlow = workbook.getWorksheet('Cash Flow');
-    const balanceSheet = workbook.getWorksheet('Balance Sheet');
-    const receivables = workbook.getWorksheet('Accounts Receivable');
-    assert.equal(income.getCell('A17').value, 'NET INCOME (LOSS) BEFORE TAX');
-    assert.equal(income.getCell('B17').value, 800);
-    assert.equal(income.getCell('B17').numFmt, '₱#,##0.00;(₱#,##0.00)');
-    assert.equal(income.getCell('A8').value, 'Revenue');
-    assert.equal(income.getCell('A13').value, 'Total Revenue');
-    assert.equal(income.getCell('A14').value, 'Recorded Expenses');
-    assert.equal(income.getCell('A14').font.bold, true);
-    assert.equal(income.getCell('A16').value, 'Total Expenses');
-    assert.equal(income.getCell('A17').fill.fgColor.argb, 'FFFFFFFF');
-    assert.equal(income.getCell('A17').font.size, 11);
-    assert.equal(income.getCell('A17').border.bottom.style, 'double');
-    assert.equal(income.getCell('A9').alignment.indent, 1);
-    assert.equal(income.getCell('A3').value, 'For the month ended October 31, 2026');
-    assert.equal(cashFlow.getCell('B8').value, 'Cash Flows from Operating Activities');
-    assert.equal(cashFlow.getCell('B11').value, 'Cash Flows from Investing Activities');
-    assert.equal(cashFlow.getCell('B13').value, 'Cash Flows from Financing Activities');
-    assert.equal(cashFlow.getCell('H16').value, 'Not Available');
-    assert.equal(cashFlow.getCell('H17').value, 'Not Available');
-    assert.equal(cashFlow.getCell('H16').fill.fgColor.argb, 'FFFFFFFF');
-    assert.equal(cashFlow.getCell('H17').fill.fgColor.argb, 'FFFFFFFF');
-    assert.equal(cashFlow.getCell('F19').fill.fgColor.argb, 'FFFFFFFF');
-    assert.equal(cashFlow.getCell('G21').fill.fgColor.argb, 'FFFFFFFF');
-    assert.equal(cashFlow.getCell('A7').fill.fgColor.argb, 'FFFFFFFF');
-    assert.equal(balanceSheet.getCell('A8').value, 'ASSETS');
-    assert.equal(balanceSheet.getCell('A9').value, 'Current Assets');
-    assert.equal(balanceSheet.getCell('A17').value, 'LIABILITIES');
-    assert.equal(balanceSheet.getCell('A24').value, 'EQUITY');
-    assert.equal(balanceSheet.getCell('B25').value, 'Not recorded');
-    assert.equal(balanceSheet.getCell('B25').fill.fgColor.argb, 'FFFFFFFF');
-    assert.equal(balanceSheet.getCell('B26').value, 'Not determinable');
-    assert.match(balanceSheet.getCell('A3').value, /^As of /);
-    assert.equal(receivables.getCell('H8').value, 700);
-    assert.equal(receivables.getCell('H8').numFmt, '₱#,##0.00;(₱#,##0.00)');
-    assert.equal(receivables.getCell('H8').fill.fgColor.argb, 'FFFFFFFF');
-    assert.equal(receivables.getCell('D8').value, 'Not recorded');
-    assert.equal(receivables.getCell('C8').numFmt, 'dd mmm yyyy');
-    assert.equal(receivables.getCell('A9').fill.fgColor.argb, 'FFF7F7F7');
-    assert.equal(receivables.getCell('H9').value, 500);
-    for (const sheet of [income, cashFlow, balanceSheet, receivables]) {
-      assert.equal(sheet.views[0].showGridLines, false);
-      assert.match(sheet.headerFooter.oddHeader, /Skin Goddess Aesthetic Center/);
-      assert.equal(sheet.headerFooter.oddFooter, '&LSkin Goddess Aesthetic Center&CFinance report&RPage &P of &N');
-      assert.equal(sheet.pageSetup.fitToWidth, 1);
-      assert.match(sheet.pageSetup.printArea, new RegExp(`^A1:[A-Z]+${sheet.lastRow.number}$`));
-    }
-    assert.equal(cashFlow.views[0].ySplit, 7);
-    assert.equal(receivables.views[0].ySplit, 7);
-    assert.equal(income.pageSetup.orientation, 'portrait');
-    assert.equal(cashFlow.pageSetup.orientation, 'landscape');
-    assert.equal(balanceSheet.pageSetup.orientation, 'portrait');
-    assert.ok(receivables.autoFilter);
-    assert.equal(workbook.getWorksheet('Inventory').getCell('F8').value, 50);
-    assert.equal(workbook.getWorksheet('Inventory').getCell('F9').value, 'Not recorded');
-    assert.equal(workbook.getWorksheet('Transaction Ledger').getCell('K8').value, 'posted');
-    assert.ok(workbook.getWorksheet('Inventory').autoFilter);
-    assert.equal(income.getCell('A1').fill.fgColor.argb, 'FFFFFFFF');
-    assert.equal(income.getCell('A7').fill.fgColor.argb, 'FFFFFFFF');
-    assert.equal(income.getCell('A9').fill.type, 'pattern');
-    assert.equal(income.getCell('A9').fill.pattern, 'none');
-    assert.equal(cashFlow.getCell('H16').font.color.argb, 'FF777777');
-    assert.equal(workbook.getWorksheet('Inventory').getCell('H8').font.color.argb, 'FFA33131');
-    assert.equal(workbook.getWorksheet('Inventory').getCell('H8').fill.fgColor.argb, 'FFFBEAEA');
-  }
+  assert.equal(queryCount, 0);
+});
+
+test('Reports page retains no controls or client branch for statement generation', () => {
+  const read = (name) => fs.readFileSync(path.join(__dirname, '..', name), 'utf8');
+  const page = read('FinanceReports.html');
+  const client = read('finance-record-exports.js');
+
+  assert.doesNotMatch(page, /incomeStatementSection|income-statement/i);
+  assert.doesNotMatch(page, /Finance summary|Sales earned|Cash collected|Recorded expenses|Net cash after expenses|Online reservation deposits|Payment method breakdown|Deposit \/ refund summary|Top services by revenue|Expenses by category|Revenue by service category|Daily cash summary/i);
+  assert.doesNotMatch(client, /export-report\.xlsx|income-statement/i);
+  assert.match(page, /data-finance-record-export="payments"/);
+  assert.match(page, /data-finance-record-export="ledger"/);
+  assert.match(page, /data-finance-record-export="cash-closings"/);
 });

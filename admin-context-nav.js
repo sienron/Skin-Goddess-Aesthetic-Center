@@ -48,6 +48,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   window.matchMedia("(min-width: 1025px)").addEventListener("change", applyAdminDesktopLayout);
 
   const currentPage = window.location.pathname.split("/").pop();
+
+  function isCurrentLink(href) {
+    const [page, hash = ""] = href.split("#");
+    const currentHash = window.location.hash;
+    if (page === "FinancesTransactions.html" && hash === "#income") {
+      return currentPage === page && currentHash !== "#ledger";
+    }
+    return page === currentPage && hash === currentHash;
+  }
   const links = [
     ["AdminDashboard.html", "Dashboard", "icons/finance-dashboard.svg"],
     ["AdminClients.html", "Clients", "icons/staff-users.svg"],
@@ -55,9 +64,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     ["AdminTreatmentHistory.html", "Treatment History", "icons/staff-content.svg"],
     ["AdminInventoryManagement.html", "Inventory", "icons/staff-inventory.svg"],
     ["AdminInventoryTransactions.html", "Stock Transaction Log", "icons/finance-transactions.svg"],
-    ["FinanceDashboard.html", "Finance Dashboard", "icons/finance-dashboard.svg"],
-    ["FinancesTransactions.html", "Sales & Transactions", "icons/finance-transactions.svg"],
+    ["FinanceDashboard.html", "Dashboard", "icons/finance-dashboard.svg"],
+    ["FinancesTransactions.html#income", "Income", "icons/finance-transactions.svg"],
     ["FinanceExpenses.html", "Expenses", "icons/finance-expenses.svg"],
+    ["FinancesTransactions.html#ledger", "Transaction Ledger", "icons/finance-transactions.svg"],
     ["FinanceReports.html", "Reports", "icons/finance-reports.svg"],
     ["AdminInquiries.html", "Inquiries", "icons/staff-inquiries.svg"],
     ["Usermanagement.html", "User Management", "icons/staff-users.svg"],
@@ -67,14 +77,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   const groups = [
     { label: "Appointments", icon: "icons/staff-appointments.svg", pages: links.slice(1, 4) },
     { label: "Inventory", icon: "icons/staff-inventory.svg", pages: links.slice(4, 6) },
-    { label: "Finance", icon: "icons/finance-transactions.svg", pages: links.slice(6, 10) },
+    { label: "Finance", icon: "icons/finance-transactions.svg", pages: links.slice(6, 11) },
   ];
 
   function makeLink([href, label, icon], child = false) {
     const link = document.createElement("a");
     link.href = href;
     link.className = `um-nav-link${child ? " admin-nav-child admin-nav-submenu-link" : ""}`;
-    if (href === currentPage) {
+    if (isCurrentLink(href)) {
       link.classList.add(child ? "admin-nav-submenu-link--active" : "um-nav-link--active");
       link.setAttribute("aria-current", "page");
     }
@@ -93,7 +103,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   function groupElement(group, retainedMenu) {
     const section = document.createElement("section");
     section.className = "admin-nav-group";
-    const active = group.pages.some(([href]) => href === currentPage);
+    const active = group.pages.some(([href]) => isCurrentLink(href));
     const toggle = document.createElement("button");
     toggle.type = "button";
     toggle.className = `admin-nav-group-toggle admin-nav-parent${active ? " is-active" : ""}`;
@@ -121,7 +131,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     group.pages.forEach((page) => {
       const item = document.createElement("li");
       item.appendChild(makeLink(page, true));
-      if (retainedMenu && page[0] === "FinancesTransactions.html") {
+      if (retainedMenu && page[0] === "FinancesTransactions.html#income") {
         item.appendChild(retainedMenu);
       }
       menu.appendChild(item);
@@ -146,6 +156,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     nav.appendChild(groupElement(group, group.label === "Finance" ? financeViews : null));
   });
   links.slice(10).forEach((page) => nav.appendChild(makeLink(page)));
+
+  function refreshActiveLinks() {
+    nav.querySelectorAll("a.um-nav-link").forEach((link) => {
+      const child = link.classList.contains("admin-nav-submenu-link");
+      const activeClass = child ? "admin-nav-submenu-link--active" : "um-nav-link--active";
+      const active = isCurrentLink(link.getAttribute("href") || "");
+      link.classList.toggle(activeClass, active);
+      if (active) link.setAttribute("aria-current", "page");
+      else link.removeAttribute("aria-current");
+    });
+  }
+  window.addEventListener("hashchange", refreshActiveLinks);
 
   const mobileLinks = document.querySelector(".mobile-nav-links");
   if (mobileLinks) {

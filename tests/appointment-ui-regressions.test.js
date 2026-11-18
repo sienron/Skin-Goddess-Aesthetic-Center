@@ -85,6 +85,18 @@ test('admin appointment status refresh is time-bounded and reports that saved ro
   assert.doesNotMatch(adminSource, /The appointment list is still being loaded\./);
 });
 
+test('admin appointment requests can be opened in separate cancellation and rescheduling queues', () => {
+  const adminPage = fs.readFileSync(path.join(root, 'AdminAppointment.html'), 'utf8');
+  const adminSource = fs.readFileSync(path.join(root, 'AdminAppointment.js'), 'utf8');
+
+  assert.match(adminPage, /id="cancellationRequestsBtn"[^>]*>Cancellation Request<\/button>/);
+  assert.match(adminPage, /id="reschedulingRequestsBtn"[^>]*>Rescheduling Requests<\/button>/);
+  assert.match(adminSource, /openCancellationRequests\('reschedule'\)/);
+  assert.match(adminSource, /openCancellationRequests\('cancellation'\)/);
+  assert.match(adminSource, /request\.request_type \|\| 'cancellation'\) === requestType/);
+  assert.match(adminSource, /requestType === 'reschedule' \? 'Rescheduling Requests'/);
+});
+
 test('admin treatment history uses its admin appointments endpoint while staff keeps its own endpoint', () => {
   const historyScript = fs.readFileSync(path.join(root, 'staff-treatment-history.js'), 'utf8');
   const adminPage = fs.readFileSync(path.join(root, 'AdminTreatmentHistory.html'), 'utf8');
@@ -229,6 +241,8 @@ test('aesthetician request dialogs ask for the appropriate details', () => {
     assert.match(pageSource, /<select name="time" id="apptRescheduleTime" required/);
     assert.doesNotMatch(pageSource, /Start Service/);
   }
+  const aestheticianPage = fs.readFileSync(path.join(root, 'AestheticianAppointmentPage.html'), 'utf8');
+  assert.match(aestheticianPage, /id="apptModalCancelBtn">Request for Cancellation<\/button>/);
 });
 
 test('aesthetician request dialogs submit to admin and can be reopened for another appointment', async () => {
@@ -326,7 +340,7 @@ test('aesthetician request dialogs submit to admin and can be reopened for anoth
   assert.equal(elements.get('apptRequestDialog').open, false);
 });
 
-test('client account reschedule form uses availability controls and immediate cancellation endpoint', () => {
+test('client account uses the shared cancellation request flow and availability controls', () => {
   const accountPage = fs.readFileSync(path.join(root, 'UserAccount.html'), 'utf8');
   const modalSource = fs.readFileSync(path.join(root, 'appointment-modal.js'), 'utf8');
   const stylesheet = fs.readFileSync(path.join(root, 'style.css'), 'utf8');
@@ -335,11 +349,13 @@ test('client account reschedule form uses availability controls and immediate ca
   assert.match(accountPage, /id="apptRescheduleMonth"/);
   assert.match(accountPage, /<select name="date" id="apptRescheduleDate"/);
   assert.match(accountPage, /<textarea name="reason" id="apptRescheduleReason"[^>]*required/);
-  assert.match(accountPage, /<button type="button" class="modal-btn modal-btn-cancel" id="apptModalCancelBtn"/);
-  assert.match(accountPage, /<button type="button" class="modal-btn modal-btn-reschedule" id="apptModalRescheduleBtn"/);
+  assert.match(accountPage, /<button type="button" class="modal-btn modal-btn-cancel" id="apptModalCancelBtn">Request for Cancellation<\/button>/);
+  assert.match(accountPage, /<button type="button" class="modal-btn modal-btn-reschedule" id="apptModalRescheduleBtn">Request for Reschedule<\/button>/);
   assert.doesNotMatch(accountPage, /id="apptRescheduleDescription"/);
-  assert.match(modalSource, /dataset\?\.page === "account"/);
-  assert.match(modalSource, /cancel-mine/);
+  assert.match(accountPage, /<input type="text" name="reason" id="apptCancellationReason" maxlength="255" required>/);
+  assert.doesNotMatch(accountPage, /apptCancellationDescription/);
+  assert.match(modalSource, /\/cancellation-request/);
+  assert.doesNotMatch(modalSource, /cancel-mine/);
   assert.match(customerAppointmentHistory, /a\.service_id/);
   assert.match(stylesheet, /\.client-header \.appt-reschedule-form \{[\s\S]*?padding: 20px 30px 8px/);
   assert.match(stylesheet, /\.client-header \.appt-modal-actions \.modal-btn \{\s*padding: 11px 16px;/);

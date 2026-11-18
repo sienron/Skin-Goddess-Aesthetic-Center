@@ -388,7 +388,9 @@ async function run(args) {
       await createLedger(client);
     }
     for (const filename of pending) await applyMigration(client, filename, rows);
-    displayStatus(await migrationRows(client));
+    console.log(pending.length
+      ? `Applied ${pending.length} migration(s): ${pending.join(', ')}`
+      : 'Database schema is up to date; no pending migrations.');
   } finally {
     if (locked) await client.query('SELECT pg_advisory_unlock(hashtext($1))', [lockName]);
     client.release();

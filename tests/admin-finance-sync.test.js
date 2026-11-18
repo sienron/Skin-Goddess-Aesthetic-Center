@@ -18,12 +18,16 @@ test('Admin and Finance Officer share Finance pages, navigation, and review APIs
       new RegExp(`path: '\\/${page}\\.html', roles: \\['finance_officer', 'admin'\\]`),
       `${page} should be available to both Finance Officers and Admins`,
     );
+    const navigationPattern = page === 'FinancesTransactions'
+      ? /\["FinancesTransactions\.html#income",/
+      : new RegExp(`\\["${page}\\.html",`);
     assert.match(
       adminNavigation,
-      new RegExp(`\\["${page}\\.html",`),
+      navigationPattern,
       `${page} should appear in Admin navigation`,
     );
   }
+  assert.match(adminNavigation, /\["FinancesTransactions\.html#ledger",\s*"Transaction Ledger"/);
 
   assert.match(expensesPage, /id="pendingExpenseReviewBtn"/);
   assert.match(expensesPage, /id="pendingPurchaseDetailModal"/);
@@ -49,6 +53,6 @@ test('Finance Dashboard applies the same Admin navigation context', () => {
   const adminNavigation = read('admin-context-nav.js');
 
   assert.match(dashboard, /<script src="admin-context-nav\.js"><\/script>/);
-  assert.match(adminNavigation, /\["FinanceDashboard\.html",\s*"Finance Dashboard"/);
-  assert.match(adminNavigation, /pages: links\.slice\(6, 10\)/);
+  assert.match(adminNavigation, /\["FinanceDashboard\.html",\s*"Dashboard"/);
+  assert.match(adminNavigation, /pages: links\.slice\(6, 11\)/);
 });

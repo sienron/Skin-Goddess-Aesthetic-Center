@@ -1,0 +1,96 @@
+#transactionLedgerPanel {
+  width: 100%;
+}
+
+#transactionLedgerPanel .fin-ledger-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+
+#transactionLedgerPanel .fin-ledger-filter-grid label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+#transactionLedgerPanel .fin-ledger-filter-grid input,
+#transactionLedgerPanel .fin-ledger-filter-grid select {
+  box-sizing: border-box;
+  min-width: 0;
+  width: 100%;
+}
+
+#transactionLedgerPanel .fin-ledger-note {
+  max-width: 80ch;
+  margin: 4px 0 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+#transactionLedgerPanel .fin-table-scroll {
+  overflow-x: auto;
+}
+
+#transactionLedgerPanel .fin-table td {
+  white-space: nowrap;
+}
+
+#transactionLedgerPanel .fin-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+body[data-finance-view="ledger"] #transactionOverview,
+body[data-finance-view="ledger"] #transactionAnalyticsRow {
+  display: none !important;
+}
+
+@media (max-width: 640px) {
+  #transactionLedgerPanel .fin-ledger-filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.fin-record-export-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.fin-record-export-filters label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.fin-record-export-filters input,
+.fin-record-export-filters select {
+  box-sizing: border-box;
+  min-width: 0;
+  width: 100%;
+}
+
+.fin-record-export-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.fin-dashboard-followups small {
+  display: block;
+  line-height: 1.4;
+  white-space: normal;
+}
+
+@media (max-width: 640px) {
+  .fin-record-export-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

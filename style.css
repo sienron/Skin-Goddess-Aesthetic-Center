@@ -17234,26 +17234,9 @@ textarea.cm-editor__input {
   min-height: 38px;
 }
 
-.fin-report-controls .fin-report-toolbar-export {
-  min-height: 38px;
-  margin-left: auto;
-  border-color: #228b46;
-  background: #228b46;
-  color: #fff;
-}
-
-.fin-report-controls .fin-report-toolbar-export:hover {
-  border-color: #176d36;
-  background: #176d36;
-}
-
 @media (max-width: 760px) {
   .fin-report-controls {
     align-items: end;
-  }
-
-  .fin-report-controls .fin-report-toolbar-export {
-    margin-left: 0;
   }
 }
 
@@ -17548,10 +17531,6 @@ textarea.cm-editor__input {
 
   .fin-report-controls>label {
     flex: 1 1 125px;
-  }
-
-  .fin-report-controls .fin-report-toolbar-export {
-    margin-left: auto;
   }
 
   .fin-report-section-heading {
@@ -25485,17 +25464,6 @@ body.staff-theme-dark .dashboard-status-menu button {
 body.staff-theme-dark .dashboard-status-menu button:hover,
 body.staff-theme-dark .fin-button:hover {
   background: #38342b;
-}
-
-body.staff-theme-dark .fin-report-controls .fin-report-toolbar-export {
-  border-color: #1f7a3d;
-  background: #1f7a3d;
-  color: #fff;
-}
-
-body.staff-theme-dark .fin-report-controls .fin-report-toolbar-export:hover {
-  border-color: #196533;
-  background: #196533;
 }
 
 body.staff-theme-dark .calendar-toolbar,

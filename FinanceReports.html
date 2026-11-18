@@ -8,6 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <title>Finance Reports</title>
+  <link rel="stylesheet" href="finance-ledger.css">
 </head>
 
 <body class="fin-printable sg-admin-typography">
@@ -16,7 +17,7 @@
                 alt="" class="staff-hamburger-icon"></button>
         <div class="page-title">
             <h2>Finance Reports</h2>
-            <p>Summarize clinic performance</p>
+            <p>Retrieve and export financial records</p>
         </div>
         <div class="actions">
             <div class="notification-wrap" id="notificationWrap"><button class="notification" id="notificationBtn"
@@ -37,8 +38,9 @@
                 aria-label="Close menu">&times;</button></div>
         <ul class="mobile-nav-links">
             <li><a href="FinanceDashboard.html">Dashboard</a></li>
-            <li><a href="FinancesTransactions.html">Sales &amp; Transactions</a></li>
+            <li><a href="FinancesTransactions.html#income">Income</a></li>
             <li><a href="FinanceExpenses.html">Expenses</a></li>
+            <li><a href="FinancesTransactions.html#ledger">Transaction Ledger</a></li>
             <li><a href="FinanceReports.html">Reports</a></li>
         </ul>
     </aside>
@@ -51,9 +53,10 @@
                 <ul>
                     <li class="nav-item"><a href="FinanceDashboard.html"><span class="finance-nav-icon-slot"><img src="icons/finance-dashboard.svg" alt=""
                                 class="finance-nav-icon"></span><span>Dashboard</span></a></li>
-                    <li class="nav-item"><a href="FinancesTransactions.html"><span class="finance-nav-icon-slot"><img src="icons/finance-transactions.svg"
-                                alt="" class="finance-nav-icon"></span><span>Sales &amp;
-                                Transactions</span></a></li>
+                    <li class="nav-item"><a href="FinancesTransactions.html#income"><span class="finance-nav-icon-slot"><img src="icons/finance-transactions.svg"
+                                alt="" class="finance-nav-icon"></span><span>Income</span></a></li>
+                    <li class="nav-item"><a href="FinancesTransactions.html#ledger"><span class="finance-nav-icon-slot"><img src="icons/finance-transactions.svg"
+                                alt="" class="finance-nav-icon"></span><span>Transaction Ledger</span></a></li>
                     <li class="nav-item"><a href="FinanceExpenses.html"><span class="finance-nav-icon-slot"><img src="icons/finance-expenses.svg" alt=""
                                 class="finance-nav-icon"></span><span>Expenses</span></a></li>
                     <li class="nav-item active"><a href="FinanceReports.html" aria-current="page"><span class="finance-nav-icon-slot"><img
@@ -86,168 +89,57 @@
                         month</button></div>
                 <label>From<input id="reportFrom" type="date"></label>
                 <label>To<input id="reportTo" type="date"></label>
-                <button class="fin-button fin-button-export fin-report-toolbar-export" type="button"
-                    data-export="income-statement">EXPORT</button>
             </div>
             <p class="fin-page-message" id="reportMessage" role="status"></p>
-            <section class="fin-report-section" id="incomeStatementSection">
+            <section class="fin-report-section fin-record-exports" aria-labelledby="recordExportsTitle">
                 <div class="fin-report-section-heading">
                     <span class="fin-report-band-letter">A</span>
-                    <h2>Financial summary</h2>
-                    <span id="reportPeriodLabel" class="fin-report-band-period"></span>
+                    <h2 id="recordExportsTitle">Financial record exports</h2>
                 </div>
-                <div class="fin-report-stats">
-                    <article class="fin-report-stat fin-report-stat--sales"><span class="admin-metric-icon" aria-hidden="true"><img src="icons/finance-reports.svg" alt=""></span><span>Sales earned</span><strong
-                            id="reportSales">PHP 0.00</strong><small id="reportSalesComparison"></small></article>
-                    <article class="fin-report-stat fin-report-stat--collected"><span class="admin-metric-icon" aria-hidden="true"><img src="icons/finance-transactions.svg" alt=""></span><span>Cash collected</span><strong
-                            id="reportCollected">PHP 0.00</strong><small id="reportCollectedComparison"></small>
-                    </article>
-                    <article class="fin-report-stat fin-report-stat--expenses"><span class="admin-metric-icon" aria-hidden="true"><img src="icons/finance-expenses.svg" alt=""></span><span>Recorded expenses</span><strong
-                            id="reportExpenses">PHP 0.00</strong><small id="reportExpensesComparison"></small></article>
-                    <article class="fin-report-stat fin-report-stat--net"><span class="admin-metric-icon" aria-hidden="true"><img src="icons/finance-dashboard.svg" alt=""></span><span>Net cash after expenses</span><strong
-                            id="reportNet">PHP 0.00</strong><small id="reportNetComparison"></small></article>
+                <p class="fin-ledger-note">Income exports include posted payments only. All exports use the date range; direction, classification, method, source, and status filters apply to payment and expense records, while cash-closing exports use dates only. Refunds and reversals remain tied to their original payment records. Expense records store dates only; their time and payment method are not recorded.</p>
+                <div class="fin-record-export-filters">
+                    <label>Direction
+                        <select id="recordExportDirection">
+                            <option value="all">All directions</option>
+                            <option value="money_in">Money In</option>
+                            <option value="money_out">Money Out</option>
+                        </select>
+                    </label>
+                    <label>Classification <input type="search" id="recordExportClassification" placeholder="All classifications"></label>
+                    <label>Payment method <input type="search" id="recordExportMethod" placeholder="All methods"></label>
+                    <label>Source
+                        <select id="recordExportSource">
+                            <option value="all">All sources</option>
+                            <option value="payments">Payments</option>
+                            <option value="expenses">Expenses</option>
+                        </select>
+                    </label>
+                    <label>Status
+                        <select id="recordExportStatus">
+                            <option value="all">All statuses</option>
+                            <option value="posted">Posted</option>
+                            <option value="refunded">Refunded</option>
+                            <option value="reversed">Reversed</option>
+                            <option value="recorded">Recorded</option>
+                            <option value="voided">Voided</option>
+                        </select>
+                    </label>
                 </div>
-            </section>
-            <section class="fin-report-section" id="trendsSection">
-                <div class="fin-report-section-heading">
-                    <span class="fin-report-band-letter">B</span>
-                    <div><h2>Sales and expenses</h2><p>Sales earned and online reservation trends</p></div>
-                    <span class="fin-report-band-period">Selected period</span>
-                </div>
-                <div class="fin-report-grid">
-                    <article class="fin-report-panel fin-chart-section" id="salesExpensesSection">
-                        <div class="fin-report-panel-heading">
-                            <h3>Sales earned vs recorded expenses trend</h3><button class="fin-button fin-button-export fin-report-export"
-                                type="button" data-export="sales-expenses">EXPORT</button>
-                        </div>
-                        <div class="fin-chart-frame"><canvas id="reportSalesExpensesChart"
-                                aria-label="Sales versus expenses" role="img" hidden></canvas></div>
-                    </article>
-                    <article class="fin-report-panel fin-chart-section" id="onlineReservationsSection">
-                        <div class="fin-report-panel-heading">
-                            <h3>Online reservation deposits</h3><button class="fin-button fin-button-export fin-report-export"
-                                type="button" data-export="online-reservations">EXPORT</button>
-                        </div>
-                        <div class="fin-chart-frame"><canvas id="reportOnlineReservationsChart"
-                                aria-label="Online reservations by payment date" role="img" hidden></canvas></div>
-                    </article>
-                </div>
-            </section>
-            <section class="fin-report-section" id="paymentsSection">
-                <div class="fin-report-section-heading">
-                    <span class="fin-report-band-letter">C</span>
-                    <div><h2>Payments, deposits and refunds</h2><p>Collections and reservation deposit activity</p></div>
-                    <span class="fin-report-band-period">Selected period</span>
-                </div>
-                <div class="fin-report-grid">
-                    <article class="fin-report-panel fin-chart-section" id="paymentMethodsSection">
-                        <div class="fin-report-panel-heading">
-                            <h3>Payment method breakdown</h3><button class="fin-button fin-button-export fin-report-export" type="button"
-                                data-export="payment-methods">EXPORT</button>
-                        </div>
-                        <div class="fin-chart-frame"><canvas id="reportMethodsChart"
-                                aria-label="Payment method breakdown for posted payments" role="img" hidden></canvas>
-                        </div>
-                    </article>
-                    <article class="fin-report-panel fin-deposit-panel" id="depositSection">
-                        <div class="fin-report-panel-heading">
-                            <h3>Deposit / refund summary</h3><button class="fin-button fin-button-export fin-report-export" type="button"
-                                data-export="deposits">EXPORT</button>
-                        </div>
-                        <div class="fin-deposit-content">
-                            <div class="fin-chart-frame fin-chart-frame--deposit"><canvas id="reportDepositsChart"
-                                    aria-label="Deposit summary" role="img" hidden></canvas></div>
-                            <dl class="fin-deposit-stats">
-                                <div>
-                                    <dt>Deposits received</dt>
-                                    <dd id="reportDepositsReceived">PHP 0.00</dd><small
-                                        id="reportDepositsReceivedCount">0 payments</small>
-                                </div>
-                                <div>
-                                    <dt>Refunds issued</dt>
-                                    <dd id="reportRefunds">PHP 0.00</dd><small id="reportRefundsCount">0
-                                        payments</small>
-                                </div>
-                                <div>
-                                    <dt>Forfeited</dt>
-                                    <dd id="reportForfeited">PHP 0.00</dd><small id="reportForfeitedCount">0
-                                        payments</small>
-                                </div>
-                            </dl>
-                        </div>
-                    </article>
+                <div class="fin-record-export-actions">
+                    <button class="fin-button fin-button-export" type="button" data-finance-record-export="income">Income Records Export</button>
+                    <button class="fin-button fin-button-export" type="button" data-finance-record-export="expenses">Expense Records Export</button>
+                    <button class="fin-button fin-button-export" type="button" data-finance-record-export="payments">Payment Records Export</button>
+                    <button class="fin-button fin-button-export" type="button" data-finance-record-export="ledger">Transaction History Export</button>
+                    <button class="fin-button fin-button-export" type="button" data-finance-record-export="cash-closings">Cash Closing Records Export</button>
                 </div>
             </section>
-            <section class="fin-report-section" id="servicesExpensesSection">
-                <div class="fin-report-section-heading">
-                    <span class="fin-report-band-letter">D</span>
-                    <div><h2>Top services and expenses</h2><p>Revenue and expense composition</p></div>
-                    <span class="fin-report-band-period">Selected period</span>
-                </div>
-                <div class="fin-report-grid">
-                    <article class="fin-report-panel fin-chart-section" id="topServicesSection">
-                        <div class="fin-report-panel-heading">
-                            <h3>Top services by revenue</h3><button class="fin-button fin-button-export fin-report-export" type="button"
-                                data-export="top-services">EXPORT</button>
-                        </div>
-                        <div class="fin-chart-frame"><canvas id="reportTopServicesChart" aria-label="Top services"
-                                role="img" hidden></canvas></div>
-                    </article>
-                    <article class="fin-report-panel fin-chart-section" id="expenseCategorySection">
-                        <div class="fin-report-panel-heading">
-                            <h3>Expenses by category</h3><button class="fin-button fin-button-export fin-report-export" type="button"
-                                data-export="expense-categories">EXPORT</button>
-                        </div>
-                        <div class="fin-chart-frame"><canvas id="reportExpenseCategoryChart"
-                                aria-label="Expenses by category" role="img" hidden></canvas></div>
-                    </article>
-                </div>
-                <div class="fin-report-detail-grid">
-                    <article class="fin-report-panel fin-chart-section" id="serviceCategorySection">
-                        <div class="fin-report-panel-heading">
-                            <h3>Revenue by service category</h3><button class="fin-button fin-button-export fin-report-export"
-                                type="button" data-export="service-categories">EXPORT</button>
-                        </div>
-                        <div class="fin-chart-frame fin-chart-frame--compact"><canvas id="reportServiceCategoryChart"
-                                aria-label="Revenue by service category" role="img" hidden></canvas></div>
-                    </article>
-                    <article class="fin-report-panel fin-daily-cash" id="dailyCashSection">
-                        <div class="fin-report-panel-heading">
-                            <h3>Daily cash summary</h3><button class="fin-button fin-button-export fin-report-export" type="button"
-                                data-export="daily-cash">EXPORT</button>
-                        </div>
-                        <div class="fin-table-scroll fin-daily-cash-scroll">
-                            <table class="fin-table">
-                                <thead>
-                                    <tr>
-                                        <th>Date</th>
-                                        <th>Posted collections (all methods)</th>
-                                        <th>Recorded expenses</th>
-                                        <th>Net after expenses</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="dailyCashRows"></tbody>
-                            </table>
-                        </div>
-                        <div class="staff-empty-state" id="dailyCashEmpty"><strong>No data for this period</strong>
-                        </div>
-                        <div class="fin-pagination fin-daily-cash-pagination" id="dailyCashPagination" hidden
-                            aria-label="Daily cash summary pagination">
-                            <button class="fin-button" id="dailyCashPrev" type="button">Previous</button>
-                            <span id="dailyCashPageLabel" aria-live="polite">Page 1 of 1</span>
-                            <button class="fin-button" id="dailyCashNext" type="button">Next</button>
-                        </div>
-                    </article>
-                </div>
-            </section>
+            
         </section>
     </main>
     <script src="header.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
     <script src="finance-common.js"></script>
-    <script src="csv-export.js"></script>
-    <script src="finance-reports.js"></script>
     <script src="admin-context-nav.js"></script>
+    <script src="finance-record-exports.js?v=20261117-1"></script>
 </body>
 
 </html>

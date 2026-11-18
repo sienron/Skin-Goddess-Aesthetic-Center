@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="style.css">
     <title>Finance Dashboard</title>
+  <link rel="stylesheet" href="finance-ledger.css">
 </head>
 
 <body>
@@ -35,8 +36,9 @@
                 aria-label="Close menu">&times;</button></div>
         <ul class="mobile-nav-links">
             <li><a href="FinanceDashboard.html">Dashboard</a></li>
-            <li><a href="FinancesTransactions.html">Sales &amp; Transactions</a></li>
+            <li><a href="FinancesTransactions.html#income">Income</a></li>
             <li><a href="FinanceExpenses.html">Expenses</a></li>
+            <li><a href="FinancesTransactions.html#ledger">Transaction Ledger</a></li>
             <li><a href="FinanceReports.html">Reports</a></li>
         </ul>
     </aside>
@@ -51,9 +53,10 @@
                                 src="icons/finance-dashboard.svg" alt=""
                                 class="finance-nav-icon"></span><span>Dashboard</span></a>
                     </li>
-                    <li class="nav-item"><a href="FinancesTransactions.html"><span class="finance-nav-icon-slot"><img src="icons/finance-transactions.svg"
-                                alt="" class="finance-nav-icon"></span><span>Sales &amp;
-                                Transactions</span></a></li>
+                    <li class="nav-item"><a href="FinancesTransactions.html#income"><span class="finance-nav-icon-slot"><img src="icons/finance-transactions.svg"
+                                alt="" class="finance-nav-icon"></span><span>Income</span></a></li>
+                    <li class="nav-item"><a href="FinancesTransactions.html#ledger"><span class="finance-nav-icon-slot"><img src="icons/finance-transactions.svg"
+                                alt="" class="finance-nav-icon"></span><span>Transaction Ledger</span></a></li>
                     <li class="nav-item"><a href="FinanceExpenses.html"><span class="finance-nav-icon-slot"><img src="icons/finance-expenses.svg" alt=""
                                 class="finance-nav-icon"></span><span>Expenses</span></a></li>
                     <li class="nav-item"><a href="FinanceReports.html"><span class="finance-nav-icon-slot"><img src="icons/finance-reports.svg" alt=""
@@ -91,23 +94,34 @@
                 <article class="fin-dashboard-kpi fin-dashboard-kpi--sales"><span class="admin-metric-icon" aria-hidden="true"><img src="icons/finance-reports.svg" alt=""></span><span>Sales earned</span><strong id="dashSales">PHP 0.00</strong><small
                         id="dashSalesComparison">Completed appointment dates and eligible product sales</small>
                 </article>
-                <article class="fin-dashboard-kpi fin-dashboard-kpi--collected"><span class="admin-metric-icon" aria-hidden="true"><img src="icons/finance-transactions.svg" alt=""></span><span>Cash collected</span><strong id="dashCollected">PHP 0.00</strong><small
+                <article class="fin-dashboard-kpi fin-dashboard-kpi--collected"><span class="admin-metric-icon" aria-hidden="true"><img src="icons/finance-transactions.svg" alt=""></span>                <span>Recorded Income</span><strong id="dashCollected">PHP 0.00</strong><small
                         id="dashCollectedComparison">Posted payments by receipt date</small></article>
                 <article class="fin-dashboard-kpi fin-dashboard-kpi--expenses"><span class="admin-metric-icon" aria-hidden="true"><img src="icons/finance-expenses.svg" alt=""></span><span>Expenses</span><strong id="dashExpenses">PHP 0.00</strong><small
                         id="dashExpensesComparison">Active expenses</small></article>
                 <article class="fin-dashboard-kpi fin-dashboard-kpi--net"><span class="admin-metric-icon" aria-hidden="true"><img src="icons/finance-dashboard.svg" alt=""></span><span>Net cash after expenses</span><strong id="dashNet">PHP 0.00</strong><small
                         id="dashNetComparison">Posted collections less recorded active expenses</small></article>
             </div>
-            <div class="fin-dashboard-followups" aria-label="Daily collections and follow-up tasks">
+            <div class="fin-dashboard-followups" aria-label="Collections, reviews, and cash closing">
                 <div><span>Today's collections</span><strong id="dashToday">PHP 0.00</strong></div>
-                <div><span>Outstanding balance</span><strong id="dashOutstanding">PHP 0.00</strong></div>
+                <div>                <span>Outstanding Receivables</span><strong id="dashOutstanding">PHP 0.00</strong></div>
                 <a href="FinancesTransactions.html#receivables"><span>Receivables</span><strong id="dashReceivables">0</strong></a>
-                <div><span>No-shows this week</span><strong id="dashNoShows">0</strong></div>
+                <div>                <span>No-shows this week</span><strong id="dashNoShows">0</strong>
+                </div>
+                <div>
+                  <span>Pending Expense Reviews</span>
+                  <strong id="dashPendingExpenseReviews">Loading…</strong>
+                  <small id="dashPendingExpenseReviewDetails">Inventory purchase suggestions awaiting review</small>
+                </div>
+                <div>
+                  <span>Daily Cash Closing</span>
+                  <strong id="dashCashClosingStatus">Loading…</strong>
+                  <small id="dashCashClosingDetails">Today's Manila business date</small>
+                </div>
             </div>
             <div class="fin-dashboard-columns">
             <section class="staff-table-card fin-dashboard-activity" aria-labelledby="dashboardActivityTitle">
                 <div class="staff-table-toolbar">
-                    <h2 id="dashboardActivityTitle">Recent finance activity</h2><a href="FinancesTransactions.html">View all transactions</a>
+                    <h2 id="dashboardActivityTitle">Recent Transactions</h2><a href="FinancesTransactions.html#ledger">View all transactions</a>
                 </div>
                 <div class="fin-table-scroll">
                     <table class="fin-table">
@@ -157,6 +171,7 @@
     <script src="finance-common.js?v=20261115-1"></script>
     <script src="finance-dashboard.js?v=20261115-1"></script>
     <script src="admin-context-nav.js"></script>
+    <script src="finance-dashboard-monitoring.js"></script>
 </body>
 
 </html>

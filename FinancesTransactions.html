@@ -7,7 +7,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
-    <title>Sales &amp; Transactions</title>
+    <title>Income</title>
+  <link rel="stylesheet" href="finance-ledger.css">
 </head>
 
 <body class="sg-admin-typography">
@@ -15,7 +16,7 @@
             aria-label="Open menu" aria-expanded="false" aria-controls="mobileNavDrawer"><img src="icons/hamburger.svg"
                 alt="" class="staff-hamburger-icon"></button>
         <div class="page-title">
-            <h2>Sales &amp; Transactions</h2>
+            <h2 id="financeModuleHeading">Income</h2>
             <p>Review recorded payments and sales</p>
         </div>
         <div class="actions">
@@ -40,8 +41,9 @@
                 aria-label="Close menu">&times;</button></div>
         <ul class="mobile-nav-links">
             <li><a href="FinanceDashboard.html">Dashboard</a></li>
-            <li><a href="FinancesTransactions.html">Sales &amp; Transactions</a></li>
+            <li><a href="FinancesTransactions.html#income">Income</a></li>
             <li><a href="FinanceExpenses.html">Expenses</a></li>
+            <li><a href="FinancesTransactions.html#ledger">Transaction Ledger</a></li>
             <li><a href="FinanceReports.html">Reports</a></li>
         </ul>
     </aside>
@@ -56,16 +58,15 @@
                                 class="finance-nav-icon"></span><span>Dashboard</span></a></li>
                     <li class="nav-item active fin-nav-dropdown">
                         <div class="fin-nav-dropdown-head">
-                            <a class="fin-nav-parent-link" href="FinancesTransactions.html" aria-current="page"><span class="finance-nav-icon-slot"><img
-                                    src="icons/finance-transactions.svg" alt="" class="finance-nav-icon"></span><span>Sales
-                                    &amp; Transactions</span></a>
+                            <a class="fin-nav-parent-link" href="FinancesTransactions.html#income" aria-current="page"><span class="finance-nav-icon-slot"><img
+                                    src="icons/finance-transactions.svg" alt="" class="finance-nav-icon"></span><span>Income</span></a>
                             <button type="button" class="fin-nav-dropdown-toggle" id="transactionViewToggle"
-                                aria-label="Collapse Sales &amp; Transactions submenu" aria-expanded="true"
+                                aria-label="Collapse Income submenu" aria-expanded="true"
                                 aria-controls="transactionViewMenu"><svg class="fin-nav-chevron" aria-hidden="true"
                                     focusable="false" viewBox="0 0 20 20"><path d="m5 7.5 5 5 5-5"/></svg></button>
                         </div>
                         <ul class="fin-nav-view-list" id="transactionViewMenu" role="tablist"
-                            aria-label="Sales and transaction views">
+                            aria-label="Income views">
                             <li role="presentation"><button type="button" class="fin-nav-view-tab is-active"
                                     id="transactionViewTransactions" data-tab="transactions" role="tab"
                                     aria-selected="true" aria-controls="transactionsPanel">Payment Ledger</button></li>
@@ -78,6 +79,8 @@
                             </li>
                         </ul>
                     </li>
+                    <li class="nav-item"><a href="FinancesTransactions.html#ledger"><span class="finance-nav-icon-slot"><img src="icons/finance-transactions.svg" alt=""
+                                class="finance-nav-icon"></span><span>Transaction Ledger</span></a></li>
                     <li class="nav-item"><a href="FinanceExpenses.html"><span class="finance-nav-icon-slot"><img src="icons/finance-expenses.svg" alt=""
                                 class="finance-nav-icon"></span><span>Expenses</span></a></li>
                     <li class="nav-item"><a href="FinanceReports.html"><span class="finance-nav-icon-slot"><img src="icons/finance-reports.svg" alt=""
@@ -125,7 +128,8 @@
                 </div>
             </div>
             <p class="fin-modal-copy" id="ledgerHelp">Includes deposits, balances, product sales, refunds, and
-                reversals.</p>
+                reversals. Payment times use Philippine time. Expense records store dates only, so their time and
+                payment method are marked as not recorded.</p>
             <div class="fin-sales-analytics-row" id="transactionAnalyticsRow">
                 <section class="staff-table-card" id="transactionsPanel" role="tabpanel"
                     aria-labelledby="transactionViewTransactions">
@@ -182,6 +186,75 @@
                     </div>
                 </section>
             </div>
+            <section class="staff-table-card fin-ledger-overview" id="transactionLedgerPanel" role="tabpanel"
+                aria-labelledby="transactionLedgerTitle" hidden>
+                <div class="staff-table-toolbar fin-ledger-toolbar">
+                    <div>
+                        <h2 id="transactionLedgerTitle">Transaction Ledger</h2>
+                        <p class="fin-ledger-note" role="note"><strong>Refunds and reversals:</strong> remain as historical Money In payment rows with their original transaction IDs and recorded references. Their status marks the receipt as no longer valid; only posted payments count as received income, and no separate cash-out row is inferred. Expense payment methods are not recorded in the source data.</p>
+                    </div>
+                    <button class="um-btn um-btn--ghost" type="button" id="financeLedgerExportXlsx">Export XLSX</button>
+                </div>
+                <div class="fin-ledger-tools fin-ledger-filter-grid">
+                    <label>From <input type="date" id="financeLedgerFrom"></label>
+                    <label>To <input type="date" id="financeLedgerTo"></label>
+                    <label>Direction
+                        <select id="financeLedgerDirection">
+                            <option value="all">All directions</option>
+                            <option value="money_in">Money In</option>
+                            <option value="money_out">Money Out</option>
+                        </select>
+                    </label>
+                    <label>Classification <input type="search" id="financeLedgerClassification" placeholder="All classifications"></label>
+                    <label>Payment method <input type="search" id="financeLedgerMethod" placeholder="All methods (use not recorded for unknown)"></label>
+                    <label>Source
+                        <select id="financeLedgerSource">
+                            <option value="all">All sources</option>
+                            <option value="payments">Payments</option>
+                            <option value="expenses">Expenses</option>
+                        </select>
+                    </label>
+                    <label>Status
+                        <select id="financeLedgerStatus">
+                            <option value="all">All statuses</option>
+                            <option value="posted">Posted</option>
+                            <option value="refunded">Refunded</option>
+                            <option value="reversed">Reversed</option>
+                            <option value="recorded">Recorded</option>
+                            <option value="voided">Voided</option>
+                        </select>
+                    </label>
+                    <label>Search <input type="search" id="financeLedgerSearch" placeholder="Customer, supplier, reference"></label>
+                </div>
+                <div class="fin-table-scroll">
+                    <table class="fin-table">
+                        <thead>
+                            <tr>
+                                <th>Transaction ID</th>
+                                <th>Date / Time</th>
+                                <th>Direction</th>
+                                <th>Sender / Recipient</th>
+                                <th>Purpose</th>
+                                <th>Amount</th>
+                                <th>Source / Destination</th>
+                                <th>Classification</th>
+                                <th>Payment Method</th>
+                                <th>Reference</th>
+                                <th>Status</th>
+                                <th>Recorded By</th>
+                            </tr>
+                        </thead>
+                        <tbody id="financeLedgerRows"></tbody>
+                    </table>
+                </div>
+                <div class="fin-table-info" id="financeLedgerMessage" role="status" aria-live="polite"></div>
+                <div class="fin-pagination">
+                    <button type="button" class="um-btn um-btn--ghost" id="financeLedgerPrevious" disabled>Previous</button>
+                    <span id="financeLedgerPageLabel">Page 1</span>
+                    <button type="button" class="um-btn um-btn--ghost" id="financeLedgerNext" disabled>Next</button>
+                </div>
+            </section>
+
             <section class="staff-table-card" id="receivablesPanel" role="tabpanel"
                 aria-labelledby="transactionViewReceivables" hidden>
                 <div class="staff-table-toolbar">
@@ -396,6 +469,7 @@
     <script src="finance-common.js?v=20261115-1"></script>
     <script src="finance-transactions.js?v=20261115-5"></script>
     <script src="admin-context-nav.js"></script>
+    <script src="finance-ledger.js?v=20261117-1"></script>
 </body>
 
 </html>
