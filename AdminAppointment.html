@@ -94,7 +94,6 @@
             </div>
           </div>
           <div class="um-header__actions-row">
-            <button class="um-btn um-btn--export" id="exportBtn" type="button">Export</button>
             <button class="um-btn um-btn--ghost" id="cancellationRequestsBtn" type="button">Cancellation Request</button>
             <button class="um-btn um-btn--ghost" id="reschedulingRequestsBtn" type="button">Rescheduling Requests</button>
             <button class="um-btn um-btn--primary" id="newAppointmentBtn" type="button">+ New Appointment</button>
@@ -118,14 +117,17 @@
           <p class="um-stat-card__value" id="aptConfirmedCount">0</p>
           <p class="um-stat-card__hint um-stat-card__hint--positive">Current appointments</p>
         </article>
-        <article class="um-stat-card">
-          <span class="apt-stat-icon apt-stat-icon--cancelled" aria-hidden="true"><img src="icons/calendar.svg" alt=""></span>
-          <p class="um-stat-card__label">CANCELLED APPOINTMENTS</p>
-          <button class="apt-stat-link" type="button" id="aptCancelledViewBtn" aria-haspopup="dialog">View</button>
-          <p class="um-stat-card__value" id="aptCancelledCount">0</p>
-          <p class="um-stat-card__hint um-stat-card__hint--negative">All recorded cancellations</p>
+        <article class="apt-trend-card" aria-labelledby="aptTopServicesTitle">
+          <h2 class="um-stat-card__label" id="aptTopServicesTitle">TOP SERVICES FOR SELECTED MONTH</h2>
+          <div class="apt-service-trend" id="aptTopServices" role="img" aria-label="Top services this month">
+            <p class="apt-insight-empty">Loading services…</p>
+          </div>
         </article>
       </section>
+
+      <div class="apt-date-export">
+        <select class="apt-date-range" id="aptDateRange" aria-label="Filter appointments by month"></select>
+      </div>
 
       <div class="apt-layout">
 
@@ -142,12 +144,13 @@
             </div>
 
             <div class="apt-toolbar__tools">
+              <button class="um-btn um-btn--ghost" id="aptCancelledViewBtn" type="button" aria-haspopup="dialog" hidden>Cancellation details</button>
               <button class="apt-chip" id="aptTodayChip" type="button" hidden>Today &times;</button>
               <div class="um-search apt-toolbar__search">
                 <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                 <input type="text" id="aptSearchInput" maxlength="100" placeholder="Search appointments..." aria-label="Search appointments">
               </div>
-              <select class="apt-date-range" id="aptDateRange" aria-label="Filter appointments by month"></select>
+              <button class="um-btn um-btn--export" id="exportBtn" type="button">Export</button>
             </div>
           </div>
 
@@ -199,15 +202,6 @@
               <span>Total appointments</span>
               <strong id="aptTotalCount">0</strong>
             </div>
-          </section>
-
-          <section class="apt-side-card">
-            <div class="apt-side-head">
-              <h2 class="apt-side-title">TOP SERVICES THIS MONTH</h2>
-            </div>
-            <ol class="apt-top-services" id="aptTopServices">
-              <li><span>Loading services…</span></li>
-            </ol>
           </section>
 
         </aside>

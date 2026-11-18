@@ -3,8 +3,8 @@
   if (!common) return;
   const today = common.manilaToday();
   const ids = [
-    'dashboardFrom', 'dashboardTo', 'dashSales', 'dashCollected', 'dashExpenses', 'dashNet',
-    'dashSalesComparison', 'dashCollectedComparison', 'dashExpensesComparison', 'dashNetComparison',
+    'dashboardFrom', 'dashboardTo', 'dashSales', 'dashCollected', 'dashExpenses',
+    'dashSalesComparison', 'dashCollectedComparison', 'dashExpensesComparison',
     'dashOutstanding', 'dashToday', 'dashReceivables', 'dashNoShows',
     'dashboardRecentRows', 'dashboardRecentEmpty', 'dashboardMessage',
     'appointmentTrendsChart', 'appointmentTrendsMessage',
@@ -35,11 +35,9 @@
     refs.dashSales.textContent = common.formatPeso(summary.sales);
     refs.dashCollected.textContent = common.formatPeso(summary.collected);
     refs.dashExpenses.textContent = common.formatPeso(summary.expenses);
-    refs.dashNet.textContent = common.formatPeso(summary.net_income);
     refs.dashSalesComparison.textContent = common.formatComparison(summary.sales, previousSummary.sales);
     refs.dashCollectedComparison.textContent = common.formatComparison(summary.collected, previousSummary.collected);
     refs.dashExpensesComparison.textContent = common.formatComparison(summary.expenses, previousSummary.expenses);
-    refs.dashNetComparison.textContent = common.formatComparison(summary.net_income, previousSummary.net_income);
     refs.dashOutstanding.textContent = common.formatPeso(summary.outstanding_balance);
     refs.dashToday.textContent = common.formatPeso(summary.today_collections);
     refs.dashReceivables.textContent = String(receivables.length);

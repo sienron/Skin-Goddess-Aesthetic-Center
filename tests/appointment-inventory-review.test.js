@@ -693,6 +693,8 @@ test('admin can cancel an in-progress appointment after it has started', async (
 
 test('only Inventory Officers can access officer review queue and review routes', async () => {
   const originalQuery = db.query;
+  const enrolledAt = new Date();
+  const authenticatedAt = Date.now();
   const routes = [
     ['/inventory-officer/reviews', 'get'],
     ['/inventory-officer/:id/review', 'get'],
@@ -710,12 +712,22 @@ test('only Inventory Officers can access officer review queue and review routes'
         ['admin', 403, false]
       ]) {
         db.query = async () => ({
-          rows: [{ role, status: 'active', dev_access_all: false }]
+          rows: [{
+            role,
+            status: 'active',
+            dev_access_all: false,
+            totp_enabled: true,
+            totp_enrolled_at: enrolledAt
+          }]
         });
         let statusCode = null;
         let nextCalled = false;
         await authorize({
-          session: { userId: 8 },
+          session: {
+            userId: 8,
+            mfaVerifiedAt: enrolledAt.getTime(),
+            privilegedMfaAuthenticatedAt: authenticatedAt
+          },
           path: `/api/appointments${path}`,
           originalUrl: `/api/appointments${path}`,
           accepts: () => false

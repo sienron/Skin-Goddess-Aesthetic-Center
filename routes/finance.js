@@ -6,6 +6,7 @@ const { DEPOSIT_DEDUCTED_FROM_PRICE, NO_SHOW_DEPOSIT_IS_INCOME } = require('../u
 const { notifyRoles } = require('../utils/notifications');
 const { escapeCsvCell } = require('../utils/csv');
 const { createSameOriginFrameHeaders } = require('../middleware/securityHeaders');
+const { appointmentRecords, chartRecords, operationalReport } = require('../utils/financeOperationalAnalytics');
 
 const router = express.Router();
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -181,20 +182,63 @@ function endpoint(handler) {
   };
 }
 
-const salesUnion = `
-  SELECT a.appointment_date AS sale_date, a.booked_service_price::numeric AS amount
-  FROM appointments a WHERE a.is_demo = FALSE AND a.appointment_status = 'completed'
+const serviceRevenueUnion = `
+  SELECT a.appointment_date AS sale_date, a.booked_service_price::numeric AS amount,
+    'Completed appointment'::text AS record_type, a.appointment_id AS record_id,
+    a.appointment_id, s.service_name AS service, s.category
+  FROM appointments a JOIN services s ON s.service_id = a.service_id
+  WHERE a.is_demo = FALSE AND a.appointment_status = 'completed'
     AND a.appointment_date BETWEEN $1::date AND $2::date
   UNION ALL
-  SELECT (p.created_at AT TIME ZONE 'Asia/Manila')::date, p.amount
-  FROM payments p WHERE p.payment_type = 'product_sale' AND p.status = 'posted'
-    AND (p.created_at AT TIME ZONE 'Asia/Manila')::date BETWEEN $1::date AND $2::date
-  UNION ALL
-  SELECT a.appointment_date, p.amount
-  FROM appointments a JOIN payments p ON p.appointment_id = a.appointment_id
+  SELECT a.appointment_date, p.amount, 'Retained deposit', p.payment_id,
+    a.appointment_id, s.service_name, s.category
+  FROM appointments a JOIN services s ON s.service_id = a.service_id JOIN payments p ON p.appointment_id = a.appointment_id
   WHERE p.payment_type = 'reservation' AND p.status = 'posted'
     AND a.is_demo = FALSE AND ${RETAINED_DEPOSIT_REVENUE} AND a.appointment_date BETWEEN $1::date AND $2::date
 `;
+
+const salesUnion = `
+  SELECT a.appointment_date AS sale_date, a.booked_service_price::numeric AS amount,
+    'Completed appointment'::text AS record_type, a.appointment_id AS record_id,
+    a.appointment_id, s.service_name AS service, s.category
+  FROM appointments a LEFT JOIN services s ON s.service_id = a.service_id
+  WHERE a.is_demo = FALSE AND a.appointment_status = 'completed'
+    AND a.appointment_date BETWEEN $1::date AND $2::date
+  UNION ALL
+  SELECT (p.created_at AT TIME ZONE 'Asia/Manila')::date, p.amount, 'Product sale',
+    p.payment_id, p.appointment_id, NULL::text, NULL::text
+  FROM payments p WHERE p.payment_type = 'product_sale' AND p.status = 'posted'
+    AND (p.created_at AT TIME ZONE 'Asia/Manila')::date BETWEEN $1::date AND $2::date
+  UNION ALL
+  SELECT a.appointment_date, p.amount, 'Retained deposit', p.payment_id,
+    a.appointment_id, s.service_name, s.category
+  FROM appointments a JOIN payments p ON p.appointment_id = a.appointment_id
+    LEFT JOIN services s ON s.service_id = a.service_id
+  WHERE p.payment_type = 'reservation' AND p.status = 'posted'
+    AND a.is_demo = FALSE AND ${RETAINED_DEPOSIT_REVENUE} AND a.appointment_date BETWEEN $1::date AND $2::date
+`;
+
+const onlineReservationPredicate = `p.payment_type = 'reservation' AND p.status = 'posted'
+  AND EXISTS (SELECT 1 FROM appointments a WHERE a.appointment_id = p.appointment_id AND a.is_demo = FALSE)
+  AND EXISTS (SELECT 1 FROM paymongo_checkout_sessions checkout
+    WHERE checkout.reference_number = p.reference_no AND checkout.payment_id IS NOT NULL)`;
+const depositStatus = `CASE WHEN p.status = 'refunded' THEN 'refunded' WHEN p.status = 'reversed' THEN 'reversed'
+  WHEN a.appointment_status = 'no_show' OR (a.appointment_status = 'cancelled'
+    AND POSITION('[DEPOSIT_FORFEITED]' IN COALESCE(p.note, '')) > 0) THEN 'forfeited' ELSE 'paid' END`;
+
+function cashClosingRows(from, to) {
+  return db.query(`
+    SELECT cc.cash_closing_id, cc.business_date::text AS business_date,
+           cc.expected_amount::float8 AS expected_amount,
+           cc.actual_amount::float8 AS actual_amount,
+           cc.variance::float8 AS variance, cc.closed_at,
+           COALESCE(NULLIF(BTRIM(CONCAT_WS(' ', NULLIF(BTRIM(u.first_name), ''), NULLIF(BTRIM(u.last_name), ''))), ''), 'Not recorded') AS closed_by_name
+    FROM cash_closings cc
+    LEFT JOIN users u ON u.user_id = cc.closed_by
+    WHERE cc.business_date BETWEEN $1::date AND $2::date
+    ORDER BY cc.business_date DESC, cc.cash_closing_id DESC
+  `, [from, to]);
+}
 
 async function outstandingBalance(from, to) {
   const result = await receivableRows(from, to, {}, true);
@@ -220,31 +264,12 @@ async function reportData(from, to) {
       SELECT day::date::text AS date, COUNT(p.payment_id)::int AS count
       FROM generate_series($1::date, $2::date, '1 day') day
       LEFT JOIN payments p ON (p.created_at AT TIME ZONE 'Asia/Manila')::date = day::date
-        AND p.payment_type = 'reservation' AND p.status = 'posted'
-        AND EXISTS (SELECT 1 FROM appointments a WHERE a.appointment_id = p.appointment_id AND a.is_demo = FALSE)
-        AND EXISTS (
-          SELECT 1
-          FROM paymongo_checkout_sessions checkout
-          WHERE checkout.reference_number = p.reference_no
-            AND checkout.payment_id IS NOT NULL
-        )
+        AND ${onlineReservationPredicate}
       GROUP BY day ORDER BY day
     `, [from, to]),
-    db.query(`SELECT category, SUM(amount)::float8 AS amount FROM (
-      SELECT s.category, a.booked_service_price::numeric AS amount FROM appointments a JOIN services s ON s.service_id = a.service_id
-      WHERE a.is_demo = FALSE AND a.appointment_status = 'completed' AND a.appointment_date BETWEEN $1::date AND $2::date
-      UNION ALL
-      SELECT s.category, p.amount FROM appointments a JOIN services s ON s.service_id = a.service_id JOIN payments p ON p.appointment_id = a.appointment_id
-      WHERE p.payment_type = 'reservation' AND p.status = 'posted' AND a.is_demo = FALSE AND ${RETAINED_DEPOSIT_REVENUE} AND a.appointment_date BETWEEN $1::date AND $2::date
-    ) revenue GROUP BY category ORDER BY amount DESC`, [from, to, NO_SHOW_DEPOSIT_IS_INCOME]),
-    db.query(`SELECT CASE WHEN p.status = 'refunded' THEN 'refunded' WHEN p.status = 'reversed' THEN 'reversed' WHEN a.appointment_status = 'no_show' OR (a.appointment_status = 'cancelled' AND POSITION('[DEPOSIT_FORFEITED]' IN COALESCE(p.note, '')) > 0) THEN 'forfeited' ELSE 'paid' END AS status, COUNT(*)::int AS count, SUM(p.amount)::float8 AS amount FROM payments p LEFT JOIN appointments a ON a.appointment_id = p.appointment_id WHERE p.payment_type = 'reservation' AND a.is_demo = FALSE AND (p.created_at AT TIME ZONE 'Asia/Manila')::date BETWEEN $1::date AND $2::date GROUP BY 1 ORDER BY 1`, [from, to]),
-    db.query(`SELECT service, SUM(amount)::float8 AS amount, COUNT(*)::int AS count FROM (
-      SELECT s.service_name AS service, a.booked_service_price::numeric AS amount FROM appointments a JOIN services s ON s.service_id = a.service_id
-      WHERE a.is_demo = FALSE AND a.appointment_status = 'completed' AND a.appointment_date BETWEEN $1::date AND $2::date
-      UNION ALL
-      SELECT s.service_name, p.amount FROM appointments a JOIN services s ON s.service_id = a.service_id JOIN payments p ON p.appointment_id = a.appointment_id
-      WHERE p.payment_type = 'reservation' AND p.status = 'posted' AND a.is_demo = FALSE AND ${RETAINED_DEPOSIT_REVENUE} AND a.appointment_date BETWEEN $1::date AND $2::date
-    ) revenue GROUP BY service ORDER BY amount DESC LIMIT 5`, [from, to, NO_SHOW_DEPOSIT_IS_INCOME]),
+    db.query(`SELECT category, SUM(amount)::float8 AS amount FROM (${serviceRevenueUnion}) revenue GROUP BY category ORDER BY amount DESC, category ASC`, [from, to, NO_SHOW_DEPOSIT_IS_INCOME]),
+    db.query(`SELECT ${depositStatus} AS status, COUNT(*)::int AS count, SUM(p.amount)::float8 AS amount FROM payments p LEFT JOIN appointments a ON a.appointment_id = p.appointment_id WHERE p.payment_type = 'reservation' AND a.is_demo = FALSE AND (p.created_at AT TIME ZONE 'Asia/Manila')::date BETWEEN $1::date AND $2::date GROUP BY 1 ORDER BY 1`, [from, to]),
+    db.query(`SELECT service, SUM(amount)::float8 AS amount, COUNT(*)::int AS count FROM (${serviceRevenueUnion}) revenue GROUP BY service ORDER BY amount DESC, service ASC LIMIT 5`, [from, to, NO_SHOW_DEPOSIT_IS_INCOME]),
     db.query(`SELECT category, SUM(amount)::float8 AS amount, COUNT(*)::int AS count FROM expenses WHERE voided_at IS NULL AND expense_date BETWEEN $1::date AND $2::date GROUP BY category ORDER BY amount DESC`, [from, to]),
   ]);
   const categories = categoryRows.rows.map((row) => ({ ...row, amount: Number(row.amount) }));
@@ -501,14 +526,11 @@ router.get('/monthly', endpoint(async (req, res) => {
   const months = req.query.months === undefined ? (hasCustomRange ? rangeMonths : 6) : Number(req.query.months);
   if (!Number.isInteger(months) || months < 1 || months > 24) throw new ApiError(400, 'Months must be between 1 and 24.');
   const start = hasCustomRange && req.query.months === undefined
-    ? `${range.from.slice(0, 7)}-01`
+    ? range.from
     : new Date(Date.UTC(endYear, endMonth - months, 1)).toISOString().slice(0, 10);
   const [sales, expenses] = await Promise.all([
-    db.query(`SELECT to_char(month, 'YYYY-MM') AS month, SUM(amount)::float8 AS amount FROM (
-      SELECT date_trunc('month', appointment_date)::date AS month, booked_service_price::numeric AS amount FROM appointments WHERE is_demo = FALSE AND appointment_status = 'completed' AND appointment_date BETWEEN $1::date AND $2::date
-      UNION ALL SELECT date_trunc('month', created_at AT TIME ZONE 'Asia/Manila')::date, amount FROM payments WHERE payment_type = 'product_sale' AND status = 'posted' AND (created_at AT TIME ZONE 'Asia/Manila')::date BETWEEN $1::date AND $2::date
-      UNION ALL SELECT date_trunc('month', a.appointment_date)::date, p.amount FROM appointments a JOIN payments p ON p.appointment_id = a.appointment_id WHERE p.payment_type = 'reservation' AND p.status = 'posted' AND ${RETAINED_DEPOSIT_REVENUE} AND a.appointment_date BETWEEN $1::date AND $2::date
-    ) s GROUP BY month`, [start, range.to, NO_SHOW_DEPOSIT_IS_INCOME]),
+    db.query(`SELECT to_char(date_trunc('month', sale_date), 'YYYY-MM') AS month, SUM(amount)::float8 AS amount
+      FROM (${salesUnion}) s GROUP BY 1`, [start, range.to, NO_SHOW_DEPOSIT_IS_INCOME]),
     db.query(`SELECT to_char(date_trunc('month', expense_date), 'YYYY-MM') AS month, SUM(amount)::float8 AS amount FROM expenses WHERE voided_at IS NULL AND expense_date BETWEEN $1::date AND $2::date GROUP BY 1`, [start, range.to]),
   ]);
   const salesMap = new Map(sales.rows.map((row) => [row.month, Number(row.amount)]));
@@ -1063,17 +1085,7 @@ router.get('/ledger/export.xlsx', endpoint(async (req, res) => {
 
 router.get('/cash-closing/export.xlsx', endpoint(async (req, res) => {
   const { from, to } = dateRange(req.query);
-  const result = await db.query(`
-    SELECT cc.cash_closing_id, cc.business_date::text AS business_date,
-           cc.expected_amount::float8 AS expected_amount,
-           cc.actual_amount::float8 AS actual_amount,
-           cc.variance::float8 AS variance, cc.closed_at,
-           COALESCE(NULLIF(BTRIM(CONCAT_WS(' ', NULLIF(BTRIM(u.first_name), ''), NULLIF(BTRIM(u.last_name), ''))), ''), 'Not recorded') AS closed_by_name
-    FROM cash_closings cc
-    LEFT JOIN users u ON u.user_id = cc.closed_by
-    WHERE cc.business_date BETWEEN $1::date AND $2::date
-    ORDER BY cc.business_date DESC, cc.cash_closing_id DESC
-  `, [from, to]);
+  const result = await cashClosingRows(from, to);
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet('Cash Closings');
   sheet.columns = [
@@ -1924,9 +1936,58 @@ router.post('/expenses/:id/void', endpoint(async (req, res) => {
   res.json(result.rows[0]);
 }));
 
+async function operationalPaymentRows(from, to) {
+  const result = await db.query(`
+    SELECT (p.created_at AT TIME ZONE 'Asia/Manila')::date::text AS date,
+      'Payment'::text AS record_type, p.payment_id::text AS record_id,
+      p.appointment_id::text AS appointment_id, s.service_name AS service,
+      p.payment_type::text AS category, p.method::text AS method,
+      p.status::text AS status, p.reference_no AS reference, p.amount::float8 AS amount
+    FROM payments p
+    LEFT JOIN appointments a ON a.appointment_id = p.appointment_id
+    LEFT JOIN services s ON s.service_id = a.service_id
+    WHERE p.status = 'posted' AND COALESCE(a.is_demo, FALSE) = FALSE
+      AND (p.created_at AT TIME ZONE 'Asia/Manila')::date BETWEEN $1::date AND $2::date
+    ORDER BY p.created_at, p.payment_id
+  `, [from, to]);
+  return result.rows;
+}
+
+async function operationalAppointmentRows(from, to) {
+  const result = await db.query(`
+    SELECT a.appointment_date::text AS date, a.appointment_id::text AS appointment_id,
+      s.service_name AS service, a.booking_source, a.appointment_status, a.payment_status,
+      a.booked_service_price::float8 AS service_price, COALESCE(paid.amount, 0)::float8 AS amount_paid
+    FROM appointments a
+    JOIN services s ON s.service_id = a.service_id
+    LEFT JOIN (
+      SELECT p.appointment_id, SUM(p.amount) AS amount
+      FROM payments p JOIN appointments selected ON selected.appointment_id = p.appointment_id
+      WHERE selected.is_demo = FALSE AND selected.appointment_date BETWEEN $1::date AND $2::date
+        AND p.status = 'posted' AND p.payment_type IN ('reservation', 'balance')
+        AND ($3::boolean OR p.payment_type <> 'reservation')
+      GROUP BY p.appointment_id
+    ) paid ON paid.appointment_id = a.appointment_id
+    WHERE a.is_demo = FALSE AND a.appointment_date BETWEEN $1::date AND $2::date
+    ORDER BY a.appointment_date, a.appointment_id
+  `, [from, to, DEPOSIT_DEDUCTED_FROM_PRICE]);
+  return result.rows;
+}
+
 router.get('/report', endpoint(async (req, res) => {
   const { from, to } = dateRange(req.query);
-  res.json(await reportData(from, to));
+  if (req.query.view === 'operational') {
+    const [payments, appointments] = await Promise.all([
+      operationalPaymentRows(from, to), operationalAppointmentRows(from, to),
+    ]);
+    return res.json(operationalReport(payments, appointments));
+  }
+  const report = await reportData(from, to);
+  if (req.query.include_closings === 'true') {
+    const closings = await cashClosingRows(from, to);
+    report.cash_closings = closings.rows;
+  }
+  res.json(report);
 }));
 
 function sendCsv(res, headers, rows, filename) {
@@ -2350,12 +2411,139 @@ function addReportDetailSheet(workbook, options) {
   return worksheet;
 }
 
+async function reportChartRecords(chart, from, to) {
+  if (['collected-services', 'payment-counts'].includes(chart)) {
+    return { rows: chartRecords(chart, await operationalPaymentRows(from, to), []) };
+  }
+  if (['appointment-source', 'appointment-payment-status'].includes(chart)) {
+    const appointments = appointmentRecords(await operationalAppointmentRows(from, to));
+    return { rows: chartRecords(chart, [], appointments) };
+  }
+  const revenueValues = [from, to, NO_SHOW_DEPOSIT_IS_INCOME];
+  if (chart === 'sales-expenses') {
+    return db.query(`
+      SELECT sale_date::text AS date, record_type, record_id::text AS record_id,
+        appointment_id::text AS appointment_id, service::text, category::text,
+        NULL::text AS method, NULL::text AS status, NULL::text AS reference, amount::float8 AS amount
+      FROM (${salesUnion}) sales
+      UNION ALL
+      SELECT expense_date::text, 'Recorded expense', expense_id::text, NULL::text, description,
+        category::text, NULL::text, 'recorded', reference_no, amount::float8
+      FROM expenses WHERE voided_at IS NULL AND expense_date BETWEEN $1::date AND $2::date
+      ORDER BY date, record_type, record_id
+    `, revenueValues);
+  }
+  if (chart === 'top-services' || chart === 'service-categories') {
+    const leaders = chart === 'top-services'
+      ? 'WHERE service IN (SELECT service FROM revenue GROUP BY service ORDER BY SUM(amount) DESC, service ASC LIMIT 5)'
+      : '';
+    return db.query(`
+      WITH revenue AS (${serviceRevenueUnion})
+      SELECT sale_date::text AS date, record_type, record_id::text AS record_id,
+        appointment_id::text AS appointment_id, service::text, category::text, amount::float8 AS amount
+      FROM revenue ${leaders} ORDER BY date, service, record_id
+    `, revenueValues);
+  }
+  if (chart === 'expense-categories') {
+    return db.query(`
+      SELECT expense_date::text AS date, 'Recorded expense'::text AS record_type,
+        expense_id::text AS record_id, description AS service, category::text, reference_no AS reference,
+        'recorded'::text AS status, amount::float8 AS amount
+      FROM expenses WHERE voided_at IS NULL AND expense_date BETWEEN $1::date AND $2::date
+      ORDER BY category, expense_date, expense_id
+    `, [from, to]);
+  }
+  const filters = {
+    'online-reservations': onlineReservationPredicate,
+    'payment-methods': "p.status = 'posted' AND COALESCE(a.is_demo, FALSE) = FALSE",
+    deposits: "p.payment_type = 'reservation' AND a.is_demo = FALSE",
+  };
+  if (!Object.hasOwn(filters, chart)) throw new ApiError(400, 'Choose a valid chart export.');
+  return db.query(`
+    SELECT (p.created_at AT TIME ZONE 'Asia/Manila')::date::text AS date,
+      'Payment'::text AS record_type, p.payment_id::text AS record_id,
+      p.appointment_id::text AS appointment_id, p.payment_type::text AS category,
+      p.method::text AS method, p.status::text AS status,
+      ${chart === 'deposits' ? depositStatus : 'NULL::text'} AS deposit_group,
+      p.reference_no AS reference, p.amount::float8 AS amount
+    FROM payments p LEFT JOIN appointments a ON a.appointment_id = p.appointment_id
+    WHERE (p.created_at AT TIME ZONE 'Asia/Manila')::date BETWEEN $1::date AND $2::date
+      AND ${filters[chart]}
+    ORDER BY ${chart === 'payment-methods' ? 'p.method, ' : ''}p.created_at, p.payment_id
+  `, [from, to]);
+}
+
+async function sendReportChartWorkbook(res, chart, from, to) {
+  const titles = {
+    'collected-services': 'Revenue by Service',
+    'appointment-source': 'Appointment Source',
+    'appointment-payment-status': 'Payment Status',
+    'payment-counts': 'Payment Methods',
+    'sales-expenses': 'Sales and Expenses',
+    'top-services': 'Top Services',
+    'service-categories': 'Service Categories',
+    'online-reservations': 'Online Reservations',
+    'payment-methods': 'Payment Methods',
+    deposits: 'Deposit Summary',
+    'expense-categories': 'Expense Categories',
+  };
+  if (!Object.hasOwn(titles, chart)) throw new ApiError(400, 'Choose a valid chart export.');
+  const result = await reportChartRecords(chart, from, to);
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'Skin Goddess Aesthetic Center';
+  const sheet = workbook.addWorksheet(titles[chart], { views: [{ state: 'frozen', ySplit: 1 }] });
+  const appointmentChart = ['appointment-source', 'appointment-payment-status'].includes(chart);
+  sheet.columns = appointmentChart ? [
+    { header: 'Appointment Date', key: 'date', width: 20 },
+    { header: 'Appointment ID', key: 'appointment_id', width: 20 },
+    { header: 'Service', key: 'service', width: 32 },
+    { header: 'Booking Source', key: 'source_label', width: 22 },
+    { header: 'Appointment Status', key: 'appointment_status', width: 23 },
+    { header: 'Recorded Payment Status', key: 'payment_status', width: 26 },
+    { header: 'Booked Service Price (PHP)', key: 'service_price', width: 27 },
+    { header: 'Eligible Paid Amount (PHP)', key: 'amount_paid', width: 26 },
+    { header: 'Current Balance Status', key: 'balance_status', width: 24 },
+  ] : [
+    { header: 'Date', key: 'date', width: 16 },
+    { header: 'Record Type', key: 'record_type', width: 24 },
+    { header: 'Record ID', key: 'record_id', width: 15 },
+    { header: 'Appointment ID', key: 'appointment_id', width: 18 },
+    { header: 'Service / Description', key: 'service', width: 32 },
+    { header: 'Category / Payment Type', key: 'category', width: 26 },
+    { header: 'Payment Method', key: 'method', width: 18 },
+    { header: 'Payment / Record Status', key: 'status', width: 24 },
+    { header: 'Deposit Group', key: 'deposit_group', width: 18 },
+    { header: 'Reference', key: 'reference', width: 25 },
+    { header: 'Amount (PHP)', key: 'amount', width: 20 },
+  ];
+  sheet.getRow(1).height = 30;
+  sheet.getRow(1).eachCell((cell) => {
+    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF6B5422' } };
+    cell.alignment = { vertical: 'middle', wrapText: true };
+  });
+  result.rows.forEach((record) => {
+    const row = sheet.addRow(record);
+    (appointmentChart ? ['service_price', 'amount_paid'] : ['amount']).forEach((key) => {
+      row.getCell(key).numFmt = '"₱"#,##0.00';
+    });
+  });
+  sheet.autoFilter = { from: 'A1', to: appointmentChart ? 'I1' : 'K1' };
+  const buffer = await workbook.xlsx.writeBuffer();
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition', `attachment; filename="finance-${chart}-${from}-to-${to}.xlsx"`);
+  return res.send(buffer);
+}
+
 router.get('/export.xlsx', endpoint(async (req, res) => {
   if (req.query.section === 'income-statement') {
     res.status(410).json({ message: 'Accounting statement exports have been retired.' });
     return;
   }
   const { from, to } = dateRange(req.query);
+  if (req.query.section === 'report-chart') {
+    return sendReportChartWorkbook(res, req.query.chart, from, to);
+  }
   if (!['transactions', 'expenses', 'receivables'].includes(req.query.section)) {
     throw new ApiError(400, 'Excel export section must be transactions, expenses, or receivables.');
   }

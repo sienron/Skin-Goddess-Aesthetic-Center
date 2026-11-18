@@ -53,7 +53,7 @@ test('finance and user CSV exports consistently use the protected encoders', () 
   const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
   assert.match(read('routes/finance.js'), /row\.map\(escapeCsvCell\)/);
   assert.match(read('Usermanagement.js'), /row\.map\(CsvExport\.escapeCell\)/);
-  assert.doesNotMatch(read('FinanceReports.html'), /csv-export\.js|finance-reports\.js/);
+  assert.doesNotMatch(read('FinanceReports.html'), /csv-export\.js/);
   assert.match(read('Usermanagement.html'), /<script src="csv-export\.js"><\/script>/);
   assert.match(read('scripts/build-public.js'), /'csv-export\.js'/);
 });

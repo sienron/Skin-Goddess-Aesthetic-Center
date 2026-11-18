@@ -259,8 +259,11 @@
     if (!canvas) return null;
     const frame = canvas.closest('.fin-chart-frame');
     if (!frame) return null;
-    const datasets = Array.isArray(config.data?.datasets) ? config.data.datasets : [];
-    const hasData = datasets.some((dataset) => (dataset.data || []).some((value) => Number.isFinite(Number(value)) && Number(value) !== 0));
+    const { showZeroValues = false, ...chartConfig } = config;
+    const datasets = Array.isArray(chartConfig.data?.datasets) ? chartConfig.data.datasets : [];
+    const hasData = datasets.some((dataset) => (dataset.data || []).some((value) =>
+      value !== null && value !== '' && Number.isFinite(Number(value)) && (showZeroValues || Number(value) !== 0)
+    ));
     const existing = charts.get(canvasId);
     let empty = frame.querySelector('.fin-chart-empty');
     if (!empty) {
@@ -287,11 +290,11 @@
       return null;
     }
     const normalized = {
-      ...config,
+      ...chartConfig,
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        ...config.options,
+        ...chartConfig.options,
       },
     };
     if (['bar', 'line'].includes(normalized.type)) {

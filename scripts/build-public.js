@@ -30,6 +30,7 @@ const browserScripts = [
   'finance-expenses.js',
   'finance-ledger.js',
   'finance-record-exports.js',
+  'finance-reports.js',
   'finance-transactions.js',
   'header.js',
   'homepage-hero.js',

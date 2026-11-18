@@ -133,14 +133,13 @@
       document.title = 'Transaction Ledger';
       document.body.dataset.financeView = 'ledger';
       loadLedger();
-      panel.scrollIntoView({ block: 'start' });
       return;
     }
     delete document.body.dataset.financeView;
   }
 
   function setActiveMenu(view) {
-    const navigation = document.querySelector('section[aria-label="Finance navigation"]');
+    const navigation = document.querySelector('.staff-sidebar');
     const incomeLink = navigation?.querySelector('a[href="FinancesTransactions.html#income"]');
     const ledgerLink = navigation?.querySelector('a[href="FinancesTransactions.html#ledger"]');
     const incomeItem = incomeLink?.closest('.nav-item');
@@ -154,6 +153,9 @@
       ledgerLink?.removeAttribute('aria-current');
       incomeLink?.setAttribute('aria-current', 'page');
     }
+    navigation?.querySelectorAll('.fin-nav-view-tab').forEach((button) => {
+      button.classList.toggle('is-active', view !== 'ledger' && button.getAttribute('aria-selected') === 'true');
+    });
   }
 
   function showIncome() {
@@ -189,11 +191,42 @@
     loadLedger();
   }
 
+  function markActiveFilters() {
+    [refs.direction, refs.classification, refs.method, refs.source, refs.status].forEach((input) => {
+      input.closest('details').classList.toggle('is-filtered', Boolean(input.value.trim()) && input.value !== 'all');
+    });
+    refs.from.closest('details').classList.toggle('is-filtered', Boolean(refs.from.value || refs.to.value));
+  }
+
+  markActiveFilters();
   [refs.from, refs.to, refs.direction, refs.classification, refs.method, refs.source, refs.status]
-    .forEach((input) => input.addEventListener('change', reloadFromFirstPage));
+    .forEach((input) => input.addEventListener('change', () => {
+      markActiveFilters();
+      reloadFromFirstPage();
+    }));
   refs.search.addEventListener('input', () => {
     clearTimeout(searchTimer);
     searchTimer = setTimeout(reloadFromFirstPage, 250);
+  });
+  panel.querySelectorAll('.fin-ledger-filter').forEach((filter) => {
+    filter.addEventListener('toggle', () => {
+      if (filter.open) panel.querySelectorAll('.fin-ledger-filter[open]').forEach((other) => {
+        if (other !== filter) other.open = false;
+      });
+    });
+  });
+  document.addEventListener('click', (event) => {
+    if (!event.target.closest('.fin-ledger-filter')) {
+      panel.querySelectorAll('.fin-ledger-filter[open]').forEach((filter) => { filter.open = false; });
+    }
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      panel.querySelectorAll('.fin-ledger-filter[open]').forEach((filter) => {
+        filter.open = false;
+        filter.querySelector('summary').focus();
+      });
+    }
   });
   refs.previous.addEventListener('click', () => {
     if (page > 1) {

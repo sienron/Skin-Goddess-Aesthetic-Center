@@ -14,6 +14,10 @@ run independent migration chains. Use `npm run migrate:validate` to check
 registry coverage and file presence without connecting to a database.
 `npm run migrate:status` reports the configured database's migration state.
 
+Migration `058-appointment-booking-source.js` records booking channels for new
+walk-in and online appointments. Existing appointments are marked online only
+when linked to a checkout; other historical sources remain unknown.
+
 The runner serializes concurrent starts with a PostgreSQL advisory lock, records
 the exact filename and SHA-256 checksum, and records a migration as applied
 only after its child process exits successfully. A failed or interrupted

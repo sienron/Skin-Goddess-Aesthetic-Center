@@ -8,6 +8,9 @@ const { manilaNow } = require('../utils/slots');
 const exportRoute = appointmentsRouter.stack
   .find((layer) => layer.route?.path === '/admin/export.xlsx' && layer.route.methods.get)
   .route.stack.at(-1).handle;
+const treatmentExportRoute = appointmentsRouter.stack
+  .find((layer) => layer.route?.path === '/admin/treatment-history/export.xlsx' && layer.route.methods.post)
+  .route.stack.at(-1).handle;
 const availabilityRoute = appointmentsRouter.stack
   .find((layer) => layer.route?.path === '/admin/walk-in-options' && layer.route.methods.get)
   .route.stack.at(-1).handle;
@@ -154,6 +157,39 @@ test('admin appointment export rejects invalid filter values', async () => {
 
   assert.equal(response.statusCode, 400);
   assert.match(response.body.message, /valid appointment status/);
+});
+
+test('treatment history export preserves selected order and formats spreadsheet columns', async () => {
+  db.query = async () => ({
+    rows: [
+      { appointment_id: 1, client: '=Client', client_email: 'client@example.test', date: '2026-11-18', start: '09:00', end: '10:00', fee: 1250 },
+      { appointment_id: 2, client: 'Second', date: '2026-11-19', start: '10:00', end: '11:00' }
+    ]
+  });
+  const response = responseCapture();
+  try {
+    await treatmentExportRoute({ body: { appointmentIds: [2, 1] } }, response);
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(response.body);
+    const sheet = workbook.getWorksheet('Treatment History');
+    assert.equal(sheet.rowCount, 3);
+    assert.equal(sheet.getCell('A2').value, '#2');
+    assert.equal(sheet.getCell('B3').value, '=Client');
+    assert.equal(sheet.getCell('K3').value, 1250);
+    assert.equal(sheet.getCell('F3').numFmt, 'dd mmm yyyy');
+    assert.ok(sheet.getColumn(3).width >= 30);
+    assert.equal(sheet.views[0].ySplit, 1);
+    assert.ok(sheet.autoFilter);
+
+    const invalid = responseCapture();
+    await treatmentExportRoute({ body: { appointmentIds: [1, 1] } }, invalid);
+    assert.equal(invalid.statusCode, 400);
+    const missing = responseCapture();
+    await treatmentExportRoute({ body: { appointmentIds: [999] } }, missing);
+    assert.equal(missing.statusCode, 409);
+  } finally {
+    db.query = originalQuery;
+  }
 });
 
 test('editing availability accepts a valid long duration inside clinic hours and bypasses new-booking lead time', async () => {

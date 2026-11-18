@@ -1,6 +1,7 @@
 (function () {
     const tableBody = document.getElementById("appointmentsTableBody");
     const searchInput = document.getElementById("searchInput");
+    const exportButton = document.getElementById("exportAppointmentsBtn");
     const tableSummary = document.getElementById("appointmentsTableSummary");
     const notesModal = document.getElementById("treatmentNotesModal");
     const notesModalClose = document.getElementById("treatmentNotesModalClose");
@@ -344,6 +345,32 @@
     }
 
     searchInput.addEventListener("input", render);
+    exportButton?.addEventListener("click", async () => {
+        exportButton.disabled = true;
+        try {
+            const response = await fetch("/api/appointments/admin/treatment-history/export.xlsx", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ appointmentIds: filteredAppointments().map((appointment) => appointment.id) }),
+            });
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || "Could not export appointments.");
+            }
+            const url = URL.createObjectURL(await response.blob());
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = "treatment-history-appointments.xlsx";
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+        } catch (error) {
+            tableSummary.textContent = `Export failed: ${error.message}`;
+        } finally {
+            exportButton.disabled = false;
+        }
+    });
     document.querySelectorAll(".treatment-sort-button").forEach((button) => {
         button.addEventListener("click", () => {
             const key = button.dataset.sortKey;

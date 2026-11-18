@@ -73,34 +73,18 @@ test('Finance dashboard shows posted income, pending reviews, recent transaction
   assert.match(dashboard, /common\.formatPeso\(summary\.collected\)/);
 });
 
-test('Reports contains only date-filtered financial record exports', () => {
+test('Reports shows date-filtered operational charts without the record export section', () => {
   const page = fs.readFileSync(path.join(root, 'FinanceReports.html'), 'utf8');
   const source = fs.readFileSync(path.join(root, 'finance-record-exports.js'), 'utf8');
   const build = fs.readFileSync(path.join(root, 'scripts', 'build-public.js'), 'utf8');
 
   for (const label of [
-    'Income Records Export',
-    'Expense Records Export',
-    'Payment Records Export',
-    'Transaction History Export',
-    'Cash Closing Records Export'
+    'Revenue by Service', 'Appointment Source', 'Payment Status', 'Payment Methods'
   ]) {
     assert.ok(page.includes(label), `${label} control should be present`);
   }
-  for (const obsolete of [
-    'Finance summary',
-    'Sales earned',
-    'Cash collected',
-    'Recorded expenses',
-    'Net cash after expenses',
-    'Online reservation deposits',
-    'Payment method breakdown',
-    'Deposit / refund summary',
-    'Top services by revenue',
-    'Expenses by category',
-    'Revenue by service category',
-    'Daily cash summary'
-  ]) {
+  for (const obsolete of ['Financial record exports', 'Income Records', 'Expense Records', 'Payment Records',
+    'Transaction History', 'Cash Closing Records', 'Finance summary', 'Net cash after expenses', 'Income exports include posted payments only']) {
     assert.ok(!page.includes(obsolete), `Reports should no longer contain ${obsolete}`);
   }
   assert.match(page, /data-period="today"/);
@@ -108,21 +92,14 @@ test('Reports contains only date-filtered financial record exports', () => {
   assert.match(page, /data-period="last-month"/);
   assert.match(page, /id="reportFrom"/);
   assert.match(page, /id="reportTo"/);
-  assert.match(page, /id="recordExportDirection"/);
-  assert.match(page, /id="recordExportClassification"/);
-  assert.match(page, /id="recordExportMethod"/);
-  assert.match(page, /id="recordExportSource"/);
-  assert.match(page, /id="recordExportStatus"/);
-  assert.doesNotMatch(page, /chart\.js|csv-export\.js|finance-reports\.js/);
-  assert.match(page, /Income exports include posted payments only[\s\S]*cash-closing exports use dates only/);
+  assert.doesNotMatch(page, /id="recordExport(?:Direction|Classification|Method|Source|Status|Kind)"/);
+  assert.match(page, /chart\.js/);
+  assert.match(page, /finance-reports\.js/);
   assert.match(page, /finance-record-exports\.js\?v=/);
-  assert.match(source, /\/api\/finance\/ledger\/export\.xlsx/);
-  assert.match(source, /\/api\/finance\/cash-closing\/export\.xlsx/);
   assert.match(source, /common\.bindPeriodControls/);
-  assert.match(source, /common\.isValidRange/);
   assert.match(build, /'finance-ledger\.js'/);
   assert.match(build, /'finance-record-exports\.js'/);
-  assert.doesNotMatch(build, /'finance-reports\.js'/);
+  assert.match(build, /'finance-reports\.js'/);
 });
 
 test('dashboard monitoring cards use pending review and server-business-date cash-close data', async () => {
@@ -163,7 +140,7 @@ test('dashboard monitoring cards use pending review and server-business-date cas
   assert.match(elements.get('dashCashClosingDetails').textContent, /2026-11-17.*Expected PHP 850.*Counted PHP 800/);
 });
 
-test('record export actions preserve date presets and route each export with supported filters', () => {
+test('report date controls load presets and reject invalid ranges', () => {
   const source = fs.readFileSync(path.join(root, 'finance-record-exports.js'), 'utf8');
   const commonWindow = {};
   vm.runInNewContext(fs.readFileSync(path.join(root, 'finance-common.js'), 'utf8'), {
@@ -180,27 +157,23 @@ test('record export actions preserve date presets and route each export with sup
   const controls = new Map([
     ['reportFrom', input()],
     ['reportTo', input()],
-    ['reportMessage', { textContent: '' }],
-    ['recordExportDirection', input('money_out')],
-    ['recordExportClassification', input('Other')],
-    ['recordExportMethod', input('cash')],
-    ['recordExportSource', input('expenses')],
-    ['recordExportStatus', input('voided')]
+    ['reportMessage', { textContent: '' }]
   ]);
-  const buttons = ['income', 'expenses', 'payments', 'ledger', 'cash-closings'].map((kind) => ({
-    dataset: { financeRecordExport: kind },
-    addEventListener(type, handler) { this[type] = handler; }
-  }));
   const periodButtons = ['today', 'month', 'last-month'].map((period) => ({
     dataset: { period },
     classList: { toggle(name, active) { this[name] = active; } },
     addEventListener(type, handler) { this[type] = handler; }
   }));
-  const window = { location: { href: '' } };
+  const ranges = [];
+  let invalidated = false;
+  const window = { FinanceReports: {
+    load(range) { ranges.push(range); },
+    invalidate() { invalidated = true; }
+  } };
   vm.runInNewContext(source, {
     document: {
       getElementById: (id) => controls.get(id) || null,
-      querySelectorAll: (selector) => selector === '[data-period]' ? periodButtons : buttons
+      querySelectorAll: () => periodButtons
     },
     window: Object.assign(window, { FinanceCommon: common }),
     URLSearchParams
@@ -220,50 +193,11 @@ test('record export actions preserve date presets and route each export with sup
     [controls.get('reportFrom').value, controls.get('reportTo').value],
     [lastMonth.from, lastMonth.to]
   );
-  controls.get('reportFrom').value = '2026-10-01';
-  controls.get('reportTo').value = '2026-10-31';
-
-  buttons[0].click();
-  assert.match(window.location.href, /ledger\/export\.xlsx\?/);
-  let params = new URLSearchParams(window.location.href.split('?')[1]);
-  assert.equal(params.get('from'), '2026-10-01');
-  assert.equal(params.get('to'), '2026-10-31');
-  assert.equal(params.get('direction'), 'money_in');
-  assert.equal(params.get('source'), 'payments');
-  assert.equal(params.get('status'), 'posted');
-  assert.equal(params.get('classification'), 'Other');
-  assert.equal(params.get('method'), 'cash');
-  buttons[1].click();
-  params = new URLSearchParams(window.location.href.split('?')[1]);
-  assert.equal(params.get('from'), '2026-10-01');
-  assert.equal(params.get('to'), '2026-10-31');
-  assert.equal(params.get('direction'), 'money_out');
-  assert.equal(params.get('source'), 'expenses');
-  buttons[2].click();
-  params = new URLSearchParams(window.location.href.split('?')[1]);
-  assert.equal(params.get('direction'), 'money_in');
-  assert.equal(params.get('source'), 'payments');
-  buttons[3].click();
-  assert.match(window.location.href, /ledger\/export\.xlsx\?/);
-  params = new URLSearchParams(window.location.href.split('?')[1]);
-  assert.equal(params.get('from'), '2026-10-01');
-  assert.equal(params.get('to'), '2026-10-31');
-  assert.equal(params.get('direction'), 'money_out');
-  assert.equal(params.get('source'), 'expenses');
-  assert.equal(params.get('status'), 'voided');
-  assert.equal(params.get('classification'), 'Other');
-  assert.equal(params.get('method'), 'cash');
-  buttons[4].click();
-  assert.match(window.location.href, /cash-closing\/export\.xlsx\?/);
-  params = new URLSearchParams(window.location.href.split('?')[1]);
-  assert.equal(params.get('from'), '2026-10-01');
-  assert.equal(params.get('to'), '2026-10-31');
-  assert.equal(params.get('direction'), null);
-
-  window.location.href = '';
+  assert.equal(ranges.at(-1).from, lastMonth.from);
+  assert.equal(ranges.at(-1).to, lastMonth.to);
   controls.get('reportFrom').value = '2026-10-31';
   controls.get('reportTo').value = '2026-10-01';
-  buttons[0].click();
-  assert.equal(window.location.href, '');
+  controls.get('reportFrom').change();
+  assert.equal(invalidated, true);
   assert.match(controls.get('reportMessage').textContent, /valid date range/i);
 });

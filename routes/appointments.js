@@ -457,6 +457,68 @@ router.get('/admin', requireRole('admin'), async (_req, res) => {
   }
 });
 
+router.post('/admin/treatment-history/export.xlsx', requireRole('admin'), async (req, res) => {
+  const ids = req.body?.appointmentIds;
+  if (!Array.isArray(ids) || ids.some((id) => !validAppointmentId(String(id)))
+    || new Set(ids.map(String)).size !== ids.length) {
+    return res.status(400).json({ message: 'Choose valid appointment records to export.' });
+  }
+  try {
+    const records = new Map((await loadAdminAppointmentRows()).map((row) => [String(row.appointment_id), row]));
+    if (ids.some((id) => !records.has(String(id)))) {
+      return res.status(409).json({ message: 'An appointment is no longer available. Reload the page and try again.' });
+    }
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'Skin Goddess Aesthetic Center';
+    const sheet = workbook.addWorksheet('Treatment History', { views: [{ state: 'frozen', ySplit: 1 }] });
+    sheet.columns = [
+      { header: 'Appointment', width: 16 },
+      { header: 'Client', width: 28 },
+      { header: 'Email', width: 32 },
+      { header: 'Contact', width: 20 },
+      { header: 'Service', width: 32 },
+      { header: 'Date', width: 18 },
+      { header: 'Start Time', width: 16 },
+      { header: 'End Time', width: 16 },
+      { header: 'Status', width: 18 },
+      { header: 'Payment', width: 18 },
+      { header: 'Service Fee (PHP)', width: 20 },
+      { header: 'Reservation Fee (PHP)', width: 24 }
+    ];
+    const header = sheet.getRow(1);
+    header.height = 30;
+    header.eachCell((cell) => {
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF6B5422' } };
+      cell.alignment = { vertical: 'middle', wrapText: true };
+    });
+    ids.forEach((id) => {
+      const record = records.get(String(id));
+      const date = String(record.date || '').slice(0, 10);
+      const row = sheet.addRow([
+        `#${record.appointment_id}`, record.client || 'Client', record.client_email || '',
+        record.contact || '', record.service || '', /^\d{4}-\d{2}-\d{2}$/.test(date) ? new Date(`${date}T00:00:00.000Z`) : null,
+        excelTime(record.start), excelTime(record.end), displayAppointmentStatus(record.status),
+        String(record.payment_status || '').replace(/_/g, ' '),
+        record.fee == null ? null : Number(record.fee),
+        record.deposit_amount == null ? null : Number(record.deposit_amount)
+      ]);
+      row.getCell(6).numFmt = 'dd mmm yyyy';
+      [7, 8].forEach((column) => { row.getCell(column).numFmt = 'h:mm AM/PM'; });
+      [11, 12].forEach((column) => { row.getCell(column).numFmt = '₱#,##0.00'; });
+      row.eachCell((cell) => { cell.alignment = { vertical: 'middle' }; });
+    });
+    sheet.autoFilter = { from: 'A1', to: 'L1' };
+    const buffer = await workbook.xlsx.writeBuffer();
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="treatment-history-appointments.xlsx"');
+    return res.send(buffer);
+  } catch (error) {
+    console.error('Error exporting treatment history:', error);
+    return res.status(500).json({ message: 'Could not export treatment history.' });
+  }
+});
+
 router.get('/admin/export.xlsx', requireRole('admin'), async (req, res) => {
   const status = typeof req.query.status === 'string' ? req.query.status : 'all';
   const month = typeof req.query.month === 'string' ? req.query.month : '';
@@ -1682,8 +1744,8 @@ router.post('/admin/walk-in', requireRole('admin'), async (req, res) => {
           (user_id, walk_in_name, service_id, booked_service_price, booked_reservation_fee,
            appointment_date, appointment_time, appointment_end_time, scheduled_end_time,
            booked_duration_minutes, booked_buffer_minutes, aesthetician_id,
-           appointment_status, payment_status)
-        VALUES (NULL, $1, $2, $3, $4, $5, $6, $7, $7, $8, $9, $10, 'confirmed', 'unpaid')
+           appointment_status, payment_status, booking_source)
+        VALUES (NULL, $1, $2, $3, $4, $5, $6, $7, $7, $8, $9, $10, 'confirmed', 'unpaid', 'walk_in')
         RETURNING appointment_id, appointment_status, payment_status
       `, [
         clientName,
@@ -2129,14 +2191,14 @@ async function createAppointmentFromPaidCheckout(client, payment, referenceNumbe
           booked_duration_minutes, booked_buffer_minutes, aesthetician_id,
           appointment_status, payment_status, reminder_24h_sent, reminder_3h_sent,
           reminder_email_24h_sent, reminder_email_3h_sent,
-          customer_first_name, customer_last_name, customer_email, customer_phone
+          customer_first_name, customer_last_name, customer_email, customer_phone, booking_source
         )
         VALUES (
           $1, $2, $3, $4, $5, $6, $7, $7, $8, $9, $10, 'confirmed', 'paid',
           $5::date + $6::time <= (NOW() AT TIME ZONE 'Asia/Manila') + INTERVAL '24 hours',
           FALSE,
           $5::date + $6::time <= (NOW() AT TIME ZONE 'Asia/Manila') + INTERVAL '24 hours',
-          FALSE, $11, $12, $13, $14
+          FALSE, $11, $12, $13, $14, 'online'
         )
         RETURNING appointment_id, appointment_status, payment_status, aesthetician_id
       `, [payment.user_id, payment.service_id, payment.service_price,

@@ -2,37 +2,113 @@
   width: 100%;
 }
 
-#transactionLedgerPanel .fin-ledger-filter-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
-  gap: 12px;
-  margin: 16px 0;
-}
-
-#transactionLedgerPanel .fin-ledger-filter-grid label {
-  display: grid;
-  gap: 6px;
-  min-width: 0;
-}
-
-#transactionLedgerPanel .fin-ledger-filter-grid input,
-#transactionLedgerPanel .fin-ledger-filter-grid select {
-  box-sizing: border-box;
-  min-width: 0;
-  width: 100%;
-}
-
-#transactionLedgerPanel .fin-ledger-note {
-  max-width: 80ch;
-  margin: 4px 0 0;
-  font-size: 0.82rem;
-  line-height: 1.5;
-}
-
 #transactionLedgerPanel .fin-table-scroll {
-  overflow-x: auto;
+  min-height: 190px;
+  max-height: max(220px, calc(100vh - 260px));
+  overflow: auto;
+  overscroll-behavior-inline: contain;
 }
 
+#transactionLedgerPanel .fin-ledger-table {
+  min-width: 1420px;
+}
+
+#transactionLedgerPanel .fin-ledger-table th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  min-width: 110px;
+  padding: 12px 10px;
+  border-bottom: 1px solid #e8e3d9;
+  background: #fbfaf7;
+  vertical-align: middle;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+#transactionLedgerPanel .fin-ledger-table th:has(.fin-ledger-filter[open]) {
+  z-index: 3;
+}
+
+.fin-ledger-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.fin-ledger-toolbar-actions input {
+  box-sizing: border-box;
+  width: 220px;
+  min-width: 0;
+  min-height: 36px;
+  padding: 8px 10px;
+  border: 1px solid #e0d9ce;
+  border-radius: 6px;
+  background: #fff;
+  color: #514b43;
+  font: inherit;
+}
+
+.fin-ledger-filter summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.fin-ledger-filter summary::-webkit-details-marker { display: none; }
+.fin-ledger-filter summary::after {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg) translateY(-2px);
+}
+.fin-ledger-filter summary:hover,
+.fin-ledger-filter.is-filtered summary { color: #8a6e2f; }
+.fin-ledger-filter summary:focus-visible {
+  outline: 2px solid #b99a5b;
+  outline-offset: 3px;
+}
+.fin-ledger-filter__panel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  box-sizing: border-box;
+  width: 230px;
+  padding: 10px;
+  border: 1px solid #e6e1d7;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 6px 16px rgba(40, 35, 25, .14);
+  white-space: normal;
+}
+.fin-ledger-filter--end .fin-ledger-filter__panel { left: auto; right: 0; }
+.fin-ledger-filter__panel input,
+#transactionLedgerPanel .fin-ledger-filter__panel select {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  padding: 6px 8px;
+  border: 1px solid #e0d9ce;
+  border-radius: 5px;
+  background: #fff;
+  color: #514b43;
+  font: 400 0.75rem "Raleway", sans-serif;
+}
+.fin-ledger-filter__panel input:focus,
+#transactionLedgerPanel .fin-ledger-filter__panel select:focus,
+.fin-ledger-toolbar-actions input:focus {
+  border-color: #b99a5b;
+  outline: 0;
+  box-shadow: 0 0 0 2px rgba(185, 154, 91, .18);
+}
+.fin-ledger-filter__dates { display: grid; gap: 8px; }
+.fin-ledger-filter__dates label { display: grid; gap: 4px; font-size: .72rem; }
 #transactionLedgerPanel .fin-table td {
   white-space: nowrap;
 }
@@ -46,40 +122,40 @@
 }
 
 body[data-finance-view="ledger"] #transactionOverview,
-body[data-finance-view="ledger"] #transactionAnalyticsRow {
+body[data-finance-view="ledger"] #transactionAnalyticsRow,
+body[data-finance-view="ledger"] #receivablesPanel,
+body[data-finance-view="ledger"] #depositsPanel,
+body[data-finance-view="ledger"] #transactionViewMenu {
   display: none !important;
 }
 
-@media (max-width: 640px) {
-  #transactionLedgerPanel .fin-ledger-filter-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+.fin-report-subtitle {
+  margin: 4px 0 0;
+  color: #756c62;
+  font: 0.72rem/1.4 "Raleway", sans-serif;
 }
 
-.fin-record-export-filters {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
-  gap: 12px;
-  margin: 16px 0;
-}
-
-.fin-record-export-filters label {
-  display: grid;
-  gap: 6px;
+.fin-reports-page .fin-report-panel-heading > div {
   min-width: 0;
 }
 
-.fin-record-export-filters input,
-.fin-record-export-filters select {
-  box-sizing: border-box;
-  min-width: 0;
-  width: 100%;
+.fin-reports-page .fin-report-export {
+  flex-shrink: 0;
 }
 
-.fin-record-export-actions {
+.fin-revenue-scroll {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.fin-reports-page .fin-report-panel {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  flex-direction: column;
+}
+
+.fin-reports-page .fin-chart-frame {
+  width: 100%;
+  min-width: 0;
 }
 
 .fin-dashboard-followups small {
@@ -89,8 +165,84 @@ body[data-finance-view="ledger"] #transactionAnalyticsRow {
 }
 
 @media (max-width: 640px) {
-  .fin-record-export-actions {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  #transactionLedgerPanel .fin-ledger-toolbar {
+    align-items: flex-start;
   }
+
+  .fin-ledger-toolbar-actions { width: 100%; }
+  .fin-ledger-toolbar-actions input { flex: 1; width: auto; }
+
+  #transactionLedgerPanel .fin-ledger-header-filter--dates {
+    grid-template-columns: minmax(112px, 1fr);
+  }
+
+}
+
+.fin-sale-footer {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #eee9df;
+}
+
+.fin-sale-footer .fin-sale-total {
+  margin: 0;
+}
+
+.fin-sale-footer .fin-modal-actions {
+  grid-column: auto;
+  margin: 0;
+}
+
+.fin-form-hint {
+  display: block;
+  margin-top: 5px;
+  color: #756c62;
+  font-size: 0.7rem;
+  line-height: 1.4;
+}
+
+@media (max-width: 640px) {
+  .fin-sale-footer {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .fin-sale-footer .fin-modal-actions {
+    justify-content: flex-end;
+  }
+}
+
+body.staff-theme-dark #transactionLedgerPanel .fin-ledger-table th,
+body.staff-theme-dark .fin-ledger-filter__panel {
+  background: #222421;
+  border-color: #494a45;
+}
+
+body.staff-theme-dark .fin-ledger-filter__panel input,
+body.staff-theme-dark #transactionLedgerPanel .fin-ledger-filter__panel select,
+body.staff-theme-dark .fin-ledger-toolbar-actions input {
+  border-color: #494a45;
+  background: #222421;
+  color: #e9e4da;
+}
+
+body.staff-theme-dark .fin-sale-footer {
+  border-color: #3d3e39;
+}
+
+body.staff-theme-dark .fin-form-hint {
+  color: #bdb5a8;
+}
+
+body.staff-theme-dark .fin-report-subtitle {
+  color: #bdb5a8;
+}
+
+body.staff-theme-dark .fin-reports-page .fin-report-panel-heading {
+  border-color: #494a45;
 }

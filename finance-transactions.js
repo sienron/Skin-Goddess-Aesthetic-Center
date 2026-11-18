@@ -50,6 +50,14 @@
   let saleRequestKey = null;
   let saleModalRequest = 0;
   let saleProducts = [];
+  const temporarySkincareProducts = [
+    'Facial Cleanser',
+    'Hydrating Toner',
+    'Vitamin C Serum',
+    'Niacinamide Serum',
+    'Moisturizer',
+    'Sunscreen SPF 50',
+  ];
 
   function element(tag, text = '', className = '') {
     const item = document.createElement(tag);
@@ -239,6 +247,37 @@
     return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
   }
 
+  function renderSaleProductOptions(products) {
+    const placeholder = new Option('Choose product', '');
+    const examples = document.createElement('optgroup');
+    examples.label = 'Temporary examples — frontend only (not selectable)';
+    temporarySkincareProducts.forEach((name, index) => {
+      const option = new Option(`${name} — preview only`, `temporary-${index + 1}`);
+      option.disabled = true;
+      examples.appendChild(option);
+    });
+
+    const inventory = document.createElement('optgroup');
+    inventory.label = 'Inventory products (recordable when in stock)';
+    if (!products.length) {
+      const unavailable = new Option('No inventory products found', '');
+      unavailable.disabled = true;
+      inventory.appendChild(unavailable);
+    } else {
+      products.forEach((product) => {
+        const stock = Number(product.stock_quantity);
+        const option = new Option(
+          `${product.product_name} — ${stock > 0 ? `${stock} in stock` : 'Out of stock'}`,
+          product.product_id,
+        );
+        option.disabled = stock <= 0;
+        inventory.appendChild(option);
+      });
+    }
+
+    refs.saleProduct.replaceChildren(placeholder, examples, inventory);
+  }
+
   async function openSaleModal() {
     const requestId = ++saleModalRequest;
     refs.saleForm.reset();
@@ -287,7 +326,8 @@
       if (!Array.isArray(products)) throw new Error('The inventory product response was not a list.');
     } catch (error) {
       if (requestId !== saleModalRequest) return;
-      refs.saleProduct.replaceChildren(new Option('Inventory products unavailable', ''));
+      renderSaleProductOptions([]);
+      refs.saleProduct.options[0].textContent = 'Inventory products unavailable';
       refs.saleProduct.disabled = true;
       refs.saleSubmit.disabled = true;
       productNotice = `Inventory products could not be loaded: ${error.message}`;
@@ -296,29 +336,21 @@
     }
 
     saleProducts = products;
+    renderSaleProductOptions(saleProducts);
     if (!saleProducts.length) {
-      refs.saleProduct.replaceChildren(new Option('No inventory products found', ''));
-      refs.saleProduct.disabled = true;
+      refs.saleProduct.disabled = false;
       refs.saleSubmit.disabled = true;
-      productNotice = 'No inventory products are available.';
+      productNotice = 'No inventory products are available. Temporary skincare examples cannot be recorded.';
       updateSaleMessage();
       return;
     }
 
-    refs.saleProduct.replaceChildren(new Option('Choose product', ''));
-    saleProducts.forEach((product) => {
-      const stock = Number(product.stock_quantity);
-      const option = new Option(
-        `${product.product_name} — ${stock > 0 ? `${stock} in stock` : 'Out of stock'}`,
-        product.product_id,
-      );
-      option.disabled = stock <= 0;
-      refs.saleProduct.add(option);
-    });
     const hasStock = saleProducts.some((product) => Number(product.stock_quantity) > 0);
     refs.saleProduct.disabled = false;
     refs.saleSubmit.disabled = !hasStock;
-    productNotice = hasStock ? '' : 'Products are listed, but none are currently in stock.';
+    productNotice = hasStock
+      ? ''
+      : 'No inventory products are in stock. Temporary skincare examples cannot be recorded.';
     updateSaleMessage();
   }
 

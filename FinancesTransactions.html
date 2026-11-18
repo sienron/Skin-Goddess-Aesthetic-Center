@@ -127,9 +127,7 @@
                     </article>
                 </div>
             </div>
-            <p class="fin-modal-copy" id="ledgerHelp">Includes deposits, balances, product sales, refunds, and
-                reversals. Payment times use Philippine time. Expense records store dates only, so their time and
-                payment method are marked as not recorded.</p>
+            <span id="ledgerHelp" hidden></span>
             <div class="fin-sales-analytics-row" id="transactionAnalyticsRow">
                 <section class="staff-table-card" id="transactionsPanel" role="tabpanel"
                     aria-labelledby="transactionViewTransactions">
@@ -191,57 +189,28 @@
                 <div class="staff-table-toolbar fin-ledger-toolbar">
                     <div>
                         <h2 id="transactionLedgerTitle">Transaction Ledger</h2>
-                        <p class="fin-ledger-note" role="note"><strong>Refunds and reversals:</strong> remain as historical Money In payment rows with their original transaction IDs and recorded references. Their status marks the receipt as no longer valid; only posted payments count as received income, and no separate cash-out row is inferred. Expense payment methods are not recorded in the source data.</p>
                     </div>
-                    <button class="um-btn um-btn--ghost" type="button" id="financeLedgerExportXlsx">Export XLSX</button>
-                </div>
-                <div class="fin-ledger-tools fin-ledger-filter-grid">
-                    <label>From <input type="date" id="financeLedgerFrom"></label>
-                    <label>To <input type="date" id="financeLedgerTo"></label>
-                    <label>Direction
-                        <select id="financeLedgerDirection">
-                            <option value="all">All directions</option>
-                            <option value="money_in">Money In</option>
-                            <option value="money_out">Money Out</option>
-                        </select>
-                    </label>
-                    <label>Classification <input type="search" id="financeLedgerClassification" placeholder="All classifications"></label>
-                    <label>Payment method <input type="search" id="financeLedgerMethod" placeholder="All methods (use not recorded for unknown)"></label>
-                    <label>Source
-                        <select id="financeLedgerSource">
-                            <option value="all">All sources</option>
-                            <option value="payments">Payments</option>
-                            <option value="expenses">Expenses</option>
-                        </select>
-                    </label>
-                    <label>Status
-                        <select id="financeLedgerStatus">
-                            <option value="all">All statuses</option>
-                            <option value="posted">Posted</option>
-                            <option value="refunded">Refunded</option>
-                            <option value="reversed">Reversed</option>
-                            <option value="recorded">Recorded</option>
-                            <option value="voided">Voided</option>
-                        </select>
-                    </label>
-                    <label>Search <input type="search" id="financeLedgerSearch" placeholder="Customer, supplier, reference"></label>
+                    <div class="fin-ledger-toolbar-actions">
+                        <input type="search" id="financeLedgerSearch" aria-label="Search transaction records" placeholder="Search Records">
+                        <button class="fin-button fin-button-export" type="button" id="financeLedgerExportXlsx">Export</button>
+                    </div>
                 </div>
                 <div class="fin-table-scroll">
-                    <table class="fin-table">
+                    <table class="fin-table fin-ledger-table">
                         <thead>
                             <tr>
-                                <th>Transaction ID</th>
-                                <th>Date / Time</th>
-                                <th>Direction</th>
-                                <th>Sender / Recipient</th>
-                                <th>Purpose</th>
-                                <th>Amount</th>
-                                <th>Source / Destination</th>
-                                <th>Classification</th>
-                                <th>Payment Method</th>
-                                <th>Reference</th>
-                                <th>Status</th>
-                                <th>Recorded By</th>
+                                <th scope="col">Transaction ID</th>
+                                <th scope="col"><details class="fin-ledger-filter"><summary>Date / Time</summary><div class="fin-ledger-filter__panel fin-ledger-filter__dates"><label>From<input type="date" id="financeLedgerFrom"></label><label>To<input type="date" id="financeLedgerTo"></label></div></details></th>
+                                <th scope="col"><details class="fin-ledger-filter"><summary>Direction</summary><div class="fin-ledger-filter__panel"><select id="financeLedgerDirection" aria-label="Filter by transaction direction"><option value="all">All directions</option><option value="money_in">Money In</option><option value="money_out">Money Out</option></select></div></details></th>
+                                <th scope="col">Sender / Recipient</th>
+                                <th scope="col">Purpose</th>
+                                <th scope="col">Amount</th>
+                                <th scope="col"><details class="fin-ledger-filter"><summary>Source / Destination</summary><div class="fin-ledger-filter__panel"><select id="financeLedgerSource" aria-label="Filter by source"><option value="all">All sources</option><option value="payments">Payments</option><option value="expenses">Expenses</option></select></div></details></th>
+                                <th scope="col"><details class="fin-ledger-filter"><summary>Classification</summary><div class="fin-ledger-filter__panel"><input type="search" id="financeLedgerClassification" aria-label="Filter by classification" placeholder="All classifications"></div></details></th>
+                                <th scope="col"><details class="fin-ledger-filter"><summary>Payment Method</summary><div class="fin-ledger-filter__panel"><input type="search" id="financeLedgerMethod" aria-label="Filter by payment method" placeholder="All methods or not recorded"></div></details></th>
+                                <th scope="col">Reference</th>
+                                <th scope="col"><details class="fin-ledger-filter fin-ledger-filter--end"><summary>Status</summary><div class="fin-ledger-filter__panel"><select id="financeLedgerStatus" aria-label="Filter by transaction status"><option value="all">All statuses</option><option value="posted">Posted</option><option value="refunded">Refunded</option><option value="reversed">Reversed</option><option value="recorded">Recorded</option><option value="voided">Voided</option></select></div></details></th>
+                                <th scope="col">Recorded By</th>
                             </tr>
                         </thead>
                         <tbody id="financeLedgerRows"></tbody>
@@ -358,12 +327,12 @@
                     <h2 id="saleTitle">Record product sale</h2>
                     <form id="saleForm" class="fin-form"><label>Client (optional)<select id="saleClient">
                                 <option value="">No client selected</option>
-                            </select></label><label>Inventory product<select id="saleProduct" required>
+                            </select></label><label>Product<select id="saleProduct" required>
                                 <option value="">Choose product</option>
                             </select></label><label>Quantity<input id="saleQuantity" type="number" min="1" step="1"
                                 value="1" required></label><label>Sale price per unit (PHP)<input id="salePrice"
                                 type="number" min="0.01" step="0.01" required></label>
-                        <p class="fin-modal-copy">Sale total: <strong id="saleTotal">PHP 0.00</strong></p><label>Payment
+                        <label>Payment
                             method<select id="saleMethod" required>
                                 <option value="">Choose method</option>
                                 <option value="cash">Cash</option>
@@ -373,9 +342,9 @@
                                 <option value="paymongo">PayMongo (Other)</option>
                             </select></label><label>Reference number<input id="saleReference" maxlength="100"></label>
                         <p class="fin-form-message" id="saleMessage" role="alert"></p>
-                        <div class="fin-modal-actions"><button class="fin-button" type="button"
+                        <div class="fin-sale-footer"><p class="fin-modal-copy fin-sale-total">Sale total: <strong id="saleTotal" aria-live="polite">PHP 0.00</strong></p><div class="fin-modal-actions"><button class="fin-button" type="button"
                                 data-close-sale>Cancel</button><button class="fin-button fin-button-primary"
-                                id="saleSubmit" type="submit">Record sale</button></div>
+                                id="saleSubmit" type="submit">Record sale</button></div></div>
                     </form>
                 </section>
             </div>
@@ -467,9 +436,9 @@
     <script src="header.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
     <script src="finance-common.js?v=20261115-1"></script>
-    <script src="finance-transactions.js?v=20261115-5"></script>
+    <script src="finance-transactions.js?v=20261118-1"></script>
     <script src="admin-context-nav.js"></script>
-    <script src="finance-ledger.js?v=20261117-1"></script>
+    <script src="finance-ledger.js?v=20261118-1"></script>
 </body>
 
 </html>

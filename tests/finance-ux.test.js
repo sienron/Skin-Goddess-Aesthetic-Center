@@ -192,6 +192,10 @@ describe('Finance UX shared helpers', () => {
     assert.equal(first.destroyCount, 1);
     assert.equal(canvas.hidden, true);
     assert.equal(empty.textContent, 'No data for this period');
+    const zeroChart = common.renderChart('chart', { ...config(0), showZeroValues: true });
+    assert.ok(zeroChart);
+    assert.equal(canvas.hidden, false);
+    assert.equal(common.renderChart('chart', { ...config(null), showZeroValues: true }), null);
   });
 
   it('preserves authored content in an existing chart empty state', () => {

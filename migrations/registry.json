@@ -66,7 +66,8 @@
     "051-hashed-email-otps.js",
     "056-finance-payment-idempotency.js",
     "056-allow-repeated-inventory-purchase-batches.js",
-    "057-appointment-in-progress-status.js"
+    "057-appointment-in-progress-status.js",
+    "058-appointment-booking-source.js"
   ],
   "optional": [
     "043-demo-customer-appointments.js"

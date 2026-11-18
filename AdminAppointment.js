@@ -1217,6 +1217,8 @@ document.addEventListener('DOMContentLoaded', () => {
       tab.classList.toggle('um-tab--active', key === state.status);
     });
     if (todayChip) todayChip.hidden = !state.todayOnly;
+    const cancellationDetails = document.getElementById('aptCancelledViewBtn');
+    if (cancellationDetails) cancellationDetails.hidden = state.status !== 'cancelled';
   }
 
   function renderPagination(totalPages) {
@@ -1309,8 +1311,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderSummary() {
     const values = {
       aptTodayCount: APPOINTMENTS.filter((appointment) => appointment.isToday).length,
-      aptConfirmedCount: APPOINTMENTS.filter((appointment) => appointment.status === 'confirmed').length,
-      aptCancelledCount: APPOINTMENTS.filter((appointment) => appointment.status === 'cancelled').length
+      aptConfirmedCount: APPOINTMENTS.filter((appointment) => appointment.status === 'confirmed').length
     };
     Object.entries(values).forEach(([id, value]) => {
       const target = document.getElementById(id);
@@ -1425,26 +1426,44 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (totalCount) totalCount.textContent = String(APPOINTMENTS.length) + ' appointments';
-    if (topServices) {
-      const counts = new Map();
-      monthAppointments.forEach((appointment) => counts.set(appointment.service, (counts.get(appointment.service) || 0) + 1));
-      const leaders = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3);
-      topServices.textContent = '';
-      if (!leaders.length) {
-        topServices.appendChild(el(
-          'li',
-          'apt-insight-empty',
-          isLoading ? 'Loading services…' : 'No bookings this month.'
-        ));
-      } else {
-        leaders.forEach(([service, count], index) => {
-          const row = el('li');
-          row.appendChild(el('span', '', (index + 1) + '. ' + service));
-          row.appendChild(el('strong', '', count + (count === 1 ? ' booking' : ' bookings')));
-          topServices.appendChild(row);
-        });
-      }
+    if (topServices) renderTopServices(topServices, monthKey);
+  }
+
+  function renderTopServices(container, monthKey) {
+    const counts = new Map();
+    APPOINTMENTS.filter((appointment) => appointment.dateKey.startsWith(monthKey))
+      .forEach((appointment) => counts.set(appointment.service, (counts.get(appointment.service) || 0) + 1));
+    const leaders = [...counts.entries()].sort((left, right) => right[1] - left[1]).slice(0, 3);
+    container.replaceChildren();
+
+    if (!leaders.length) {
+      container.setAttribute('aria-label', isLoading ? 'Loading services' : 'No bookings for the selected month');
+      container.appendChild(el(
+        'p',
+        'apt-insight-empty',
+        isLoading ? 'Loading services…' : 'No bookings this month.'
+      ));
+      return;
     }
+    container.setAttribute('aria-label', `Top services for the selected month: ${leaders.map(([service, count]) => (
+      `${service}, ${count} bookings`
+    )).join('; ')}.`);
+    const list = el('ul', 'apt-service-bars');
+    const maxCount = leaders[0][1];
+    leaders.forEach(([service, count]) => {
+      const item = el('li');
+      const label = el('div', 'apt-service-bars__label');
+      const name = el('span', '', service);
+      name.title = service;
+      label.append(name, el('strong', '', String(count)));
+      const track = el('div', 'apt-service-bars__track');
+      const fill = el('span');
+      fill.style.width = `${count / maxCount * 100}%`;
+      track.appendChild(fill);
+      item.append(label, track);
+      list.appendChild(item);
+    });
+    container.appendChild(list);
   }
 
   async function loadAppointments() {
@@ -1642,7 +1661,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const cancellationRequestsSubtitle = document.getElementById('cancellationRequestsSubtitle');
   let activeRequestType = 'cancellation';
 
-  if (!cancelledModal || !cancelledViewBtn || !cancelledBody || !cancelledPills || !reasonList) return;
+  if (!cancelledModal || !cancelledBody || !cancelledPills || !reasonList) return;
 
   function formatFee(amount) {
     if (amount == null || !Number.isFinite(amount)) return 'Not recorded';
@@ -1751,7 +1770,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function closeCancelledModal() {
     cancelledModal.classList.remove('apt-modal-overlay--open');
     document.body.classList.remove('modal-open');
-    cancelledViewBtn.focus();
+    cancelledViewBtn?.focus();
   }
 
   function formatRequestDate(value) {
@@ -1837,7 +1856,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.classList.remove('modal-open');
   }
 
-  cancelledViewBtn.addEventListener('click', openCancelledModal);
+  cancelledViewBtn?.addEventListener('click', openCancelledModal);
   if (cancelledClose) cancelledClose.addEventListener('click', closeCancelledModal);
 
   cancelledModal.addEventListener('click', (event) => {

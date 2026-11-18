@@ -50,7 +50,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   const currentPage = window.location.pathname.split("/").pop();
 
   function isCurrentLink(href) {
-    const [page, hash = ""] = href.split("#");
+    const [page, fragment = ""] = href.split("#");
+    const hash = fragment ? `#${fragment}` : "";
     const currentHash = window.location.hash;
     if (page === "FinancesTransactions.html" && hash === "#income") {
       return currentPage === page && currentHash !== "#ledger";
@@ -64,7 +65,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     ["AdminTreatmentHistory.html", "Treatment History", "icons/staff-content.svg"],
     ["AdminInventoryManagement.html", "Inventory", "icons/staff-inventory.svg"],
     ["AdminInventoryTransactions.html", "Stock Transaction Log", "icons/finance-transactions.svg"],
-    ["FinanceDashboard.html", "Dashboard", "icons/finance-dashboard.svg"],
     ["FinancesTransactions.html#income", "Income", "icons/finance-transactions.svg"],
     ["FinanceExpenses.html", "Expenses", "icons/finance-expenses.svg"],
     ["FinancesTransactions.html#ledger", "Transaction Ledger", "icons/finance-transactions.svg"],
@@ -77,7 +77,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const groups = [
     { label: "Appointments", icon: "icons/staff-appointments.svg", pages: links.slice(1, 4) },
     { label: "Inventory", icon: "icons/staff-inventory.svg", pages: links.slice(4, 6) },
-    { label: "Finance", icon: "icons/finance-transactions.svg", pages: links.slice(6, 11) },
+    { label: "Finance", icon: "icons/finance-transactions.svg", pages: links.slice(6, 10) },
   ];
 
   function makeLink([href, label, icon], child = false) {
@@ -171,14 +171,27 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const mobileLinks = document.querySelector(".mobile-nav-links");
   if (mobileLinks) {
-    mobileLinks.replaceChildren(...links.map(([href, label]) => {
+    const makeMobileItem = ([href, label]) => {
       const item = document.createElement("li");
       const link = document.createElement("a");
       link.href = href;
       link.textContent = label;
       item.appendChild(link);
       return item;
-    }));
+    };
+    const financeGroup = document.createElement("li");
+    financeGroup.className = "admin-mobile-nav-group";
+    const financeLabel = document.createElement("span");
+    financeLabel.textContent = "Finance";
+    const financeItems = document.createElement("ul");
+    financeItems.className = "admin-mobile-nav-submenu";
+    financeItems.append(...links.slice(6, 10).map(makeMobileItem));
+    financeGroup.append(financeLabel, financeItems);
+    mobileLinks.replaceChildren(
+      ...links.slice(0, 6).map(makeMobileItem),
+      financeGroup,
+      ...links.slice(10).map(makeMobileItem),
+    );
   }
 
   const name = [account.firstName, account.lastName].filter(Boolean).join(" ");
