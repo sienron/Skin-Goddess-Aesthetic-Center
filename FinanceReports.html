@@ -8,7 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <title>Finance Reports</title>
-  <link rel="stylesheet" href="finance-ledger.css">
+  <link rel="stylesheet" href="finance-ledger.css?v=20261119-3">
 </head>
 
 <body class="fin-printable sg-admin-typography">
@@ -110,6 +110,18 @@
                         <div class="fin-report-panel-heading"><div><h3>Payment Methods</h3><p class="fin-report-subtitle">Posted payment transactions by payment date (Philippine time).</p></div><button class="fin-button fin-button-export fin-report-export" type="button" data-chart-export="payment-counts">Export</button></div>
                         <div class="fin-chart-frame"><canvas id="reportMethodsChart" role="img" aria-label="Posted transaction counts by payment method" hidden></canvas></div>
                     </article>
+                    <article class="fin-report-panel fin-chart-section">
+                        <div class="fin-report-panel-heading"><div><h3>After Sales Products</h3><p class="fin-report-subtitle" id="afterSalesSubtitle">Units sold per product from recorded product sales. Demo data shows when no sales exist.</p></div><button class="fin-button fin-button-export fin-report-export" type="button" data-chart-export="after-sales-products">Export</button></div>
+                        <div class="fin-chart-frame"><canvas id="reportAfterSalesChart" role="img" aria-label="Units sold by after sales product" hidden></canvas></div>
+                    </article>
+                    <article class="fin-report-panel fin-chart-section">
+                        <div class="fin-report-panel-heading"><div><h3>Inventory Consumption</h3><p class="fin-report-subtitle">Units used in services, manual deductions and sales; fastest-consumed first.</p></div><button class="fin-button fin-button-export fin-report-export" type="button" data-chart-export="inventory-consumption">Export</button></div>
+                        <div class="fin-chart-frame"><canvas id="reportInventoryChart" role="img" aria-label="Inventory units consumed by product" hidden></canvas></div>
+                    </article>
+                    <article class="fin-report-panel fin-chart-section fin-report-panel--wide">
+                        <div class="fin-report-panel-heading"><div><h3>Utilities Expenses</h3><p class="fin-report-subtitle">Last 12 months ending at the selected end date, compared with the same months a year earlier.</p></div><button class="fin-button fin-button-export fin-report-export" type="button" data-chart-export="utilities-trend">Export</button></div>
+                        <div class="fin-chart-frame"><canvas id="reportUtilitiesChart" role="img" aria-label="Monthly utilities expenses compared with the previous year" hidden></canvas></div>
+                    </article>
                 </div>
             </section>
         </section>
@@ -118,7 +130,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
     <script src="finance-common.js"></script>
     <script src="admin-context-nav.js"></script>
-    <script src="finance-reports.js"></script>
+    <script src="finance-reports.js?v=20261119-2"></script>
     <script src="finance-record-exports.js?v=20261119-1"></script>
 </body>
 

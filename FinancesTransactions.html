@@ -8,7 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <title>Income</title>
-  <link rel="stylesheet" href="finance-ledger.css">
+  <link rel="stylesheet" href="finance-ledger.css?v=20261119-3">
 </head>
 
 <body class="sg-admin-typography">
@@ -216,13 +216,15 @@
                         <tbody id="financeLedgerRows"></tbody>
                     </table>
                 </div>
-                <div class="fin-table-info" id="financeLedgerMessage" role="status" aria-live="polite"></div>
-                <div class="fin-pagination">
-                    <button type="button" class="um-btn um-btn--ghost" id="financeLedgerPrevious" disabled>Previous</button>
-                    <span id="financeLedgerPageLabel">Page 1</span>
-                    <button type="button" class="um-btn um-btn--ghost" id="financeLedgerNext" disabled>Next</button>
-                </div>
             </section>
+            <div class="fin-ledger-footer" id="financeLedgerFooter" hidden>
+            <div class="fin-table-info" id="financeLedgerMessage" role="status" aria-live="polite"></div>
+            <div class="fin-pagination">
+                <button type="button" class="um-btn um-btn--ghost" id="financeLedgerPrevious" disabled>Previous</button>
+                <span id="financeLedgerPageLabel">Page 1</span>
+                <button type="button" class="um-btn um-btn--ghost" id="financeLedgerNext" disabled>Next</button>
+            </div>
+            </div>
 
             <section class="staff-table-card" id="receivablesPanel" role="tabpanel"
                 aria-labelledby="transactionViewReceivables" hidden>
@@ -340,7 +342,7 @@
                                 <option value="maya">Maya</option>
                                 <option value="card">Credit/debit card</option>
                                 <option value="paymongo">PayMongo (Other)</option>
-                            </select></label><label>Reference number<input id="saleReference" maxlength="100"></label>
+                            </select>                            </label>
                         <p class="fin-form-message" id="saleMessage" role="alert"></p>
                         <div class="fin-sale-footer"><p class="fin-modal-copy fin-sale-total">Sale total: <strong id="saleTotal" aria-live="polite">PHP 0.00</strong></p><div class="fin-modal-actions"><button class="fin-button" type="button"
                                 data-close-sale>Cancel</button><button class="fin-button fin-button-primary"
@@ -436,9 +438,9 @@
     <script src="header.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
     <script src="finance-common.js?v=20261115-1"></script>
-    <script src="finance-transactions.js?v=20261118-1"></script>
+    <script src="finance-transactions.js?v=20261119-1"></script>
     <script src="admin-context-nav.js"></script>
-    <script src="finance-ledger.js?v=20261118-1"></script>
+    <script src="finance-ledger.js?v=20261119-1"></script>
 </body>
 
 </html>

@@ -1354,9 +1354,8 @@ router.post('/product-sales', endpoint(async (req, res) => {
     throw new ApiError(400, 'Sale total must not exceed 99999999.99.');
   }
   const total = (totalCents / 100).toFixed(2);
-  const reference = body.reference_no == null || body.reference_no === ''
-    ? null
-    : String(body.reference_no).trim().slice(0, 100);
+  // Sale references are system-generated and derived from the idempotency key so retries stay consistent.
+  const reference = `SG-SALE-${requestKey.replace(/-/g, '').slice(0, 12).toUpperCase()}`;
 
   let sale;
   try {
@@ -1974,13 +1973,74 @@ async function operationalAppointmentRows(from, to) {
   return result.rows;
 }
 
+async function afterSalesProductRows(from, to) {
+  const result = await db.query(`
+    SELECT detail.product_name AS label, SUM(detail.quantity)::int AS value,
+      MIN((p.created_at AT TIME ZONE 'Asia/Manila')::date)::text AS first_sale
+    FROM product_sale_details detail
+    JOIN payments p ON p.payment_id = detail.payment_id
+    WHERE p.payment_type = 'product_sale' AND p.status = 'posted'
+      AND (p.created_at AT TIME ZONE 'Asia/Manila')::date BETWEEN $1::date AND $2::date
+    GROUP BY detail.product_name
+    ORDER BY value DESC, label ASC
+    LIMIT 10
+  `, [from, to]);
+  return result.rows.map((row) => ({ label: row.label, value: Number(row.value), first_sale: row.first_sale }));
+}
+
+async function inventoryConsumptionRows(from, to) {
+  const result = await db.query(`
+    SELECT product_name AS label,
+      SUM(CASE WHEN transaction_type = 'Sale Reversed' THEN -ABS(quantity) ELSE ABS(quantity) END)::int AS value
+    FROM inventory_transactions
+    WHERE transaction_type IN ('Used in Service', 'Manual Stock Deduction', 'Sale', 'Sale Reversed')
+      AND (created_at AT TIME ZONE 'Asia/Manila')::date BETWEEN $1::date AND $2::date
+    GROUP BY product_name
+    HAVING SUM(CASE WHEN transaction_type = 'Sale Reversed' THEN -ABS(quantity) ELSE ABS(quantity) END) > 0
+    ORDER BY value DESC, label ASC
+    LIMIT 10
+  `, [from, to]);
+  return result.rows.map((row) => ({ label: row.label, value: Number(row.value) }));
+}
+
+// Twelve months ending at the selected end month, beside the same months one year earlier.
+async function utilitiesTrend(to) {
+  const result = await db.query(`
+    WITH months AS (
+      SELECT generate_series(date_trunc('month', $1::date) - INTERVAL '11 months', date_trunc('month', $1::date), INTERVAL '1 month')::date AS month
+    )
+    SELECT to_char(months.month, 'YYYY-MM') AS month,
+      COALESCE(SUM(expense.amount) FILTER (WHERE expense.expense_date >= months.month
+        AND expense.expense_date < months.month + INTERVAL '1 month'), 0)::float8 AS current_amount,
+      COALESCE(SUM(expense.amount) FILTER (WHERE expense.expense_date >= months.month - INTERVAL '1 year'
+        AND expense.expense_date < months.month - INTERVAL '11 months'), 0)::float8 AS previous_year
+    FROM months
+    LEFT JOIN expenses expense ON expense.voided_at IS NULL AND expense.category = 'Utilities'
+      AND expense.expense_date >= months.month - INTERVAL '1 year'
+      AND expense.expense_date < months.month + INTERVAL '1 month'
+    GROUP BY months.month
+    ORDER BY months.month
+  `, [to]);
+  return {
+    labels: result.rows.map((row) => row.month),
+    current: result.rows.map((row) => Number(row.current_amount)),
+    previous_year: result.rows.map((row) => Number(row.previous_year)),
+  };
+}
+
 router.get('/report', endpoint(async (req, res) => {
   const { from, to } = dateRange(req.query);
   if (req.query.view === 'operational') {
-    const [payments, appointments] = await Promise.all([
+    const [payments, appointments, afterSales, consumption, utilities] = await Promise.all([
       operationalPaymentRows(from, to), operationalAppointmentRows(from, to),
+      afterSalesProductRows(from, to), inventoryConsumptionRows(from, to), utilitiesTrend(to),
     ]);
-    return res.json(operationalReport(payments, appointments));
+    return res.json({
+      ...operationalReport(payments, appointments),
+      after_sales_products: afterSales,
+      inventory_consumption: consumption,
+      utilities_trend: utilities,
+    });
   }
   const report = await reportData(from, to);
   if (req.query.include_closings === 'true') {
@@ -2412,6 +2472,15 @@ function addReportDetailSheet(workbook, options) {
 }
 
 async function reportChartRecords(chart, from, to) {
+  if (chart === 'after-sales-products') {
+    return db.query(`SELECT (p.created_at AT TIME ZONE 'Asia/Manila')::date::text AS date, 'Product sale'::text AS record_type, p.payment_id::text AS record_id, NULL::text AS appointment_id, detail.product_name AS service, ('Qty ' || detail.quantity)::text AS category, p.method::text AS method, p.status::text AS status, NULL::text AS deposit_group, p.reference_no AS reference, p.amount::float8 AS amount FROM product_sale_details detail JOIN payments p ON p.payment_id = detail.payment_id WHERE p.payment_type = 'product_sale' AND p.status = 'posted' AND (p.created_at AT TIME ZONE 'Asia/Manila')::date BETWEEN $1::date AND $2::date ORDER BY p.created_at, p.payment_id`, [from, to]);
+  }
+  if (chart === 'inventory-consumption') {
+    return db.query(`SELECT (created_at AT TIME ZONE 'Asia/Manila')::date::text AS date, 'Inventory movement'::text AS record_type, transaction_id::text AS record_id, NULL::text AS appointment_id, product_name AS service, transaction_type::text AS category, NULL::text AS method, NULL::text AS status, NULL::text AS deposit_group, NULL::text AS reference, ABS(quantity)::float8 AS amount FROM inventory_transactions WHERE transaction_type IN ('Used in Service', 'Manual Stock Deduction', 'Sale', 'Sale Reversed') AND (created_at AT TIME ZONE 'Asia/Manila')::date BETWEEN $1::date AND $2::date ORDER BY product_name, created_at`, [from, to]);
+  }
+  if (chart === 'utilities-trend') {
+    return db.query(`SELECT expense_date::text AS date, 'Recorded expense'::text AS record_type, expense_id::text AS record_id, NULL::text AS appointment_id, description AS service, category::text, NULL::text AS method, 'recorded'::text AS status, NULL::text AS deposit_group, reference_no AS reference, amount::float8 AS amount FROM expenses WHERE voided_at IS NULL AND category = 'Utilities' AND expense_date >= (date_trunc('month', $1::date) - INTERVAL '23 months')::date AND expense_date <= $1::date ORDER BY expense_date, expense_id`, [to]);
+  }
   if (['collected-services', 'payment-counts'].includes(chart)) {
     return { rows: chartRecords(chart, await operationalPaymentRows(from, to), []) };
   }
@@ -2479,6 +2548,9 @@ async function sendReportChartWorkbook(res, chart, from, to) {
     'appointment-source': 'Appointment Source',
     'appointment-payment-status': 'Payment Status',
     'payment-counts': 'Payment Methods',
+    'after-sales-products': 'After Sales Products',
+    'inventory-consumption': 'Inventory Consumption',
+    'utilities-trend': 'Utilities Expenses',
     'sales-expenses': 'Sales and Expenses',
     'top-services': 'Top Services',
     'service-categories': 'Service Categories',
@@ -2514,7 +2586,7 @@ async function sendReportChartWorkbook(res, chart, from, to) {
     { header: 'Payment / Record Status', key: 'status', width: 24 },
     { header: 'Deposit Group', key: 'deposit_group', width: 18 },
     { header: 'Reference', key: 'reference', width: 25 },
-    { header: 'Amount (PHP)', key: 'amount', width: 20 },
+    { header: chart === 'inventory-consumption' ? 'Units' : 'Amount (PHP)', key: 'amount', width: 20 },
   ];
   sheet.getRow(1).height = 30;
   sheet.getRow(1).eachCell((cell) => {
@@ -2525,7 +2597,7 @@ async function sendReportChartWorkbook(res, chart, from, to) {
   result.rows.forEach((record) => {
     const row = sheet.addRow(record);
     (appointmentChart ? ['service_price', 'amount_paid'] : ['amount']).forEach((key) => {
-      row.getCell(key).numFmt = '"₱"#,##0.00';
+      row.getCell(key).numFmt = chart === 'inventory-consumption' ? '#,##0' : '"₱"#,##0.00';
     });
   });
   sheet.autoFilter = { from: 'A1', to: appointmentChart ? 'I1' : 'K1' };

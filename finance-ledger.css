@@ -113,12 +113,22 @@
   white-space: nowrap;
 }
 
-#transactionLedgerPanel .fin-pagination {
+#financeLedgerFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  margin-top: 12px;
+}
+#financeLedgerFooter[hidden] { display: none; }
+#financeLedgerFooter .fin-table-info { margin: 0; text-align: left; }
+#financeLedgerFooter .fin-pagination {
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 10px;
-  margin-top: 16px;
+  margin: 0;
 }
 
 body[data-finance-view="ledger"] #transactionOverview,
@@ -245,4 +255,72 @@ body.staff-theme-dark .fin-report-subtitle {
 
 body.staff-theme-dark .fin-reports-page .fin-report-panel-heading {
   border-color: #494a45;
+}
+
+/* Income date controls: one aligned row, identical on every Income sub-view. */
+.fin-transactions-page .fin-transaction-date-filters {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  box-sizing: border-box;
+  min-height: 112px;
+}
+.fin-transactions-page .fin-transaction-date-filters .fin-filter-period-controls {
+  flex: 1 1 auto;
+}
+.fin-transactions-page .fin-transaction-date-filters .fin-date-range-fields > label {
+  padding-top: 8px;
+}
+.fin-transactions-page .fin-transaction-date-filters .fin-filter-period-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 18px;
+}
+.fin-transactions-page .fin-transaction-date-filters .fin-segmented button,
+.fin-transactions-page .fin-transaction-date-filters .fin-date-range-fields input[type="date"] {
+  box-sizing: border-box;
+  height: 40px;
+  min-height: 40px;
+}
+.fin-transactions-page .fin-transaction-date-filters .fin-date-range-fields {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+@media (max-width: 620px) {
+  .fin-transactions-page .fin-transaction-date-filters .fin-date-range-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+}
+/* Report cards: charts fill the card so pie/doughnut charts stay centered. */
+.fin-reports-page .fin-report-panel .fin-chart-frame {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 280px;
+}
+.fin-reports-page .fin-report-panel--wide {
+  grid-column: 1 / -1;
+}
+.fin-reports-page .fin-report-panel--wide .fin-chart-frame {
+  min-height: 320px;
+}
+@media (max-width: 900px) {
+  .fin-reports-page .fin-report-grid { grid-template-columns: minmax(0, 1fr); }
+  .fin-reports-page .fin-report-panel--wide { grid-column: auto; }
+}
+
+/* Keep the header and its notification dropdown above sticky table headers; tighten space below the header. */
+body:has(.fin-transactions-page) > .staff-header {
+  z-index: 30;
+}
+body .main-content.fin-transactions-page {
+  padding-top: 10px;
+}
+#transactionLedgerPanel {
+  position: relative;
+  z-index: 0;
 }

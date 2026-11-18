@@ -34,7 +34,7 @@
     const hex = [...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('');
     return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
   }
-  const refs = Object.fromEntries(['transactionFrom', 'transactionTo', 'transactionType', 'transactionMethod', 'transactionStatus', 'transactionSearch', 'transactionMessage', 'transactionRows', 'transactionCount', 'transactionEmpty', 'transactionPagination', 'transactionPrev', 'transactionNext', 'transactionPageLabel', 'transactionPageSize', 'transactionPeriodLabel', 'transactionComparison', 'ledgerHelp', 'transactionSummary', 'transactionOverview', 'paymentCountSummary', 'paymentCountLabel', 'receivablesPanel', 'transactionsPanel', 'depositsPanel', 'methodChartSection', 'methodChartEmpty', 'receivableRows', 'receivableEmpty', 'receivableSearch', 'receivableStatus', 'receivablePagination', 'receivablePrev', 'receivableNext', 'receivablePageLabel', 'receivablePageSize', 'exportReceivablesXlsx', 'depositRows', 'depositEmpty', 'depositCount', 'depositPagination', 'depositPrev', 'depositNext', 'depositPageLabel', 'depositPageSize', 'recordPaymentModal', 'recordPaymentForm', 'balanceAppointmentId', 'balanceAmount', 'balanceMethod', 'balanceReference', 'balanceNote', 'paymentBalanceText', 'paymentFormMessage', 'saleModal', 'saleForm', 'saleClient', 'saleProduct', 'saleQuantity', 'salePrice', 'saleTotal', 'saleMethod', 'saleReference', 'saleMessage', 'saleSubmit', 'recordSaleBtn', 'exportTransactionsXlsx', 'refundModal', 'refundForm', 'refundPaymentId', 'refundPaymentSummary', 'refundNote', 'refundFormMessage', 'reverseModal', 'reverseForm', 'reversePaymentId', 'reversePaymentSummary', 'reverseReason', 'reverseFormMessage', 'paymentDetailsModal', 'paymentDetails', 'paymentHistoryRows', 'paymentHistoryEmpty', 'receiptModal', 'receiptModalTitle', 'receiptFrame', 'clientDetailsModal', 'clientDetailsTitle', 'clientDetails', 'clientPaymentHistoryBtn', 'clientPaymentHistoryModal', 'clientPaymentHistoryTitle', 'clientPaymentHistoryMessage', 'clientPaymentHistoryRows', 'clientPaymentHistoryEmpty'].map((id) => [id, byId(id)]));
+  const refs = Object.fromEntries(['transactionFrom', 'transactionTo', 'transactionType', 'transactionMethod', 'transactionStatus', 'transactionSearch', 'transactionMessage', 'transactionRows', 'transactionCount', 'transactionEmpty', 'transactionPagination', 'transactionPrev', 'transactionNext', 'transactionPageLabel', 'transactionPageSize', 'transactionPeriodLabel', 'transactionComparison', 'ledgerHelp', 'transactionSummary', 'transactionOverview', 'paymentCountSummary', 'paymentCountLabel', 'receivablesPanel', 'transactionsPanel', 'depositsPanel', 'methodChartSection', 'methodChartEmpty', 'receivableRows', 'receivableEmpty', 'receivableSearch', 'receivableStatus', 'receivablePagination', 'receivablePrev', 'receivableNext', 'receivablePageLabel', 'receivablePageSize', 'exportReceivablesXlsx', 'depositRows', 'depositEmpty', 'depositCount', 'depositPagination', 'depositPrev', 'depositNext', 'depositPageLabel', 'depositPageSize', 'recordPaymentModal', 'recordPaymentForm', 'balanceAppointmentId', 'balanceAmount', 'balanceMethod', 'balanceReference', 'balanceNote', 'paymentBalanceText', 'paymentFormMessage', 'saleModal', 'saleForm', 'saleClient', 'saleProduct', 'saleQuantity', 'salePrice', 'saleTotal', 'saleMethod', 'saleMessage', 'saleSubmit', 'recordSaleBtn', 'exportTransactionsXlsx', 'refundModal', 'refundForm', 'refundPaymentId', 'refundPaymentSummary', 'refundNote', 'refundFormMessage', 'reverseModal', 'reverseForm', 'reversePaymentId', 'reversePaymentSummary', 'reverseReason', 'reverseFormMessage', 'paymentDetailsModal', 'paymentDetails', 'paymentHistoryRows', 'paymentHistoryEmpty', 'receiptModal', 'receiptModalTitle', 'receiptFrame', 'clientDetailsModal', 'clientDetailsTitle', 'clientDetails', 'clientPaymentHistoryBtn', 'clientPaymentHistoryModal', 'clientPaymentHistoryTitle', 'clientPaymentHistoryMessage', 'clientPaymentHistoryRows', 'clientPaymentHistoryEmpty'].map((id) => [id, byId(id)]));
   const chartColors = ['#c9a84c', '#267447', '#3977b8', '#8c8c8c', '#8a6e2f'];
   refs.recordSaleBtn.classList.add('fin-sales-record-button');
   refs.methodChartLegend = element('ul', '', 'fin-chart-legend');
@@ -250,7 +250,7 @@
   function renderSaleProductOptions(products) {
     const placeholder = new Option('Choose product', '');
     const examples = document.createElement('optgroup');
-    examples.label = 'Temporary examples — frontend only (not selectable)';
+    examples.label = 'After Sales Products';
     temporarySkincareProducts.forEach((name, index) => {
       const option = new Option(`${name} — preview only`, `temporary-${index + 1}`);
       option.disabled = true;
@@ -258,7 +258,7 @@
     });
 
     const inventory = document.createElement('optgroup');
-    inventory.label = 'Inventory products (recordable when in stock)';
+    inventory.label = 'Inventory products';
     if (!products.length) {
       const unavailable = new Option('No inventory products found', '');
       unavailable.disabled = true;
@@ -846,7 +846,6 @@
           quantity: Number(refs.saleQuantity.value),
           unit_price: Number(refs.salePrice.value),
           method: refs.saleMethod.value,
-          reference_no: refs.saleReference.value.trim(),
         }),
       });
       modalClose(refs.saleModal);

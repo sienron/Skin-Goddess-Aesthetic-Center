@@ -173,14 +173,15 @@ test('obsolete accounting statement export routes return 410 without querying da
   assert.equal(queryCount, 0);
 });
 
-test('Reports shows four operational charts without statement generation', () => {
+test('Reports shows the operational charts without statement generation', () => {
   const read = (name) => fs.readFileSync(path.join(__dirname, '..', name), 'utf8');
   const page = read('FinanceReports.html');
   const client = read('finance-record-exports.js');
 
   assert.doesNotMatch(page, /incomeStatementSection|income-statement/i);
   const charts = [
-    'collected-services', 'appointment-source', 'appointment-payment-status', 'payment-counts'
+    'collected-services', 'appointment-source', 'appointment-payment-status', 'payment-counts',
+    'after-sales-products', 'inventory-consumption', 'utilities-trend'
   ];
   for (const chart of charts) {
     assert.match(page, new RegExp(`data-chart-export="${chart}"`));
@@ -251,7 +252,7 @@ test('monthly trend restricts partial months to the selected dates', async () =>
 
 test('report charts load selected ranges and export their own record sets', async () => {
   const source = fs.readFileSync(path.join(__dirname, '..', 'finance-reports.js'), 'utf8');
-  const buttons = ['collected-services', 'appointment-source', 'appointment-payment-status', 'payment-counts'].map((kind) => ({
+  const buttons = ['collected-services', 'appointment-source', 'appointment-payment-status', 'payment-counts', 'after-sales-products', 'inventory-consumption', 'utilities-trend'].map((kind) => ({
     dataset: { chartExport: kind },
     addEventListener(_type, handler) { this.click = handler; }
   }));
@@ -261,7 +262,10 @@ test('report charts load selected ranges and export their own record sets', asyn
     revenue_by_service: [{ label: 'Facial', value: 100 }],
     appointment_source: [{ label: 'Unknown', value: 1 }],
     payment_status: [{ label: 'Unpaid', value: 2 }],
-    payment_methods: [{ label: 'cash', value: 3 }]
+    payment_methods: [{ label: 'cash', value: 3 }],
+    after_sales_products: [{ label: 'Facial Cleanser', value: 4 }],
+    inventory_consumption: [{ label: 'Wipes', value: 5 }],
+    utilities_trend: { labels: ['2027-03'], current: [10], previous_year: [8] }
   };
   const common = {
     rangeParams(from, to) { return new URLSearchParams({ from, to }).toString(); },
@@ -286,7 +290,8 @@ test('report charts load selected ranges and export their own record sets', asyn
   });
 
   await window.FinanceReports.load({ from: '2025-01-15', to: '2027-03-04' });
-  assert.equal(charts.size, 4);
+  assert.equal(charts.size, 7);
+  assert.equal(charts.get('reportUtilitiesChart').type, 'line');
   assert.equal(requests.length, 1);
   assert.match(requests[0], /from=2025-01-15&to=2027-03-04&view=operational/);
   assert.equal(charts.get('reportStatusChart').data.datasets[0].data[0], 2);

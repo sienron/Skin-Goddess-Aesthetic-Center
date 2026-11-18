@@ -62,6 +62,8 @@ test('operational charts and exports agree on filtered payment and appointment f
   const sqlSeen = [];
   db.query = async (sql, values) => {
     sqlSeen.push(sql);
+    // Postgres-only queries for the supplementary charts are covered by the live-query check, not this sqlite fixture.
+    if (/product_sale_details|inventory_transactions|generate_series/.test(sql)) return { rows: [] };
     const sqliteSql = sql
       .replace(/\(p\.created_at AT TIME ZONE 'Asia\/Manila'\)::date/g, "date(datetime(p.created_at, '+8 hours'))")
       .replace(/::(?:text|date|float8|boolean)/g, '')

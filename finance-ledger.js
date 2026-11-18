@@ -127,6 +127,8 @@
 
   function setLedgerView(enabled) {
     panel.hidden = !enabled;
+    const footer = document.getElementById('financeLedgerFooter');
+    if (footer) footer.hidden = !enabled;
     if (enabled) {
       setActiveMenu('ledger');
       if (refs.moduleHeading) refs.moduleHeading.textContent = 'Transaction Ledger';
