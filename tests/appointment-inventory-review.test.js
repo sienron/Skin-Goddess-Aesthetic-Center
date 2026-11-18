@@ -19,6 +19,9 @@ const reviewRoute = appointmentsRouter.stack
 const reviewQueueRoute = appointmentsRouter.stack
   .find((layer) => layer.route?.path === '/inventory-officer/reviews' && layer.route.methods.get)
   .route.stack.at(-1).handle;
+const reviewedAppointmentsRoute = appointmentsRouter.stack
+  .find((layer) => layer.route?.path === '/inventory-officer/reviews/reviewed' && layer.route.methods.get)
+  .route.stack.at(-1).handle;
 const adminAppointmentsRoute = appointmentsRouter.stack
   .find((layer) => layer.route?.path === '/admin' && layer.route.methods.get)
   .route.stack.at(-1).handle;
@@ -416,15 +419,14 @@ test('inventory review preselects enabled service suggestions and leaves other p
   assert.deepEqual(mappingQuery.values, [3, '2026-10-17']);
 });
 
-test('Inventory Officer queue includes in-progress appointments and review status', async () => {
+test('Inventory Officer queue includes only in-progress appointments awaiting product review', async () => {
   const originalQuery = db.query;
   let queryText = '';
   db.query = async (sql) => {
     queryText = sql;
     return {
       rows: [
-        { appointment_id: 42, service: 'Test service', reviewed_at: null, reviewer_id: null, reviewer_name: null },
-        { appointment_id: 43, service: 'Other service', reviewed_at: '2026-10-16T00:00:00Z', reviewer_id: 19, reviewer_name: 'Officer' }
+        { appointment_id: 42, service: 'Test service', reviewed_at: null, reviewer_id: null, reviewer_name: null }
       ]
     };
   };
@@ -445,8 +447,47 @@ test('Inventory Officer queue includes in-progress appointments and review statu
   }
 
   assert.match(queryText, /appointment_status = 'in_progress'/);
+  assert.match(queryText, /review\.reviewed_at IS NULL OR review\.reviewed_by IS NULL/);
   assert.match(queryText, /appointment_inventory_deductions/);
-  assert.deepEqual(responseBody.map((item) => item.review_status), ['pending', 'confirmed']);
+  assert.deepEqual(responseBody.map((item) => item.review_status), ['pending']);
+});
+
+test('Inventory Officer reviewed appointments include confirmed records regardless of appointment status', async () => {
+  const originalQuery = db.query;
+  let queryText = '';
+  db.query = async (sql) => {
+    queryText = sql;
+    return {
+      rows: [{
+        appointment_id: 43,
+        status: 'completed',
+        reviewed_at: '2026-10-16T00:00:00Z',
+        reviewer_id: 19,
+        reviewer_name: 'Officer'
+      }]
+    };
+  };
+  let responseBody;
+
+  try {
+    await reviewedAppointmentsRoute({}, {
+      status() {
+        return this;
+      },
+      json(body) {
+        responseBody = body;
+        return this;
+      }
+    });
+  } finally {
+    db.query = originalQuery;
+  }
+
+  assert.match(queryText, /review\.reviewed_at IS NOT NULL/);
+  assert.match(queryText, /review\.reviewed_by IS NOT NULL/);
+  assert.doesNotMatch(queryText, /appointment_status = 'in_progress'/);
+  assert.equal(responseBody[0].review_status, 'confirmed');
+  assert.equal(responseBody[0].reviewed_by, 'Officer');
 });
 
 test('admin status advancement selects only confirmed appointments scheduled to start today', async () => {
@@ -969,7 +1010,7 @@ test('provisional catalog candidates use exact supplied products and do not assu
   assert.equal(new Set(keys).size, keys.length);
 });
 
-test('Anti-Aging Drip preselects all six configured product suggestions', async () => {
+test('Anti-Aging Drip preselects all six configured product suggestions with quantity one', async () => {
   const suggestedNames = [
     'Macroset (IV Set)',
     '10cc Syringe',
@@ -992,7 +1033,7 @@ test('Anti-Aging Drip preselects all six configured product suggestions', async 
 
   assert.equal(result.responseBody.products.length, 6);
   assert.ok(result.responseBody.products.every((product) => product.is_selected));
-  assert.ok(result.responseBody.products.every((product) => product.selected_quantity === null));
+  assert.ok(result.responseBody.products.every((product) => product.selected_quantity === 1));
 });
 
 test('inventory review keeps out-of-stock and insufficient-stock draft selections and quantities', async () => {
@@ -1058,7 +1099,7 @@ test('inventory review leaves products unselected when a service has no configur
   assert.deepEqual(JSON.parse(persistedSelection.values[1]), []);
 });
 
-test('inventory review preselects enabled suggestions without inventing a quantity', async () => {
+test('inventory review defaults enabled suggestions without a configured quantity to one', async () => {
   const result = await loadReview({
     products: [
       { product_id: 12, product_name: 'Unconfirmed quantity', category: 'Treatment', stock_quantity: 5, default_quantity: null, review_note: 'Confirm use', is_suggested: true }
@@ -1067,11 +1108,33 @@ test('inventory review preselects enabled suggestions without inventing a quanti
 
   assert.equal(result.statusCode, 200);
   assert.equal(result.responseBody.products[0].is_selected, true);
-  assert.equal(result.responseBody.products[0].selected_quantity, null);
+  assert.equal(result.responseBody.products[0].default_quantity, 1);
+  assert.equal(result.responseBody.products[0].selected_quantity, 1);
   const persistedSelection = result.queryCalls.find(({ sql }) => /INSERT INTO appointment_inventory_review_drafts/.test(sql));
   assert.deepEqual(JSON.parse(persistedSelection.values[1]), [
-    { productId: 12, quantity: null, isSuggested: true, suggestionDefaultQuantity: null }
+    { productId: 12, quantity: 1, isSuggested: true, suggestionDefaultQuantity: 1 }
   ]);
+});
+
+test('inventory review fills a saved suggested selection with one when its quantity is blank', async () => {
+  const result = await loadReview({
+    products: [{
+      product_id: 12,
+      product_name: 'Suggested product',
+      category: 'Treatment',
+      stock_quantity: 5,
+      default_quantity: null,
+      review_note: 'Confirm use',
+      is_suggested: true
+    }],
+    savedSelection: [
+      { productId: 12, quantity: null, isSuggested: true, suggestionDefaultQuantity: null }
+    ]
+  });
+
+  assert.equal(result.statusCode, 200);
+  assert.equal(result.responseBody.products[0].selected_quantity, 1);
+  assert.equal(result.responseBody.products[0].selected_suggestion_default_quantity, 1);
 });
 
 test('inventory review preserves saved products and quantities without silently changing a confirmed review', async () => {

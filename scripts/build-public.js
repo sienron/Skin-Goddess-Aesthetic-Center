@@ -13,6 +13,7 @@ const browserScripts = [
   'admin-notifications.js',
   'clinic-management.js',
   'appointment-inventory-review.js',
+  'reviewed-appointments.js',
   'AdminInventoryManagement.js',
   'batch-upload.js',
   'AdminAppointment.js',

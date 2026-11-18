@@ -236,6 +236,94 @@ body.inventory-transactions-page > .inventory-page {
     height: 16px;
 }
 
+.inventory-notification-toasts{
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    z-index: 6000;
+    display: flex;
+    width: min(380px, calc(100vw - 40px));
+    max-height: calc(100vh - 40px);
+    flex-direction: column;
+    gap: 10px;
+    overflow-y: auto;
+    pointer-events: none;
+}
+
+.inventory-notification-toast{
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 14px 14px 16px;
+    border: 1px solid #e8d9b8;
+    border-left: 4px solid #d4a937;
+    border-radius: 10px;
+    background: #fff;
+    color: #201c18;
+    box-shadow: 0 8px 24px rgba(32, 28, 24, .2);
+    pointer-events: auto;
+    animation: inventory-notification-toast-in .2s ease-out;
+}
+
+.inventory-notification-toast__message{
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.inventory-notification-toast__close{
+    display: grid;
+    flex: 0 0 28px;
+    width: 28px;
+    height: 28px;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: inherit;
+    font-size: 21px;
+    line-height: 1;
+}
+
+.inventory-notification-toast__close:hover,
+.inventory-notification-toast__close:focus-visible{
+    background: #f5eee1;
+}
+
+body.staff-theme-dark.InventoryManagement .inventory-notification-toast{
+    border-color: #514a3b;
+    background: #262724;
+    color: #eee8dd;
+}
+
+body.staff-theme-dark.InventoryManagement .inventory-notification-toast__close:hover,
+body.staff-theme-dark.InventoryManagement .inventory-notification-toast__close:focus-visible{
+    background: #3a3831;
+}
+
+@keyframes inventory-notification-toast-in{
+    from{ opacity: 0; transform: translateY(8px); }
+    to{ opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 600px){
+    .inventory-notification-toasts{
+        right: 12px;
+        bottom: max(12px, env(safe-area-inset-bottom));
+        width: calc(100vw - 24px);
+        max-height: calc(100vh - 24px);
+    }
+}
+
+@media (prefers-reduced-motion: reduce){
+    .inventory-notification-toast{
+        animation: none;
+    }
+}
+
 .search-box {
     display: flex;
     align-items: center;
@@ -334,7 +422,7 @@ body.inventory-transactions-page > .inventory-page {
 
 .summary-cards{
     display: grid;
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
     gap: 13px;
 
     padding: 18px 0;
@@ -347,6 +435,10 @@ body.inventory-transactions-page > .inventory-page {
     border-radius: 6px;;
     padding: 15px 18px;
     min-height: 84px;
+}
+
+.summary-card[hidden]{
+    display: none !important;
 }
 
 .summary-label{
@@ -1105,7 +1197,7 @@ body.inventory-transactions-page > .inventory-page {
 
 
     .summary-cards{
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
     }
 
     .filter-bar{
@@ -1982,7 +2074,7 @@ body.inventory-transactions-page > .inventory-page {
     }
 
     .admin-inventory-main .summary-cards {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
         gap: 9px;
         padding: 0 0 14px;
     }
