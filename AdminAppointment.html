@@ -146,6 +146,11 @@
             <div class="apt-toolbar__tools">
               <button class="um-btn um-btn--ghost" id="aptCancelledViewBtn" type="button" aria-haspopup="dialog" hidden>Cancellation details</button>
               <button class="apt-chip" id="aptTodayChip" type="button" hidden>Today &times;</button>
+              <select class="apt-inventory-review-select" id="aptInventoryReviewFilter" aria-label="Filter inventory review status" hidden>
+                <option value="all">All</option>
+                <option value="reviewed">Reviewed by Inventory Officer</option>
+                <option value="pending">Pending Review</option>
+              </select>
               <div class="um-search apt-toolbar__search">
                 <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                 <input type="text" id="aptSearchInput" maxlength="100" placeholder="Search appointments..." aria-label="Search appointments">

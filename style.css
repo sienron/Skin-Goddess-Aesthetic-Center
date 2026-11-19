@@ -11826,6 +11826,24 @@ body:not(.profile-ready) .mobile-nav-profile {
   flex: 0 0 auto;
 }
 
+.apt-inventory-review-select[hidden] {
+  display: none;
+}
+
+.apt-inventory-review-select {
+  width: 190px;
+  min-width: 0;
+  height: 32px;
+  padding: 5px 28px 5px 10px;
+  border: 1px solid #e7e1d7;
+  border-radius: 8px;
+  background: #fff;
+  color: #51483a;
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
 .apt-toolbar__tools {
   display: flex;
   align-items: center;

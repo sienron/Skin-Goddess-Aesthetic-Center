@@ -129,6 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   const state = {
     status: 'all',
+    inventoryReview: 'all',
     todayOnly: false,
     month: manilaDateKey().slice(0, 7),
     query: '',
@@ -201,6 +202,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const query = state.query.trim().toLowerCase();
     return APPOINTMENTS.filter((a) => {
       if (state.status !== 'all' && a.status !== state.status) return false;
+      if (state.status === 'in-progress' && state.inventoryReview === 'reviewed' && !a.inventoryReviewConfirmedAt) return false;
+      if (state.status === 'in-progress' && state.inventoryReview === 'pending' && a.inventoryReviewConfirmedAt) return false;
       if (a.dateKey.slice(0, 7) !== state.month) return false;
       if (state.todayOnly && !a.isToday) return false;
       if (!query) return true;
@@ -1216,6 +1219,11 @@ document.addEventListener('DOMContentLoaded', () => {
       tab.textContent = tab.dataset.label + ' (' + count + ')';
       tab.classList.toggle('um-tab--active', key === state.status);
     });
+    const inventoryReviewFilter = document.getElementById('aptInventoryReviewFilter');
+    if (inventoryReviewFilter) {
+      inventoryReviewFilter.hidden = state.status !== 'in-progress';
+      inventoryReviewFilter.value = state.inventoryReview;
+    }
     if (todayChip) todayChip.hidden = !state.todayOnly;
     const cancellationDetails = document.getElementById('aptCancelledViewBtn');
     if (cancellationDetails) cancellationDetails.hidden = state.status !== 'cancelled';
@@ -1543,7 +1551,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const tab = event.target.closest('.um-tab');
     if (!tab) return;
     state.status = tab.dataset.status;
+    if (state.status !== 'in-progress') state.inventoryReview = 'all';
     state.todayOnly = false;
+    state.page = 1;
+    render();
+  });
+
+  const inventoryReviewFilter = document.getElementById('aptInventoryReviewFilter');
+  inventoryReviewFilter?.addEventListener('change', () => {
+    state.inventoryReview = inventoryReviewFilter.value;
     state.page = 1;
     render();
   });
@@ -1566,6 +1582,7 @@ document.addEventListener('DOMContentLoaded', () => {
         state.month = manilaDateKey().slice(0, 7);
       } else {
         state.status = key;
+        if (state.status !== 'in-progress') state.inventoryReview = 'all';
         state.todayOnly = false;
       }
       render();
@@ -1606,6 +1623,7 @@ document.addEventListener('DOMContentLoaded', () => {
   exportButton?.addEventListener('click', async () => {
     const params = new URLSearchParams({
       status: state.status,
+      inventoryReview: state.status === 'in-progress' ? state.inventoryReview : 'all',
       month: state.month,
       todayOnly: String(state.todayOnly),
       search: state.query.trim()

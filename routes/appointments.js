@@ -341,13 +341,15 @@ async function loadAdminAppointmentRows() {
   return result.rows;
 }
 
-function filterAdminAppointmentRows(rows, { status, month, todayOnly, search }) {
+function filterAdminAppointmentRows(rows, { status, month, todayOnly, search, inventoryReview = 'all' }) {
   const normalizedSearch = search.trim().toLowerCase();
   const today = manilaNow().dateStr;
   return rows.filter((row) => {
     const appointmentStatus = String(row.status || '').toLowerCase().replace(/_/g, '-');
     const date = String(row.date || '').slice(0, 10);
     if (status !== 'all' && appointmentStatus !== status) return false;
+    if (appointmentStatus === 'in-progress' && inventoryReview === 'reviewed' && !row.inventory_product_reviewed_at) return false;
+    if (appointmentStatus === 'in-progress' && inventoryReview === 'pending' && row.inventory_product_reviewed_at) return false;
     if (date.slice(0, 7) !== month) return false;
     if (todayOnly && date !== today) return false;
     if (!normalizedSearch) return true;
@@ -521,6 +523,7 @@ router.post('/admin/treatment-history/export.xlsx', requireRole('admin'), async 
 
 router.get('/admin/export.xlsx', requireRole('admin'), async (req, res) => {
   const status = typeof req.query.status === 'string' ? req.query.status : 'all';
+  const inventoryReview = typeof req.query.inventoryReview === 'string' ? req.query.inventoryReview : 'all';
   const month = typeof req.query.month === 'string' ? req.query.month : '';
   const todayOnly = req.query.todayOnly === 'true';
   const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
@@ -533,10 +536,14 @@ router.get('/admin/export.xlsx', requireRole('admin'), async (req, res) => {
   if (search.length > 100) {
     return res.status(400).json({ message: 'Appointment search must be 100 characters or fewer.' });
   }
+  if (!['all', 'reviewed', 'pending'].includes(inventoryReview)) {
+    return res.status(400).json({ message: 'Choose a valid inventory review filter.' });
+  }
 
   try {
     const records = filterAdminAppointmentRows(await loadAdminAppointmentRows(), {
       status,
+      inventoryReview,
       month,
       todayOnly,
       search
